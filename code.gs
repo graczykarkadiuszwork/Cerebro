@@ -15,7 +15,7 @@ function doGet(e) {
     .evaluate()
     .setTitle('Cerebro')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.SAMEORIGIN);
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
 }
 
 // Includowanie plików HTML
