@@ -23,13 +23,24 @@ function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
+// Generuje HTML szkieletu ładowania (wywoływany jako scriptlet w plikach HTML)
+function skeleton(n) {
+  n = n || 3;
+  var html = '';
+  for (var i = 0; i < n; i++) {
+    html += '<div class="mb-3"><div class="skeleton-line" style="width:' + (i % 2 === 0 ? '75%' : '50%') + '"></div></div>';
+  }
+  return html;
+}
+
 // Ładowanie modułów dynamicznie — z whitelistą po stronie serwera
+// Używamy createTemplateFromFile aby scriptlety <?= skeleton(N) ?> były ewaluowane
 function getModuleHtml(moduleName) {
   if (!ALLOWED_MODULES.includes(moduleName)) {
     return '<div class="p-6"><div class="text-red-600">Niedozwolony moduł.</div></div>';
   }
   try {
-    return HtmlService.createHtmlOutputFromFile(moduleName).getContent();
+    return HtmlService.createTemplateFromFile(moduleName).evaluate().getContent();
   } catch(e) {
     return '<div class="p-6"><div class="text-red-600">Błąd ładowania modułu.</div></div>';
   }
