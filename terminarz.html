@@ -1,0 +1,51 @@
+<div class="max-w-6xl mx-auto">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-[#000]">Terminarz</h1>
+    <button onclick="showAddEventModal()" class="btn-primary w-auto flex items-center gap-2" style="width: auto;"><i data-lucide="plus" class="w-5 h-5"></i>Dodaj</button>
+  </div>
+  <div class="mb-4 flex items-center gap-3">
+    <div class="segmented">
+      <button class="segmented-btn active" onclick="switchCalendarView('month')"><i data-lucide="calendar" class="w-4 h-4 inline-block mr-1"></i>Miesiąc</button>
+      <button class="segmented-btn" onclick="switchCalendarView('list')"><i data-lucide="list" class="w-4 h-4 inline-block mr-1"></i>Lista</button>
+    </div>
+  </div>
+  <div id="month-view">
+    <div class="ios-card">
+      <div class="px-4 py-3 border-b border-[#e5e5ea] flex items-center justify-between">
+        <button onclick="prevMonth()" class="p-2 hover:bg-[rgba(0,122,255,0.1)] rounded"><i data-lucide="chevron-left" class="w-5 h-5 text-[#007aff]"></i></button>
+        <div class="text-center"><h2 id="month-title" class="text-[17px] font-semibold"></h2></div>
+        <button onclick="nextMonth()" class="p-2 hover:bg-[rgba(0,122,255,0.1)] rounded"><i data-lucide="chevron-right" class="w-5 h-5 text-[#007aff]"></i></button>
+      </div>
+      <div class="grid grid-cols-7 gap-1 p-4">
+        <div class="text-center text-[13px] font-semibold text-[#8e8e93]">Pn</div>
+        <div class="text-center text-[13px] font-semibold text-[#8e8e93]">Wt</div>
+        <div class="text-center text-[13px] font-semibold text-[#8e8e93]">Śr</div>
+        <div class="text-center text-[13px] font-semibold text-[#8e8e93]">Cz</div>
+        <div class="text-center text-[13px] font-semibold text-[#8e8e93]">Pt</div>
+        <div class="text-center text-[13px] font-semibold text-[#8e8e93]">Sb</div>
+        <div class="text-center text-[13px] font-semibold text-[#8e8e93]">Nd</div>
+      </div>
+      <div id="calendar-grid" class="grid grid-cols-7 gap-1 p-4">${skeleton(35)}</div>
+    </div>
+  </div>
+  <div id="list-view" class="hidden">
+    <div id="events-list" class="ios-card">${skeleton(5)}</div>
+  </div>
+</div>
+<script id="event-modal-template" type="text/template">
+<div class="modal-sheet"><div class="modal-handle"></div><div class="px-6 py-4"><h2 class="text-[20px] font-bold mb-4">{{ title }}</h2><div class="space-y-4"><div><label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Tytuł *</label><input type="text" id="modal-evt-title" class="ios-input" placeholder="Wpisz tytuł..."></div><div><label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Data *</label><input type="date" id="modal-evt-date" class="ios-input"></div><div class="grid grid-cols-2 gap-3"><div><label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Od</label><input type="time" id="modal-evt-time-from" class="ios-input"></div><div><label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Do</label><input type="time" id="modal-evt-time-to" class="ios-input"></div></div><div><label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Typ</label><select id="modal-evt-type" class="ios-select"><option value="ogolne">Ogólne</option><option value="spotkanie">Spotkanie</option><option value="deadline">Deadline</option><option value="wolne">Wolne</option><option value="inne">Inne</option></select></div><div><label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Notatki</label><textarea id="modal-evt-notes" class="ios-textarea" placeholder="Dodaj notatki..."></textarea></div><div class="flex gap-3 pt-4"><button onclick="closeModal(); saveEvent();" class="btn-primary">Zapisz</button><button onclick="closeModal(); if(window.editingEventId) deleteEvent(window.editingEventId);" id="delete-evt-btn" class="btn-destructive hidden">Usuń</button><button onclick="closeModal()" class="btn-secondary">Anuluj</button></div></div></div></div>
+</script>
+<script>
+let currentMonth = new Date(); let allEvents = []; let calendarView = 'month';
+function initModule() { loadEvents(); }
+function switchCalendarView(view) { calendarView = view; document.querySelectorAll('.segmented-btn').forEach(el => el.classList.remove('active')); event.target.closest('.segmented-btn').classList.add('active'); document.getElementById('month-view').classList.toggle('hidden', view !== 'month'); document.getElementById('list-view').classList.toggle('hidden', view !== 'list'); if (view === 'month') renderCalendar(); else renderEventsList(); }
+function loadEvents() { google.script.run.withSuccessHandler(function(result) { if (result.success) { allEvents = result.data; renderCalendar(); renderEventsList(); } }).getEvents(); }
+function prevMonth() { currentMonth.setMonth(currentMonth.getMonth() - 1); renderCalendar(); }
+function nextMonth() { currentMonth.setMonth(currentMonth.getMonth() + 1); renderCalendar(); }
+function renderCalendar() { const year = currentMonth.getFullYear(); const month = currentMonth.getMonth(); const monthNames = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień']; document.getElementById('month-title').textContent = monthNames[month] + ' ' + year; const firstDay = new Date(year, month, 1); const startDate = new Date(firstDay); startDate.setDate(startDate.getDate() - firstDay.getDay() + 1); let html = ''; const current = new Date(startDate); for (let i = 0; i < 42; i++) { const isCurrentMonth = current.getMonth() === month; const dateStr = current.toISOString().split('T')[0]; const dayEvents = allEvents.filter(e => e.data === dateStr); html += `<div class="border border-[#e5e5ea] rounded-[8px] p-2 min-h-[80px] ${isCurrentMonth ? 'bg-white' : 'bg-[#f2f2f7]'}"><div class="text-[13px] font-semibold ${isCurrentMonth ? 'text-[#000]' : 'text-[#c6c6c8]'} mb-1">${current.getDate()}</div><div class="space-y-1">${dayEvents.slice(0, 2).map(e => `<div class="text-[11px] bg-[#007aff] text-white rounded px-1 py-0.5 truncate cursor-pointer" onclick="showEditEventModal('${escapeHtml(e.id)}')">${escapeHtml(e.tytul)}</div>`).join('')}${dayEvents.length > 2 ? `<div class="text-[11px] text-[#8e8e93]">+${dayEvents.length - 2}</div>` : ''}</div></div>`; current.setDate(current.getDate() + 1); } document.getElementById('calendar-grid').innerHTML = html; }
+function renderEventsList() { const sorted = allEvents.sort((a, b) => new Date(a.data) - new Date(b.data)).slice(0, 50); if (sorted.length === 0) { document.getElementById('events-list').innerHTML = `<div class="empty-state py-8"><div class="empty-state-icon">📅</div><div class="empty-state-title">Brak wydarzeń</div><div class="empty-state-text">Kliknij "Dodaj", aby stworzyć nowe wydarzenie</div></div>`; return; } const html = sorted.map(e => `<div class="ios-row cursor-pointer" onclick="showEditEventModal('${escapeHtml(e.id)}')"><div class="flex-1 min-w-0"><div class="text-[15px] font-medium text-[#000] truncate">${escapeHtml(e.tytul)}</div><div class="text-[13px] text-[#8e8e93] mt-1">📅 ${formatDate(e.data)}${e.godzina_od ? ' • ' + e.godzina_od : ''}</div></div></div>`).join(''); document.getElementById('events-list').innerHTML = html; }
+function showAddEventModal() { window.editingEventId = null; const modal = document.getElementById('event-modal-template').innerHTML.replace('{{ title }}', 'Dodaj wydarzenie'); const tempDiv = document.createElement('div'); tempDiv.innerHTML = modal; showModal(tempDiv.innerHTML); document.getElementById('modal-evt-date').value = new Date().toISOString().split('T')[0]; document.getElementById('delete-evt-btn').classList.add('hidden'); }
+function showEditEventModal(eventId) { window.editingEventId = eventId; const event = allEvents.find(e => e.id === eventId); if (!event) return; const modal = document.getElementById('event-modal-template').innerHTML.replace('{{ title }}', 'Edytuj wydarzenie'); const tempDiv = document.createElement('div'); tempDiv.innerHTML = modal; showModal(tempDiv.innerHTML); document.getElementById('modal-evt-title').value = event.tytul; document.getElementById('modal-evt-date').value = event.data; document.getElementById('modal-evt-time-from').value = event.godzina_od || ''; document.getElementById('modal-evt-time-to').value = event.godzina_do || ''; document.getElementById('modal-evt-type').value = event.typ || 'ogolne'; document.getElementById('modal-evt-notes').value = event.notatki || ''; document.getElementById('delete-evt-btn').classList.remove('hidden'); }
+function saveEvent() { const title = document.getElementById('modal-evt-title').value.trim(); const date = document.getElementById('modal-evt-date').value; if (!title || !date) { showError('Tytuł i data są wymagane'); return; } const eventData = { tytul: title, data: date, godzina_od: document.getElementById('modal-evt-time-from').value, godzina_do: document.getElementById('modal-evt-time-to').value, typ: document.getElementById('modal-evt-type').value, notatki: document.getElementById('modal-evt-notes').value }; if (window.editingEventId) { eventData.id = window.editingEventId; google.script.run.withSuccessHandler(function(result) { if (result.success) { showSuccess('Wydarzenie zaktualizowane'); loadEvents(); } else showError('Błąd: ' + result.error); }).updateEvent(eventData); } else { google.script.run.withSuccessHandler(function(result) { if (result.success) { showSuccess('Wydarzenie dodane'); loadEvents(); } else showError('Błąd: ' + result.error); }).createEvent(eventData); } }
+function deleteEvent(eventId) { if (!confirm('Czy na pewno chcesz usunąć to wydarzenie?')) return; google.script.run.withSuccessHandler(function(result) { if (result.success) { showSuccess('Wydarzenie usunięte'); loadEvents(); } else showError('Błąd: ' + result.error); }).deleteEvent(eventId); }
+</script>
