@@ -1,42 +1,223 @@
 <div class="max-w-6xl mx-auto">
   <div class="flex items-center justify-between mb-6">
     <h1 class="text-2xl font-bold text-[#000]">Zadania</h1>
-    <button onclick="showAddTaskModal()" class="btn-primary w-auto flex items-center gap-2" style="width: auto;"><i data-lucide="plus" class="w-5 h-5"></i>Dodaj</button>
+    <button onclick="showAddTaskModal()" class="btn-primary w-auto flex items-center gap-2" style="width: auto;">
+      <i data-lucide="plus" class="w-5 h-5"></i>Dodaj
+    </button>
   </div>
   <div class="mb-4 flex items-center gap-3">
     <div class="segmented">
-      <button class="segmented-btn active" onclick="switchView('list')"><i data-lucide="list" class="w-4 h-4 inline-block mr-1"></i>Lista</button>
-      <button class="segmented-btn" onclick="switchView('kanban')"><i data-lucide="layout-grid" class="w-4 h-4 inline-block mr-1"></i>Kanban</button>
+      <button class="segmented-btn active" onclick="switchView('list', event)">
+        <i data-lucide="list" class="w-4 h-4 inline-block mr-1"></i>Lista
+      </button>
+      <button class="segmented-btn" onclick="switchView('kanban', event)">
+        <i data-lucide="layout-grid" class="w-4 h-4 inline-block mr-1"></i>Kanban
+      </button>
     </div>
   </div>
   <div id="list-view">
     <div class="ios-card">
-      <div id="tasks-list" class="divide-y divide-[#e5e5ea]">
-        ${skeleton(5)}
-      </div>
+      <div id="tasks-list" class="divide-y divide-[#e5e5ea]">${skeleton(5)}</div>
     </div>
   </div>
   <div id="kanban-view" class="hidden">
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div id="kanban-todo" class="bg-[#f2f2f7] rounded-[12px] p-4 min-h-[500px]"><h3 class="font-semibold text-[#000] mb-3">Do wykonania</h3><div class="space-y-2">${skeleton(3)}</div></div>
-      <div id="kanban-inprogress" class="bg-[#f2f2f7] rounded-[12px] p-4 min-h-[500px]"><h3 class="font-semibold text-[#000] mb-3">W trakcie</h3><div class="space-y-2">${skeleton(3)}</div></div>
-      <div id="kanban-done" class="bg-[#f2f2f7] rounded-[12px] p-4 min-h-[500px]"><h3 class="font-semibold text-[#000] mb-3">Ukończone</h3><div class="space-y-2">${skeleton(3)}</div></div>
+      <div id="kanban-todo" class="bg-[#f2f2f7] rounded-[12px] p-4 min-h-[500px]">
+        <h3 class="font-semibold text-[#000] mb-3">Do wykonania</h3>
+        <div id="kanban-todo-items" class="space-y-2">${skeleton(3)}</div>
+      </div>
+      <div id="kanban-inprogress" class="bg-[#f2f2f7] rounded-[12px] p-4 min-h-[500px]">
+        <h3 class="font-semibold text-[#000] mb-3">W trakcie</h3>
+        <div id="kanban-inprogress-items" class="space-y-2">${skeleton(3)}</div>
+      </div>
+      <div id="kanban-done" class="bg-[#f2f2f7] rounded-[12px] p-4 min-h-[500px]">
+        <h3 class="font-semibold text-[#000] mb-3">Ukończone</h3>
+        <div id="kanban-done-items" class="space-y-2">${skeleton(3)}</div>
+      </div>
     </div>
   </div>
 </div>
+
 <script id="task-modal-template" type="text/template">
-<div class="modal-sheet"><div class="modal-handle"></div><div class="px-6 py-4"><h2 class="text-[20px] font-bold mb-4">{{ title }}</h2><div class="space-y-4"><div><label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Tytuł *</label><input type="text" id="modal-title" class="ios-input" placeholder="Wpisz tytuł..."></div><div><label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Opis</label><textarea id="modal-opis" class="ios-textarea" placeholder="Dodaj szczegóły..."></textarea></div><div class="grid grid-cols-2 gap-3"><div><label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Priorytet</label><select id="modal-priority" class="ios-select"><option value="niski">Niski</option><option value="normalny" selected>Normalny</option><option value="wysoki">Wysoki</option><option value="pilne">Pilne</option></select></div><div><label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Status</label><select id="modal-status" class="ios-select"><option value="todo" selected>Do wykonania</option><option value="inprogress">W trakcie</option><option value="done">Ukończone</option></select></div></div><div><label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Termin</label><input type="date" id="modal-termin" class="ios-input"></div><div class="flex gap-3 pt-4"><button onclick="closeModal(); saveTask();" class="btn-primary">Zapisz</button><button onclick="closeModal(); if(window.editingTaskId) deleteTask(window.editingTaskId);" id="delete-btn" class="btn-destructive hidden">Usuń</button><button onclick="closeModal()" class="btn-secondary">Anuluj</button></div></div></div></div>
+<div class="modal-sheet"><div class="modal-handle"></div><div class="px-6 py-4">
+<h2 class="text-[20px] font-bold mb-4">{{ title }}</h2>
+<div class="space-y-4">
+  <div><label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Tytuł *</label><input type="text" id="modal-title" class="ios-input" placeholder="Wpisz tytuł..."></div>
+  <div><label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Opis</label><textarea id="modal-opis" class="ios-textarea" placeholder="Dodaj szczegóły..."></textarea></div>
+  <div class="grid grid-cols-2 gap-3">
+    <div><label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Priorytet</label>
+    <select id="modal-priority" class="ios-select"><option value="niski">Niski</option><option value="normalny" selected>Normalny</option><option value="wysoki">Wysoki</option><option value="pilne">Pilne</option></select></div>
+    <div><label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Status</label>
+    <select id="modal-status" class="ios-select"><option value="todo" selected>Do wykonania</option><option value="inprogress">W trakcie</option><option value="done">Ukończone</option></select></div>
+  </div>
+  <div><label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Termin</label><input type="date" id="modal-termin" class="ios-input"></div>
+  <div class="flex gap-3 pt-4">
+    <button onclick="closeModal(); saveTask();" class="btn-primary">Zapisz</button>
+    <button onclick="confirmDeleteTask()" id="delete-btn" class="btn-destructive hidden">Usuń</button>
+    <button onclick="closeModal()" class="btn-secondary">Anuluj</button>
+  </div>
+</div></div></div>
 </script>
+
 <script>
-let currentView = 'list'; let allTasks = [];
+let currentView = 'list';
+let allTasks = [];
+
 function initModule() { loadTasks(); }
-function switchView(view) { currentView = view; document.querySelectorAll('.segmented-btn').forEach(el => el.classList.remove('active')); event.target.closest('.segmented-btn').classList.add('active'); document.getElementById('list-view').classList.toggle('hidden', view !== 'list'); document.getElementById('kanban-view').classList.toggle('hidden', view !== 'kanban'); if (view === 'kanban') renderKanban(); }
-function loadTasks() { google.script.run.withSuccessHandler(function(result) { if (result.success) { allTasks = result.data; renderListView(); renderKanban(); } }).getTasks(); }
-function renderListView() { if (allTasks.length === 0) { document.getElementById('tasks-list').innerHTML = `<div class="empty-state py-8"><div class="empty-state-icon">📋</div><div class="empty-state-title">Brak zadań</div><div class="empty-state-text">Kliknij "Dodaj", aby stworzyć nowe zadanie</div></div>`; return; } const sorted = allTasks.sort((a, b) => { const priorityOrder = { 'pilne': 0, 'wysoki': 1, 'normalny': 2, 'niski': 3 }; return (priorityOrder[a.priorytet] || 2) - (priorityOrder[b.priorytet] || 2); }); const html = sorted.map(t => `<div class="ios-row cursor-pointer" onclick="showEditTaskModal('${escapeHtml(t.id)}')"><input type="checkbox" ${t.status === 'done' ? 'checked' : ''} onclick="event.stopPropagation(); toggleTaskDone('${escapeHtml(t.id)}')" class="w-5 h-5 cursor-pointer"><div class="flex-1 min-w-0"><div class="text-[15px] font-medium ${t.status === 'done' ? 'line-through text-[#8e8e93]' : 'text-[#000]'}">${escapeHtml(t.tytul)}</div>${t.termin ? `<div class="text-[13px] text-[#8e8e93] mt-1">📅 ${formatDate(t.termin)}</div>` : ''}</div><div class="flex-shrink-0">${getPriorityBadge(t.priorytet)}</div></div>`).join(''); document.getElementById('tasks-list').innerHTML = html; }
-function renderKanban() { const columns = { 'todo': [], 'inprogress': [], 'done': [] }; allTasks.forEach(t => { const status = t.status || 'todo'; columns[status].push(t); }); ['todo', 'inprogress', 'done'].forEach(status => { const html = columns[status].map(t => `<div class="ios-card p-3 cursor-pointer" onclick="showEditTaskModal('${escapeHtml(t.id)}')"><div class="text-[15px] font-medium text-[#000] mb-2 line-clamp-2">${escapeHtml(t.tytul)}</div><div class="flex items-center justify-between"><span class="text-[13px] text-[#8e8e93]">${getPriorityBadge(t.priorytet)}</span>${t.termin ? `<span class="text-[13px] text-[#8e8e93]">${formatDate(t.termin)}</span>` : ''}</div></div>`).join(''); const emptyMessage = `<div class="text-center text-[13px] text-[#8e8e93] py-6">Brak zadań</div>`; document.getElementById(`kanban-${status}`).innerHTML = `<div class="space-y-2">${html || emptyMessage}</div>`; }); }
-function showAddTaskModal() { window.editingTaskId = null; const modal = document.getElementById('task-modal-template').innerHTML.replace('{{ title }}', 'Dodaj zadanie'); const tempDiv = document.createElement('div'); tempDiv.innerHTML = modal; showModal(tempDiv.innerHTML); document.getElementById('delete-btn').classList.add('hidden'); }
-function showEditTaskModal(taskId) { window.editingTaskId = taskId; const task = allTasks.find(t => t.id === taskId); if (!task) return; const modal = document.getElementById('task-modal-template').innerHTML.replace('{{ title }}', 'Edytuj zadanie'); const tempDiv = document.createElement('div'); tempDiv.innerHTML = modal; showModal(tempDiv.innerHTML); document.getElementById('modal-title').value = task.tytul; document.getElementById('modal-opis').value = task.opis || ''; document.getElementById('modal-priority').value = task.priorytet || 'normalny'; document.getElementById('modal-status').value = task.status || 'todo'; document.getElementById('modal-termin').value = task.termin ? task.termin.split('T')[0] : ''; document.getElementById('delete-btn').classList.remove('hidden'); }
-function saveTask() { const title = document.getElementById('modal-title').value.trim(); if (!title) { showError('Tytuł jest wymagany'); return; } const taskData = { tytul: title, opis: document.getElementById('modal-opis').value, priorytet: document.getElementById('modal-priority').value, status: document.getElementById('modal-status').value, termin: document.getElementById('modal-termin').value }; if (window.editingTaskId) { taskData.id = window.editingTaskId; google.script.run.withSuccessHandler(function(result) { if (result.success) { showSuccess('Zadanie zaktualizowane'); loadTasks(); } else showError('Błąd: ' + result.error); }).updateTask(taskData); } else { google.script.run.withSuccessHandler(function(result) { if (result.success) { showSuccess('Zadanie dodane'); loadTasks(); } else showError('Błąd: ' + result.error); }).createTask(taskData); } }
-function toggleTaskDone(taskId) { const task = allTasks.find(t => t.id === taskId); if (!task) return; task.status = task.status === 'done' ? 'todo' : 'done'; google.script.run.withSuccessHandler(function(result) { if (result.success) { loadTasks(); } }).updateTask(task); }
-function deleteTask(taskId) { if (!confirm('Czy na pewno chcesz usunąć to zadanie?')) return; google.script.run.withSuccessHandler(function(result) { if (result.success) { showSuccess('Zadanie usunięte'); loadTasks(); } else showError('Błąd: ' + result.error); }).deleteTask(taskId); }
+
+function switchView(view, e) {
+  currentView = view;
+  document.querySelectorAll('.segmented-btn').forEach(function(el) { el.classList.remove('active'); });
+  if (e && e.target) e.target.closest('.segmented-btn').classList.add('active');
+  document.getElementById('list-view').classList.toggle('hidden', view !== 'list');
+  document.getElementById('kanban-view').classList.toggle('hidden', view !== 'kanban');
+  if (view === 'kanban') renderKanban();
+}
+
+function loadTasks() {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) {
+        allTasks = result.data;
+        renderListView();
+        if (currentView === 'kanban') renderKanban();
+      } else {
+        showError('Błąd: ' + result.error);
+      }
+    })
+    .withFailureHandler(function(err) { showError('Błąd połączenia: ' + err.message); })
+    .getTasks();
+}
+
+function renderListView() {
+  if (allTasks.length === 0) {
+    document.getElementById('tasks-list').innerHTML =
+      '<div class="empty-state py-8"><div class="empty-state-icon">📋</div>' +
+      '<div class="empty-state-title">Brak zadań</div>' +
+      '<div class="empty-state-text">Kliknij "Dodaj", aby stworzyć nowe zadanie</div></div>';
+    return;
+  }
+  const priorityOrder = { 'pilne': 0, 'wysoki': 1, 'normalny': 2, 'niski': 3 };
+  // Kopiujemy tablicę przed sortowaniem — nie mutujemy allTasks
+  const sorted = [...allTasks].sort(function(a, b) {
+    return (priorityOrder[a.priorytet] || 2) - (priorityOrder[b.priorytet] || 2);
+  });
+  const html = sorted.map(function(t) {
+    return '<div class="ios-row cursor-pointer" onclick="showEditTaskModal(\'' + escapeHtml(t.id) + '\')">' +
+      '<input type="checkbox" ' + (t.status === 'done' ? 'checked' : '') +
+      ' onclick="event.stopPropagation(); toggleTaskDone(\'' + escapeHtml(t.id) + '\')" class="w-5 h-5 cursor-pointer">' +
+      '<div class="flex-1 min-w-0">' +
+      '<div class="text-[15px] font-medium ' + (t.status === 'done' ? 'line-through text-[#8e8e93]' : 'text-[#000]') + '">' +
+      escapeHtml(t.tytul) + '</div>' +
+      (t.termin ? '<div class="text-[13px] text-[#8e8e93] mt-1">📅 ' + formatDate(t.termin) + '</div>' : '') +
+      '</div><div class="flex-shrink-0">' + getPriorityBadge(t.priorytet) + '</div></div>';
+  }).join('');
+  document.getElementById('tasks-list').innerHTML = html;
+}
+
+function renderKanban() {
+  const columns = { 'todo': [], 'inprogress': [], 'done': [] };
+  allTasks.forEach(function(t) {
+    const status = t.status || 'todo';
+    if (columns[status]) columns[status].push(t);
+  });
+  ['todo', 'inprogress', 'done'].forEach(function(status) {
+    const html = columns[status].map(function(t) {
+      return '<div class="ios-card p-3 cursor-pointer" onclick="showEditTaskModal(\'' + escapeHtml(t.id) + '\')">' +
+        '<div class="text-[15px] font-medium text-[#000] mb-2 line-clamp-2">' + escapeHtml(t.tytul) + '</div>' +
+        '<div class="flex items-center justify-between">' +
+        '<span class="text-[13px] text-[#8e8e93]">' + getPriorityBadge(t.priorytet) + '</span>' +
+        (t.termin ? '<span class="text-[13px] text-[#8e8e93]">' + formatDate(t.termin) + '</span>' : '') +
+        '</div></div>';
+    }).join('');
+    document.getElementById('kanban-' + status + '-items').innerHTML =
+      html || '<div class="text-center text-[13px] text-[#8e8e93] py-6">Brak zadań</div>';
+  });
+}
+
+function showAddTaskModal() {
+  window.editingTaskId = null;
+  const tpl = document.getElementById('task-modal-template').innerHTML.replace('{{ title }}', 'Dodaj zadanie');
+  const div = document.createElement('div');
+  div.innerHTML = tpl;
+  showModal(div.innerHTML);
+  document.getElementById('delete-btn').classList.add('hidden');
+}
+
+function showEditTaskModal(taskId) {
+  window.editingTaskId = taskId;
+  const task = allTasks.find(function(t) { return t.id === taskId; });
+  if (!task) return;
+  const tpl = document.getElementById('task-modal-template').innerHTML.replace('{{ title }}', 'Edytuj zadanie');
+  const div = document.createElement('div');
+  div.innerHTML = tpl;
+  showModal(div.innerHTML);
+  document.getElementById('modal-title').value = task.tytul;
+  document.getElementById('modal-opis').value = task.opis || '';
+  document.getElementById('modal-priority').value = task.priorytet || 'normalny';
+  document.getElementById('modal-status').value = task.status || 'todo';
+  document.getElementById('modal-termin').value = task.termin ? String(task.termin).split('T')[0] : '';
+  document.getElementById('delete-btn').classList.remove('hidden');
+}
+
+function confirmDeleteTask() {
+  if (!window.editingTaskId) return;
+  if (!confirm('Czy na pewno chcesz usunąć to zadanie?')) return;
+  const id = window.editingTaskId;
+  closeModal();
+  deleteTask(id);
+}
+
+function saveTask() {
+  const title = document.getElementById('modal-title').value.trim();
+  if (!title) { showError('Tytuł jest wymagany'); return; }
+  const taskData = {
+    tytul: title,
+    opis: document.getElementById('modal-opis').value,
+    priorytet: document.getElementById('modal-priority').value,
+    status: document.getElementById('modal-status').value,
+    termin: document.getElementById('modal-termin').value
+  };
+  if (window.editingTaskId) {
+    taskData.id = window.editingTaskId;
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.success) { showSuccess('Zadanie zaktualizowane'); loadTasks(); }
+        else showError('Błąd: ' + result.error);
+      })
+      .withFailureHandler(function(err) { showError('Błąd połączenia: ' + err.message); })
+      .updateTask(taskData);
+  } else {
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.success) { showSuccess('Zadanie dodane'); loadTasks(); }
+        else showError('Błąd: ' + result.error);
+      })
+      .withFailureHandler(function(err) { showError('Błąd połączenia: ' + err.message); })
+      .createTask(taskData);
+  }
+}
+
+function toggleTaskDone(taskId) {
+  const task = allTasks.find(function(t) { return t.id === taskId; });
+  if (!task) return;
+  const updated = Object.assign({}, task, { status: task.status === 'done' ? 'todo' : 'done' });
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) loadTasks();
+      else showError('Błąd: ' + result.error);
+    })
+    .withFailureHandler(function(err) { showError('Błąd połączenia: ' + err.message); })
+    .updateTask(updated);
+}
+
+function deleteTask(taskId) {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) { showSuccess('Zadanie usunięte'); loadTasks(); }
+      else showError('Błąd: ' + result.error);
+    })
+    .withFailureHandler(function(err) { showError('Błąd połączenia: ' + err.message); })
+    .deleteTask(taskId);
+}
 </script>

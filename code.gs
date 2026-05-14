@@ -5,15 +5,17 @@
 
 const FOLDER_NAME = 'Cerebro';
 
+const ALLOWED_MODULES = ['Pulpit', 'Zadania', 'Wiedza', 'Chat', 'Terminarz', 'Personel', 'Ustawienia'];
+const ALLOWED_SETTINGS_KEYS = ['organizationName', 'contactEmail', 'claudeApiKey', 'claudeModel', 'claudeSystemPrompt'];
+
 // Główny handler HTTP
 function doGet(e) {
-  const page = e.parameter.page || 'index';
   return HtmlService
     .createTemplateFromFile('Index')
     .evaluate()
     .setTitle('Cerebro')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.SAMEORIGIN);
 }
 
 // Includowanie plików HTML
@@ -21,12 +23,15 @@ function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
-// Ładowanie modułów dynamicznie
+// Ładowanie modułów dynamicznie — z whitelistą po stronie serwera
 function getModuleHtml(moduleName) {
+  if (!ALLOWED_MODULES.includes(moduleName)) {
+    return '<div class="p-6"><div class="text-red-600">Niedozwolony moduł.</div></div>';
+  }
   try {
     return HtmlService.createHtmlOutputFromFile(moduleName).getContent();
   } catch(e) {
-    return '<div class="p-6"><div class="text-red-600">Błąd ładowania modułu: ' + e.toString() + '</div></div>';
+    return '<div class="p-6"><div class="text-red-600">Błąd ładowania modułu.</div></div>';
   }
 }
 
@@ -36,14 +41,10 @@ function getModuleHtml(moduleName) {
 
 function setupCerebro() {
   try {
-    // Utwórz arkusz kalkulacyjny
     const ss = SpreadsheetApp.create('Cerebro — Baza Danych');
     const id = ss.getId();
-
-    // Zapisz ID w Properties
     PropertiesService.getScriptProperties().setProperty('SPREADSHEET_ID', id);
 
-    // Utwórz arkusze
     const sheets = [
       {
         name: 'zadania',
@@ -57,10 +58,6 @@ function setupCerebro() {
         name: 'wydarzenia',
         headers: ['id','tytul','data','godzina_od','godzina_do','typ','notatki','data_utworzenia']
       },
-      {
-        name: 'ustawienia',
-        headers: ['klucz','wartosc']
-      },
     ];
 
     sheets.forEach(cfg => {
@@ -73,14 +70,10 @@ function setupCerebro() {
         .setBackground('#f2f2f7');
     });
 
-    // Usuń domyślny Sheet1
     const defaultSheet = ss.getSheetByName('Sheet1') || ss.getSheetByName('Arkusz1');
     if (defaultSheet) ss.deleteSheet(defaultSheet);
 
-    // Utwórz strukturę folderów na Drive
     setupDriveFolders();
-
-    // Ustaw trigger auto-importu
     setupDriveTrigger();
 
     return {
@@ -131,14 +124,25 @@ function getTasks() {
 
 function createTask(data) {
   try {
+    if (!data || !data.tytul || String(data.tytul).trim() === '') {
+      return { success: false, error: 'Tytuł jest wymagany' };
+    }
+    const ALLOWED_PRIORITIES = ['niski','normalny','wysoki','pilne'];
+    const ALLOWED_STATUSES = ['todo','inprogress','done'];
     const sheet = getSpreadsheet().getSheetByName('zadania');
     const id = generateId();
     const now = new Date().toISOString();
     sheet.appendRow([
-      id, data.tytul, data.opis||'', data.termin||'',
-      data.priorytet||'normalny', data.kategoria||'Ogólne',
-      data.status||'todo', data.tagi||'',
-      data.powtarzaj||'nigdy', now, now
+      id,
+      String(data.tytul).trim(),
+      data.opis ? String(data.opis) : '',
+      data.termin ? String(data.termin) : '',
+      ALLOWED_PRIORITIES.includes(data.priorytet) ? data.priorytet : 'normalny',
+      data.kategoria ? String(data.kategoria) : 'Ogólne',
+      ALLOWED_STATUSES.includes(data.status) ? data.status : 'todo',
+      data.tagi ? String(data.tagi) : '',
+      data.powtarzaj ? String(data.powtarzaj) : 'nigdy',
+      now, now
     ]);
     return { success: true, id };
   } catch(e) {
@@ -148,15 +152,28 @@ function createTask(data) {
 
 function updateTask(data) {
   try {
+    if (!data || !data.id) return { success: false, error: 'Brak ID zadania' };
+    if (!data.tytul || String(data.tytul).trim() === '') {
+      return { success: false, error: 'Tytuł jest wymagany' };
+    }
+    const ALLOWED_PRIORITIES = ['niski','normalny','wysoki','pilne'];
+    const ALLOWED_STATUSES = ['todo','inprogress','done'];
     const sheet = getSpreadsheet().getSheetByName('zadania');
     const rows = sheet.getDataRange().getValues();
     for (let i = 1; i < rows.length; i++) {
       if (rows[i][0] === data.id) {
         sheet.getRange(i+1, 1, 1, 11).setValues([[
-          data.id, data.tytul, data.opis||'', data.termin||'',
-          data.priorytet||'normalny', data.kategoria||'Ogólne',
-          data.status||'todo', data.tagi||'',
-          data.powtarzaj||'nigdy', rows[i][9], new Date().toISOString()
+          data.id,
+          String(data.tytul).trim(),
+          data.opis ? String(data.opis) : '',
+          data.termin ? String(data.termin) : '',
+          ALLOWED_PRIORITIES.includes(data.priorytet) ? data.priorytet : 'normalny',
+          data.kategoria ? String(data.kategoria) : 'Ogólne',
+          ALLOWED_STATUSES.includes(data.status) ? data.status : 'todo',
+          data.tagi ? String(data.tagi) : '',
+          data.powtarzaj ? String(data.powtarzaj) : 'nigdy',
+          rows[i][9],
+          new Date().toISOString()
         ]]);
         return { success: true };
       }
@@ -202,13 +219,23 @@ function getKnowledge(filterVisibility) {
 
 function createKnowledge(data) {
   try {
+    if (!data || !data.tytul || String(data.tytul).trim() === '') {
+      return { success: false, error: 'Tytuł jest wymagany' };
+    }
+    const ALLOWED_CATEGORIES = ['notatki','procedury','cenniki','szablony','materialy','materiały','inne','chat'];
+    const ALLOWED_VISIBILITY = ['prywatny','udostepniony'];
     const sheet = getSpreadsheet().getSheetByName('wiedza');
     const id = generateId();
     const now = new Date().toISOString();
     sheet.appendRow([
-      id, data.tytul, data.kategoria||'notatki',
-      data.tagi||'', data.widocznosc||'prywatny',
-      data.tresc||'', data.zrodlo||'', now, now, 1
+      id,
+      String(data.tytul).trim(),
+      ALLOWED_CATEGORIES.includes(data.kategoria) ? data.kategoria : 'notatki',
+      data.tagi ? String(data.tagi) : '',
+      ALLOWED_VISIBILITY.includes(data.widocznosc) ? data.widocznosc : 'prywatny',
+      data.tresc ? String(data.tresc) : '',
+      data.zrodlo ? String(data.zrodlo) : '',
+      now, now, 1
     ]);
     return { success: true, id };
   } catch(e) {
@@ -218,16 +245,28 @@ function createKnowledge(data) {
 
 function updateKnowledge(data) {
   try {
+    if (!data || !data.id) return { success: false, error: 'Brak ID wpisu' };
+    if (!data.tytul || String(data.tytul).trim() === '') {
+      return { success: false, error: 'Tytuł jest wymagany' };
+    }
+    const ALLOWED_CATEGORIES = ['notatki','procedury','cenniki','szablony','materialy','materiały','inne','chat'];
+    const ALLOWED_VISIBILITY = ['prywatny','udostepniony'];
     const sheet = getSpreadsheet().getSheetByName('wiedza');
     const rows = sheet.getDataRange().getValues();
     for (let i = 1; i < rows.length; i++) {
       if (rows[i][0] === data.id) {
         const version = (parseInt(rows[i][9]) || 1) + 1;
         sheet.getRange(i+1, 1, 1, 10).setValues([[
-          data.id, data.tytul, data.kategoria,
-          data.tagi||'', data.widocznosc,
-          data.tresc||'', data.zrodlo||'',
-          rows[i][7], new Date().toISOString(), version
+          data.id,
+          String(data.tytul).trim(),
+          ALLOWED_CATEGORIES.includes(data.kategoria) ? data.kategoria : 'notatki',
+          data.tagi ? String(data.tagi) : '',
+          ALLOWED_VISIBILITY.includes(data.widocznosc) ? data.widocznosc : 'prywatny',
+          data.tresc ? String(data.tresc) : '',
+          data.zrodlo ? String(data.zrodlo) : '',
+          rows[i][7],
+          new Date().toISOString(),
+          version
         ]]);
         return { success: true };
       }
@@ -269,12 +308,21 @@ function getEvents() {
 
 function createEvent(data) {
   try {
+    if (!data || !data.tytul || String(data.tytul).trim() === '') {
+      return { success: false, error: 'Tytuł jest wymagany' };
+    }
+    if (!data.data) return { success: false, error: 'Data jest wymagana' };
+    const ALLOWED_TYPES = ['ogolne','spotkanie','deadline','wolne','inne'];
     const sheet = getSpreadsheet().getSheetByName('wydarzenia');
     const id = generateId();
     sheet.appendRow([
-      id, data.tytul, data.data,
-      data.godzina_od||'', data.godzina_do||'',
-      data.typ||'ogolne', data.notatki||'',
+      id,
+      String(data.tytul).trim(),
+      String(data.data),
+      data.godzina_od ? String(data.godzina_od) : '',
+      data.godzina_do ? String(data.godzina_do) : '',
+      ALLOWED_TYPES.includes(data.typ) ? data.typ : 'ogolne',
+      data.notatki ? String(data.notatki) : '',
       new Date().toISOString()
     ]);
     return { success: true, id };
@@ -285,14 +333,25 @@ function createEvent(data) {
 
 function updateEvent(data) {
   try {
+    if (!data || !data.id) return { success: false, error: 'Brak ID wydarzenia' };
+    if (!data.tytul || String(data.tytul).trim() === '') {
+      return { success: false, error: 'Tytuł jest wymagany' };
+    }
+    if (!data.data) return { success: false, error: 'Data jest wymagana' };
+    const ALLOWED_TYPES = ['ogolne','spotkanie','deadline','wolne','inne'];
     const sheet = getSpreadsheet().getSheetByName('wydarzenia');
     const rows = sheet.getDataRange().getValues();
     for (let i = 1; i < rows.length; i++) {
       if (rows[i][0] === data.id) {
         sheet.getRange(i+1, 1, 1, 8).setValues([[
-          data.id, data.tytul, data.data,
-          data.godzina_od||'', data.godzina_do||'',
-          data.typ||'ogolne', data.notatki||'', rows[i][7]
+          data.id,
+          String(data.tytul).trim(),
+          String(data.data),
+          data.godzina_od ? String(data.godzina_od) : '',
+          data.godzina_do ? String(data.godzina_do) : '',
+          ALLOWED_TYPES.includes(data.typ) ? data.typ : 'ogolne',
+          data.notatki ? String(data.notatki) : '',
+          rows[i][7]
         ]]);
         return { success: true };
       }
@@ -320,13 +379,19 @@ function deleteEvent(id) {
 }
 
 // ============================================================
-// SETTINGS
+// SETTINGS — tylko dozwolone klucze
 // ============================================================
 
 function getSettings() {
   try {
-    const props = PropertiesService.getUserProperties().getProperties();
-    return { success: true, data: props };
+    const allProps = PropertiesService.getUserProperties().getProperties();
+    const safe = {};
+    ALLOWED_SETTINGS_KEYS.forEach(key => {
+      if (allProps[key] !== undefined) safe[key] = allProps[key];
+    });
+    safe._spreadsheetReady = !!PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
+    safe._driveFolderReady = !!PropertiesService.getScriptProperties().getProperty('CEREBRO_FOLDER_ID');
+    return { success: true, data: safe };
   } catch(e) {
     return { success: false, error: e.toString() };
   }
@@ -334,8 +399,95 @@ function getSettings() {
 
 function saveSettings(data) {
   try {
-    PropertiesService.getUserProperties().setProperties(data);
+    const safe = {};
+    ALLOWED_SETTINGS_KEYS.forEach(key => {
+      if (data[key] !== undefined) safe[key] = String(data[key]);
+    });
+    PropertiesService.getUserProperties().setProperties(safe);
     return { success: true };
+  } catch(e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+// ============================================================
+// CLAUDE API
+// ============================================================
+
+function callClaudeApi(messages, systemPrompt) {
+  try {
+    const apiKey = PropertiesService.getUserProperties().getProperty('claudeApiKey');
+    if (!apiKey || apiKey.trim() === '') {
+      return { success: false, error: 'Brak klucza API Claude. Dodaj go w Ustawieniach.' };
+    }
+
+    const model = PropertiesService.getUserProperties().getProperty('claudeModel') || 'claude-opus-4-7';
+    const defaultSystem = PropertiesService.getUserProperties().getProperty('claudeSystemPrompt') ||
+      'Jesteś pomocnym asystentem o nazwie Cerebro. Odpowiadasz po polsku, chyba że użytkownik pisze w innym języku. Jesteś zwięzły, precyzyjny i przyjazny.';
+
+    const payload = {
+      model: model,
+      max_tokens: 4096,
+      system: systemPrompt || defaultSystem,
+      messages: messages
+    };
+
+    const options = {
+      method: 'post',
+      contentType: 'application/json',
+      headers: {
+        'x-api-key': apiKey.trim(),
+        'anthropic-version': '2023-06-01'
+      },
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    };
+
+    const response = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', options);
+    const result = JSON.parse(response.getContentText());
+
+    if (result.error) {
+      return { success: false, error: result.error.message || 'Błąd API Claude' };
+    }
+    if (!result.content || !result.content[0]) {
+      return { success: false, error: 'Pusta odpowiedź z API' };
+    }
+
+    return { success: true, message: result.content[0].text, usage: result.usage };
+  } catch(e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+function saveChatConversationToDrive(title, messages) {
+  try {
+    const folderId = PropertiesService.getScriptProperties().getProperty('CEREBRO_FOLDER_ID');
+    if (!folderId) {
+      return { success: false, error: 'Folder Cerebro nie istnieje. Skonfiguruj Drive w Ustawieniach.' };
+    }
+
+    const cerebro = DriveApp.getFolderById(folderId);
+    let chatsFolder;
+    const existing = cerebro.getFoldersByName('Konwersacje_Claude');
+    if (existing.hasNext()) {
+      chatsFolder = existing.next();
+    } else {
+      chatsFolder = cerebro.createFolder('Konwersacje_Claude');
+    }
+
+    const dateStr = new Date().toLocaleDateString('pl-PL');
+    const dateIso = new Date().toISOString().split('T')[0];
+    let content = '# ' + title + '\n\nData: ' + dateStr + '\n\n---\n\n';
+    messages.forEach(function(msg) {
+      const role = msg.role === 'user' ? '## Użytkownik' : '## Claude';
+      content += role + '\n\n' + msg.content + '\n\n---\n\n';
+    });
+
+    const filename = title.substring(0, 60) + ' — ' + dateIso + '.md';
+    const blob = Utilities.newBlob(content, 'text/markdown', filename);
+    const file = chatsFolder.createFile(blob);
+
+    return { success: true, fileId: file.getId(), fileUrl: file.getUrl(), filename: filename };
   } catch(e) {
     return { success: false, error: e.toString() };
   }
@@ -360,14 +512,19 @@ function exportAllData() {
 
 function exportCSV(sheetName) {
   try {
+    const ALLOWED_SHEETS = ['zadania','wiedza','wydarzenia'];
+    if (!ALLOWED_SHEETS.includes(sheetName)) {
+      return { success: false, error: 'Niedozwolona nazwa arkusza' };
+    }
     const sheet = getSpreadsheet().getSheetByName(sheetName);
     const data = sheet.getDataRange().getValues();
     const csv = data.map(row =>
       row.map(cell => {
-        if (typeof cell === 'string' && (cell.includes(',') || cell.includes('"'))) {
-          return '"' + cell.replace(/"/g, '""') + '"';
+        const val = String(cell);
+        if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+          return '"' + val.replace(/"/g, '""') + '"';
         }
-        return cell;
+        return val;
       }).join(',')
     ).join('\n');
     return { success: true, data: csv, filename: sheetName + '.csv' };

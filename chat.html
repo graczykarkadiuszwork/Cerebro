@@ -1,27 +1,420 @@
-<div class="max-w-4xl mx-auto">
-  <div class="flex items-center justify-between mb-6">
+<div class="max-w-4xl mx-auto h-full flex flex-col">
+
+  <!-- Nagłówek z zakładkami -->
+  <div class="flex items-center justify-between mb-4">
     <div>
-      <h1 class="text-2xl font-bold text-[#000]">Chat Saver</h1>
-      <p class="text-[15px] text-[#8e8e93] mt-1">Zapisz ważne rozmowy i chat prompty</p>
+      <h1 class="text-2xl font-bold text-[#000]">Chat Claude</h1>
+      <p class="text-[15px] text-[#8e8e93] mt-1">Rozmawiaj z Claude i zapisuj konwersacje</p>
     </div>
-    <button onclick="showAddChatModal()" class="btn-primary w-auto flex items-center gap-2" style="width: auto;"><i data-lucide="plus" class="w-5 h-5"></i>Nowa rozmowa</button>
   </div>
-  <div class="ios-card bg-[rgba(0,122,255,0.05)] border border-[#007aff] mb-4">
-    <div class="px-4 py-3 text-[15px] text-[#007aff]">💡 Kopiuj rozmowy z ChatGPT, Claude lub innego AI. Każda rozmowa zapisywana jest w bazie wiedzy.</div>
+
+  <!-- Segmented control: zakładki -->
+  <div class="mb-4 flex items-center gap-3">
+    <div class="segmented">
+      <button class="segmented-btn active" onclick="switchChatTab('live', event)">
+        <i data-lucide="bot" class="w-4 h-4 inline-block mr-1"></i>Czat z Claude
+      </button>
+      <button class="segmented-btn" onclick="switchChatTab('saved', event)">
+        <i data-lucide="archive" class="w-4 h-4 inline-block mr-1"></i>Zapisane rozmowy
+      </button>
+    </div>
   </div>
-  <div id="chats-list" class="ios-card">${skeleton(5)}</div>
+
+  <!-- ======= ZAKŁADKA: Live Chat ======= -->
+  <div id="tab-live" class="flex flex-col flex-1" style="min-height: 0;">
+
+    <!-- Pasek narzędzi chatu -->
+    <div class="flex items-center gap-2 mb-3">
+      <button onclick="newConversation()" class="btn-secondary w-auto flex items-center gap-2 text-[14px] py-2 px-4" style="width:auto;">
+        <i data-lucide="plus" class="w-4 h-4"></i>Nowa rozmowa
+      </button>
+      <button onclick="saveCurrentConversation()" id="save-conv-btn" class="btn-primary w-auto flex items-center gap-2 text-[14px] py-2 px-4 hidden" style="width:auto;">
+        <i data-lucide="save" class="w-4 h-4"></i>Zapisz na Drive
+      </button>
+      <div id="api-warning" class="hidden flex-1 text-[13px] text-[#ff9500] flex items-center gap-1">
+        <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+        Brak klucza API Claude — <button onclick="navigateTo('ustawienia')" class="underline ml-1">Przejdź do Ustawień</button>
+      </div>
+    </div>
+
+    <!-- Tytuł konwersacji -->
+    <div class="flex items-center gap-2 mb-3">
+      <input type="text" id="conv-title" class="ios-input text-[15px] py-2 px-3" placeholder="Tytuł rozmowy (opcjonalnie)..." style="max-width: 360px;">
+    </div>
+
+    <!-- Okno chatu -->
+    <div id="chat-messages" class="flex-1 ios-card overflow-y-auto p-4 space-y-4 mb-3"
+      style="min-height: 300px; max-height: calc(100vh - 420px);">
+      <div class="empty-state py-6" id="chat-empty">
+        <div class="empty-state-icon">🤖</div>
+        <div class="empty-state-title">Witaj! Jestem Claude</div>
+        <div class="empty-state-text">Wpisz wiadomość poniżej, aby rozpocząć rozmowę.<br>Konwersacje są automatycznie zapisywane na Google Drive.</div>
+      </div>
+    </div>
+
+    <!-- Pole wejściowe -->
+    <div class="flex gap-2 items-end">
+      <textarea id="chat-input" class="ios-textarea flex-1 resize-none"
+        placeholder="Wpisz wiadomość... (Enter = wyślij, Shift+Enter = nowa linia)"
+        rows="2"
+        onkeydown="handleChatKeydown(event)"
+        style="min-height: 52px; max-height: 200px;"></textarea>
+      <button onclick="sendMessage()" id="send-btn"
+        class="btn-primary w-14 h-14 flex items-center justify-center flex-shrink-0 rounded-[12px]"
+        style="width: 56px; height: 56px; min-width: 56px; padding: 0;">
+        <i data-lucide="send" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <!-- Status wysyłania -->
+    <div id="sending-indicator" class="hidden mt-2 flex items-center gap-2 text-[13px] text-[#8e8e93]">
+      <div class="animate-pulse">🧠</div>
+      <span>Claude pisze odpowiedź...</span>
+    </div>
+
+  </div>
+
+  <!-- ======= ZAKŁADKA: Zapisane rozmowy ======= -->
+  <div id="tab-saved" class="hidden">
+    <div class="flex items-center justify-between mb-4">
+      <div class="text-[15px] text-[#8e8e93]">Rozmowy zapisane w bazie wiedzy i na Google Drive</div>
+      <button onclick="showAddChatModal()" class="btn-primary w-auto flex items-center gap-2 text-[14px]" style="width:auto;">
+        <i data-lucide="plus" class="w-4 h-4"></i>Dodaj ręcznie
+      </button>
+    </div>
+    <div id="chats-list" class="ios-card">${skeleton(5)}</div>
+  </div>
+
 </div>
+
+<!-- Template modala do ręcznego dodawania rozmów -->
 <script id="chat-modal-template" type="text/template">
-<div class="modal-sheet"><div class="modal-handle"></div><div class="px-6 py-4"><h2 class="text-[20px] font-bold mb-4">{{ title }}</h2><div class="space-y-4 max-h-[70vh] overflow-y-auto"><div><label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Temat rozmowy *</label><input type="text" id="modal-chat-title" class="ios-input" placeholder="np. Pytania o API"></div><div><label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Model AI</label><select id="modal-chat-model" class="ios-select"><option value="ChatGPT">ChatGPT</option><option value="Claude">Claude</option><option value="Gemini">Gemini</option><option value="inne">Inne</option></select></div><div><label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Treść rozmowy (Markdown)</label><textarea id="modal-chat-content" class="ios-textarea" placeholder="Wklej całą rozmowę..." style="min-height: 250px;"></textarea></div><div><label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Tagi</label><input type="text" id="modal-chat-tags" class="ios-input" placeholder="np. api, python, prompt"></div><div class="flex gap-3 pt-4"><button onclick="closeModal(); saveChat();" class="btn-primary">Zapisz</button><button onclick="closeModal(); if(window.editingChatId) deleteChat(window.editingChatId);" id="delete-chat-btn" class="btn-destructive hidden">Usuń</button><button onclick="closeModal()" class="btn-secondary">Anuluj</button></div></div></div></div>
+<div class="modal-sheet"><div class="modal-handle"></div><div class="px-6 py-4">
+<h2 class="text-[20px] font-bold mb-4">{{ title }}</h2>
+<div class="space-y-4 max-h-[70vh] overflow-y-auto">
+  <div><label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Temat rozmowy *</label>
+  <input type="text" id="modal-chat-title" class="ios-input" placeholder="np. Pytania o API"></div>
+  <div><label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Model AI</label>
+  <select id="modal-chat-model" class="ios-select"><option value="Claude">Claude</option><option value="ChatGPT">ChatGPT</option><option value="Gemini">Gemini</option><option value="inne">Inne</option></select></div>
+  <div><label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Treść rozmowy (Markdown)</label>
+  <textarea id="modal-chat-content" class="ios-textarea" placeholder="Wklej całą rozmowę..." style="min-height: 250px;"></textarea></div>
+  <div><label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Tagi</label>
+  <input type="text" id="modal-chat-tags" class="ios-input" placeholder="np. api, python, prompt"></div>
+  <div class="flex gap-3 pt-4">
+    <button onclick="closeModal(); saveChat();" class="btn-primary">Zapisz</button>
+    <button onclick="confirmDeleteChat()" id="delete-chat-btn" class="btn-destructive hidden">Usuń</button>
+    <button onclick="closeModal()" class="btn-secondary">Anuluj</button>
+  </div>
+</div></div></div>
 </script>
+
 <script>
 let allChats = [];
-function initModule() { loadChats(); }
-function loadChats() { google.script.run.withSuccessHandler(function(result) { if (result.success) { allChats = result.data.filter(item => item.kategoria === 'chat' || item.tagi.includes('chat-saver')); renderChats(); } }).getKnowledge(); }
-function renderChats() { if (allChats.length === 0) { document.getElementById('chats-list').innerHTML = `<div class="empty-state py-8"><div class="empty-state-icon">💬</div><div class="empty-state-title">Brak rozmów</div><div class="empty-state-text">Kliknij "Nowa rozmowa", aby zapisać pierwszą rozmowę</div></div>`; return; } const sorted = allChats.sort((a, b) => new Date(b.data_utworzenia) - new Date(a.data_utworzenia)); const html = sorted.map(chat => `<div class="ios-row cursor-pointer" onclick="showEditChatModal('${escapeHtml(chat.id)}')"><div class="flex-1 min-w-0"><div class="text-[15px] font-medium text-[#000] truncate">${escapeHtml(chat.tytul)}</div><div class="text-[13px] text-[#8e8e93] mt-1">${escapeHtml(chat.kategoria || 'chat')} • ${formatDateTime(chat.data_utworzenia)}</div>${chat.tagi ? `<div class="text-[12px] text-[#007aff] mt-1">${escapeHtml(chat.tagi).split(',').slice(0, 2).join(' • ')}</div>` : ''}</div><i data-lucide="chevron-right" class="w-5 h-5 text-[#c6c6c8] flex-shrink-0"></i></div>`).join(''); document.getElementById('chats-list').innerHTML = html; lucide.createIcons(); }
-function showAddChatModal() { window.editingChatId = null; const modal = document.getElementById('chat-modal-template').innerHTML.replace('{{ title }}', 'Nowa rozmowa'); const tempDiv = document.createElement('div'); tempDiv.innerHTML = modal; showModal(tempDiv.innerHTML); document.getElementById('delete-chat-btn').classList.add('hidden'); }
-function showEditChatModal(chatId) { window.editingChatId = chatId; const chat = allChats.find(c => c.id === chatId); if (!chat) return; const modal = `<div class="modal-sheet"><div class="modal-handle"></div><div class="px-6 py-4 max-h-[80vh] overflow-y-auto"><h2 class="text-[20px] font-bold mb-2">${escapeHtml(chat.tytul)}</h2><div class="flex gap-2 mb-4"><span class="text-[13px] text-[#8e8e93]">🤖 ${escapeHtml(chat.kategoria || 'chat')}</span><span class="text-[13px] text-[#8e8e93]">📅 ${formatDateTime(chat.data_utworzenia)}</span></div><div class="divider mb-4"></div>${renderMarkdown(chat.tresc)}<div class="flex gap-3 pt-4 mt-4 border-t"><button onclick="closeModal(); editChat('${escapeHtml(chat.id)}');" class="btn-primary">Edytuj</button><button onclick="closeModal(); deleteChat('${escapeHtml(chat.id)}');" class="btn-destructive">Usuń</button><button onclick="closeModal()" class="btn-secondary">Zamknij</button></div></div></div>`; showModal(modal); }
-function editChat(chatId) { const chat = allChats.find(c => c.id === chatId); if (!chat) return; window.editingChatId = chatId; const modal = document.getElementById('chat-modal-template').innerHTML.replace('{{ title }}', 'Edytuj rozmowę'); const tempDiv = document.createElement('div'); tempDiv.innerHTML = modal; showModal(tempDiv.innerHTML); document.getElementById('modal-chat-title').value = chat.tytul; document.getElementById('modal-chat-model').value = chat.kategoria || 'ChatGPT'; document.getElementById('modal-chat-content').value = chat.tresc || ''; document.getElementById('modal-chat-tags').value = chat.tagi || ''; document.getElementById('delete-chat-btn').classList.remove('hidden'); }
-function saveChat() { const title = document.getElementById('modal-chat-title').value.trim(); if (!title) { showError('Temat rozmowy jest wymagany'); return; } const chatData = { tytul: title, kategoria: 'chat', tresc: document.getElementById('modal-chat-content').value, tagi: 'chat-saver,' + document.getElementById('modal-chat-tags').value, widocznosc: 'prywatny' }; if (window.editingChatId) { chatData.id = window.editingChatId; google.script.run.withSuccessHandler(function(result) { if (result.success) { showSuccess('Rozmowa zaktualizowana'); loadChats(); } else showError('Błąd: ' + result.error); }).updateKnowledge(chatData); } else { google.script.run.withSuccessHandler(function(result) { if (result.success) { showSuccess('Rozmowa zapisana'); loadChats(); } else showError('Błąd: ' + result.error); }).createKnowledge(chatData); } }
-function deleteChat(chatId) { if (!confirm('Czy na pewno chcesz usunąć tę rozmowę?')) return; google.script.run.withSuccessHandler(function(result) { if (result.success) { showSuccess('Rozmowa usunięta'); loadChats(); } else showError('Błąd: ' + result.error); }).deleteKnowledge(chatId); }
+let currentConversation = []; // { role: 'user'|'assistant', content: string }
+
+function initModule() {
+  loadChats();
+  checkApiKey();
+}
+
+function checkApiKey() {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      const hasKey = result.success && result.data && result.data.claudeApiKey && result.data.claudeApiKey.trim() !== '';
+      if (!hasKey) {
+        document.getElementById('api-warning').classList.remove('hidden');
+      }
+    })
+    .withFailureHandler(function() {})
+    .getSettings();
+}
+
+function switchChatTab(tab, e) {
+  document.querySelectorAll('.segmented-btn').forEach(function(el) { el.classList.remove('active'); });
+  if (e && e.target) e.target.closest('.segmented-btn').classList.add('active');
+  document.getElementById('tab-live').classList.toggle('hidden', tab !== 'live');
+  document.getElementById('tab-saved').classList.toggle('hidden', tab !== 'saved');
+  if (tab === 'saved') loadChats();
+}
+
+// ————— Live Chat —————
+
+function newConversation() {
+  if (currentConversation.length > 0 && !confirm('Rozpocząć nową rozmowę? Niezapisane wiadomości zostaną utracone.')) return;
+  currentConversation = [];
+  document.getElementById('chat-messages').innerHTML =
+    '<div class="empty-state py-6" id="chat-empty">' +
+    '<div class="empty-state-icon">🤖</div>' +
+    '<div class="empty-state-title">Witaj! Jestem Claude</div>' +
+    '<div class="empty-state-text">Wpisz wiadomość poniżej, aby rozpocząć rozmowę.<br>Konwersacje są automatycznie zapisywane na Google Drive.</div>' +
+    '</div>';
+  document.getElementById('conv-title').value = '';
+  document.getElementById('save-conv-btn').classList.add('hidden');
+  document.getElementById('chat-input').value = '';
+}
+
+function handleChatKeydown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const message = input.value.trim();
+  if (!message) return;
+
+  const sendBtn = document.getElementById('send-btn');
+  const indicator = document.getElementById('sending-indicator');
+  sendBtn.disabled = true;
+  input.value = '';
+
+  // Usuń empty state
+  const empty = document.getElementById('chat-empty');
+  if (empty) empty.remove();
+
+  // Dodaj wiadomość użytkownika
+  currentConversation.push({ role: 'user', content: message });
+  appendMessage('user', message);
+
+  indicator.classList.remove('hidden');
+  document.getElementById('save-conv-btn').classList.add('hidden');
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      indicator.classList.add('hidden');
+      sendBtn.disabled = false;
+      if (result.success) {
+        currentConversation.push({ role: 'assistant', content: result.message });
+        appendMessage('assistant', result.message);
+        document.getElementById('save-conv-btn').classList.remove('hidden');
+        // Auto-save w tle po każdej wymianie
+        autoSaveToDrive();
+      } else {
+        showError('Błąd Claude: ' + result.error);
+        // Cofnij ostatnią wiadomość użytkownika z tablicy
+        currentConversation.pop();
+      }
+    })
+    .withFailureHandler(function(err) {
+      indicator.classList.add('hidden');
+      sendBtn.disabled = false;
+      showError('Błąd połączenia: ' + err.message);
+      currentConversation.pop();
+    })
+    .callClaudeApi(currentConversation, null);
+}
+
+function appendMessage(role, content) {
+  const container = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = 'flex ' + (role === 'user' ? 'justify-end' : 'justify-start');
+
+  const bubble = document.createElement('div');
+  bubble.className = role === 'user'
+    ? 'max-w-[80%] bg-[#007aff] text-white rounded-[18px] rounded-br-[4px] px-4 py-3 text-[15px]'
+    : 'max-w-[80%] bg-white rounded-[18px] rounded-bl-[4px] px-4 py-3 text-[15px] shadow-sm';
+
+  if (role === 'assistant') {
+    bubble.innerHTML = renderMarkdown(content);
+  } else {
+    bubble.textContent = content;
+  }
+
+  div.appendChild(bubble);
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function autoSaveToDrive() {
+  if (currentConversation.length < 2) return;
+  const title = document.getElementById('conv-title').value.trim() ||
+    ('Rozmowa ' + new Date().toLocaleDateString('pl-PL'));
+  google.script.run
+    .withSuccessHandler(function(result) {
+      // Cicha auto-save — nie pokazujemy toastu za każdym razem
+      if (!result.success) {
+        console.warn('Auto-save nieudany:', result.error);
+      }
+    })
+    .withFailureHandler(function() {})
+    .saveChatConversationToDrive(title, currentConversation);
+}
+
+function saveCurrentConversation() {
+  if (currentConversation.length === 0) return;
+  const title = document.getElementById('conv-title').value.trim() ||
+    ('Rozmowa ' + new Date().toLocaleDateString('pl-PL'));
+
+  // Zapisz na Drive
+  google.script.run
+    .withSuccessHandler(function(driveResult) {
+      const driveMsg = driveResult.success
+        ? ' i na Drive (' + driveResult.filename + ')'
+        : ' (Drive: ' + driveResult.error + ')';
+      // Zapisz też w bazie wiedzy jako backup
+      const content = currentConversation.map(function(m) {
+        return '**' + (m.role === 'user' ? 'Użytkownik' : 'Claude') + ':**\n\n' + m.content;
+      }).join('\n\n---\n\n');
+      google.script.run
+        .withSuccessHandler(function(kbResult) {
+          if (kbResult.success) showSuccess('Zapisano w bazie wiedzy' + driveMsg);
+          else showError('Błąd zapisu: ' + kbResult.error);
+        })
+        .withFailureHandler(function(err) { showError('Błąd: ' + err.message); })
+        .createKnowledge({
+          tytul: title,
+          kategoria: 'chat',
+          tresc: content,
+          tagi: 'claude,chat-saver',
+          widocznosc: 'prywatny',
+          zrodlo: 'Claude API'
+        });
+    })
+    .withFailureHandler(function(err) { showError('Błąd Drive: ' + err.message); })
+    .saveChatConversationToDrive(title, currentConversation);
+}
+
+// ————— Zapisane rozmowy —————
+
+function loadChats() {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) {
+        allChats = result.data.filter(function(item) {
+          return item.kategoria === 'chat' || (item.tagi && item.tagi.includes('chat-saver'));
+        });
+        renderChats();
+      } else {
+        showError('Błąd: ' + result.error);
+      }
+    })
+    .withFailureHandler(function(err) { showError('Błąd połączenia: ' + err.message); })
+    .getKnowledge();
+}
+
+function renderChats() {
+  const list = document.getElementById('chats-list');
+  if (!list) return;
+  if (allChats.length === 0) {
+    list.innerHTML = '<div class="empty-state py-8"><div class="empty-state-icon">💬</div>' +
+      '<div class="empty-state-title">Brak zapisanych rozmów</div>' +
+      '<div class="empty-state-text">Rozmowy z Claude są tu zapisywane automatycznie</div></div>';
+    return;
+  }
+  const sorted = [...allChats].sort(function(a, b) {
+    return new Date(b.data_utworzenia) - new Date(a.data_utworzenia);
+  });
+  list.innerHTML = sorted.map(function(chat) {
+    return '<div class="ios-row cursor-pointer" onclick="showChatPreview(\'' + escapeHtml(chat.id) + '\')">' +
+      '<div class="flex-1 min-w-0">' +
+      '<div class="text-[15px] font-medium text-[#000] truncate">' + escapeHtml(chat.tytul) + '</div>' +
+      '<div class="text-[13px] text-[#8e8e93] mt-1">🤖 ' + escapeHtml(chat.zrodlo || 'Chat') +
+      ' • ' + formatDateTime(chat.data_utworzenia) + '</div>' +
+      (chat.tagi ? '<div class="text-[12px] text-[#007aff] mt-1">' +
+        escapeHtml(chat.tagi).split(',').filter(function(t) { return t.trim() && t.trim() !== 'chat-saver'; })
+          .slice(0, 3).join(' • ') + '</div>' : '') +
+      '</div><i data-lucide="chevron-right" class="w-5 h-5 text-[#c6c6c8] flex-shrink-0"></i></div>';
+  }).join('');
+  lucide.createIcons();
+}
+
+function showChatPreview(chatId) {
+  const chat = allChats.find(function(c) { return c.id === chatId; });
+  if (!chat) return;
+  const modal = '<div class="modal-sheet"><div class="modal-handle"></div>' +
+    '<div class="px-6 py-4 max-h-[80vh] overflow-y-auto">' +
+    '<h2 class="text-[20px] font-bold mb-2">' + escapeHtml(chat.tytul) + '</h2>' +
+    '<div class="flex gap-3 mb-4 text-[13px] text-[#8e8e93]">' +
+    '<span>🤖 ' + escapeHtml(chat.zrodlo || 'Chat') + '</span>' +
+    '<span>📅 ' + formatDateTime(chat.data_utworzenia) + '</span></div>' +
+    '<div class="divider mb-4"></div>' +
+    renderMarkdown(chat.tresc) +
+    '<div class="flex gap-3 pt-4 mt-4 border-t">' +
+    '<button onclick="closeModal(); editChat(\'' + escapeHtml(chat.id) + '\');" class="btn-primary">Edytuj</button>' +
+    '<button onclick="confirmDeleteChatFromPreview(\'' + escapeHtml(chat.id) + '\')" class="btn-destructive">Usuń</button>' +
+    '<button onclick="closeModal()" class="btn-secondary">Zamknij</button>' +
+    '</div></div></div>';
+  showModal(modal);
+}
+
+function confirmDeleteChatFromPreview(chatId) {
+  if (!confirm('Czy na pewno chcesz usunąć tę rozmowę?')) return;
+  closeModal();
+  deleteChat(chatId);
+}
+
+function showAddChatModal() {
+  window.editingChatId = null;
+  const tpl = document.getElementById('chat-modal-template').innerHTML.replace('{{ title }}', 'Nowa rozmowa');
+  const div = document.createElement('div');
+  div.innerHTML = tpl;
+  showModal(div.innerHTML);
+  document.getElementById('delete-chat-btn').classList.add('hidden');
+}
+
+function editChat(chatId) {
+  window.editingChatId = chatId;
+  const chat = allChats.find(function(c) { return c.id === chatId; });
+  if (!chat) return;
+  const tpl = document.getElementById('chat-modal-template').innerHTML.replace('{{ title }}', 'Edytuj rozmowę');
+  const div = document.createElement('div');
+  div.innerHTML = tpl;
+  showModal(div.innerHTML);
+  document.getElementById('modal-chat-title').value = chat.tytul;
+  document.getElementById('modal-chat-model').value = chat.kategoria === 'chat' ? 'Claude' : (chat.kategoria || 'Claude');
+  document.getElementById('modal-chat-content').value = chat.tresc || '';
+  document.getElementById('modal-chat-tags').value = chat.tagi || '';
+  document.getElementById('delete-chat-btn').classList.remove('hidden');
+}
+
+function confirmDeleteChat() {
+  if (!window.editingChatId) return;
+  if (!confirm('Czy na pewno chcesz usunąć tę rozmowę?')) return;
+  const id = window.editingChatId;
+  closeModal();
+  deleteChat(id);
+}
+
+function saveChat() {
+  const title = document.getElementById('modal-chat-title').value.trim();
+  if (!title) { showError('Temat rozmowy jest wymagany'); return; }
+  const chatData = {
+    tytul: title,
+    kategoria: 'chat',
+    tresc: document.getElementById('modal-chat-content').value,
+    tagi: 'chat-saver,' + document.getElementById('modal-chat-tags').value,
+    widocznosc: 'prywatny',
+    zrodlo: document.getElementById('modal-chat-model').value
+  };
+  if (window.editingChatId) {
+    chatData.id = window.editingChatId;
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.success) { showSuccess('Rozmowa zaktualizowana'); loadChats(); }
+        else showError('Błąd: ' + result.error);
+      })
+      .withFailureHandler(function(err) { showError('Błąd połączenia: ' + err.message); })
+      .updateKnowledge(chatData);
+  } else {
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.success) { showSuccess('Rozmowa zapisana'); loadChats(); }
+        else showError('Błąd: ' + result.error);
+      })
+      .withFailureHandler(function(err) { showError('Błąd połączenia: ' + err.message); })
+      .createKnowledge(chatData);
+  }
+}
+
+function deleteChat(chatId) {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) { showSuccess('Rozmowa usunięta'); loadChats(); }
+      else showError('Błąd: ' + result.error);
+    })
+    .withFailureHandler(function(err) { showError('Błąd połączenia: ' + err.message); })
+    .deleteKnowledge(chatId);
+}
 </script>
