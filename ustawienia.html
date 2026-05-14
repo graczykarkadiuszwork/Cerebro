@@ -3,6 +3,8 @@
     <h1 class="text-2xl font-bold text-[#000]">Ustawienia</h1>
   </div>
   <div id="settings-container">
+
+    <!-- Organizacja -->
     <div class="ios-card mb-4">
       <div class="section-title">Organizacja</div>
       <div class="p-4 space-y-4">
@@ -17,57 +19,253 @@
         <button onclick="saveSettings()" class="btn-primary">Zapisz zmiany</button>
       </div>
     </div>
+
+    <!-- Claude AI -->
+    <div class="ios-card mb-4">
+      <div class="section-title">Claude AI</div>
+      <div class="p-4 space-y-4">
+        <div>
+          <label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Klucz API Claude (Anthropic)</label>
+          <input type="password" id="claudeApiKey" class="ios-input" placeholder="sk-ant-...">
+          <p class="text-[12px] text-[#8e8e93] mt-1">Klucz jest przechowywany w Google User Properties — widoczny tylko dla Ciebie.</p>
+        </div>
+        <div>
+          <label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Model Claude</label>
+          <select id="claudeModel" class="ios-select">
+            <option value="claude-opus-4-7">Claude Opus 4.7 (najlepszy)</option>
+            <option value="claude-sonnet-4-6">Claude Sonnet 4.6 (szybki)</option>
+            <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 (najszybszy)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">System Prompt (opcjonalnie)</label>
+          <textarea id="claudeSystemPrompt" class="ios-textarea" rows="3"
+            placeholder="Jesteś pomocnym asystentem o nazwie Cerebro..."></textarea>
+        </div>
+        <button onclick="saveSettings()" class="btn-primary">Zapisz ustawienia AI</button>
+        <button onclick="testClaudeApi()" class="btn-secondary">Testuj połączenie z Claude</button>
+        <div id="claude-test-result" class="hidden"></div>
+      </div>
+    </div>
+
+    <!-- Google Drive -->
     <div class="ios-card mb-4">
       <div class="section-title">Google Drive</div>
       <div class="p-4 space-y-3">
-        <p class="text-[15px] text-[#8e8e93] leading-relaxed">Automatyczny import plików z następujących folderów Drive:</p>
+        <!-- Status -->
+        <div id="drive-status" class="flex items-center gap-2 text-[15px] text-[#8e8e93]">
+          <div class="animate-pulse">⏳</div>
+          <span>Sprawdzam status Drive...</span>
+        </div>
+        <p class="text-[15px] text-[#8e8e93] leading-relaxed">
+          Struktura folderów na Twoim Google Drive:
+        </p>
         <ul class="text-[15px] text-[#000] space-y-2 ml-4">
-          <li>📁 <strong>Procedury</strong> → kategoria "procedury"</li>
-          <li>💰 <strong>Cenniki</strong> → kategoria "cenniki"</li>
-          <li>📋 <strong>Szablony</strong> → kategoria "szablony"</li>
-          <li>📚 <strong>Materiały</strong> → kategoria "materiały"</li>
-          <li>🔒 <strong>Prywatne</strong> → widoczność prywatna</li>
-          <li>📝 <strong>Notatki</strong> → kategoria "notatki"</li>
+          <li>📁 <strong>Procedury</strong> → kategoria "procedury" (auto-import)</li>
+          <li>💰 <strong>Cenniki</strong> → kategoria "cenniki" (auto-import)</li>
+          <li>📋 <strong>Szablony</strong> → kategoria "szablony" (auto-import)</li>
+          <li>📚 <strong>Materiały</strong> → kategoria "materiały" (auto-import)</li>
+          <li>🔒 <strong>Prywatne</strong> → widoczność prywatna (auto-import)</li>
+          <li>📝 <strong>Notatki</strong> → kategoria "notatki" (auto-import)</li>
+          <li>🤖 <strong>Konwersacje_Claude</strong> → auto-zapis rozmów z Claude</li>
         </ul>
         <div class="mt-4 space-y-2">
-          <button onclick="setupDrive()" class="btn-primary"><i data-lucide="folder-plus" class="inline-block w-5 h-5 mr-2"></i>Skonfiguruj Drive</button>
-          <button onclick="manualSync()" class="btn-secondary"><i data-lucide="refresh-cw" class="inline-block w-5 h-5 mr-2"></i>Synchronizuj ręcznie</button>
+          <button onclick="setupCerebroFull()" class="btn-primary">
+            <i data-lucide="folder-plus" class="inline-block w-5 h-5 mr-2"></i>Konfiguruj Cerebro (pierwsze uruchomienie)
+          </button>
+          <button onclick="setupDriveOnly()" class="btn-secondary">
+            <i data-lucide="folder-plus" class="inline-block w-5 h-5 mr-2"></i>Utwórz tylko foldery Drive
+          </button>
+          <button onclick="manualSync()" class="btn-secondary">
+            <i data-lucide="refresh-cw" class="inline-block w-5 h-5 mr-2"></i>Synchronizuj Drive ręcznie
+          </button>
         </div>
-        <p class="text-[13px] text-[#8e8e93]">⏱️ Automatyczna synchronizacja: co 1 godzinę</p>
+        <p class="text-[13px] text-[#8e8e93]">⏱️ Automatyczna synchronizacja plików: co 1 godzinę</p>
       </div>
     </div>
+
+    <!-- Eksport danych -->
     <div class="ios-card mb-4">
       <div class="section-title">Eksport danych</div>
       <div class="p-4 space-y-3">
         <p class="text-[15px] text-[#8e8e93] leading-relaxed">Pobierz kopię wszystkich danych w formacie JSON:</p>
-        <button onclick="exportJSON()" class="btn-primary"><i data-lucide="download" class="inline-block w-5 h-5 mr-2"></i>Eksportuj JSON</button>
+        <button onclick="exportJSON()" class="btn-primary">
+          <i data-lucide="download" class="inline-block w-5 h-5 mr-2"></i>Eksportuj JSON
+        </button>
         <p class="text-[13px] text-[#8e8e93]">Plik zawiera: zadania, bazę wiedzy, wydarzenia</p>
       </div>
     </div>
+
+    <!-- O aplikacji -->
     <div class="ios-card mb-6">
       <div class="section-title">O aplikacji</div>
       <div class="p-4 space-y-3">
         <div class="flex justify-between items-center py-2 border-b border-[#e5e5ea]">
           <span class="text-[15px]">Aplikacja</span>
-          <span class="text-[15px] font-semibold">Cerebro v1.0</span>
+          <span class="text-[15px] font-semibold">Cerebro v2.0</span>
         </div>
         <div class="flex justify-between items-center py-2 border-b border-[#e5e5ea]">
           <span class="text-[15px]">Technologia</span>
           <span class="text-[15px] font-semibold">Google Apps Script</span>
         </div>
-        <div class="flex justify-between items-center py-2">
+        <div class="flex justify-between items-center py-2 border-b border-[#e5e5ea]">
           <span class="text-[15px]">Baza danych</span>
           <span class="text-[15px] font-semibold">Google Sheets</span>
+        </div>
+        <div class="flex justify-between items-center py-2">
+          <span class="text-[15px]">AI</span>
+          <span class="text-[15px] font-semibold" id="ai-version-badge">Sprawdzam...</span>
         </div>
       </div>
     </div>
   </div>
 </div>
+
 <script>
 function initModule() { loadSettings(); }
-function loadSettings() { google.script.run.withSuccessHandler(function(result) { if (result.success && result.data) { document.getElementById('organizationName').value = result.data.organizationName || ''; document.getElementById('contactEmail').value = result.data.contactEmail || ''; } }).getSettings(); }
-function saveSettings() { const settings = { organizationName: document.getElementById('organizationName').value, contactEmail: document.getElementById('contactEmail').value }; google.script.run.withSuccessHandler(function(result) { if (result.success) { showSuccess('Ustawienia zapisane'); document.getElementById('sidebar-org').textContent = settings.organizationName || 'Moja Organizacja'; } else { showError('Błąd: ' + result.error); } }).saveSettings(settings); }
-function setupDrive() { google.script.run.withSuccessHandler(function(result) { if (result.success) { showSuccess('Folder struktury Drive utworzony. Synchronizacja uruchomiona.'); } else { showError('Błąd: ' + result.error); } }).setupDriveFolders(); }
-function manualSync() { google.script.run.withSuccessHandler(function(result) { if (result.success) { showSuccess('Zaimportowano ' + result.imported + ' plików'); } else { showError('Błąd: ' + result.error); } }).manualSyncDrive(); }
-function exportJSON() { google.script.run.withSuccessHandler(function(result) { if (result.success) { const blob = new Blob([result.data], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'cerebro-export-' + new Date().getTime() + '.json'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); showSuccess('Eksport został pobrany'); } else { showError('Błąd: ' + result.error); } }).exportAllData(); }
+
+function loadSettings() {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success && result.data) {
+        document.getElementById('organizationName').value = result.data.organizationName || '';
+        document.getElementById('contactEmail').value = result.data.contactEmail || '';
+        document.getElementById('claudeApiKey').value = result.data.claudeApiKey || '';
+        document.getElementById('claudeModel').value = result.data.claudeModel || 'claude-opus-4-7';
+        document.getElementById('claudeSystemPrompt').value = result.data.claudeSystemPrompt || '';
+
+        const hasApiKey = !!(result.data.claudeApiKey && result.data.claudeApiKey.trim());
+        document.getElementById('ai-version-badge').textContent = hasApiKey
+          ? ('Claude — ' + (result.data.claudeModel || 'opus-4-7'))
+          : 'Nie skonfigurowany';
+
+        // Status Drive
+        const driveEl = document.getElementById('drive-status');
+        if (result.data._driveFolderReady) {
+          driveEl.innerHTML = '<div class="w-2 h-2 rounded-full bg-[#34c759] flex-shrink-0"></div>' +
+            '<span class="text-[#34c759]">Google Drive skonfigurowany</span>';
+        } else {
+          driveEl.innerHTML = '<div class="w-2 h-2 rounded-full bg-[#ff9500] flex-shrink-0"></div>' +
+            '<span class="text-[#ff9500]">Drive nie skonfigurowany — kliknij "Konfiguruj Cerebro"</span>';
+        }
+      }
+    })
+    .withFailureHandler(function(err) { showError('Błąd ładowania ustawień: ' + err.message); })
+    .getSettings();
+}
+
+function saveSettings() {
+  const settings = {
+    organizationName: document.getElementById('organizationName').value,
+    contactEmail: document.getElementById('contactEmail').value,
+    claudeApiKey: document.getElementById('claudeApiKey').value,
+    claudeModel: document.getElementById('claudeModel').value,
+    claudeSystemPrompt: document.getElementById('claudeSystemPrompt').value
+  };
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) {
+        showSuccess('Ustawienia zapisane');
+        const orgEl = document.getElementById('sidebar-org');
+        if (orgEl) orgEl.textContent = settings.organizationName || 'Moja Organizacja';
+        const badge = document.getElementById('ai-version-badge');
+        if (badge) {
+          badge.textContent = settings.claudeApiKey
+            ? ('Claude — ' + settings.claudeModel)
+            : 'Nie skonfigurowany';
+        }
+      } else {
+        showError('Błąd: ' + result.error);
+      }
+    })
+    .withFailureHandler(function(err) { showError('Błąd: ' + err.message); })
+    .saveSettings(settings);
+}
+
+function testClaudeApi() {
+  const resultEl = document.getElementById('claude-test-result');
+  resultEl.className = 'text-[14px] text-[#8e8e93] p-3 rounded-[10px] bg-[#f2f2f7]';
+  resultEl.textContent = '⏳ Wysyłam zapytanie testowe...';
+  resultEl.classList.remove('hidden');
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) {
+        resultEl.className = 'text-[14px] text-[#34c759] p-3 rounded-[10px] bg-[rgba(52,199,89,0.1)]';
+        resultEl.textContent = '✅ Połączenie działa! Claude odpowiedział: ' + result.message.substring(0, 100) + '...';
+      } else {
+        resultEl.className = 'text-[14px] text-[#ff3b30] p-3 rounded-[10px] bg-[rgba(255,59,48,0.1)]';
+        resultEl.textContent = '❌ Błąd: ' + result.error;
+      }
+    })
+    .withFailureHandler(function(err) {
+      resultEl.className = 'text-[14px] text-[#ff3b30] p-3 rounded-[10px] bg-[rgba(255,59,48,0.1)]';
+      resultEl.textContent = '❌ Błąd połączenia: ' + err.message;
+    })
+    .callClaudeApi([{ role: 'user', content: 'Odpowiedz jednym zdaniem po polsku: jak się nazywasz?' }], null);
+}
+
+function setupCerebroFull() {
+  showInfo('Konfigurowanie Cerebro — to może chwilę potrwać...');
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) {
+        showSuccess('Cerebro skonfigurowane! ' + result.message);
+        loadSettings();
+      } else {
+        showError('Błąd: ' + result.error);
+      }
+    })
+    .withFailureHandler(function(err) { showError('Błąd: ' + err.message); })
+    .setupCerebro();
+}
+
+function setupDriveOnly() {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) {
+        showSuccess('Foldery Drive utworzone pomyślnie');
+        loadSettings();
+      } else {
+        showError('Błąd: ' + result.error);
+      }
+    })
+    .withFailureHandler(function(err) { showError('Błąd: ' + err.message); })
+    .setupDriveFolders();
+}
+
+function manualSync() {
+  showInfo('Synchronizowanie plików z Drive...');
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) {
+        showSuccess('Zaimportowano ' + result.imported + ' pliku/ów');
+      } else {
+        showError('Błąd: ' + result.error);
+      }
+    })
+    .withFailureHandler(function(err) { showError('Błąd: ' + err.message); })
+    .manualSyncDrive();
+}
+
+function exportJSON() {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) {
+        const blob = new Blob([result.data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'cerebro-export-' + new Date().getTime() + '.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showSuccess('Eksport został pobrany');
+      } else {
+        showError('Błąd: ' + result.error);
+      }
+    })
+    .withFailureHandler(function(err) { showError('Błąd: ' + err.message); })
+    .exportAllData();
+}
 </script>

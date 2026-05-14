@@ -6,18 +6,100 @@
     </div>
   </div>
   <div class="ios-card bg-[rgba(52,199,89,0.05)] border border-[#34c759] mb-4">
-    <div class="px-4 py-3 text-[15px] text-[#34c759]">👥 Ten widok pokazuje tylko artykuły oznaczone jako "Udostępniony" z Bazy Wiedzy.</div>
+    <div class="px-4 py-3 text-[15px] text-[#34c759]">
+      👥 Ten widok pokazuje tylko artykuły oznaczone jako "Udostępniony" z Bazy Wiedzy.
+    </div>
   </div>
   <div class="mb-4 flex items-center gap-3">
-    <input type="text" id="search-input" class="ios-input" placeholder="🔍 Szukaj..." onkeyup="filterArticles()" style="max-width: 300px;">
+    <input type="text" id="search-input" class="ios-input" placeholder="🔍 Szukaj..."
+      onkeyup="filterArticles()" style="max-width: 300px;">
   </div>
-  <div id="articles-list" class="ios-card">${skeleton(5)}</div>
+  <div id="articles-list" class="ios-card"></div>
 </div>
+
 <script>
 let allSharedArticles = [];
+
 function initModule() { loadSharedArticles(); }
-function loadSharedArticles() { google.script.run.withSuccessHandler(function(result) { if (result.success) { allSharedArticles = result.data.filter(item => item.widocznosc === 'udostepniony'); renderArticles(); } }).getKnowledge('shared'); }
-function renderArticles() { if (allSharedArticles.length === 0) { document.getElementById('articles-list').innerHTML = `<div class="empty-state py-8"><div class="empty-state-icon">📚</div><div class="empty-state-title">Brak dostępnych artykułów</div><div class="empty-state-text">Administrator nie udostępnił jeszcze żadnych artykułów</div></div>`; return; } const sorted = allSharedArticles.sort((a, b) => { const catA = (a.kategoria || 'notatki').toLowerCase(); const catB = (b.kategoria || 'notatki').toLowerCase(); if (catA !== catB) return catA.localeCompare(catB); return new Date(b.data_utworzenia) - new Date(a.data_utworzenia); }); const html = sorted.map(article => `<div class="ios-row cursor-pointer" onclick="showArticlePreview('${escapeHtml(article.id)}')"><div class="flex-1 min-w-0"><div class="text-[15px] font-medium text-[#000] truncate">${escapeHtml(article.tytul)}</div><div class="text-[13px] text-[#8e8e93] mt-1">📁 ${escapeHtml(article.kategoria || 'notatki')} • ${formatDate(article.data_utworzenia)}</div>${article.tagi ? `<div class="text-[12px] text-[#007aff] mt-1">${escapeHtml(article.tagi).split(',').map(t => t.trim()).slice(0, 3).join(' • ')}</div>` : ''}</div><i data-lucide="chevron-right" class="w-5 h-5 text-[#c6c6c8] flex-shrink-0"></i></div>`).join(''); document.getElementById('articles-list').innerHTML = html; lucide.createIcons(); }
-function filterArticles() { const query = document.getElementById('search-input').value.toLowerCase(); const filtered = allSharedArticles.filter(article => { return article.tytul.toLowerCase().includes(query) || article.kategoria.toLowerCase().includes(query) || (article.tagi || '').toLowerCase().includes(query); }); if (filtered.length === 0) { document.getElementById('articles-list').innerHTML = `<div class="empty-state py-8"><div class="empty-state-icon">🔍</div><div class="empty-state-title">Brak wyników</div><div class="empty-state-text">Spróbuj innego wyszukiwania</div></div>`; return; } const sorted = filtered.sort((a, b) => { const catA = (a.kategoria || 'notatki').toLowerCase(); const catB = (b.kategoria || 'notatki').toLowerCase(); if (catA !== catB) return catA.localeCompare(catB); return new Date(b.data_utworzenia) - new Date(a.data_utworzenia); }); const html = sorted.map(article => `<div class="ios-row cursor-pointer" onclick="showArticlePreview('${escapeHtml(article.id)}')"><div class="flex-1 min-w-0"><div class="text-[15px] font-medium text-[#000] truncate">${escapeHtml(article.tytul)}</div><div class="text-[13px] text-[#8e8e93] mt-1">📁 ${escapeHtml(article.kategoria || 'notatki')} • ${formatDate(article.data_utworzenia)}</div>${article.tagi ? `<div class="text-[12px] text-[#007aff] mt-1">${escapeHtml(article.tagi).split(',').map(t => t.trim()).slice(0, 3).join(' • ')}</div>` : ''}</div><i data-lucide="chevron-right" class="w-5 h-5 text-[#c6c6c8] flex-shrink-0"></i></div>`).join(''); document.getElementById('articles-list').innerHTML = html; lucide.createIcons(); }
-function showArticlePreview(articleId) { const article = allSharedArticles.find(a => a.id === articleId); if (!article) return; const tagsSection = article.tagi ? `<div class="text-[13px] text-[#8e8e93] mb-4">Tagi: ${escapeHtml(article.tagi).split(',').map(t => t.trim()).join(', ')}</div>` : ''; let modal = `<div class="modal-sheet"><div class="modal-handle"></div><div class="px-6 py-4 max-h-[80vh] overflow-y-auto"><h2 class="text-[20px] font-bold mb-2">${escapeHtml(article.tytul)}</h2><div class="flex gap-2 mb-4 text-[13px] text-[#8e8e93]"><span>📁 ${escapeHtml(article.kategoria || 'notatki')}</span><span>📅 ${formatDateLong(article.data_utworzenia)}</span></div>${tagsSection}<div class="divider mb-4"></div>${renderMarkdown(article.tresc)}</div></div>`; showModal(modal); }
+
+function loadSharedArticles() {
+  // Backend filtruje już po 'shared' — nie filtrujemy ponownie po stronie frontendu
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) {
+        allSharedArticles = result.data;
+        renderArticles(allSharedArticles);
+      } else {
+        showError('Błąd: ' + result.error);
+      }
+    })
+    .withFailureHandler(function(err) { showError('Błąd połączenia: ' + err.message); })
+    .getKnowledge('shared');
+}
+
+function renderArticles(articles) {
+  if (articles.length === 0) {
+    document.getElementById('articles-list').innerHTML =
+      '<div class="empty-state py-8"><div class="empty-state-icon">📚</div>' +
+      '<div class="empty-state-title">Brak dostępnych artykułów</div>' +
+      '<div class="empty-state-text">Administrator nie udostępnił jeszcze żadnych artykułów</div></div>';
+    return;
+  }
+  const sorted = [...articles].sort(function(a, b) {
+    const catA = (a.kategoria || 'notatki').toLowerCase();
+    const catB = (b.kategoria || 'notatki').toLowerCase();
+    if (catA !== catB) return catA.localeCompare(catB);
+    return new Date(b.data_utworzenia) - new Date(a.data_utworzenia);
+  });
+  document.getElementById('articles-list').innerHTML = sorted.map(function(article) {
+    return '<div class="ios-row cursor-pointer" onclick="showArticlePreview(\'' + escapeHtml(article.id) + '\')">' +
+      '<div class="flex-1 min-w-0">' +
+      '<div class="text-[15px] font-medium text-[#000] truncate">' + escapeHtml(article.tytul) + '</div>' +
+      '<div class="text-[13px] text-[#8e8e93] mt-1">📁 ' + escapeHtml(article.kategoria || 'notatki') +
+      ' • ' + formatDate(article.data_utworzenia) + '</div>' +
+      (article.tagi ? '<div class="text-[12px] text-[#007aff] mt-1">' +
+        escapeHtml(article.tagi).split(',').map(function(t) { return t.trim(); }).filter(Boolean).slice(0, 3).join(' • ') +
+        '</div>' : '') +
+      '</div><i data-lucide="chevron-right" class="w-5 h-5 text-[#c6c6c8] flex-shrink-0"></i></div>';
+  }).join('');
+  lucide.createIcons();
+}
+
+function filterArticles() {
+  const query = document.getElementById('search-input').value.toLowerCase();
+  if (!query) { renderArticles(allSharedArticles); return; }
+  const filtered = allSharedArticles.filter(function(article) {
+    return article.tytul.toLowerCase().includes(query) ||
+      (article.kategoria || '').toLowerCase().includes(query) ||
+      (article.tagi || '').toLowerCase().includes(query);
+  });
+  if (filtered.length === 0) {
+    document.getElementById('articles-list').innerHTML =
+      '<div class="empty-state py-8"><div class="empty-state-icon">🔍</div>' +
+      '<div class="empty-state-title">Brak wyników</div>' +
+      '<div class="empty-state-text">Spróbuj innego wyszukiwania</div></div>';
+    return;
+  }
+  renderArticles(filtered);
+}
+
+function showArticlePreview(articleId) {
+  const article = allSharedArticles.find(function(a) { return a.id === articleId; });
+  if (!article) return;
+  const tagsSection = article.tagi
+    ? '<div class="text-[13px] text-[#8e8e93] mb-4">Tagi: ' +
+      escapeHtml(article.tagi).split(',').map(function(t) { return t.trim(); }).filter(Boolean).join(', ') + '</div>'
+    : '';
+  const modal = '<div class="modal-sheet"><div class="modal-handle"></div>' +
+    '<div class="px-6 py-4 max-h-[80vh] overflow-y-auto">' +
+    '<h2 class="text-[20px] font-bold mb-2">' + escapeHtml(article.tytul) + '</h2>' +
+    '<div class="flex gap-2 mb-4 text-[13px] text-[#8e8e93]">' +
+    '<span>📁 ' + escapeHtml(article.kategoria || 'notatki') + '</span>' +
+    '<span>📅 ' + formatDateLong(article.data_utworzenia) + '</span></div>' +
+    tagsSection +
+    '<div class="divider mb-4"></div>' +
+    renderMarkdown(article.tresc) +
+    '</div></div>';
+  showModal(modal);
+}
 </script>
