@@ -1,0 +1,73 @@
+<div class="max-w-2xl mx-auto">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-[#000]">Ustawienia</h1>
+  </div>
+  <div id="settings-container">
+    <div class="ios-card mb-4">
+      <div class="section-title">Organizacja</div>
+      <div class="p-4 space-y-4">
+        <div>
+          <label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Nazwa organizacji</label>
+          <input type="text" id="organizationName" class="ios-input" placeholder="Wpisz nazwę...">
+        </div>
+        <div>
+          <label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Email kontaktowy</label>
+          <input type="email" id="contactEmail" class="ios-input" placeholder="email@example.com">
+        </div>
+        <button onclick="saveSettings()" class="btn-primary">Zapisz zmiany</button>
+      </div>
+    </div>
+    <div class="ios-card mb-4">
+      <div class="section-title">Google Drive</div>
+      <div class="p-4 space-y-3">
+        <p class="text-[15px] text-[#8e8e93] leading-relaxed">Automatyczny import plików z następujących folderów Drive:</p>
+        <ul class="text-[15px] text-[#000] space-y-2 ml-4">
+          <li>📁 <strong>Procedury</strong> → kategoria "procedury"</li>
+          <li>💰 <strong>Cenniki</strong> → kategoria "cenniki"</li>
+          <li>📋 <strong>Szablony</strong> → kategoria "szablony"</li>
+          <li>📚 <strong>Materiały</strong> → kategoria "materiały"</li>
+          <li>🔒 <strong>Prywatne</strong> → widoczność prywatna</li>
+          <li>📝 <strong>Notatki</strong> → kategoria "notatki"</li>
+        </ul>
+        <div class="mt-4 space-y-2">
+          <button onclick="setupDrive()" class="btn-primary"><i data-lucide="folder-plus" class="inline-block w-5 h-5 mr-2"></i>Skonfiguruj Drive</button>
+          <button onclick="manualSync()" class="btn-secondary"><i data-lucide="refresh-cw" class="inline-block w-5 h-5 mr-2"></i>Synchronizuj ręcznie</button>
+        </div>
+        <p class="text-[13px] text-[#8e8e93]">⏱️ Automatyczna synchronizacja: co 1 godzinę</p>
+      </div>
+    </div>
+    <div class="ios-card mb-4">
+      <div class="section-title">Eksport danych</div>
+      <div class="p-4 space-y-3">
+        <p class="text-[15px] text-[#8e8e93] leading-relaxed">Pobierz kopię wszystkich danych w formacie JSON:</p>
+        <button onclick="exportJSON()" class="btn-primary"><i data-lucide="download" class="inline-block w-5 h-5 mr-2"></i>Eksportuj JSON</button>
+        <p class="text-[13px] text-[#8e8e93]">Plik zawiera: zadania, bazę wiedzy, wydarzenia</p>
+      </div>
+    </div>
+    <div class="ios-card mb-6">
+      <div class="section-title">O aplikacji</div>
+      <div class="p-4 space-y-3">
+        <div class="flex justify-between items-center py-2 border-b border-[#e5e5ea]">
+          <span class="text-[15px]">Aplikacja</span>
+          <span class="text-[15px] font-semibold">Cerebro v1.0</span>
+        </div>
+        <div class="flex justify-between items-center py-2 border-b border-[#e5e5ea]">
+          <span class="text-[15px]">Technologia</span>
+          <span class="text-[15px] font-semibold">Google Apps Script</span>
+        </div>
+        <div class="flex justify-between items-center py-2">
+          <span class="text-[15px]">Baza danych</span>
+          <span class="text-[15px] font-semibold">Google Sheets</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+function initModule() { loadSettings(); }
+function loadSettings() { google.script.run.withSuccessHandler(function(result) { if (result.success && result.data) { document.getElementById('organizationName').value = result.data.organizationName || ''; document.getElementById('contactEmail').value = result.data.contactEmail || ''; } }).getSettings(); }
+function saveSettings() { const settings = { organizationName: document.getElementById('organizationName').value, contactEmail: document.getElementById('contactEmail').value }; google.script.run.withSuccessHandler(function(result) { if (result.success) { showSuccess('Ustawienia zapisane'); document.getElementById('sidebar-org').textContent = settings.organizationName || 'Moja Organizacja'; } else { showError('Błąd: ' + result.error); } }).saveSettings(settings); }
+function setupDrive() { google.script.run.withSuccessHandler(function(result) { if (result.success) { showSuccess('Folder struktury Drive utworzony. Synchronizacja uruchomiona.'); } else { showError('Błąd: ' + result.error); } }).setupDriveFolders(); }
+function manualSync() { google.script.run.withSuccessHandler(function(result) { if (result.success) { showSuccess('Zaimportowano ' + result.imported + ' plików'); } else { showError('Błąd: ' + result.error); } }).manualSyncDrive(); }
+function exportJSON() { google.script.run.withSuccessHandler(function(result) { if (result.success) { const blob = new Blob([result.data], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'cerebro-export-' + new Date().getTime() + '.json'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); showSuccess('Eksport został pobrany'); } else { showError('Błąd: ' + result.error); } }).exportAllData(); }
+</script>
