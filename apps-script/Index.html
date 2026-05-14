@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Cerebro">
+  <title>Cerebro</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+  <!-- Marked.js (markdown) -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <!-- iOS Design System -->
+  <?!= include('Styles'); ?>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'ios-blue': '#007aff',
+            'ios-green': '#34c759',
+            'ios-red': '#ff3b30',
+            'ios-orange': '#ff9500',
+            'ios-gray': '#8e8e93',
+            'ios-bg': '#f2f2f7',
+            'ios-card': '#ffffff',
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-[#f2f2f7] font-[-apple-system,BlinkMacSystemFont,'Inter',sans-serif]">
+
+  <!-- PWA Install Banner -->
+  <div id="pwa-banner" class="hidden fixed top-0 left-0 right-0 bg-[#007aff] text-white
+    px-4 py-2 text-sm text-center z-50">
+    Dodaj Cerebro do ekranu głównego: Udostępnij → Dodaj do ekranu głównego
+    <button onclick="document.getElementById('pwa-banner').remove()"
+      class="ml-3 underline">Zamknij</button>
+  </div>
+
+  <!-- Główny layout -->
+  <div class="flex h-screen overflow-hidden">
+
+    <!-- Sidebar (desktop) -->
+    <div id="sidebar" class="hidden md:flex flex-col w-64 bg-[#f2f2f7] border-r
+      border-[#c6c6c8] flex-shrink-0">
+      <?!= include('Sidebar'); ?>
+    </div>
+
+    <!-- Mobile sidebar overlay -->
+    <div id="mobile-overlay" class="hidden fixed inset-0 bg-black/50 z-40 md:hidden"
+      onclick="toggleMobileSidebar()"></div>
+    <div id="mobile-sidebar" class="fixed left-0 top-0 bottom-0 w-72 bg-[#f2f2f7]
+      z-50 transform -translate-x-full transition-transform duration-300 md:hidden
+      border-r border-[#c6c6c8]">
+      <?!= include('Sidebar'); ?>
+    </div>
+
+    <!-- Content area -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+
+      <!-- Mobile header -->
+      <div class="md:hidden flex items-center px-4 py-3 bg-white border-b border-[#c6c6c8]">
+        <button onclick="toggleMobileSidebar()" class="p-2 -ml-2">
+          <i data-lucide="menu" class="w-6 h-6 text-[#007aff]"></i>
+        </button>
+        <span id="mobile-title" class="ml-3 text-[17px] font-semibold">Cerebro</span>
+      </div>
+
+      <!-- Module content -->
+      <div id="content" class="flex-1 overflow-auto p-4 md:p-6">
+        <!-- Ładowanie -->
+        <div class="flex items-center justify-center h-full">
+          <div class="text-center">
+            <div class="text-5xl mb-4">🧠</div>
+            <div class="text-[17px] font-semibold text-[#000]">Cerebro</div>
+            <div class="text-[15px] text-[#8e8e93] mt-1">Ładowanie...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tooltip container -->
+  <div id="tooltip" class="hidden fixed z-[9999] bg-black/75 text-white text-[13px]
+    px-3 py-1.5 rounded-md pointer-events-none backdrop-blur-sm whitespace-nowrap">
+  </div>
+
+  <!-- Modal container -->
+  <div id="modal-overlay" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm
+    z-[100] flex items-end md:items-center justify-center">
+    <div id="modal-content" class="bg-white w-full md:max-w-lg rounded-t-[20px]
+      md:rounded-[16px] max-h-[90vh] overflow-auto">
+    </div>
+  </div>
+
+  <!-- Toast notifications -->
+  <div id="toast-container" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200]
+    flex flex-col gap-2 items-center">
+  </div>
+
+  <?!= include('Scripts'); ?>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      lucide.createIcons();
+      checkFirstRun();
+      navigateTo('pulpit');
+      showPWABanner();
+    });
+
+    function showPWABanner() {
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+      if (isIOS && !isStandalone) {
+        document.getElementById('pwa-banner').classList.remove('hidden');
+      }
+    }
+
+    function checkFirstRun() {
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (!result.success || !result.data.organizationName) {
+            navigateTo('ustawienia');
+            showInfo('Witaj w Cerebro! Zacznij od konfiguracji.');
+          }
+        })
+        .getSettings();
+    }
+
+    function toggleMobileSidebar() {
+      const sidebar = document.getElementById('mobile-sidebar');
+      const overlay = document.getElementById('mobile-overlay');
+      const isOpen = !sidebar.classList.contains('-translate-x-full');
+
+      if (isOpen) {
+        sidebar.classList.add('-translate-x-full');
+        overlay.classList.add('hidden');
+      } else {
+        sidebar.classList.remove('-translate-x-full');
+        overlay.classList.remove('hidden');
+      }
+    }
+
+    // Close modal when clicking outside
+    document.getElementById('modal-overlay').addEventListener('click', function(e) {
+      if (e.target === this) closeModal();
+    });
+  </script>
+</body>
+</html>
