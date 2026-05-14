@@ -1,0 +1,96 @@
+<!-- Sidebar -->
+<div class="flex flex-col h-full">
+  <!-- Logo -->
+  <div class="px-4 py-5 border-b border-[#c6c6c8]">
+    <div class="flex items-center gap-3">
+      <span class="text-3xl">🧠</span>
+      <div>
+        <div class="text-[20px] font-bold text-[#007aff]">Cerebro</div>
+        <div id="sidebar-org" class="text-[12px] text-[#8e8e93]">Ładowanie...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Nawigacja -->
+  <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+    <div class="text-[11px] font-semibold text-[#8e8e93] uppercase tracking-wider px-3 mb-2">
+      Moduły
+    </div>
+
+    <button id="nav-pulpit" onclick="navigateTo('pulpit')"
+      class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px]
+      text-[15px] font-medium transition-colors text-[#000] hover:bg-[rgba(120,120,128,0.08)]"
+      data-tooltip="Pulpit">
+      <i data-lucide="layout-dashboard" class="w-5 h-5 flex-shrink-0"></i>
+      <span>Pulpit</span>
+    </button>
+
+    <button id="nav-zadania" onclick="navigateTo('zadania')"
+      class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px]
+      text-[15px] font-medium transition-colors text-[#000] hover:bg-[rgba(120,120,128,0.08)]"
+      data-tooltip="Zadania">
+      <i data-lucide="check-square" class="w-5 h-5 flex-shrink-0"></i>
+      <span>Zadania</span>
+    </button>
+
+    <button id="nav-wiedza" onclick="navigateTo('wiedza')"
+      class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px]
+      text-[15px] font-medium transition-colors text-[#000] hover:bg-[rgba(120,120,128,0.08)]"
+      data-tooltip="Baza Wiedzy">
+      <i data-lucide="book-open" class="w-5 h-5 flex-shrink-0"></i>
+      <span>Baza Wiedzy</span>
+    </button>
+
+    <button id="nav-chat" onclick="navigateTo('chat')"
+      class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px]
+      text-[15px] font-medium transition-colors text-[#000] hover:bg-[rgba(120,120,128,0.08)]"
+      data-tooltip="Chat Saver">
+      <i data-lucide="message-square-plus" class="w-5 h-5 flex-shrink-0"></i>
+      <span>Chat Saver</span>
+    </button>
+
+    <button id="nav-terminarz" onclick="navigateTo('terminarz')"
+      class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px]
+      text-[15px] font-medium transition-colors text-[#000] hover:bg-[rgba(120,120,128,0.08)]"
+      data-tooltip="Terminarz">
+      <i data-lucide="calendar" class="w-5 h-5 flex-shrink-0"></i>
+      <span>Terminarz</span>
+    </button>
+
+    <button id="nav-personel" onclick="navigateTo('personel')"
+      class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px]
+      text-[15px] font-medium transition-colors text-[#000] hover:bg-[rgba(120,120,128,0.08)]"
+      data-tooltip="Personel">
+      <i data-lucide="users" class="w-5 h-5 flex-shrink-0"></i>
+      <span>Personel</span>
+    </button>
+  </nav>
+
+  <!-- Dół sidebara -->
+  <div class="px-3 py-4 border-t border-[#c6c6c8] space-y-1">
+    <button id="nav-ustawienia" onclick="navigateTo('ustawienia')"
+      class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px]
+      text-[15px] font-medium transition-colors text-[#000] hover:bg-[rgba(120,120,128,0.08)]"
+      data-tooltip="Ustawienia">
+      <i data-lucide="settings" class="w-5 h-5 flex-shrink-0"></i>
+      <span>Ustawienia</span>
+    </button>
+
+    <!-- Status -->
+    <div id="connection-status" class="flex items-center gap-2 px-3 py-2 text-[13px] text-[#8e8e93]">
+      <div class="w-2 h-2 rounded-full bg-[#34c759]"></div>
+      <span>Połączono</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success && result.data) {
+        const org = result.data.organizationName || 'Moja Organizacja';
+        document.getElementById('sidebar-org').textContent = org;
+      }
+    })
+    .getSettings();
+</script>
