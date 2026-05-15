@@ -1,15 +1,8 @@
 /**
  * SYSTEM RCP v2.0 — Rejestracja Czasu Pracy dla Klinik Stomatologicznych
  *
- * ARCHITEKTURA BEZPIECZEŃSTWA:
- *   - Uwierzytelnienie: Google OAuth (konto Google pracownika, nie PIN)
- *   - Lokalizacja: HTML5 Geolocation API (weryfikacja po stronie klienta + serwera)
- *   - Antyfraud: PropertiesService (rate limiting, anomaly detection)
- *   - Hashing: SHA-256 dla wrażliwych identyfikatorów
- *   - Retencja: 10 lat zgodnie z Art. 94(9a) KP
- *
  * PODSTAWY PRAWNE:
- *   - Art. 149 KP — obowiązek prowadzenia ewidencji czasu pracy
+ *   - Art. 149 KP  — obowiązek prowadzenia ewidencji czasu pracy
  *   - Art. 94(9a) KP — retencja dokumentacji pracowniczej 10 lat
  *   - RODO Art. 6(1)(b)(c) — podstawa prawna przetwarzania
  *   - RODO Art. 32 — bezpieczeństwo przetwarzania
@@ -21,308 +14,372 @@
 // ============================================================
 
 const CONFIG = {
-
   // ID arkusza Google Sheets (skopiuj z URL: /spreadsheets/d/TUTAJ_ID/edit)
   ARKUSZ_ID: "WKLEJ_TUTAJ_ID_ARKUSZA",
 
-  // Nazwy zakładek w arkuszu (nie zmieniaj po wdrożeniu)
+  // Nazwy zakładek — muszą się DOKŁADNIE zgadzać z nazwami w arkuszu
   ZAKŁADKI: {
-    EWIDENCJA:    "Ewidencja Czasu",
-    PRACOWNICY:   "Pracownicy",
-    KLINIKI:      "Kliniki",
-    LOGI:         "Logi Audytowe",
-    ANOMALIE:     "Anomalie",
-    KONFIGURACJA: "Konfiguracja"
+    EWIDENCJA:  "Ewidencja Czasu",
+    PRACOWNICY: "Pracownicy",
+    KLINIKI:    "Kliniki",
+    LOGI:       "Logi Audytowe",
+    ANOMALIE:   "Anomalie"
   },
 
-  // Email administratora systemu
-  EMAIL_ADMIN: "admin@twoja-klinika.pl",
+  EMAIL_ADMIN:        "admin@twoja-klinika.pl",
+  NAZWA_ORGANIZACJI:  "Klinika Stomatologiczna XYZ",
 
-  // Nazwa organizacji (do emaili i raportów)
-  NAZWA_ORGANIZACJI: "Klinika Stomatologiczna XYZ",
+  RADIUS_GPS_METRY:     100,  // promień akceptacji GPS w metrach
+  TOLERANCJA_GPS_METRY:  10,  // dodatkowa tolerancja
 
-  // Bezpieczeństwo
-  MAX_PROB_NA_GODZINE: 5,       // po ilu próbach blokada
-  BLOKADA_MINUT: 60,            // czas blokady w minutach
-  RADIUS_GPS_METRY: 50,         // promień akceptacji GPS (metry)
-  TOLERANCJA_GPS_METRY: 10,     // dodatkowa tolerancja dla GPS
+  MAX_PROB_NA_GODZINE:   5,   // po ilu nieudanych próbach blokada
+  BLOKADA_MINUT:        60,   // czas blokady
 
-  // Anomaly detection — progi alertów
-  MIN_CZAS_ZMIANY_MINUT: 15,    // zmiana krótsza → alert
-  MAX_CZAS_ZMIANY_GODZIN: 13,   // zmiana dłuższa → alert (max Art. 131 KP)
-  ALERT_WEEKEND: true,          // alert przy rejestracji w weekend
-  ALERT_NOC: true,              // alert między 22:00 a 06:00
+  // Anomaly detection
+  MIN_CZAS_ZMIANY_MINUT:  15,
+  MAX_CZAS_ZMIANY_GODZIN: 13,
+  ALERT_WEEKEND: true,
+  ALERT_NOC:     true,
 
-  // Retencja danych (Art. 94(9a) KP — 10 lat)
+  // Retencja (Art. 94(9a) KP)
   RETENCJA_EWIDENCJI_LAT: 10,
-  RETENCJA_LOGOW_LAT: 3,        // logi audytowe: 3 lata
-
+  RETENCJA_LOGOW_LAT:      3
 };
 
 // ============================================================
-// PUNKT WEJŚCIA — SERWOWANIE APLIKACJI (GET)
+// PUNKT WEJŚCIA — SERWOWANIE STRONY (GET)
 // ============================================================
 
 function doGet(e) {
-  const sesja = Session.getActiveUser();
-  const email = sesja.getEmail();
+  const email = Session.getActiveUser().getEmail();
+  Logger.log("doGet — email: " + email);
 
-  // Blokada dostępu dla niezalogowanych
   if (!email) {
     return HtmlService.createHtmlOutput(
-      '<h2>Brak dostępu. Zaloguj się kontem Google kliniki.</h2>'
+      "<h2>Zaloguj się kontem Google aby korzystać z systemu RCP.</h2>"
     );
   }
 
-  // Sprawdź czy pracownik jest w systemie
   const pracownik = znajdzPracownika(email);
 
-  // Panel administratora
-  if (e.parameter.panel === "admin") {
-    if (!czyAdmin(email)) {
-      return HtmlService.createHtmlOutput('<h2>Brak uprawnień administratora.</h2>');
-    }
-    return serweAdminPanel();
-  }
-
-  // Sprawdź blokadę rate-limit
-  const blokada = sprawdzBlokade(email);
-  if (blokada.zablokowany) {
-    return serweStroneBledu(
-      "Konto tymczasowo zablokowane",
-      `Zbyt wiele prób. Spróbuj za ${blokada.pozostalychMinut} min.`
-    );
-  }
-
   if (!pracownik) {
-    logujZdarzenie("DOSTEP_ODMOWIONY", email, null, "Nieznany email");
-    return serweStroneBledu(
-      "Brak dostępu",
-      "Twój email nie jest zarejestrowany w systemie. Skontaktuj się z administratorem."
+    logujZdarzenie("BRAK_PRACOWNIKA", email, "", "Email nie w bazie");
+    return HtmlService.createHtmlOutput(
+      "<h2>Brak dostępu.</h2><p>Email <b>" + email +
+      "</b> nie jest zarejestrowany. Skontaktuj się z administratorem.</p>" +
+      "<p>Admin: " + CONFIG.EMAIL_ADMIN + "</p>"
     );
   }
 
-  // Załaduj konfigurację klinik dla danego pracownika
-  const kliniki = pobierzKlinikiPracownika(pracownik.id);
+  const kliniki = pobierzKlinikiPracownika();
 
-  const szablon = HtmlService.createTemplateFromFile("index");
-  szablon.pracownik = pracownik;
-  szablon.kliniki = JSON.stringify(kliniki);
-  szablon.config = JSON.stringify({
-    radiusMetry: CONFIG.RADIUS_GPS_METRY + CONFIG.TOLERANCJA_GPS_METRY
+  const template = HtmlService.createTemplateFromFile("index");
+
+  // WAŻNE: przekazuj jako JSON string — w HTML użyj <?!= ?> (bez escape)
+  template.pracownikJson = JSON.stringify(pracownik);
+  template.klinikiJson   = JSON.stringify(kliniki);
+  template.configJson    = JSON.stringify({
+    radius: CONFIG.RADIUS_GPS_METRY + CONFIG.TOLERANCJA_GPS_METRY,
+    emailAdmin: CONFIG.EMAIL_ADMIN
   });
 
-  return szablon.evaluate()
-    .setTitle("RCP — Rejestracja Czasu Pracy")
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DENY)
-    .addMetaTag("viewport", "width=device-width, initial-scale=1");
+  return template
+    .evaluate()
+    .setTitle("RCP — Rejestracja Czasu")
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
 // ============================================================
-// PUNKT WEJŚCIA — REJESTRACJA CZASU (POST, AJAX)
+// FUNKCJE WYWOŁYWANE PRZEZ google.script.run (CLIENT-SIDE)
+// Muszą zwracać zwykłe obiekty JS — NIE ContentService
 // ============================================================
 
-function doPost(e) {
+/**
+ * Rejestracja czasu — wywoływana przez google.script.run z przeglądarki.
+ */
+function clientRejestruj(dane) {
   try {
     const email = Session.getActiveUser().getEmail();
-    if (!email) return odpowiedz(false, "Brak uwierzytelnienia");
+    if (!email) return { sukces: false, komunikat: "Brak autoryzacji. Odśwież stronę." };
 
-    const dane = JSON.parse(e.postData.contents);
-    const akcja = dane.akcja;
-
-    if (akcja === "rejestruj") {
-      return zarejestrujCzas(email, dane);
+    // Rate limiting
+    const blokada = sprawdzBlokade(email);
+    if (blokada.zablokowany) {
+      return { sukces: false, komunikat: "Konto zablokowane na " + blokada.pozostalychMinut + " min." };
     }
 
-    if (akcja === "statusDzisiaj") {
-      return pobierzStatusDzisiaj(email);
+    const pracownik = znajdzPracownika(email);
+    if (!pracownik) {
+      return { sukces: false, komunikat: "Nie znaleziono pracownika." };
     }
 
-    return odpowiedz(false, "Nieznana akcja");
+    const klinika = znajdzKlinike(dane.klinikaId);
+    if (!klinika) {
+      return { sukces: false, komunikat: "Nie znaleziono kliniki." };
+    }
+
+    if (!dane.gps || typeof dane.gps.lat !== "number") {
+      return { sukces: false, komunikat: "Brak danych GPS. Zezwól na lokalizację i spróbuj ponownie." };
+    }
+
+    const dystans = obliczOdleglosc(dane.gps.lat, dane.gps.lng, klinika.lat, klinika.lng);
+    const maxDystans = CONFIG.RADIUS_GPS_METRY + CONFIG.TOLERANCJA_GPS_METRY;
+
+    if (dystans > maxDystans) {
+      zwiekszLicznikProb(email);
+      logujZdarzenie("GPS_ODMOWA", email, klinika.nazwa,
+        "Dystans: " + Math.round(dystans) + "m, limit: " + maxDystans + "m");
+      return {
+        sukces: false,
+        komunikat: "Jesteś " + Math.round(dystans) + "m od kliniki. Maksimum: " + maxDystans + "m."
+      };
+    }
+
+    if (dane.typ !== "P" && dane.typ !== "W") {
+      return { sukces: false, komunikat: "Nieprawidłowy typ zdarzenia." };
+    }
+
+    // Sprawdź spójność sekwencji
+    const ostatni = pobierzOstatniWpis(pracownik.id, klinika.id);
+
+    if (dane.typ === "P" && ostatni && ostatni.typ === "P") {
+      return { sukces: false, komunikat: pracownik.imie + ", masz już zarejestrowane przyjście dziś. Skontaktuj się z administratorem jeśli to błąd." };
+    }
+    if (dane.typ === "W" && (!ostatni || ostatni.typ === "W")) {
+      return { sukces: false, komunikat: pracownik.imie + ", nie masz zarejestrowanego przyjścia dziś." };
+    }
+
+    // Zapis do arkusza
+    const now = new Date();
+    const id  = Utilities.getUuid().replace(/-/g, "").substring(0, 12).toUpperCase();
+
+    const sheet = SpreadsheetApp
+      .openById(CONFIG.ARKUSZ_ID)
+      .getSheetByName(CONFIG.ZAKŁADKI.EWIDENCJA);
+
+    sheet.appendRow([
+      id,
+      pracownik.id,
+      Utilities.formatDate(now, Session.getScriptTimeZone(), "yyyy-MM-dd"),
+      klinika.id,
+      dane.typ,
+      Utilities.formatDate(now, Session.getScriptTimeZone(), "HH:mm:ss"),
+      Utilities.formatDate(now, Session.getScriptTimeZone(), "EEEE"),
+      Math.round(dystans),
+      "ZATWIERDZONE",
+      now.toISOString(),
+      ""
+    ]);
+
+    resetujLicznikProb(email);
+    logujZdarzenie("SUKCES", email, klinika.nazwa, dane.typ + " | " + Math.round(dystans) + "m");
+
+    // Anomaly detection (nie blokuje rejestracji)
+    wykryjAnomalieASync(pracownik, klinika, dane.typ, now, dystans, ostatni);
+
+    // Email potwierdzający
+    wyslijPotwierdzenie(pracownik, klinika, dane.typ, now);
+
+    const godzina = Utilities.formatDate(now, Session.getScriptTimeZone(), "HH:mm");
+    const typPelny = dane.typ === "P" ? "Przyjście" : "Wyjście";
+
+    return {
+      sukces: true,
+      komunikat: typPelny + " zarejestrowane o " + godzina,
+      dane: { godzina: godzina, klinika: klinika.nazwa }
+    };
 
   } catch (err) {
-    logujZdarzenie("BŁĄD_SYSTEMU", null, null, err.toString());
-    return odpowiedz(false, "Błąd systemu. Skontaktuj się z administratorem.");
+    Logger.log("clientRejestruj ERROR: " + err);
+    return { sukces: false, komunikat: "Błąd serwera: " + err.toString() };
+  }
+}
+
+/**
+ * Pobiera dzisiejsze wpisy pracownika — wywoływana przez google.script.run.
+ */
+function clientStatus() {
+  try {
+    const email = Session.getActiveUser().getEmail();
+    if (!email) return { sukces: false, wpisyDzisiaj: [] };
+
+    const pracownik = znajdzPracownika(email);
+    if (!pracownik) return { sukces: false, wpisyDzisiaj: [] };
+
+    const sheet = SpreadsheetApp
+      .openById(CONFIG.ARKUSZ_ID)
+      .getSheetByName(CONFIG.ZAKŁADKI.EWIDENCJA);
+
+    const dane  = sheet.getDataRange().getValues();
+    const dzis  = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
+    const wpisy = [];
+
+    for (let i = 1; i < dane.length; i++) {
+      if (dane[i][1] === pracownik.id && dane[i][2] === dzis) {
+        const klinika = znajdzKlinike(dane[i][3]);
+        wpisy.push({
+          typ:     dane[i][4],
+          godzina: dane[i][5],
+          klinika: klinika ? klinika.nazwa : dane[i][3]
+        });
+      }
+    }
+
+    return { sukces: true, wpisyDzisiaj: wpisy };
+
+  } catch (err) {
+    Logger.log("clientStatus ERROR: " + err);
+    return { sukces: false, wpisyDzisiaj: [] };
   }
 }
 
 // ============================================================
-// GŁÓWNA LOGIKA — REJESTRACJA CZASU
+// DANE — PRACOWNICY
 // ============================================================
 
-function zarejestrujCzas(email, dane) {
-  const timestamp = new Date();
+function znajdzPracownika(email) {
+  const sheet = SpreadsheetApp
+    .openById(CONFIG.ARKUSZ_ID)
+    .getSheetByName(CONFIG.ZAKŁADKI.PRACOWNICY);
 
-  // 1. Rate limiting
-  const blokada = sprawdzBlokade(email);
-  if (blokada.zablokowany) {
-    return odpowiedz(false, `Blokada bezpieczeństwa. Spróbuj za ${blokada.pozostalychMinut} min.`);
-  }
+  const dane      = sheet.getDataRange().getValues();
+  const emailHash = hashuj(email.toLowerCase().trim());
 
-  // 2. Weryfikacja pracownika
-  const pracownik = znajdzPracownika(email);
-  if (!pracownik) {
-    rejestrujPróbę(email, false);
-    logujZdarzenie("ODMOWA_REJESTRACJI", email, null, "Nieznany pracownik");
-    return odpowiedz(false, "Nie znaleziono pracownika.");
-  }
-
-  // 3. Weryfikacja kliniki
-  const klinika = znajdzKlinike(dane.klinikaId);
-  if (!klinika) {
-    logujZdarzenie("BŁĄD_KLINIKI", email, dane.klinikaId, "Nieznana klinika");
-    return odpowiedz(false, "Nieznana klinika.");
-  }
-
-  // 4. Weryfikacja GPS (serwer ponownie sprawdza przesłane współrzędne)
-  if (!dane.gps || typeof dane.gps.lat !== "number" || typeof dane.gps.lng !== "number") {
-    logujZdarzenie("BRAK_GPS", email, klinika.nazwa, "Brak danych GPS");
-    return odpowiedz(false, "Wymagana lokalizacja GPS. Zezwól na dostęp do lokalizacji.");
-  }
-
-  const odlegloscMetry = obliczOdleglosc(
-    dane.gps.lat, dane.gps.lng,
-    klinika.lat, klinika.lng
-  );
-
-  const radiusAkceptacji = CONFIG.RADIUS_GPS_METRY + CONFIG.TOLERANCJA_GPS_METRY;
-
-  if (odlegloscMetry > radiusAkceptacji) {
-    logujZdarzenie(
-      "GPS_ODMOWA", email, klinika.nazwa,
-      `Odległość: ${Math.round(odlegloscMetry)}m, limit: ${radiusAkceptacji}m`
-    );
-    zwiekszLicznikProb(email);
-    return odpowiedz(false,
-      `Jesteś ${Math.round(odlegloscMetry)}m od kliniki. ` +
-      `Maksymalna odległość: ${radiusAkceptacji}m. ` +
-      `Skontaktuj się z administratorem jeśli jesteś na miejscu.`
-    );
-  }
-
-  // 5. Sprawdź typ zdarzenia (przyjście/wyjście)
-  const typ = walidujTyp(dane.typ);
-  if (!typ) return odpowiedz(false, "Nieprawidłowy typ zdarzenia.");
-
-  // 6. Sprawdź spójność (nie można wyjść bez wcześniejszego wejścia)
-  const ostatniWpis = pobierzOstatniWpis(pracownik.id, dane.klinikaId);
-  const walidacjaSekwencji = walidujSekwencje(ostatniWpis, typ, pracownik.imie);
-  if (!walidacjaSekwencji.ok) {
-    return odpowiedz(false, walidacjaSekwencji.komunikat);
-  }
-
-  // 7. Zapisz ewidencję
-  const idWpisu = zapiszEwidencje(pracownik, klinika, typ, timestamp, dane.gps, odlegloscMetry);
-
-  // 8. Wykryj anomalie (asynchronicznie — nie blokuje rejestracji)
-  wykryjAnomalieASync(pracownik, klinika, typ, timestamp, odlegloscMetry, ostatniWpis);
-
-  // 9. Wyślij potwierdzenie
-  wyslijPotwierdzenie(pracownik, klinika, typ, timestamp);
-
-  // 10. Loguj sukces
-  logujZdarzenie("SUKCES_REJESTRACJI", email, klinika.nazwa,
-    `${typ} | GPS: ${Math.round(odlegloscMetry)}m | ID: ${idWpisu}`
-  );
-
-  // Resetuj licznik prób po udanej rejestracji
-  resetujLicznikProb(email);
-
-  const godzina = Utilities.formatDate(timestamp, Session.getScriptTimeZone(), "HH:mm");
-  const typPelny = typ === "P" ? "Przyjście" : "Wyjście";
-
-  return odpowiedz(true,
-    `✅ ${typPelny} zarejestrowane o ${godzina}`,
-    { godzina, typ, klinika: klinika.nazwa, idWpisu }
-  );
-}
-
-// ============================================================
-// STATUS DZISIAJ
-// ============================================================
-
-function pobierzStatusDzisiaj(email) {
-  const pracownik = znajdzPracownika(email);
-  if (!pracownik) return odpowiedz(false, "Brak pracownika");
-
-  const ss = SpreadsheetApp.openById(CONFIG.ARKUSZ_ID);
-  const sheet = ss.getSheetByName(CONFIG.ZAKŁADKI.EWIDENCJA);
-  const dzisiaj = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
-
-  const dane = sheet.getDataRange().getValues();
-  const wpisyDzisiaj = [];
+  Logger.log("Szukam hash: " + emailHash);
 
   for (let i = 1; i < dane.length; i++) {
-    const wiersz = dane[i];
-    if (wiersz[1] === pracownik.id && wiersz[2] === dzisiaj) {
-      wpisyDzisiaj.push({
-        typ:     wiersz[4],
-        godzina: wiersz[5],
-        klinika: wiersz[3]
+    const row = dane[i];
+    // Kolumna D (index 3) = EMAIL_HASH, kolumna H (index 7) = STATUS
+    if (String(row[3]) === emailHash && String(row[7]) === "AKTYWNY") {
+      return {
+        id:       String(row[0]),
+        imie:     String(row[1]),
+        nazwisko: String(row[2]),
+        rola:     String(row[5]),
+        email:    email
+      };
+    }
+  }
+
+  Logger.log("Nie znaleziono pracownika dla hash: " + emailHash);
+  return null;
+}
+
+// ============================================================
+// DANE — KLINIKI
+// ============================================================
+
+function pobierzKlinikiPracownika() {
+  const sheet = SpreadsheetApp
+    .openById(CONFIG.ARKUSZ_ID)
+    .getSheetByName(CONFIG.ZAKŁADKI.KLINIKI);
+
+  const dane   = sheet.getDataRange().getValues();
+  const wynik  = [];
+
+  for (let i = 1; i < dane.length; i++) {
+    // Kolumna G (index 6) = STATUS
+    if (String(dane[i][6]) === "AKTYWNA") {
+      wynik.push({
+        id:    String(dane[i][0]),
+        nazwa: String(dane[i][1]),
+        adres: String(dane[i][2]),
+        lat:   parseFloat(dane[i][3]),
+        lng:   parseFloat(dane[i][4])
       });
     }
   }
 
-  return odpowiedz(true, "OK", { wpisyDzisiaj });
+  return wynik;
+}
+
+function znajdzKlinike(id) {
+  return pobierzKlinikiPracownika().find(k => k.id === id) || null;
 }
 
 // ============================================================
-// EWIDENCJA — ZAPIS DO ARKUSZA
+// DANE — OSTATNI WPIS (do walidacji sekwencji)
 // ============================================================
 
-function zapiszEwidencje(pracownik, klinika, typ, timestamp, gps, odlegloscMetry) {
-  const ss = SpreadsheetApp.openById(CONFIG.ARKUSZ_ID);
-  const sheet = ss.getSheetByName(CONFIG.ZAKŁADKI.EWIDENCJA);
+function pobierzOstatniWpis(pracownikId, klinikaId) {
+  const sheet = SpreadsheetApp
+    .openById(CONFIG.ARKUSZ_ID)
+    .getSheetByName(CONFIG.ZAKŁADKI.EWIDENCJA);
 
-  const idWpisu = generujId();
-  const data = Utilities.formatDate(timestamp, Session.getScriptTimeZone(), "yyyy-MM-dd");
-  const godz = Utilities.formatDate(timestamp, Session.getScriptTimeZone(), "HH:mm:ss");
-  const dzienTygodnia = Utilities.formatDate(timestamp, Session.getScriptTimeZone(), "EEEE");
+  const dane  = sheet.getDataRange().getValues();
+  const dzis  = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
+  let ostatni = null;
 
-  sheet.appendRow([
-    idWpisu,                    // A: ID wpisu
-    pracownik.id,               // B: ID pracownika
-    data,                       // C: Data
-    klinika.id,                 // D: ID kliniki
-    typ,                        // E: Typ (P/W)
-    godz,                       // F: Godzina
-    dzienTygodnia,              // G: Dzień tygodnia
-    Math.round(odlegloscMetry), // H: Odległość GPS (m)
-    "ZATWIERDZONE",             // I: Status
-    new Date().toISOString(),   // J: Timestamp ISO (dla archiwum)
-    ""                          // K: Uwagi (do ręcznych korekt)
-  ]);
+  for (let i = 1; i < dane.length; i++) {
+    if (dane[i][1] === pracownikId && dane[i][2] === dzis && dane[i][3] === klinikaId) {
+      ostatni = { typ: dane[i][4], timestamp: new Date(dane[i][9]) };
+    }
+  }
 
-  return idWpisu;
+  return ostatni;
+}
+
+// ============================================================
+// RATE LIMITING
+// ============================================================
+
+function sprawdzBlokade(email) {
+  const props = PropertiesService.getScriptProperties();
+  const klucz = "bl_" + hashuj(email);
+  const dane  = props.getProperty(klucz);
+
+  if (!dane) return { zablokowany: false };
+
+  const obj  = JSON.parse(dane);
+  const teraz = Date.now();
+
+  if (obj.licznik >= CONFIG.MAX_PROB_NA_GODZINE) {
+    const koniec = obj.ostatnia + (CONFIG.BLOKADA_MINUT * 60 * 1000);
+    if (teraz < koniec) {
+      return { zablokowany: true, pozostalychMinut: Math.ceil((koniec - teraz) / 60000) };
+    }
+    props.deleteProperty(klucz);
+  }
+
+  return { zablokowany: false };
+}
+
+function zwiekszLicznikProb(email) {
+  const props = PropertiesService.getScriptProperties();
+  const klucz = "bl_" + hashuj(email);
+  const dane  = props.getProperty(klucz);
+  const obj   = dane ? JSON.parse(dane) : { licznik: 0, ostatnia: 0 };
+  obj.licznik++;
+  obj.ostatnia = Date.now();
+  props.setProperty(klucz, JSON.stringify(obj));
+}
+
+function resetujLicznikProb(email) {
+  PropertiesService.getScriptProperties().deleteProperty("bl_" + hashuj(email));
 }
 
 // ============================================================
 // ANOMALY DETECTION
 // ============================================================
 
-function wykryjAnomalieASync(pracownik, klinika, typ, timestamp, odlegloscMetry, ostatniWpis) {
+function wykryjAnomalieASync(pracownik, klinika, typ, timestamp, dystans, ostatniWpis) {
   const anomalie = [];
-  const godz = timestamp.getHours();
-  const dzienTygodnia = timestamp.getDay(); // 0=niedziela, 6=sobota
+  const godz     = timestamp.getHours();
+  const dzien    = timestamp.getDay();
 
-  // Nocna rejestracja (22:00–06:00)
   if (CONFIG.ALERT_NOC && (godz >= 22 || godz < 6)) {
-    anomalie.push(`Rejestracja w godzinach nocnych: ${godz}:00`);
+    anomalie.push("Rejestracja w godzinach nocnych (" + godz + ":00)");
   }
-
-  // Rejestracja w weekend
-  if (CONFIG.ALERT_WEEKEND && (dzienTygodnia === 0 || dzienTygodnia === 6)) {
-    anomalie.push(`Rejestracja w weekend (${dzienTygodnia === 0 ? "niedziela" : "sobota"})`);
+  if (CONFIG.ALERT_WEEKEND && (dzien === 0 || dzien === 6)) {
+    anomalie.push("Rejestracja w weekend (" + (dzien === 0 ? "niedziela" : "sobota") + ")");
   }
-
-  // Zbyt krótka zmiana (poniżej minimum)
   if (typ === "W" && ostatniWpis && ostatniWpis.typ === "P") {
-    const minutyCzasuPracy = (timestamp - ostatniWpis.timestamp) / 60000;
-    if (minutyCzasuPracy < CONFIG.MIN_CZAS_ZMIANY_MINUT) {
-      anomalie.push(`Bardzo krótka zmiana: ${Math.round(minutyCzasuPracy)} minut`);
+    const min = (timestamp - ostatniWpis.timestamp) / 60000;
+    if (min < CONFIG.MIN_CZAS_ZMIANY_MINUT) {
+      anomalie.push("Bardzo krótka zmiana: " + Math.round(min) + " min");
     }
-    if (minutyCzasuPracy > CONFIG.MAX_CZAS_ZMIANY_GODZIN * 60) {
-      anomalie.push(`Zmiana przekracza ${CONFIG.MAX_CZAS_ZMIANY_GODZIN}h: ${Math.round(minutyCzasuPracy / 60)}h`);
+    if (min > CONFIG.MAX_CZAS_ZMIANY_GODZIN * 60) {
+      anomalie.push("Zmiana powyżej " + CONFIG.MAX_CZAS_ZMIANY_GODZIN + "h: " + Math.round(min / 60) + "h");
     }
   }
 
@@ -333,376 +390,122 @@ function wykryjAnomalieASync(pracownik, klinika, typ, timestamp, odlegloscMetry,
 }
 
 function zapiszAnomalie(pracownik, klinika, typ, timestamp, anomalie) {
-  const ss = SpreadsheetApp.openById(CONFIG.ARKUSZ_ID);
-  const sheet = ss.getSheetByName(CONFIG.ZAKŁADKI.ANOMALIE);
-
-  sheet.appendRow([
-    generujId(),
-    Utilities.formatDate(timestamp, Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss"),
-    pracownik.id,
-    pracownik.imie + " " + pracownik.nazwisko,
-    klinika.nazwa,
-    typ,
-    anomalie.join(" | "),
-    "NOWE"
-  ]);
-}
-
-// ============================================================
-// RATE LIMITING
-// ============================================================
-
-function sprawdzBlokade(email) {
-  const props = PropertiesService.getScriptProperties();
-  const klucz = "blokada_" + hashuj(email);
-  const dane = props.getProperty(klucz);
-
-  if (!dane) return { zablokowany: false };
-
-  const obj = JSON.parse(dane);
-  const teraz = Date.now();
-
-  if (obj.licznik >= CONFIG.MAX_PROB_NA_GODZINE) {
-    const koniecBlokady = obj.ostatniaProba + (CONFIG.BLOKADA_MINUT * 60 * 1000);
-    if (teraz < koniecBlokady) {
-      const pozostale = Math.ceil((koniecBlokady - teraz) / 60000);
-      return { zablokowany: true, pozostalychMinut: pozostale };
-    } else {
-      // Blokada wygasła — resetuj
-      props.deleteProperty(klucz);
-      return { zablokowany: false };
-    }
-  }
-
-  return { zablokowany: false };
-}
-
-function rejestrujPróbę(email, sukces) {
-  if (sukces) {
-    resetujLicznikProb(email);
-    return;
-  }
-  zwiekszLicznikProb(email);
-}
-
-function zwiekszLicznikProb(email) {
-  const props = PropertiesService.getScriptProperties();
-  const klucz = "blokada_" + hashuj(email);
-  const dane = props.getProperty(klucz);
-  const obj = dane ? JSON.parse(dane) : { licznik: 0, ostatniaProba: 0 };
-
-  obj.licznik++;
-  obj.ostatniaProba = Date.now();
-  props.setProperty(klucz, JSON.stringify(obj));
-}
-
-function resetujLicznikProb(email) {
-  const props = PropertiesService.getScriptProperties();
-  props.deleteProperty("blokada_" + hashuj(email));
-}
-
-// ============================================================
-// DANE — PRACOWNICY I KLINIKI (z arkusza)
-// ============================================================
-
-function znajdzPracownika(email) {
-  const ss = SpreadsheetApp.openById(CONFIG.ARKUSZ_ID);
-  const sheet = ss.getSheetByName(CONFIG.ZAKŁADKI.PRACOWNICY);
-  const dane = sheet.getDataRange().getValues();
-
-  const emailHash = hashuj(email.toLowerCase().trim());
-
-  for (let i = 1; i < dane.length; i++) {
-    const wiersz = dane[i];
-    // Kolumna D: hash emaila (nie przechowujemy emaila w plaintext)
-    if (wiersz[3] === emailHash && wiersz[7] === "AKTYWNY") {
-      return {
-        id:       wiersz[0],
-        imie:     wiersz[1],
-        nazwisko: wiersz[2],
-        email:    email,          // pobrane z sesji Google, nie z arkusza
-        rola:     wiersz[5],
-        klinikiId: wiersz[6] ? wiersz[6].split(",") : []
-      };
-    }
-  }
-  return null;
-}
-
-function czyAdmin(email) {
-  const pracownik = znajdzPracownika(email);
-  return pracownik && (pracownik.rola === "ADMIN" || pracownik.rola === "KIEROWNIK");
-}
-
-function znajdzKlinike(klinikaId) {
-  const ss = SpreadsheetApp.openById(CONFIG.ARKUSZ_ID);
-  const sheet = ss.getSheetByName(CONFIG.ZAKŁADKI.KLINIKI);
-  const dane = sheet.getDataRange().getValues();
-
-  for (let i = 1; i < dane.length; i++) {
-    const wiersz = dane[i];
-    if (wiersz[0] === klinikaId && wiersz[6] === "AKTYWNA") {
-      return {
-        id:     wiersz[0],
-        nazwa:  wiersz[1],
-        adres:  wiersz[2],
-        lat:    parseFloat(wiersz[3]),
-        lng:    parseFloat(wiersz[4]),
-        radius: parseInt(wiersz[5]) || CONFIG.RADIUS_GPS_METRY
-      };
-    }
-  }
-  return null;
-}
-
-function pobierzKlinikiPracownika(pracownikId) {
-  const ss = SpreadsheetApp.openById(CONFIG.ARKUSZ_ID);
-  const sheet = ss.getSheetByName(CONFIG.ZAKŁADKI.KLINIKI);
-  const dane = sheet.getDataRange().getValues();
-
-  const kliniki = [];
-  for (let i = 1; i < dane.length; i++) {
-    const wiersz = dane[i];
-    if (wiersz[6] === "AKTYWNA") {
-      kliniki.push({
-        id:    wiersz[0],
-        nazwa: wiersz[1],
-        adres: wiersz[2],
-        lat:   parseFloat(wiersz[3]),
-        lng:   parseFloat(wiersz[4])
-      });
-    }
-  }
-  return kliniki;
-}
-
-function pobierzOstatniWpis(pracownikId, klinikaId) {
-  const ss = SpreadsheetApp.openById(CONFIG.ARKUSZ_ID);
-  const sheet = ss.getSheetByName(CONFIG.ZAKŁADKI.EWIDENCJA);
-  const dane = sheet.getDataRange().getValues();
-  const dzisiaj = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
-
-  let ostatni = null;
-  for (let i = 1; i < dane.length; i++) {
-    const wiersz = dane[i];
-    if (wiersz[1] === pracownikId && wiersz[2] === dzisiaj && wiersz[3] === klinikaId) {
-      ostatni = {
-        id:        wiersz[0],
-        typ:       wiersz[4],
-        godzina:   wiersz[5],
-        timestamp: new Date(wiersz[9])
-      };
-    }
-  }
-  return ostatni;
-}
-
-// ============================================================
-// WALIDACJE
-// ============================================================
-
-function walidujTyp(typ) {
-  if (typ === "P" || typ === "W") return typ;
-  return null;
-}
-
-function walidujSekwencje(ostatniWpis, typ, imie) {
-  if (typ === "P") {
-    if (ostatniWpis && ostatniWpis.typ === "P") {
-      return {
-        ok: false,
-        komunikat: `${imie}, masz już zarejestrowane przyjście dziś. ` +
-                   `Czy chcesz zarejestrować wyjście? Skontaktuj się z administratorem jeśli to błąd.`
-      };
-    }
-  }
-  if (typ === "W") {
-    if (!ostatniWpis || ostatniWpis.typ === "W") {
-      return {
-        ok: false,
-        komunikat: `${imie}, nie masz zarejestrowanego przyjścia dziś. ` +
-                   `Skontaktuj się z administratorem.`
-      };
-    }
-  }
-  return { ok: true };
-}
-
-// ============================================================
-// OBLICZENIA GPS (Haversine)
-// ============================================================
-
-function obliczOdleglosc(lat1, lng1, lat2, lng2) {
-  const R = 6371000; // promień Ziemi w metrach
-  const φ1 = lat1 * Math.PI / 180;
-  const φ2 = lat2 * Math.PI / 180;
-  const Δφ = (lat2 - lat1) * Math.PI / 180;
-  const Δλ = (lng2 - lng1) * Math.PI / 180;
-
-  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-            Math.cos(φ1) * Math.cos(φ2) *
-            Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-// ============================================================
-// EMAIL — POTWIERDZENIA I ALERTY
-// ============================================================
-
-function wyslijPotwierdzenie(pracownik, klinika, typ, timestamp) {
-  const godz = Utilities.formatDate(timestamp, Session.getScriptTimeZone(), "HH:mm");
-  const data = Utilities.formatDate(timestamp, Session.getScriptTimeZone(), "dd.MM.yyyy");
-  const typPelny = typ === "P" ? "PRZYJŚCIE" : "WYJŚCIE";
-  const emoji = typ === "P" ? "🟢" : "🔴";
-
-  const temat = `${emoji} RCP: ${typPelny} — ${godz} — ${klinika.nazwa}`;
-
-  const tresc = `
-<!DOCTYPE html>
-<html lang="pl">
-<head><meta charset="UTF-8"></head>
-<body style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
-  <div style="background: ${typ === 'P' ? '#d4edda' : '#f8d7da'}; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-    <h2 style="margin: 0; color: ${typ === 'P' ? '#155724' : '#721c24'};">
-      ${emoji} Rejestracja potwierdzona
-    </h2>
-  </div>
-
-  <p>Cześć, <strong>${pracownik.imie}</strong>!</p>
-
-  <table style="width: 100%; border-collapse: collapse;">
-    <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Typ zdarzenia</strong></td>
-        <td style="padding: 8px; border-bottom: 1px solid #eee;">${typPelny}</td></tr>
-    <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Godzina</strong></td>
-        <td style="padding: 8px; border-bottom: 1px solid #eee;">${godz}</td></tr>
-    <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Data</strong></td>
-        <td style="padding: 8px; border-bottom: 1px solid #eee;">${data}</td></tr>
-    <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Klinika</strong></td>
-        <td style="padding: 8px; border-bottom: 1px solid #eee;">${klinika.nazwa}</td></tr>
-    <tr><td style="padding: 8px;"><strong>Lokalizacja GPS</strong></td>
-        <td style="padding: 8px;">✅ Potwierdzona</td></tr>
-  </table>
-
-  <div style="background: #fff3cd; border-radius: 4px; padding: 12px; margin-top: 20px;">
-    <strong>⚠️ To nie Ty?</strong><br>
-    Jeśli nie rejestrowałeś/aś czasu pracy, natychmiast skontaktuj się z administratorem:<br>
-    <a href="mailto:${CONFIG.EMAIL_ADMIN}">${CONFIG.EMAIL_ADMIN}</a>
-  </div>
-
-  <p style="color: #6c757d; font-size: 12px; margin-top: 20px;">
-    ${CONFIG.NAZWA_ORGANIZACJI} — System RCP v2.0<br>
-    Wiadomość generowana automatycznie. Dane przetwarzane na podstawie Art. 149 KP i RODO Art. 6(1)(b)(c).
-  </p>
-</body>
-</html>`;
-
   try {
-    GmailApp.sendEmail(pracownik.email, temat, "", { htmlBody: tresc });
-  } catch (e) {
-    logujZdarzenie("BŁĄD_EMAIL", pracownik.email, klinika.nazwa, e.toString());
-  }
+    const sheet = SpreadsheetApp
+      .openById(CONFIG.ARKUSZ_ID)
+      .getSheetByName(CONFIG.ZAKŁADKI.ANOMALIE);
+
+    sheet.appendRow([
+      Utilities.getUuid().substring(0, 12),
+      Utilities.formatDate(timestamp, Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss"),
+      pracownik.id,
+      pracownik.imie + " " + pracownik.nazwisko,
+      klinika.nazwa,
+      typ,
+      anomalie.join(" | "),
+      "NOWE"
+    ]);
+  } catch (e) { Logger.log("zapiszAnomalie: " + e); }
 }
 
-function wyslijAlertAnomalii(pracownik, klinika, typ, timestamp, anomalie) {
-  const godz = Utilities.formatDate(timestamp, Session.getScriptTimeZone(), "HH:mm");
-  const data = Utilities.formatDate(timestamp, Session.getScriptTimeZone(), "dd.MM.yyyy");
-
-  const temat = `⚠️ ANOMALIA RCP: ${pracownik.imie} ${pracownik.nazwisko} — ${data} ${godz}`;
-
-  const listaAnomali = anomalie.map(a => `<li>${a}</li>`).join("");
-
-  const tresc = `
-<!DOCTYPE html>
-<html lang="pl">
-<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 20px;">
-    <h2 style="color: #856404; margin: 0;">⚠️ Wykryto anomalię w rejestracji czasu</h2>
-  </div>
-
-  <h3>Szczegóły zdarzenia:</h3>
-  <table style="width: 100%; border-collapse: collapse;">
-    <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Pracownik</strong></td>
-        <td>${pracownik.imie} ${pracownik.nazwisko}</td></tr>
-    <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Data / Godzina</strong></td>
-        <td>${data} ${godz}</td></tr>
-    <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Klinika</strong></td>
-        <td>${klinika.nazwa}</td></tr>
-    <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Typ</strong></td>
-        <td>${typ === 'P' ? 'Przyjście' : 'Wyjście'}</td></tr>
-  </table>
-
-  <h3>Wykryte anomalie:</h3>
-  <ul style="color: #856404;">${listaAnomali}</ul>
-
-  <p>Sprawdź zakładkę <strong>Anomalie</strong> w arkuszu RCP i potwierdź lub odrzuć zdarzenie.</p>
-
-  <p style="color: #6c757d; font-size: 12px;">
-    ${CONFIG.NAZWA_ORGANIZACJI} — System RCP v2.0 — Automatyczny alert bezpieczeństwa
-  </p>
-</body>
-</html>`;
-
-  try {
-    GmailApp.sendEmail(CONFIG.EMAIL_ADMIN, temat, "", { htmlBody: tresc });
-  } catch (e) {
-    Logger.log("Błąd wysyłania alertu: " + e);
-  }
-}
+// ============================================================
+// LOGI AUDYTOWE
+// ============================================================
 
 function logujZdarzenie(typ, email, kontekst, szczegoly) {
   try {
-    const ss = SpreadsheetApp.openById(CONFIG.ARKUSZ_ID);
-    const sheet = ss.getSheetByName(CONFIG.ZAKŁADKI.LOGI);
-    const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss");
+    const sheet = SpreadsheetApp
+      .openById(CONFIG.ARKUSZ_ID)
+      .getSheetByName(CONFIG.ZAKŁADKI.LOGI);
 
     sheet.appendRow([
-      generujId(),
-      timestamp,
+      Utilities.getUuid().substring(0, 12),
+      Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss"),
       typ,
       email ? hashuj(email) : "—",  // email jako hash, nie plaintext
       kontekst || "—",
       szczegoly || "—"
     ]);
-  } catch (e) {
-    Logger.log("Błąd logowania: " + e);
-  }
+  } catch (e) { Logger.log("logujZdarzenie: " + e); }
 }
 
 // ============================================================
-// PANEL ADMINISTRACYJNY
+// EMAIL
 // ============================================================
 
-function serweAdminPanel() {
-  const szablon = HtmlService.createTemplateFromFile("admin");
-  return szablon.evaluate()
-    .setTitle("RCP — Panel Administratora")
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DENY);
+function wyslijPotwierdzenie(pracownik, klinika, typ, timestamp) {
+  try {
+    const godz     = Utilities.formatDate(timestamp, Session.getScriptTimeZone(), "HH:mm");
+    const data     = Utilities.formatDate(timestamp, Session.getScriptTimeZone(), "dd.MM.yyyy");
+    const typPelny = typ === "P" ? "PRZYJŚCIE" : "WYJŚCIE";
+    const kolor    = typ === "P" ? "#d4edda" : "#f8d7da";
+    const tKolor   = typ === "P" ? "#155724" : "#721c24";
+
+    const temat = (typ === "P" ? "🟢" : "🔴") + " RCP: " + typPelny + " — " + godz;
+
+    const tresc = `
+<html><body style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:20px">
+<div style="background:${kolor};border-radius:8px;padding:16px;margin-bottom:16px">
+  <h2 style="margin:0;color:${tKolor}">${typ === "P" ? "🟢" : "🔴"} Rejestracja potwierdzona</h2>
+</div>
+<p>Cześć, <strong>${pracownik.imie}</strong>!</p>
+<table style="width:100%;border-collapse:collapse">
+  <tr><td style="padding:8px;border-bottom:1px solid #eee"><strong>Zdarzenie</strong></td><td style="padding:8px;border-bottom:1px solid #eee">${typPelny}</td></tr>
+  <tr><td style="padding:8px;border-bottom:1px solid #eee"><strong>Godzina</strong></td><td style="padding:8px;border-bottom:1px solid #eee">${godz}</td></tr>
+  <tr><td style="padding:8px;border-bottom:1px solid #eee"><strong>Data</strong></td><td style="padding:8px;border-bottom:1px solid #eee">${data}</td></tr>
+  <tr><td style="padding:8px"><strong>Klinika</strong></td><td style="padding:8px">${klinika.nazwa}</td></tr>
+</table>
+<div style="background:#fff3cd;border-radius:4px;padding:12px;margin-top:16px">
+  <strong>⚠️ To nie Ty?</strong> Natychmiast napisz do: <a href="mailto:${CONFIG.EMAIL_ADMIN}">${CONFIG.EMAIL_ADMIN}</a>
+</div>
+<p style="color:#aaa;font-size:11px;margin-top:16px">${CONFIG.NAZWA_ORGANIZACJI} — System RCP v2.0<br>
+Dane przetwarzane na podstawie Art. 149 KP i RODO Art. 6(1)(b)(c).</p>
+</body></html>`;
+
+    GmailApp.sendEmail(pracownik.email, temat, "", { htmlBody: tresc });
+  } catch (e) { Logger.log("wyslijPotwierdzenie: " + e); }
 }
 
-function serweStroneBledu(tytul, komunikat) {
-  return HtmlService.createHtmlOutput(`
-<!DOCTYPE html>
-<html lang="pl">
-<body style="font-family: Arial, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #f8f9fa;">
-  <div style="text-align: center; padding: 40px; background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 400px;">
-    <div style="font-size: 48px; margin-bottom: 16px;">🔒</div>
-    <h2 style="color: #dc3545;">${tytul}</h2>
-    <p style="color: #6c757d;">${komunikat}</p>
-    <p style="color: #6c757d; font-size: 13px;">Kontakt: <a href="mailto:${CONFIG.EMAIL_ADMIN}">${CONFIG.EMAIL_ADMIN}</a></p>
-  </div>
-</body>
-</html>`);
+function wyslijAlertAnomalii(pracownik, klinika, typ, timestamp, anomalie) {
+  try {
+    const godz = Utilities.formatDate(timestamp, Session.getScriptTimeZone(), "HH:mm");
+    const data = Utilities.formatDate(timestamp, Session.getScriptTimeZone(), "dd.MM.yyyy");
+    const lista = anomalie.map(a => "<li>" + a + "</li>").join("");
+
+    const tresc = `
+<html><body style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:20px">
+<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:16px">
+  <h2 style="color:#856404;margin:0">⚠️ Anomalia RCP</h2>
+</div>
+<p><strong>${pracownik.imie} ${pracownik.nazwisko}</strong> — ${data} ${godz} — ${klinika.nazwa}</p>
+<ul>${lista}</ul>
+<p>Sprawdź zakładkę <strong>Anomalie</strong> w arkuszu.</p>
+</body></html>`;
+
+    GmailApp.sendEmail(CONFIG.EMAIL_ADMIN,
+      "⚠️ Anomalia RCP: " + pracownik.imie + " " + pracownik.nazwisko + " — " + data + " " + godz,
+      "", { htmlBody: tresc });
+  } catch (e) { Logger.log("wyslijAlertAnomalii: " + e); }
 }
 
 // ============================================================
-// FUNKCJE POMOCNICZE
+// MATEMATYKA GPS (Haversine)
 // ============================================================
 
-function generujId() {
-  return Utilities.getUuid().replace(/-/g, "").substring(0, 12).toUpperCase();
+function obliczOdleglosc(lat1, lng1, lat2, lng2) {
+  const R  = 6371000;
+  const p1 = lat1 * Math.PI / 180;
+  const p2 = lat2 * Math.PI / 180;
+  const dp = (lat2 - lat1) * Math.PI / 180;
+  const dl = (lng2 - lng1) * Math.PI / 180;
+  const a  = Math.sin(dp / 2) * Math.sin(dp / 2) +
+             Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) * Math.sin(dl / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
+
+// ============================================================
+// SHA-256
+// ============================================================
 
 function hashuj(tekst) {
   const bytes = Utilities.computeDigest(
@@ -710,110 +513,104 @@ function hashuj(tekst) {
     tekst,
     Utilities.Charset.UTF_8
   );
-  return bytes.map(b => ('0' + (b & 0xFF).toString(16)).slice(-2)).join("").substring(0, 32);
-}
-
-function odpowiedz(sukces, komunikat, dane) {
-  return ContentService
-    .createTextOutput(JSON.stringify({ sukces, komunikat, dane: dane || null }))
-    .setMimeType(ContentService.MimeType.JSON);
+  return bytes.map(b => ("0" + (b & 0xFF).toString(16)).slice(-2)).join("").substring(0, 32);
 }
 
 // ============================================================
-// FUNKCJE ADMINISTRACYJNE — RAPORTY I KONSERWACJA
+// AUTOMATYCZNE TRIGGERY
 // ============================================================
 
-/**
- * Uruchom raz w miesiącu (Trigger: czyszczenieMiesieczne).
- * Nie usuwa ewidencji — tylko stare logi audytowe.
- * Ewidencja przechowywana 10 lat (Art. 94(9a) KP).
- */
-function czyszczenieMiesieczne() {
-  const ss = SpreadsheetApp.openById(CONFIG.ARKUSZ_ID);
-  const sheetLogi = ss.getSheetByName(CONFIG.ZAKŁADKI.LOGI);
-  const dataGraniczna = new Date();
-  dataGraniczna.setFullYear(dataGraniczna.getFullYear() - CONFIG.RETENCJA_LOGOW_LAT);
-
-  const dane = sheetLogi.getDataRange().getValues();
-  const wierszeDoCzieniu = [];
-
-  for (let i = dane.length - 1; i >= 1; i--) {
-    const dataWiersza = new Date(dane[i][1]);
-    if (dataWiersza < dataGraniczna) {
-      wierszeDoCzieniu.push(i + 1);
-    }
-  }
-
-  // Usuń od dołu, żeby nie przesunąć indeksów
-  wierszeDoCzieniu.forEach(nr => sheetLogi.deleteRow(nr));
-
-  Logger.log(`Czyszczenie: usunięto ${wierszeDoCzieniu.length} starych logów audytowych`);
-}
-
-/**
- * Uruchom co poniedziałek (Trigger: raportTygodniowy).
- * Wysyła administratorowi podsumowanie tygodnia.
- */
 function raportTygodniowy() {
-  const ss = SpreadsheetApp.openById(CONFIG.ARKUSZ_ID);
-  const sheet = ss.getSheetByName(CONFIG.ZAKŁADKI.EWIDENCJA);
-  const dane = sheet.getDataRange().getValues();
-
-  const ponPrzeszly = new Date();
-  ponPrzeszly.setDate(ponPrzeszly.getDate() - 7);
-  const dataGraniczna = Utilities.formatDate(ponPrzeszly, Session.getScriptTimeZone(), "yyyy-MM-dd");
-
-  const statystyki = {};
-  let liczbaWpisow = 0;
-
-  for (let i = 1; i < dane.length; i++) {
-    if (dane[i][2] >= dataGraniczna) {
-      liczbaWpisow++;
-      const pracownikId = dane[i][1];
-      if (!statystyki[pracownikId]) statystyki[pracownikId] = { P: 0, W: 0 };
-      statystyki[pracownikId][dane[i][4]]++;
-    }
-  }
+  const temat = "📊 Raport tygodniowy RCP — " + CONFIG.NAZWA_ORGANIZACJI;
+  const ss    = SpreadsheetApp.openById(CONFIG.ARKUSZ_ID);
 
   const sheetAnom = ss.getSheetByName(CONFIG.ZAKŁADKI.ANOMALIE);
-  const anomalie = sheetAnom.getDataRange().getValues();
-  const nowe = anomalie.filter(r => r[7] === "NOWE" && r[1] >= dataGraniczna).length;
+  const anomalie  = sheetAnom.getDataRange().getValues();
+  const nowe      = anomalie.filter(r => r[7] === "NOWE").length;
 
-  const temat = `📊 Raport tygodniowy RCP — ${CONFIG.NAZWA_ORGANIZACJI}`;
-  const tresc = `
+  const tresc = `<html><body style="font-family:Arial">
 <h2>Raport tygodniowy RCP</h2>
-<p>Łącznie wpisów w ostatnich 7 dniach: <strong>${liczbaWpisow}</strong></p>
-<p>Anomalie do przejrzenia: <strong style="color: ${nowe > 0 ? '#dc3545' : '#28a745'}">${nowe}</strong></p>
-<p>Sprawdź arkusz RCP po szczegóły.</p>
-<p style="color: #6c757d; font-size: 12px;">${CONFIG.NAZWA_ORGANIZACJI} — System RCP v2.0</p>`;
+<p>Anomalie do przejrzenia: <strong style="color:${nowe > 0 ? "#dc3545" : "#28a745"}">${nowe}</strong></p>
+<p>Otwórz arkusz RCP aby zobaczyć szczegóły.</p>
+</body></html>`;
 
   GmailApp.sendEmail(CONFIG.EMAIL_ADMIN, temat, "", { htmlBody: tresc });
 }
 
-/**
- * Funkcja do ręcznego testowania systemu przez administratora.
- * Uruchamiaj z edytora Apps Script przed wdrożeniem.
- */
+function czyszczenieMiesieczne() {
+  const sheet = SpreadsheetApp
+    .openById(CONFIG.ARKUSZ_ID)
+    .getSheetByName(CONFIG.ZAKŁADKI.LOGI);
+
+  const granica = new Date();
+  granica.setFullYear(granica.getFullYear() - CONFIG.RETENCJA_LOGOW_LAT);
+
+  const dane    = sheet.getDataRange().getValues();
+  const doUsuniecia = [];
+
+  for (let i = dane.length - 1; i >= 1; i--) {
+    if (new Date(dane[i][1]) < granica) doUsuniecia.push(i + 1);
+  }
+
+  doUsuniecia.forEach(nr => sheet.deleteRow(nr));
+  Logger.log("Czyszczenie: usunięto " + doUsuniecia.length + " logów");
+}
+
+// ============================================================
+// GENEROWANIE HASHY PRACOWNIKÓW (uruchom raz po dodaniu)
+// ============================================================
+
+function generujHashe() {
+  const sheet = SpreadsheetApp
+    .openById(CONFIG.ARKUSZ_ID)
+    .getSheetByName(CONFIG.ZAKŁADKI.PRACOWNICY);
+
+  const dane = sheet.getDataRange().getValues();
+
+  for (let i = 1; i < dane.length; i++) {
+    const email = String(dane[i][4]).trim(); // Kolumna E = EMAIL_JAWNY
+    if (email && email.includes("@")) {
+      const hash = hashuj(email.toLowerCase());
+      sheet.getRange(i + 1, 4).setValue(hash); // Kolumna D = EMAIL_HASH
+      Logger.log("Hash dla " + email + ": " + hash);
+    }
+  }
+
+  Logger.log("✅ Hashe wygenerowane!");
+}
+
+// ============================================================
+// TEST SYSTEMU (uruchom przed wdrożeniem)
+// ============================================================
+
 function testSystemu() {
-  Logger.log("=== TEST SYSTEMU RCP v2.0 ===");
+  Logger.log("=== TEST RCP v2.0 ===");
 
   // Test hashowania
-  const hash = hashuj("test@klinika.pl");
-  Logger.log("Hash emaila: " + hash);
-  Logger.log("Hash OK: " + (hash.length === 32));
+  const h = hashuj("test@klinika.pl");
+  Logger.log("Hash: " + h + " (len=" + h.length + ", oczekiwane=32)");
 
-  // Test obliczania odległości
-  const odl = obliczOdleglosc(52.2297, 21.0122, 52.2298, 21.0124);
-  Logger.log(`Odległość testowa: ${Math.round(odl)}m (oczekiwane: ~15m)`);
+  // Test GPS
+  const d = obliczOdleglosc(52.2297, 21.0122, 52.2298, 21.0124);
+  Logger.log("Dystans testowy: " + Math.round(d) + "m (oczekiwane ~15m)");
 
-  // Test połączenia z arkuszem
+  // Test arkusza
   try {
     const ss = SpreadsheetApp.openById(CONFIG.ARKUSZ_ID);
     Logger.log("Arkusz: " + ss.getName());
-    const zakładki = ss.getSheets().map(s => s.getName());
-    Logger.log("Zakładki: " + zakładki.join(", "));
+    ss.getSheets().forEach(s => Logger.log(" - " + s.getName()));
   } catch (e) {
-    Logger.log("BŁĄD arkusza: " + e);
+    Logger.log("BŁĄD ARKUSZA: " + e);
+    Logger.log("Sprawdź ARKUSZ_ID w konfiguracji!");
+  }
+
+  // Test pracowników
+  try {
+    const sheet = SpreadsheetApp.openById(CONFIG.ARKUSZ_ID).getSheetByName(CONFIG.ZAKŁADKI.PRACOWNICY);
+    const dane  = sheet.getDataRange().getValues();
+    Logger.log("Pracownicy w arkuszu: " + (dane.length - 1));
+  } catch (e) {
+    Logger.log("BŁĄD PRACOWNICY: " + e);
   }
 
   Logger.log("=== TEST ZAKOŃCZONY ===");
