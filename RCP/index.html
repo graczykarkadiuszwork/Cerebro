@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>RCP — Rejestracja Czasu Pracy</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .karta {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+      width: 100%;
+      max-width: 400px;
+      padding: 32px 24px;
+    }
+
+    .naglowek {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .logo { font-size: 40px; margin-bottom: 8px; }
+
+    .naglowek h1 {
+      font-size: 20px;
+      color: #1a202c;
+      margin-bottom: 4px;
+    }
+
+    .naglowek p {
+      color: #718096;
+      font-size: 14px;
+    }
+
+    .pracownik-info {
+      background: #ebf8ff;
+      border: 1px solid #bee3f8;
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .pracownik-avatar {
+      width: 44px;
+      height: 44px;
+      background: #3182ce;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 18px;
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+
+    .pracownik-dane { flex: 1; min-width: 0; }
+
+    .pracownik-imie {
+      font-weight: 600;
+      color: #2d3748;
+      font-size: 15px;
+    }
+
+    .pracownik-rola {
+      color: #4a5568;
+      font-size: 12px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #4a5568;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    select {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 16px;
+      color: #2d3748;
+      background: white;
+      margin-bottom: 20px;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23718096' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+    }
+
+    select:focus {
+      outline: none;
+      border-color: #3182ce;
+    }
+
+    .gps-status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .gps-status.pobieranie {
+      background: #fefcbf;
+      color: #744210;
+      border: 1px solid #f6e05e;
+    }
+
+    .gps-status.ok {
+      background: #f0fff4;
+      color: #276749;
+      border: 1px solid #9ae6b4;
+    }
+
+    .gps-status.blad {
+      background: #fff5f5;
+      color: #c53030;
+      border: 1px solid #fed7d7;
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid transparent;
+      border-top-color: currentColor;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .przyciski {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px 12px;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      min-height: 90px;
+      gap: 8px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn:active { transform: scale(0.97); }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-przyjscie {
+      background: #38a169;
+      color: white;
+      box-shadow: 0 4px 12px rgba(56,161,105,0.3);
+    }
+
+    .btn-wyjscie {
+      background: #e53e3e;
+      color: white;
+      box-shadow: 0 4px 12px rgba(229,62,62,0.3);
+    }
+
+    .btn-emoji { font-size: 28px; }
+
+    .wynik {
+      display: none;
+      text-align: center;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      font-size: 15px;
+    }
+
+    .wynik.sukces {
+      background: #f0fff4;
+      border: 1px solid #9ae6b4;
+      color: #276749;
+    }
+
+    .wynik.blad {
+      background: #fff5f5;
+      border: 1px solid #fed7d7;
+      color: #c53030;
+    }
+
+    .wynik-emoji { font-size: 36px; margin-bottom: 8px; }
+    .wynik-tytul { font-weight: 700; font-size: 18px; margin-bottom: 6px; }
+    .wynik-szczegoly { font-size: 13px; opacity: 0.85; }
+
+    .historia {
+      border-top: 1px solid #e2e8f0;
+      padding-top: 16px;
+    }
+
+    .historia-tytul {
+      font-size: 12px;
+      font-weight: 600;
+      color: #718096;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 10px;
+    }
+
+    .historia-wpis {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 0;
+      font-size: 13px;
+      color: #4a5568;
+      border-bottom: 1px solid #f7fafc;
+    }
+
+    .historia-wpis:last-child { border-bottom: none; }
+
+    .historia-badge {
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .badge-p { background: #c6f6d5; color: #276749; }
+    .badge-w { background: #fed7d7; color: #c53030; }
+
+    .ladowanie {
+      display: none;
+      text-align: center;
+      padding: 20px;
+      color: #718096;
+    }
+
+    .stopka {
+      text-align: center;
+      font-size: 11px;
+      color: #a0aec0;
+      margin-top: 16px;
+      line-height: 1.6;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body { background: #1a202c; }
+      .karta { background: #2d3748; }
+      .naglowek h1 { color: #f7fafc; }
+      .naglowek p { color: #a0aec0; }
+      .pracownik-imie { color: #f7fafc; }
+      .pracownik-dane .pracownik-rola { color: #cbd5e0; }
+      select { background-color: #2d3748; color: #f7fafc; border-color: #4a5568; }
+      label { color: #a0aec0; }
+      .historia-wpis { color: #cbd5e0; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="karta">
+  <div class="naglowek">
+    <div class="logo">🦷</div>
+    <h1>Rejestracja Czasu Pracy</h1>
+    <p id="aktualnyczas"></p>
+  </div>
+
+  <!-- Informacja o zalogowanym pracowniku -->
+  <div class="pracownik-info">
+    <div class="pracownik-avatar" id="avatar">?</div>
+    <div class="pracownik-dane">
+      <div class="pracownik-imie" id="pracownikImie">Ładowanie…</div>
+      <div class="pracownik-rola" id="pracownikRola"></div>
+    </div>
+  </div>
+
+  <!-- Wybór kliniki (widoczne gdy > 1 klinika) -->
+  <div id="klinikaWybor">
+    <label for="klinikaSelect">Klinika</label>
+    <select id="klinikaSelect">
+      <option value="">— Wybierz klinikę —</option>
+    </select>
+  </div>
+
+  <!-- Status GPS -->
+  <div class="gps-status pobieranie" id="gpsStatus">
+    <div class="spinner"></div>
+    <span>Pobieranie lokalizacji GPS…</span>
+  </div>
+
+  <!-- Przyciski akcji -->
+  <div class="przyciski">
+    <button class="btn btn-przyjscie" id="btnPrzyjscie" disabled onclick="rejestruj('P')">
+      <span class="btn-emoji">🟢</span>
+      Przyjście
+    </button>
+    <button class="btn btn-wyjscie" id="btnWyjscie" disabled onclick="rejestruj('W')">
+      <span class="btn-emoji">🔴</span>
+      Wyjście
+    </button>
+  </div>
+
+  <!-- Wynik rejestracji -->
+  <div class="wynik" id="wynikBox">
+    <div class="wynik-emoji" id="wynikEmoji"></div>
+    <div class="wynik-tytul" id="wynikTytul"></div>
+    <div class="wynik-szczegoly" id="wynikSzczegoly"></div>
+  </div>
+
+  <!-- Ładowanie -->
+  <div class="ladowanie" id="ladowanie">
+    <div class="spinner" style="width:24px;height:24px;border-width:3px;margin:0 auto 8px;display:block;"></div>
+    Rejestruję…
+  </div>
+
+  <!-- Historia dzisiaj -->
+  <div class="historia" id="historiaBox" style="display:none;">
+    <div class="historia-tytul">Dzisiaj</div>
+    <div id="historiaLista"></div>
+  </div>
+
+  <div class="stopka">
+    Dane przetwarzane na podstawie Art. 149 KP i RODO Art. 6(1)(b)(c)<br>
+    Administrator: <?= CONFIG.EMAIL_ADMIN ?>
+  </div>
+</div>
+
+<script>
+  // Dane z serwera (wstrzykiwane przez Apps Script)
+  const PRACOWNIK = <?= JSON.stringify(pracownik) ?>;
+  const KLINIKI   = <?= kliniki ?>;
+  const CFG       = <?= config ?>;
+
+  let gpsData   = null;
+  let gpsBlad   = false;
+  let rejestrowanie = false;
+
+  // ─── Inicjalizacja ───────────────────────────────────────
+
+  document.addEventListener("DOMContentLoaded", () => {
+    initPracownik();
+    initKliniki();
+    inicjalizujGPS();
+    aktualizujZegar();
+    setInterval(aktualizujZegar, 10000);
+    pobierzHistorię();
+  });
+
+  function initPracownik() {
+    const inicjaly = (PRACOWNIK.imie[0] + PRACOWNIK.nazwisko[0]).toUpperCase();
+    document.getElementById("avatar").textContent = inicjaly;
+    document.getElementById("pracownikImie").textContent = PRACOWNIK.imie + " " + PRACOWNIK.nazwisko;
+    document.getElementById("pracownikRola").textContent = PRACOWNIK.rola;
+  }
+
+  function initKliniki() {
+    const select = document.getElementById("klinikaSelect");
+    const parsedKliniki = typeof KLINIKI === "string" ? JSON.parse(KLINIKI) : KLINIKI;
+
+    parsedKliniki.forEach(k => {
+      const opt = document.createElement("option");
+      opt.value = k.id;
+      opt.textContent = k.nazwa + " — " + k.adres;
+      opt.dataset.lat = k.lat;
+      opt.dataset.lng = k.lng;
+      select.appendChild(opt);
+    });
+
+    // Jeśli tylko jedna klinika — zaznacz automatycznie
+    if (parsedKliniki.length === 1) {
+      select.value = parsedKliniki[0].id;
+      document.getElementById("klinikaWybor").style.display = "none";
+    }
+  }
+
+  // ─── GPS ─────────────────────────────────────────────────
+
+  function inicjalizujGPS() {
+    if (!navigator.geolocation) {
+      ustawGPSBlad("Twoja przeglądarka nie obsługuje GPS.");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      onGPSSukces,
+      onGPSBlad,
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 30000
+      }
+    );
+
+    // Odświeżaj GPS co 60 sekund
+    setInterval(() => {
+      if (!rejestrowanie) {
+        navigator.geolocation.getCurrentPosition(onGPSSukces, onGPSBlad, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 20000
+        });
+      }
+    }, 60000);
+  }
+
+  function onGPSSukces(pos) {
+    gpsData = {
+      lat: pos.coords.latitude,
+      lng: pos.coords.longitude,
+      dokladnosc: pos.coords.accuracy
+    };
+    gpsBlad = false;
+
+    const statusEl = document.getElementById("gpsStatus");
+    statusEl.className = "gps-status ok";
+    statusEl.innerHTML = `<span>✅</span><span>GPS aktywny (dokładność: ${Math.round(pos.coords.accuracy)}m)</span>`;
+
+    aktualizujPrzyciski();
+  }
+
+  function onGPSBlad(err) {
+    gpsBlad = true;
+    let komunikat;
+
+    switch (err.code) {
+      case err.PERMISSION_DENIED:
+        komunikat = "Brak zgody na GPS. Zezwól na lokalizację w ustawieniach przeglądarki.";
+        break;
+      case err.POSITION_UNAVAILABLE:
+        komunikat = "Lokalizacja niedostępna. Sprawdź czy GPS jest włączony.";
+        break;
+      case err.TIMEOUT:
+        komunikat = "Limit czasu GPS. Spróbuj odświeżyć stronę.";
+        break;
+      default:
+        komunikat = "Błąd GPS. Skontaktuj się z administratorem.";
+    }
+
+    ustawGPSBlad(komunikat);
+  }
+
+  function ustawGPSBlad(komunikat) {
+    const statusEl = document.getElementById("gpsStatus");
+    statusEl.className = "gps-status blad";
+    statusEl.innerHTML = `<span>❌</span><span>${komunikat}</span>`;
+    document.getElementById("btnPrzyjscie").disabled = true;
+    document.getElementById("btnWyjscie").disabled = true;
+  }
+
+  function aktualizujPrzyciski() {
+    const klinikaId = document.getElementById("klinikaSelect").value;
+    const gotowe = gpsData && !gpsBlad && klinikaId;
+    document.getElementById("btnPrzyjscie").disabled = !gotowe;
+    document.getElementById("btnWyjscie").disabled = !gotowe;
+  }
+
+  document.getElementById("klinikaSelect").addEventListener("change", aktualizujPrzyciski);
+
+  // ─── Rejestracja ─────────────────────────────────────────
+
+  function rejestruj(typ) {
+    if (rejestrowanie) return;
+
+    const klinikaId = document.getElementById("klinikaSelect").value;
+    if (!klinikaId) {
+      pokazWynik(false, "Wybierz klinikę", "Wybierz klinikę przed rejestracją.");
+      return;
+    }
+
+    if (!gpsData || gpsBlad) {
+      pokazWynik(false, "Brak GPS", "Poczekaj na potwierdzenie lokalizacji GPS.");
+      return;
+    }
+
+    rejestrowanie = true;
+    ukryjWynik();
+    document.getElementById("ladowanie").style.display = "block";
+    document.getElementById("btnPrzyjscie").disabled = true;
+    document.getElementById("btnWyjscie").disabled = true;
+
+    const payload = {
+      akcja:    "rejestruj",
+      typ:      typ,
+      klinikaId: klinikaId,
+      gps: {
+        lat:      gpsData.lat,
+        lng:      gpsData.lng,
+        dokladnosc: gpsData.dokladnosc
+      }
+    };
+
+    fetch(window.location.href, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    })
+    .then(r => r.json())
+    .then(odp => {
+      document.getElementById("ladowanie").style.display = "none";
+      rejestrowanie = false;
+
+      if (odp.sukces) {
+        pokazWynik(true, odp.komunikat, `Klinika: ${odp.dane.klinika}`);
+        pobierzHistorię();
+      } else {
+        pokazWynik(false, "Błąd rejestracji", odp.komunikat);
+        aktualizujPrzyciski();
+      }
+    })
+    .catch(err => {
+      document.getElementById("ladowanie").style.display = "none";
+      rejestrowanie = false;
+      pokazWynik(false, "Błąd połączenia", "Sprawdź internet i spróbuj ponownie.");
+      aktualizujPrzyciski();
+    });
+  }
+
+  // ─── Wynik ───────────────────────────────────────────────
+
+  function pokazWynik(sukces, tytul, szczegoly) {
+    const box = document.getElementById("wynikBox");
+    box.className = "wynik " + (sukces ? "sukces" : "blad");
+    box.style.display = "block";
+    document.getElementById("wynikEmoji").textContent = sukces ? "✅" : "❌";
+    document.getElementById("wynikTytul").textContent = tytul;
+    document.getElementById("wynikSzczegoly").textContent = szczegoly || "";
+
+    if (sukces) {
+      setTimeout(ukryjWynik, 8000);
+    }
+  }
+
+  function ukryjWynik() {
+    document.getElementById("wynikBox").style.display = "none";
+  }
+
+  // ─── Historia dzisiaj ─────────────────────────────────────
+
+  function pobierzHistorię() {
+    fetch(window.location.href, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ akcja: "statusDzisiaj" })
+    })
+    .then(r => r.json())
+    .then(odp => {
+      if (odp.sukces && odp.dane.wpisyDzisiaj.length > 0) {
+        const box = document.getElementById("historiaBox");
+        const lista = document.getElementById("historiaLista");
+        box.style.display = "block";
+        lista.innerHTML = "";
+
+        odp.dane.wpisyDzisiaj.forEach(wpis => {
+          const div = document.createElement("div");
+          div.className = "historia-wpis";
+          div.innerHTML = `
+            <span class="historia-badge ${wpis.typ === 'P' ? 'badge-p' : 'badge-w'}">
+              ${wpis.typ === 'P' ? 'Przyjście' : 'Wyjście'}
+            </span>
+            <span>${wpis.godzina}</span>
+            <span style="color:#a0aec0;">${wpis.klinika}</span>
+          `;
+          lista.appendChild(div);
+        });
+      }
+    })
+    .catch(() => {});
+  }
+
+  // ─── Zegar ───────────────────────────────────────────────
+
+  function aktualizujZegar() {
+    const teraz = new Date();
+    const opcje = { weekday: "long", year: "numeric", month: "long", day: "numeric",
+                    hour: "2-digit", minute: "2-digit" };
+    document.getElementById("aktualnyczas").textContent =
+      teraz.toLocaleDateString("pl-PL", opcje);
+  }
+</script>
+
+</body>
+</html>
