@@ -85,8 +85,7 @@ function doGet(e) {
 
   return template
     .evaluate()
-    .setTitle("RCP — Rejestracja Czasu")
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    .setTitle("RCP — Rejestracja Czasu");
 }
 
 // ============================================================
