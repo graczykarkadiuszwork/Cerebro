@@ -15,10 +15,10 @@
 
 const CONFIG = {
   // ID arkusza Google Sheets (skopiuj z URL: /spreadsheets/d/TUTAJ_ID/edit)
-  ARKUSZ_ID: "WKLEJ_TUTAJ_ID_ARKUSZA",
+  ARKUSZ_ID: "1n9dPIfRiJuPxZS4lfh-QA-gUSv1rnNQgqLQJEfZ-rUY",
 
   // Nazwy zakładek — muszą się DOKŁADNIE zgadzać z nazwami w arkuszu
-  ZAKŁADKI: {
+  ZAKLADKI: {
     EWIDENCJA:  "Ewidencja Czasu",
     PRACOWNICY: "Pracownicy",
     KLINIKI:    "Kliniki",
@@ -26,19 +26,19 @@ const CONFIG = {
     ANOMALIE:   "Anomalie"
   },
 
-  EMAIL_ADMIN:        "admin@twoja-klinika.pl",
-  NAZWA_ORGANIZACJI:  "Klinika Stomatologiczna XYZ",
+  EMAIL_ADMIN:        "graczyk.arkadiusz.work@gmail.com",
+  NAZWA_ORGANIZACJI:  "We SMILE",
 
   RADIUS_GPS_METRY:     100,  // promień akceptacji GPS w metrach
   TOLERANCJA_GPS_METRY:  10,  // dodatkowa tolerancja
 
   MAX_PROB_NA_GODZINE:   5,   // po ilu nieudanych próbach blokada
-  BLOKADA_MINUT:        60,   // czas blokady
+  BLOKADA_MINUT:        10,   // czas blokady
 
   // Anomaly detection
   MIN_CZAS_ZMIANY_MINUT:  15,
-  MAX_CZAS_ZMIANY_GODZIN: 13,
-  ALERT_WEEKEND: true,
+  MAX_CZAS_ZMIANY_GODZIN: 12,
+  ALERT_WEEKEND: false,
   ALERT_NOC:     true,
 
   // Retencja (Art. 94(9a) KP)
@@ -154,7 +154,7 @@ function clientRejestruj(dane) {
 
     const sheet = SpreadsheetApp
       .openById(CONFIG.ARKUSZ_ID)
-      .getSheetByName(CONFIG.ZAKŁADKI.EWIDENCJA);
+      .getSheetByName(CONFIG.ZAKLADKI.EWIDENCJA);
 
     sheet.appendRow([
       id,
@@ -207,7 +207,7 @@ function clientStatus() {
 
     const sheet = SpreadsheetApp
       .openById(CONFIG.ARKUSZ_ID)
-      .getSheetByName(CONFIG.ZAKŁADKI.EWIDENCJA);
+      .getSheetByName(CONFIG.ZAKLADKI.EWIDENCJA);
 
     const dane  = sheet.getDataRange().getValues();
     const dzis  = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
@@ -239,7 +239,7 @@ function clientStatus() {
 function znajdzPracownika(email) {
   const sheet = SpreadsheetApp
     .openById(CONFIG.ARKUSZ_ID)
-    .getSheetByName(CONFIG.ZAKŁADKI.PRACOWNICY);
+    .getSheetByName(CONFIG.ZAKLADKI.PRACOWNICY);
 
   const dane      = sheet.getDataRange().getValues();
   const emailHash = hashuj(email.toLowerCase().trim());
@@ -271,7 +271,7 @@ function znajdzPracownika(email) {
 function pobierzKlinikiPracownika() {
   const sheet = SpreadsheetApp
     .openById(CONFIG.ARKUSZ_ID)
-    .getSheetByName(CONFIG.ZAKŁADKI.KLINIKI);
+    .getSheetByName(CONFIG.ZAKLADKI.KLINIKI);
 
   const dane   = sheet.getDataRange().getValues();
   const wynik  = [];
@@ -303,7 +303,7 @@ function znajdzKlinike(id) {
 function pobierzOstatniWpis(pracownikId, klinikaId) {
   const sheet = SpreadsheetApp
     .openById(CONFIG.ARKUSZ_ID)
-    .getSheetByName(CONFIG.ZAKŁADKI.EWIDENCJA);
+    .getSheetByName(CONFIG.ZAKLADKI.EWIDENCJA);
 
   const dane  = sheet.getDataRange().getValues();
   const dzis  = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
@@ -392,7 +392,7 @@ function zapiszAnomalie(pracownik, klinika, typ, timestamp, anomalie) {
   try {
     const sheet = SpreadsheetApp
       .openById(CONFIG.ARKUSZ_ID)
-      .getSheetByName(CONFIG.ZAKŁADKI.ANOMALIE);
+      .getSheetByName(CONFIG.ZAKLADKI.ANOMALIE);
 
     sheet.appendRow([
       Utilities.getUuid().substring(0, 12),
@@ -415,7 +415,7 @@ function logujZdarzenie(typ, email, kontekst, szczegoly) {
   try {
     const sheet = SpreadsheetApp
       .openById(CONFIG.ARKUSZ_ID)
-      .getSheetByName(CONFIG.ZAKŁADKI.LOGI);
+      .getSheetByName(CONFIG.ZAKLADKI.LOGI);
 
     sheet.appendRow([
       Utilities.getUuid().substring(0, 12),
@@ -523,7 +523,7 @@ function raportTygodniowy() {
   const temat = "📊 Raport tygodniowy RCP — " + CONFIG.NAZWA_ORGANIZACJI;
   const ss    = SpreadsheetApp.openById(CONFIG.ARKUSZ_ID);
 
-  const sheetAnom = ss.getSheetByName(CONFIG.ZAKŁADKI.ANOMALIE);
+  const sheetAnom = ss.getSheetByName(CONFIG.ZAKLADKI.ANOMALIE);
   const anomalie  = sheetAnom.getDataRange().getValues();
   const nowe      = anomalie.filter(r => r[7] === "NOWE").length;
 
@@ -539,7 +539,7 @@ function raportTygodniowy() {
 function czyszczenieMiesieczne() {
   const sheet = SpreadsheetApp
     .openById(CONFIG.ARKUSZ_ID)
-    .getSheetByName(CONFIG.ZAKŁADKI.LOGI);
+    .getSheetByName(CONFIG.ZAKLADKI.LOGI);
 
   const granica = new Date();
   granica.setFullYear(granica.getFullYear() - CONFIG.RETENCJA_LOGOW_LAT);
@@ -562,7 +562,7 @@ function czyszczenieMiesieczne() {
 function generujHashe() {
   const sheet = SpreadsheetApp
     .openById(CONFIG.ARKUSZ_ID)
-    .getSheetByName(CONFIG.ZAKŁADKI.PRACOWNICY);
+    .getSheetByName(CONFIG.ZAKLADKI.PRACOWNICY);
 
   const dane = sheet.getDataRange().getValues();
 
@@ -605,7 +605,7 @@ function testSystemu() {
 
   // Test pracowników
   try {
-    const sheet = SpreadsheetApp.openById(CONFIG.ARKUSZ_ID).getSheetByName(CONFIG.ZAKŁADKI.PRACOWNICY);
+    const sheet = SpreadsheetApp.openById(CONFIG.ARKUSZ_ID).getSheetByName(CONFIG.ZAKLADKI.PRACOWNICY);
     const dane  = sheet.getDataRange().getValues();
     Logger.log("Pracownicy w arkuszu: " + (dane.length - 1));
   } catch (e) {
