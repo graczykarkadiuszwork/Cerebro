@@ -2,1107 +2,964 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>RCP · We SMILE</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    :root {
-      --bg: #000;
-      --fg: #fff;
-      --t35: rgba(255,255,255,0.35);
-      --t25: rgba(255,255,255,0.25);
-      --t15: rgba(255,255,255,0.15);
-      --t10: rgba(255,255,255,0.10);
-      --b12: rgba(255,255,255,0.12);
-      --b18: rgba(255,255,255,0.18);
-      --b60: rgba(255,255,255,0.60);
-      --f03: rgba(255,255,255,0.03);
-      --f06: rgba(255,255,255,0.06);
-      --mono: 'Space Mono', monospace;
-      --grotesk: 'Space Grotesk', sans-serif;
-    }
-
     html, body {
-      height: 100%;
-      background: var(--bg);
-      color: var(--fg);
-      font-family: var(--mono);
+      background: #000;
+      color: #fff;
+      font-family: 'Space Mono', monospace;
+      min-height: 100vh;
       -webkit-font-smoothing: antialiased;
-      overflow: hidden;
     }
 
-    body {
+    /* Siatka w tle — Nothing Phone aesthetic */
+    .grid-bg {
       background-image:
         repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,255,255,0.04) 39px, rgba(255,255,255,0.04) 40px),
         repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,0.04) 39px, rgba(255,255,255,0.04) 40px);
     }
 
-    .screen {
-      display: none;
-      flex-direction: column;
-      height: 100%;
-      max-width: 420px;
-      margin: 0 auto;
-      padding: 0 20px;
-      overflow-y: auto;
+    /* ── Focus states dla dosteponosci (WCAG 2.4.11) ── */
+    :focus-visible {
+      outline: 2px solid rgba(255,255,255,0.8);
+      outline-offset: 3px;
+      border-radius: 4px;
     }
+
+    .screen { display: none; flex-direction: column; min-height: 100vh; }
     .screen.active { display: flex; }
 
-    /* ── LABEL / EYEBROW ── */
+    /* ── Typy bazowe ── */
     .label {
+      font-family: 'Space Mono', monospace;
       font-size: 8px;
-      font-family: var(--mono);
-      font-weight: 400;
       letter-spacing: 0.22em;
       text-transform: uppercase;
-      color: var(--t25);
+      color: rgba(255,255,255,0.35);
     }
 
-    /* ── STATUS BAR ── */
-    .status-bar {
-      display: flex;
-      justify-content: space-between;
+    /* ─────────────────────────────────────────────────
+       s-loading
+    ───────────────────────────────────────────────── */
+    #s-loading {
       align-items: center;
-      padding-top: 20px;
-      padding-bottom: 4px;
+      justify-content: center;
+      padding: 40px;
     }
-    .status-bar .clinic-name {
-      font-size: 8px;
-      font-family: var(--mono);
+    .loading-text {
+      font-size: 9px;
       letter-spacing: 0.22em;
+      color: rgba(255,255,255,0.35);
       text-transform: uppercase;
-      color: var(--t25);
     }
-    #clock {
-      font-size: 11px;
-      font-family: var(--mono);
-      color: var(--t35);
+
+    /* ─────────────────────────────────────────────────
+       s-main
+    ───────────────────────────────────────────────── */
+    #s-main { padding: 20px 20px 24px; }
+
+    .status-bar { display: flex; justify-content: space-between; align-items: center; }
+    .status-clock {
+      font-size: 12px;
+      color: rgba(255,255,255,0.45);
+      letter-spacing: 0.05em;
       font-variant-numeric: tabular-nums;
     }
 
-    /* ── TOKEN STRIP ── */
+    /* Token strip */
     .token-strip {
-      border: 1px solid var(--b12);
+      margin-top: 16px;
+      border: 1px solid rgba(255,255,255,0.15);
       border-radius: 10px;
       padding: 11px 14px;
-      margin-top: 16px;
-      background: var(--f03);
+      background: rgba(255,255,255,0.02);
     }
-    .token-strip-top {
+    .token-strip-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 8px;
+      margin-bottom: 7px;
     }
-    .token-glyph {
-      font-size: 18px;
-      color: rgba(255,255,255,0.15);
-      margin-right: 8px;
-    }
-    .token-label-row {
-      display: flex;
-      align-items: center;
-      flex: 1;
-      gap: 6px;
-    }
-    .token-meta {
-      font-size: 8px;
-      font-family: var(--mono);
-      color: rgba(255,255,255,0.25);
-      letter-spacing: 0.10em;
-    }
-    .token-countdown {
-      font-size: 8px;
-      font-family: var(--mono);
-      color: rgba(255,255,255,0.25);
-      font-variant-numeric: tabular-nums;
-      margin-left: auto;
-    }
-    .token-code {
-      font-size: 13px;
-      font-family: var(--mono);
-      color: rgba(255,255,255,0.50);
-      letter-spacing: 0.15em;
-      margin-bottom: 8px;
-    }
-    .token-bar-track {
-      height: 1px;
-      background: rgba(255,255,255,0.08);
-      border-radius: 1px;
-      margin-bottom: 6px;
-      overflow: hidden;
-    }
-    .token-bar-fill {
-      height: 1px;
-      background: #fff;
-      border-radius: 1px;
-      transition: width 1s linear, background 0.3s;
-    }
-    .token-hint {
-      font-size: 7px;
-      font-family: var(--mono);
-      color: rgba(255,255,255,0.15);
-      letter-spacing: 0.10em;
-    }
+    .token-strip-left { display: flex; align-items: center; gap: 8px; }
+    .token-glyph     { font-size: 16px; color: rgba(255,255,255,0.20); }
+    .token-label     { font-size: 8px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(255,255,255,0.35); }
+    .token-countdown { font-size: 8px; color: rgba(255,255,255,0.35); font-variant-numeric: tabular-nums; }
+    .token-code      { font-size: 13px; letter-spacing: 0.15em; color: rgba(255,255,255,0.35); margin-bottom: 8px; }
+    .token-bar-wrap  { height: 1px; background: rgba(255,255,255,0.08); border-radius: 1px; overflow: hidden; margin-bottom: 6px; }
+    .token-bar-fill  { height: 1px; background: #fff; width: 100%; transition: width 1s linear, background 0.3s; }
+    .token-hint      { font-size: 7px; letter-spacing: 0.15em; color: rgba(255,255,255,0.18); }
 
-    /* ── SEPARATOR ── */
-    .sep {
-      height: 1px;
-      background: var(--b12);
-      margin-top: 16px;
-    }
+    .separator { height: 1px; background: rgba(255,255,255,0.10); margin-top: 16px; }
 
-    /* ── PROFILE ROW ── */
+    /* Profile */
     .profile-row {
+      margin-top: 20px;
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      padding-top: 20px;
     }
     .profile-name {
-      font-family: var(--grotesk);
-      font-weight: 700;
+      font-family: 'Space Grotesk', sans-serif;
       font-size: 36px;
-      line-height: 1.0;
+      font-weight: 700;
       letter-spacing: -1px;
-      color: var(--fg);
+      color: #fff;
+      line-height: 1.1;
     }
-    .profile-meta {
-      margin-top: 4px;
-    }
-    .profile-role {
-      font-size: 9px;
-      font-family: var(--mono);
-      color: var(--t35);
-      letter-spacing: 0.10em;
-    }
-    .profile-year {
-      font-size: 8px;
-      font-family: var(--mono);
-      color: var(--t25);
-      letter-spacing: 0.10em;
-      margin-top: 2px;
-    }
+    .profile-meta { font-size: 9px; color: rgba(255,255,255,0.45); margin-top: 5px; letter-spacing: 0.08em; }
+
     .switch-btn {
-      width: 40px;
-      height: 40px;
-      border: 1px solid var(--b12);
+      width: 40px; height: 40px;
       border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.20);
       background: transparent;
       cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: flex; align-items: center; justify-content: center;
       flex-shrink: 0;
-      transition: border-color 0.2s;
-      margin-top: 4px;
+      transition: border-color 0.15s;
     }
-    .switch-btn:hover { border-color: var(--b60); }
-    .switch-btn svg { color: var(--t35); transition: color 0.2s; }
-    .switch-btn:hover svg { color: var(--fg); }
+    .switch-btn:hover { border-color: rgba(255,255,255,0.70); }
 
-    /* ── TOKEN INPUT SECTION ── */
-    .token-input-section {
-      margin-top: 20px;
-    }
-    .token-input-label {
-      font-size: 8px;
-      font-family: var(--mono);
-      letter-spacing: 0.22em;
-      text-transform: uppercase;
-      color: var(--t25);
-      margin-bottom: 8px;
-    }
+    /* Token input */
+    .token-input-wrap { margin-top: 20px; }
+    .token-input-label { font-size: 8px; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(255,255,255,0.45); margin-bottom: 8px; }
     .token-input {
       width: 100%;
-      background: var(--f03);
-      border: 1px solid var(--b12);
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.18);
       border-radius: 10px;
-      padding: 12px 14px;
-      font-size: 16px;
-      font-family: var(--mono);
-      color: var(--fg);
-      letter-spacing: 0.15em;
+      padding: 13px 14px;
+      font-family: 'Space Mono', monospace;
+      font-size: 18px;
+      letter-spacing: 0.20em;
+      color: #fff;
       outline: none;
-      transition: border-color 0.2s;
+      text-transform: lowercase;
+      transition: border-color 0.15s;
       -webkit-appearance: none;
     }
-    .token-input::placeholder { color: rgba(255,255,255,0.15); }
-    .token-input:focus { border-color: var(--b60); }
+    .token-input::placeholder { color: rgba(255,255,255,0.20); font-size: 14px; }
+    .token-input:focus        { border-color: rgba(255,255,255,0.60); }
+    .token-input.error        { border-color: rgba(255,255,255,0.60); }
+    .token-error {
+      font-size: 9px;
+      color: rgba(255,255,255,0.60);
+      margin-top: 7px;
+      letter-spacing: 0.10em;
+      display: none;
+      padding: 6px 10px;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 6px;
+    }
+    .token-error.show { display: block; }
 
-    /* ── SPACER ── */
     .spacer { flex: 1; }
 
-    /* ── ACTION BUTTONS ── */
-    .action-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      padding-bottom: 24px;
-      padding-top: 16px;
-    }
+    /* Action buttons — opacity ≥ 0.60 dla WCAG AA */
+    .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .action-btn {
       height: 148px;
       border-radius: 14px;
+      padding: 18px;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      padding: 18px;
       cursor: pointer;
+      transition: all 0.15s;
+      text-align: left;
       border: 1px solid;
-      transition: background 0.18s, border-color 0.18s, color 0.18s;
     }
-    .action-btn .btn-icon {
-      font-size: 30px;
-      line-height: 1;
+    .action-btn-arrive {
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(255,255,255,0.22);
     }
-    .action-btn .btn-bottom {}
-    .action-btn .btn-label {
-      display: block;
+    .action-btn-arrive:hover { background: #fff; border-color: #fff; }
+    .action-btn-arrive:hover .btn-icon,
+    .action-btn-arrive:hover .btn-label,
+    .action-btn-arrive:hover .btn-sublabel { color: #000 !important; }
+
+    .action-btn-leave {
+      background: transparent;
+      border-color: rgba(255,255,255,0.18);
+    }
+    .action-btn-leave:hover { border-color: rgba(255,255,255,0.70); }
+    .action-btn-leave:hover .btn-icon,
+    .action-btn-leave:hover .btn-label { color: #fff !important; }
+
+    .btn-icon    { font-size: 30px; line-height: 1; }
+    .btn-label   { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 3px; }
+    .btn-sublabel{ font-size: 8px; color: rgba(255,255,255,0.40); }
+    /* Ikony i etykiety ≥ 0.60 opacity w stanie spoczynku */
+    .btn-arrive-icon, .btn-arrive-label { color: rgba(255,255,255,0.70); }
+    .btn-leave-icon,  .btn-leave-label  { color: rgba(255,255,255,0.65); }
+
+    /* ─────────────────────────────────────────────────
+       s-select
+    ───────────────────────────────────────────────── */
+    #s-select { padding: 48px 24px 32px; }
+    .select-heading { font-family: 'Space Grotesk', sans-serif; font-size: 28px; font-weight: 700; letter-spacing: -0.5px; color: #fff; }
+    .select-hint { font-size: 9px; color: rgba(255,255,255,0.40); margin-top: 6px; letter-spacing: 0.1em; }
+    .employee-list { display: flex; flex-direction: column; gap: 8px; margin-top: 28px; }
+    .employee-item {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 12px;
+      padding: 16px 18px;
+      display: flex; align-items: center; justify-content: space-between;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: left; width: 100%;
+    }
+    .employee-item:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.40); }
+    .emp-name { font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 700; color: #fff; letter-spacing: -0.3px; }
+    .emp-meta { font-size: 9px; color: rgba(255,255,255,0.45); margin-top: 3px; letter-spacing: 0.08em; }
+    .emp-chevron { color: rgba(255,255,255,0.35); flex-shrink: 0; }
+    .footer-legal { margin-top: auto; padding-top: 32px; font-size: 7px; letter-spacing: 0.15em; color: rgba(255,255,255,0.15); text-transform: uppercase; text-align: center; }
+
+    /* ─────────────────────────────────────────────────
+       s-confirm
+    ───────────────────────────────────────────────── */
+    #s-confirm { padding: 40px 24px 32px; }
+    .confirm-tag {
+      display: inline-flex; align-items: center; gap: 7px;
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 20px; padding: 6px 12px;
+      align-self: flex-start; margin-bottom: 32px;
+    }
+    .confirm-tag-glyph { font-size: 14px; color: rgba(255,255,255,0.35); }
+    .confirm-tag-text  { font-size: 8px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(255,255,255,0.45); }
+    .confirm-name   { font-family: 'Space Grotesk', sans-serif; font-size: 52px; font-weight: 700; letter-spacing: -2px; color: #fff; line-height: 1; margin-bottom: 8px; word-break: break-word; }
+    .confirm-role   { font-size: 9px; color: rgba(255,255,255,0.40); letter-spacing: 0.12em; margin-bottom: 28px; }
+    .confirm-action-label { font-size: 8px; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(255,255,255,0.40); margin-bottom: 6px; }
+    .confirm-action { font-family: 'Space Grotesk', sans-serif; font-size: 28px; font-weight: 700; color: #fff; margin-bottom: 24px; }
+    .meta-table { border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; margin-bottom: 24px; overflow: hidden; }
+    .meta-row { display: flex; justify-content: space-between; align-items: center; padding: 11px 16px; }
+    .meta-row + .meta-row { border-top: 1px solid rgba(255,255,255,0.07); }
+    .meta-key { font-size: 8px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(255,255,255,0.35); }
+    .meta-val { font-size: 11px; color: rgba(255,255,255,0.60); letter-spacing: 0.05em; }
+    .meta-val.highlight { color: #fff; font-size: 13px; }
+    .confirm-btn {
+      width: 100%; background: #fff; color: #000;
+      border: none; border-radius: 14px; padding: 20px;
+      font-family: 'Space Mono', monospace; font-size: 10px; font-weight: 700;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      cursor: pointer; margin-bottom: 12px; transition: opacity 0.15s;
+    }
+    .confirm-btn:hover   { opacity: 0.85; }
+    .confirm-btn:disabled{ opacity: 0.40; cursor: default; }
+    .confirm-error { font-size: 9px; color: rgba(255,255,255,0.65); margin-bottom: 10px; letter-spacing: 0.10em; display: none; padding: 8px 12px; border: 1px solid rgba(255,255,255,0.18); border-radius: 8px; }
+    .confirm-error.show { display: block; }
+    .cancel-btn {
+      background: transparent; border: none;
+      color: rgba(255,255,255,0.35);
+      font-family: 'Space Mono', monospace; font-size: 10px;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      cursor: pointer; padding: 8px; transition: color 0.15s;
+      text-align: center; width: 100%;
+    }
+    .cancel-btn:hover { color: #fff; }
+
+    /* ─────────────────────────────────────────────────
+       s-success
+    ───────────────────────────────────────────────── */
+    #s-success { align-items: center; justify-content: center; padding: 40px 24px; }
+    .success-ring-outer {
+      position: relative; width: 80px; height: 80px; margin-bottom: 28px;
+    }
+    .success-ring-outer::before {
+      content: ''; position: absolute; inset: 0;
+      border-radius: 50%; border: 1px solid rgba(255,255,255,0.08);
+    }
+    .success-ring-outer::after {
+      content: ''; position: absolute; inset: 8px;
+      border-radius: 50%; border: 1px solid rgba(255,255,255,0.20);
+    }
+    .success-check { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+    .success-name { font-family: 'Space Grotesk', sans-serif; font-size: 44px; font-weight: 700; letter-spacing: -1.5px; color: #fff; text-align: center; margin-bottom: 6px; }
+    .success-sub  { font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(255,255,255,0.40); margin-bottom: 20px; }
+    .success-time-pill {
+      border: 1px solid rgba(255,255,255,0.20); border-radius: 20px;
+      padding: 8px 18px; font-size: 14px; color: #fff;
+      letter-spacing: 0.08em; font-variant-numeric: tabular-nums; margin-bottom: 32px;
+    }
+    .success-bar-wrap { width: 160px; height: 1px; background: rgba(255,255,255,0.12); border-radius: 1px; overflow: hidden; margin-bottom: 12px; }
+    .success-bar-fill { height: 1px; background: #fff; width: 100%; transition: width 50ms linear; }
+    .success-hint { font-size: 8px; color: rgba(255,255,255,0.20); letter-spacing: 0.12em; }
+
+    /* ─────────────────────────────────────────────────
+       s-error  (5. ekran)
+    ───────────────────────────────────────────────── */
+    #s-error {
+      align-items: center;
+      justify-content: center;
+      padding: 40px 24px;
+      text-align: center;
+    }
+    .error-glyph {
+      font-size: 28px;
+      color: rgba(255,255,255,0.20);
+      margin-bottom: 24px;
+    }
+    .error-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 28px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.5px;
+      margin-bottom: 12px;
+    }
+    .error-message {
+      font-size: 13px;
+      color: rgba(255,255,255,0.65);
+      letter-spacing: 0.05em;
+      line-height: 1.6;
+      margin-bottom: 8px;
+      max-width: 300px;
+    }
+    .error-detail {
+      font-size: 9px;
+      color: rgba(255,255,255,0.30);
+      letter-spacing: 0.12em;
+      margin-bottom: 36px;
+      max-width: 300px;
+      line-height: 1.6;
+    }
+    .error-back-btn {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.22);
+      border-radius: 14px;
+      padding: 16px 28px;
+      font-family: 'Space Mono', monospace;
       font-size: 10px;
-      font-family: var(--mono);
       font-weight: 700;
       letter-spacing: 0.12em;
       text-transform: uppercase;
-    }
-    .action-btn .btn-sub {
-      display: block;
-      font-size: 8px;
-      font-family: var(--mono);
-      letter-spacing: 0.10em;
-      opacity: 0.5;
-      margin-top: 2px;
-    }
-
-    .btn-arrive {
-      background: var(--f06);
-      border-color: var(--b18);
-      color: rgba(255,255,255,0.50);
-    }
-    .btn-arrive:hover {
-      background: var(--fg);
-      border-color: var(--fg);
-      color: var(--bg);
-    }
-    .btn-leave {
-      background: transparent;
-      border-color: var(--b12);
-      color: rgba(255,255,255,0.40);
-    }
-    .btn-leave:hover {
-      background: transparent;
-      border-color: var(--b60);
-      color: var(--fg);
-    }
-
-    /* ── SELECT SCREEN ── */
-    #s-select {
-      padding-top: 20px;
-    }
-    .select-title {
-      font-family: var(--grotesk);
-      font-weight: 700;
-      font-size: 28px;
-      letter-spacing: -0.5px;
-      margin-bottom: 4px;
-    }
-    .select-subtitle {
-      font-size: 9px;
-      font-family: var(--mono);
-      color: var(--t25);
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      margin-bottom: 20px;
-    }
-    .employee-list {
-      flex: 1;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-    }
-    .employee-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 14px 0;
-      border-bottom: 1px solid rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.70);
       cursor: pointer;
-      transition: opacity 0.15s;
-    }
-    .employee-item:hover { opacity: 0.7; }
-    .employee-item:last-child { border-bottom: none; }
-    .emp-name {
-      font-family: var(--grotesk);
-      font-weight: 700;
-      font-size: 18px;
-      letter-spacing: -0.3px;
-    }
-    .emp-role {
-      font-size: 8px;
-      font-family: var(--mono);
-      color: var(--t25);
-      letter-spacing: 0.10em;
-      margin-top: 2px;
-    }
-    .emp-arrow {
-      font-size: 14px;
-      color: var(--t15);
-    }
-    .select-loading {
-      text-align: center;
-      padding: 40px 0;
-      font-size: 9px;
-      font-family: var(--mono);
-      color: var(--t25);
-      letter-spacing: 0.15em;
-    }
-
-    /* ── CONFIRM SCREEN ── */
-    #s-confirm {
-      padding-top: 20px;
-    }
-    .confirm-tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      border: 1px solid var(--b12);
-      border-radius: 20px;
-      padding: 5px 12px;
-      font-size: 8px;
-      font-family: var(--mono);
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--t25);
-      margin-bottom: 24px;
-    }
-    .confirm-name {
-      font-family: var(--grotesk);
-      font-weight: 700;
-      font-size: 54px;
-      line-height: 1.0;
-      letter-spacing: -2px;
-      color: var(--fg);
-    }
-    .confirm-role {
-      font-size: 9px;
-      font-family: var(--mono);
-      color: rgba(255,255,255,0.30);
-      letter-spacing: 0.10em;
-      margin-top: 6px;
-      margin-bottom: 20px;
-    }
-    .confirm-registering {
-      font-size: 8px;
-      font-family: var(--mono);
-      letter-spacing: 0.22em;
-      text-transform: uppercase;
-      color: var(--t25);
-      margin-bottom: 6px;
-    }
-    .confirm-action {
-      font-family: var(--grotesk);
-      font-weight: 700;
-      font-size: 28px;
-      letter-spacing: -0.5px;
-      margin-bottom: 20px;
-    }
-    .confirm-meta-table {
-      border: 1px solid rgba(255,255,255,0.10);
-      border-radius: 12px;
-      overflow: hidden;
-      margin-bottom: 24px;
-    }
-    .confirm-meta-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 11px 16px;
-      border-top: 1px solid rgba(255,255,255,0.06);
-    }
-    .confirm-meta-row:first-child { border-top: none; }
-    .confirm-meta-key {
-      font-size: 8px;
-      font-family: var(--mono);
-      color: rgba(255,255,255,0.25);
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-    }
-    .confirm-meta-val {
-      font-size: 11px;
-      font-family: var(--mono);
-      color: rgba(255,255,255,0.45);
-      letter-spacing: 0.10em;
-    }
-    .confirm-meta-val.highlight {
-      color: #fff;
-      font-size: 13px;
-    }
-    .confirm-cta {
+      transition: border-color 0.15s, color 0.15s;
+      margin-bottom: 12px;
+      display: block;
       width: 100%;
-      background: var(--fg);
-      color: var(--bg);
+      max-width: 320px;
+    }
+    .error-back-btn:hover { border-color: rgba(255,255,255,0.70); color: #fff; }
+    .error-retry-btn {
+      background: #fff;
       border: none;
       border-radius: 14px;
-      padding: 20px;
+      padding: 16px 28px;
+      font-family: 'Space Mono', monospace;
       font-size: 10px;
-      font-family: var(--mono);
       font-weight: 700;
       letter-spacing: 0.12em;
       text-transform: uppercase;
+      color: #000;
       cursor: pointer;
-      transition: opacity 0.18s;
-    }
-    .confirm-cta:hover { opacity: 0.88; }
-    .confirm-cta:disabled { opacity: 0.40; cursor: default; }
-    .confirm-cancel {
-      display: block;
-      text-align: center;
-      margin-top: 14px;
-      margin-bottom: 24px;
-      font-size: 9px;
-      font-family: var(--mono);
-      color: rgba(255,255,255,0.20);
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      cursor: pointer;
-      transition: color 0.18s;
-      background: none;
-      border: none;
+      transition: opacity 0.15s;
+      display: none;   /* pokazywany tylko gdy retry ma sens */
       width: 100%;
+      max-width: 320px;
+      margin-bottom: 12px;
     }
-    .confirm-cancel:hover { color: var(--fg); }
-
-    /* ── SUCCESS SCREEN ── */
-    #s-success {
-      justify-content: center;
-      align-items: center;
-      text-align: center;
-    }
-    .success-ring-outer {
-      width: 80px;
-      height: 80px;
-      border: 1px solid rgba(255,255,255,0.06);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 24px;
-    }
-    .success-ring-inner {
-      width: 62px;
-      height: 62px;
-      border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .success-check {
-      font-size: 22px;
-      color: var(--fg);
-    }
-    .success-name {
-      font-family: var(--grotesk);
-      font-weight: 700;
-      font-size: 44px;
-      letter-spacing: -1.5px;
-      line-height: 1;
-    }
-    .success-action {
-      font-size: 9px;
-      font-family: var(--mono);
-      color: rgba(255,255,255,0.30);
-      letter-spacing: 0.22em;
-      text-transform: uppercase;
-      margin-top: 8px;
-      margin-bottom: 16px;
-    }
-    .success-time-pill {
-      display: inline-block;
-      border: 1px solid var(--b12);
-      border-radius: 20px;
-      padding: 6px 16px;
-      font-size: 14px;
-      font-family: var(--mono);
-      font-variant-numeric: tabular-nums;
-      color: var(--t35);
-      margin-bottom: 28px;
-    }
-    .success-bar-track {
-      width: 160px;
-      height: 1px;
-      background: rgba(255,255,255,0.08);
-      border-radius: 1px;
-      overflow: hidden;
-      margin: 0 auto 10px;
-    }
-    .success-bar-fill {
-      height: 1px;
-      background: #fff;
-      width: 100%;
-      animation: shrink 3s linear forwards;
-    }
-    @keyframes shrink {
-      from { width: 100%; }
-      to   { width: 0%; }
-    }
-    .success-hint {
-      font-size: 8px;
-      font-family: var(--mono);
-      color: rgba(255,255,255,0.15);
-      letter-spacing: 0.15em;
-    }
-
-    /* ── ERROR MESSAGE ── */
-    .error-msg {
-      display: none;
-      font-size: 9px;
-      font-family: var(--mono);
-      color: rgba(255,100,100,0.80);
-      letter-spacing: 0.10em;
-      margin-top: 8px;
-      padding: 8px 12px;
-      border: 1px solid rgba(255,100,100,0.20);
-      border-radius: 8px;
-    }
-    .error-msg.visible { display: block; }
-
-    /* ── LOADING OVERLAY ── */
-    .loading-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.8);
-      z-index: 100;
-      align-items: center;
-      justify-content: center;
-    }
-    .loading-overlay.visible { display: flex; }
-    .loading-dots {
-      font-size: 9px;
-      font-family: var(--mono);
-      color: var(--t35);
-      letter-spacing: 0.3em;
-    }
-
-    @media (max-height: 600px) {
-      .profile-name { font-size: 28px; }
-      .action-btn { height: 110px; }
-    }
+    .error-retry-btn.show { display: block; }
+    .error-retry-btn:hover { opacity: 0.85; }
   </style>
 </head>
-<body>
+<body class="grid-bg">
 
-<!-- LOADING OVERLAY -->
-<div class="loading-overlay" id="loading-overlay">
-  <div class="loading-dots">ŁADOWANIE · · ·</div>
+<!-- ══ LOADING ════════════════════════════════════════════════════ -->
+<div id="s-loading" class="screen active" role="status" aria-live="polite">
+  <div class="loading-text" id="loading-text">Ładowanie · · ·</div>
 </div>
 
-<!-- ═══════════════════════════════════════ EKRAN GŁÓWNY -->
-<div class="screen" id="s-main">
+<!-- ══ SELECT ═════════════════════════════════════════════════════ -->
+<div id="s-select" class="screen" role="main">
+  <div class="label" id="select-clinic-label">We SMILE · Warszawa</div>
+  <div class="select-heading" style="margin-top:12px">Wybierz profil</div>
+  <div class="select-hint">Profil zostanie zapamiętany na tym urządzeniu</div>
+  <div class="employee-list" id="employee-list" role="list"></div>
+  <div class="footer-legal">Art. 149 KP · Ewidencja Czasu Pracy · RODO Art. 6(1)(b)(c)</div>
+</div>
 
+<!-- ══ MAIN ═══════════════════════════════════════════════════════ -->
+<div id="s-main" class="screen" role="main">
+  <!-- Status bar -->
   <div class="status-bar">
-    <span class="clinic-name" id="main-clinic-name">WE SMILE · WARSZAWA</span>
-    <span id="clock">00:00</span>
+    <div class="label" id="main-clinic-label">We SMILE · Warszawa</div>
+    <div class="status-clock" id="main-clock" aria-label="Aktualny czas">00:00:00</div>
   </div>
 
-  <!-- Token strip -->
-  <div class="token-strip">
-    <div class="token-strip-top">
-      <div class="token-label-row">
-        <span class="token-glyph">◈</span>
-        <span class="token-meta">HMAC-SHA256 · Token aktywny</span>
+  <!-- Token strip — wizualne odliczanie tokenu -->
+  <div class="token-strip" role="status" aria-label="Status tokenu HMAC">
+    <div class="token-strip-header">
+      <div class="token-strip-left">
+        <span class="token-glyph" aria-hidden="true">◈</span>
+        <span class="token-label">HMAC-SHA256 · Token aktywny</span>
       </div>
-      <span class="token-countdown" id="token-countdown">60s</span>
+      <span class="token-countdown" id="token-countdown" aria-live="off">15s</span>
     </div>
-    <div class="token-code" id="token-display">— — — — · — — — — · — — — — · — — — —</div>
-    <div class="token-bar-track">
-      <div class="token-bar-fill" id="token-bar" style="width:100%"></div>
+    <div class="token-code" id="token-display" aria-label="Wpisz token widoczny na tablecie kliniki">· · · · wpisz z tabletu · · · ·</div>
+    <div class="token-bar-wrap" role="progressbar" aria-label="Czas do rotacji tokenu">
+      <div class="token-bar-fill" id="token-bar"></div>
     </div>
-    <div class="token-hint">Klucz rotuje co 60s · SHA-256 · Okno ±1</div>
+    <div class="token-hint">Klucz rotuje co 15s · SHA-256 · Okno ±1 · Okno 15s zmniejsza ryzyko przechwycenia</div>
   </div>
 
-  <div class="sep"></div>
+  <div class="separator"></div>
 
   <!-- Profile -->
   <div class="profile-row">
     <div>
-      <div class="label" style="margin-bottom:6px">Pracownik</div>
+      <div class="label">Zalogowany jako</div>
       <div class="profile-name" id="main-name">—</div>
-      <div class="profile-meta">
-        <div class="profile-role" id="main-role">—</div>
-        <div class="profile-year" id="main-year">—</div>
-      </div>
+      <div class="profile-meta" id="main-meta">—</div>
     </div>
-    <button class="switch-btn" id="switch-btn" title="Zmień pracownika">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="8" r="4"/>
-        <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+    <button class="switch-btn" id="switch-btn"
+      title="Zmień pracownika"
+      aria-label="Zmień pracownika">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <circle cx="8" cy="5" r="2.5" stroke="rgba(255,255,255,0.65)" stroke-width="1.2"/>
+        <path d="M2.5 13.5C2.5 11 4.8 9 8 9s5.5 2 5.5 4.5" stroke="rgba(255,255,255,0.65)" stroke-width="1.2" stroke-linecap="round"/>
       </svg>
     </button>
   </div>
 
   <!-- Token input -->
-  <div class="token-input-section">
-    <div class="token-input-label">Token z tabletu przy wejściu</div>
-    <input type="text" class="token-input" id="token-input"
-      placeholder="a3f9" maxlength="16" autocomplete="off"
-      autocorrect="off" autocapitalize="off" spellcheck="false">
-    <div class="error-msg" id="main-error"></div>
+  <div class="token-input-wrap">
+    <div class="token-input-label" id="token-input-label">Token z tabletu przy wejściu (min. 4 znaki)</div>
+    <input
+      type="text"
+      id="token-input"
+      class="token-input"
+      placeholder="np. a3f9"
+      maxlength="16"
+      minlength="4"
+      autocomplete="off"
+      autocorrect="off"
+      autocapitalize="none"
+      spellcheck="false"
+      inputmode="text"
+      aria-labelledby="token-input-label"
+      aria-describedby="token-error"
+      aria-required="true">
+    <div class="token-error" id="token-error" role="alert"></div>
   </div>
 
   <div class="spacer"></div>
 
   <!-- Action buttons -->
   <div class="action-grid">
-    <button class="action-btn btn-arrive" id="btn-arrive">
-      <span class="btn-icon">↑</span>
-      <div class="btn-bottom">
-        <span class="btn-label">Przyjście</span>
-        <span class="btn-sub">Rejestruj wejście</span>
+    <button class="action-btn action-btn-arrive" id="btn-arrive"
+      aria-label="Zarejestruj przyjście do pracy">
+      <div class="btn-icon btn-arrive-icon" aria-hidden="true">↑</div>
+      <div>
+        <div class="btn-label btn-arrive-label">Przyjście</div>
+        <div class="btn-sublabel">Rejestruj wejście</div>
       </div>
     </button>
-    <button class="action-btn btn-leave" id="btn-leave">
-      <span class="btn-icon">↓</span>
-      <div class="btn-bottom">
-        <span class="btn-label">Wyjście</span>
-        <span class="btn-sub">Rejestruj wyjście</span>
+    <button class="action-btn action-btn-leave" id="btn-leave"
+      aria-label="Zarejestruj wyjście z pracy">
+      <div class="btn-icon btn-leave-icon" aria-hidden="true">↓</div>
+      <div>
+        <div class="btn-label btn-leave-label">Wyjście</div>
+        <div class="btn-sublabel">Rejestruj wyjście</div>
       </div>
     </button>
   </div>
+</div>
 
-</div><!-- /s-main -->
-
-<!-- ═══════════════════════════════════════ EKRAN WYBORU PRACOWNIKA -->
-<div class="screen" id="s-select">
-  <div style="padding-top:20px; padding-bottom:16px; flex-shrink:0">
-    <div class="label" style="margin-bottom:8px">We SMILE · Warszawa</div>
-    <div class="select-title">Kim jesteś?</div>
-    <div class="select-subtitle">Wybierz swój profil</div>
+<!-- ══ CONFIRM ════════════════════════════════════════════════════ -->
+<div id="s-confirm" class="screen" role="main">
+  <div class="confirm-tag">
+    <span class="confirm-tag-glyph" aria-hidden="true">◈</span>
+    <span class="confirm-tag-text">Weryfikacja obecności</span>
   </div>
-  <div class="employee-list" id="employee-list">
-    <div class="select-loading">Ładowanie listy · · ·</div>
-  </div>
-  <div style="padding-bottom:20px; padding-top:10px; flex-shrink:0">
-    <div style="font-size:7px; font-family:var(--mono); color:rgba(255,255,255,0.12); letter-spacing:0.15em; text-align:center; text-transform:uppercase">
-      Wybór jest zapamiętywany na tym urządzeniu
-    </div>
-  </div>
-</div><!-- /s-select -->
-
-<!-- ═══════════════════════════════════════ EKRAN POTWIERDZENIA -->
-<div class="screen" id="s-confirm">
-
-  <div class="confirm-tag">◈ Weryfikacja obecności</div>
-
   <div class="confirm-name" id="confirm-name">—</div>
   <div class="confirm-role" id="confirm-role">—</div>
-
-  <div class="confirm-registering">Rejestrujesz</div>
-  <div class="confirm-action" id="confirm-action">—</div>
-
-  <div class="confirm-meta-table">
-    <div class="confirm-meta-row">
-      <span class="confirm-meta-key">Klinika</span>
-      <span class="confirm-meta-val" id="confirm-clinic">We SMILE</span>
+  <div class="confirm-action-label">Rejestrujesz</div>
+  <div class="confirm-action" id="confirm-action" aria-live="polite">—</div>
+  <div class="meta-table" role="table" aria-label="Szczegóły rejestracji">
+    <div class="meta-row" role="row">
+      <span class="meta-key" role="rowheader">Godzina</span>
+      <span class="meta-val highlight" id="meta-time" role="cell">—</span>
     </div>
-    <div class="confirm-meta-row">
-      <span class="confirm-meta-key">Data</span>
-      <span class="confirm-meta-val" id="confirm-date">—</span>
+    <div class="meta-row" role="row">
+      <span class="meta-key" role="rowheader">Data</span>
+      <span class="meta-val" id="meta-date" role="cell">—</span>
     </div>
-    <div class="confirm-meta-row">
-      <span class="confirm-meta-key">Godzina</span>
-      <span class="confirm-meta-val highlight" id="confirm-time">—</span>
+    <div class="meta-row" role="row">
+      <span class="meta-key" role="rowheader">Rok urodzenia</span>
+      <span class="meta-val" id="meta-year" role="cell">—</span>
     </div>
-    <div class="confirm-meta-row">
-      <span class="confirm-meta-key">Token (skrót)</span>
-      <span class="confirm-meta-val" id="confirm-token">—</span>
+    <div class="meta-row" role="row">
+      <span class="meta-key" role="rowheader">Token (skrót)</span>
+      <span class="meta-val" id="meta-token" role="cell">—</span>
     </div>
-    <div class="confirm-meta-row">
-      <span class="confirm-meta-key">Rok ur.</span>
-      <span class="confirm-meta-val" id="confirm-year">—</span>
+    <div class="meta-row" role="row">
+      <span class="meta-key" role="rowheader">Klinika</span>
+      <span class="meta-val" id="meta-clinic" role="cell">—</span>
     </div>
   </div>
+  <div class="confirm-error" id="confirm-error" role="alert"></div>
+  <button class="confirm-btn" id="confirm-btn">Potwierdzam — to ja</button>
+  <button class="cancel-btn" id="cancel-btn" aria-label="Anuluj i wróć">Anuluj</button>
+</div>
 
-  <button class="confirm-cta" id="confirm-cta">Potwierdzam — to ja</button>
-  <div class="error-msg" id="confirm-error"></div>
-  <button class="confirm-cancel" id="confirm-cancel">Anuluj</button>
-
-</div><!-- /s-confirm -->
-
-<!-- ═══════════════════════════════════════ EKRAN SUKCESU -->
-<div class="screen" id="s-success">
-  <div class="success-ring-outer">
-    <div class="success-ring-inner">
-      <span class="success-check">✓</span>
+<!-- ══ SUCCESS ════════════════════════════════════════════════════ -->
+<div id="s-success" class="screen" role="status" aria-live="assertive">
+  <div class="success-ring-outer" aria-hidden="true">
+    <div class="success-check">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <path d="M4 10l4 4 8-8" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
     </div>
   </div>
   <div class="success-name" id="success-name">—</div>
-  <div class="success-action" id="success-action">—</div>
+  <div class="success-sub" id="success-sub">—</div>
   <div class="success-time-pill" id="success-time">—</div>
-  <div class="success-bar-track">
+  <div class="success-bar-wrap" role="progressbar" aria-label="Powrót do ekranu głównego za 3 sekundy">
     <div class="success-bar-fill" id="success-bar"></div>
   </div>
   <div class="success-hint">Powrót za 3s</div>
-</div><!-- /s-success -->
+</div>
+
+<!-- ══ ERROR (5. ekran) ════════════════════════════════════════════ -->
+<div id="s-error" class="screen" role="alert" aria-live="assertive">
+  <div class="error-glyph" aria-hidden="true">◈</div>
+  <div class="error-title" id="error-title">Błąd</div>
+  <div class="error-message" id="error-message">Coś poszło nie tak.</div>
+  <div class="error-detail" id="error-detail"></div>
+  <button class="error-retry-btn" id="error-retry-btn" aria-label="Spróbuj ponownie">
+    Spróbuj ponownie
+  </button>
+  <button class="error-back-btn" id="error-back-btn" aria-label="Wróć do ekranu głównego">
+    ← Wróć
+  </button>
+</div>
 
 <script>
-// ============================================================
-// STATE
-// ============================================================
-var selectedEmployee = null; // { id, name, imie, inicjal, rok, rola }
-var currentAction    = null; // 'arrive' | 'leave'
+// ═══════════════════════════════════════════════════════════════
+// STAN APLIKACJI
+// ═══════════════════════════════════════════════════════════════
+var selectedEmployee = null;  // { id, name, imie, inicjal, year, role }
+var currentAction    = null;  // 'P' | 'W'
 var employeesList    = [];
 var clinicData       = { nazwa: 'We SMILE', miasto: 'Warszawa' };
+var clockInterval    = null;
 var successTimer     = null;
-var clockTimer       = null;
-var tokenTimer       = null;
+var errorRetryFn     = null;  // funkcja retry dla aktualnego bledu
 
-// ============================================================
-// LOCALSTORAGE (z try-catch dla Safari private mode)
-// ============================================================
+// ═══════════════════════════════════════════════════════════════
+// LOCALSTORAGE — try/catch dla Safari Private Mode (Pulapka 7)
+// ═══════════════════════════════════════════════════════════════
 function saveEmployee(emp) {
   try { localStorage.setItem('rcp_employee', JSON.stringify(emp)); } catch(e) {}
 }
 function loadEmployee() {
-  try {
-    var s = localStorage.getItem('rcp_employee');
-    return s ? JSON.parse(s) : null;
-  } catch(e) { return null; }
-}
-function clearEmployee() {
-  try { localStorage.removeItem('rcp_employee'); } catch(e) {}
+  try { var s = localStorage.getItem('rcp_employee'); return s ? JSON.parse(s) : null; } catch(e) { return null; }
 }
 
-// ============================================================
-// SCREEN SWITCHING
-// ============================================================
+// ═══════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════
+function pad2(n) { return ('0' + n).slice(-2); }
+function formatTime(d) { return pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds()); }
+function formatDate(d) {
+  var days   = ['Niedz.','Pon.','Wt.','Śr.','Czw.','Pt.','Sob.'];
+  var months = ['sty','lut','mar','kwi','maj','cze','lip','sie','wrz','paź','lis','gru'];
+  return days[d.getDay()] + ' ' + d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+}
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 function showScreen(id) {
   var screens = document.querySelectorAll('.screen');
-  for (var i = 0; i < screens.length; i++) {
-    screens[i].classList.remove('active');
-  }
+  for (var i = 0; i < screens.length; i++) screens[i].classList.remove('active');
   document.getElementById(id).classList.add('active');
 }
 
-// ============================================================
-// CLOCK
-// ============================================================
+// ═══════════════════════════════════════════════════════════════
+// WRAPPER google.script.run Z TIMEOUT 10s
+// ═══════════════════════════════════════════════════════════════
+function gasCall(runner, timeoutMs) {
+  // runner(successCb, failCb) — wywoluje google.script.run wewnatrz
+  var done = false;
+  var timer = setTimeout(function() {
+    if (!done) {
+      done = true;
+      showError(
+        'Brak odpowiedzi serwera',
+        'Serwer nie odpowiedział w ciągu 10 sekund.',
+        'Sprawdź połączenie z internetem i spróbuj ponownie.',
+        null
+      );
+    }
+  }, timeoutMs || 10000);
+
+  runner(
+    function(result) {
+      if (!done) { done = true; clearTimeout(timer); }
+      else return; // timeout juz nastapil — ignoruj
+      handleGasSuccess(result);
+    },
+    function(err) {
+      if (!done) { done = true; clearTimeout(timer); }
+      else return;
+      showError(
+        'Błąd połączenia',
+        'Nie można połączyć się z serwerem.',
+        String(err && err.message ? err.message : err),
+        null
+      );
+    }
+  );
+}
+
+// Dispatcher — rozpoznaje kontekst odpowiedzi
+var gasContext = ''; // 'init' | 'register'
+function handleGasSuccess(result) {
+  if (gasContext === 'init') {
+    handleInitSuccess(result);
+  } else if (gasContext === 'register') {
+    handleRegisterSuccess(result);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ZEGAR I PASEK TOKENU (15s okno)
+// ═══════════════════════════════════════════════════════════════
+var TOKEN_WINDOW = 15; // sekund — synchronizowane z backendem
+
 function startClock() {
+  if (clockInterval) clearInterval(clockInterval);
   function tick() {
-    var now = new Date();
-    var h = ('0' + now.getHours()).slice(-2);
-    var m = ('0' + now.getMinutes()).slice(-2);
-    var s = ('0' + now.getSeconds()).slice(-2);
-    var el = document.getElementById('clock');
-    if (el) el.textContent = h + ':' + m + ':' + s;
+    var now      = new Date();
+    var secsIn   = Math.floor((now.getTime() % (TOKEN_WINDOW * 1000)) / 1000);
+    var secsLeft = TOKEN_WINDOW - secsIn;
+    var pct      = (secsLeft / TOKEN_WINDOW) * 100;
+
+    var clockEl = document.getElementById('main-clock');
+    var cntEl   = document.getElementById('token-countdown');
+    var barEl   = document.getElementById('token-bar');
+
+    if (clockEl) clockEl.textContent = formatTime(now);
+    if (cntEl)   cntEl.textContent   = secsLeft + 's';
+    if (barEl) {
+      barEl.style.width      = pct + '%';
+      // Ostrzezenie przy <4s (25% okna)
+      barEl.style.background = secsLeft < 4 ? 'rgba(255,255,255,0.4)' : '#fff';
+    }
   }
   tick();
-  if (clockTimer) clearInterval(clockTimer);
-  clockTimer = setInterval(tick, 1000);
+  clockInterval = setInterval(tick, 1000);
 }
 
-// ============================================================
-// TOKEN DISPLAY STRIP
-// ============================================================
-function startTokenDisplay() {
-  function updateTokenDisplay() {
-    var now         = Date.now();
-    var secsInSlot  = Math.floor(now / 1000) % 60;
-    var remaining   = 60 - secsInSlot;
-    var pct         = (remaining / 60) * 100;
-
-    var barEl = document.getElementById('token-bar');
-    var cdEl  = document.getElementById('token-countdown');
-    if (barEl) {
-      barEl.style.width = pct + '%';
-      barEl.style.background = remaining <= 12 ? 'rgba(255,255,255,0.4)' : '#fff';
-    }
-    if (cdEl) cdEl.textContent = remaining + 's';
-  }
-
-  updateTokenDisplay();
-  if (tokenTimer) clearInterval(tokenTimer);
-  tokenTimer = setInterval(updateTokenDisplay, 1000);
-
-  // Pasek tokenu na ekranie glownym jest wizualny tylko
-  // Nie pokazujemy prawdziwego tokenu po stronie telefonu (bezpieczenstwo)
-  var dispEl = document.getElementById('token-display');
-  if (dispEl) dispEl.textContent = '· · · · · wpisz z tabletu · · · · ·';
-}
-
-// ============================================================
-// EMPLOYEE LIST
-// ============================================================
+// ═══════════════════════════════════════════════════════════════
+// LISTA PRACOWNIKOW
+// ═══════════════════════════════════════════════════════════════
 function buildEmployeeList() {
   var list = document.getElementById('employee-list');
-  if (!list) return;
-
+  list.innerHTML = '';
   if (employeesList.length === 0) {
-    list.innerHTML = '<div class="select-loading">Brak aktywnych pracowników</div>';
+    list.innerHTML = '<div class="footer-legal" style="margin:40px auto;color:rgba(255,255,255,0.30)">Brak aktywnych pracowników</div>';
     return;
   }
-
-  list.innerHTML = '';
   for (var i = 0; i < employeesList.length; i++) {
     (function(emp) {
-      var div = document.createElement('div');
-      div.className = 'employee-item';
-      div.innerHTML =
+      var btn = document.createElement('button');
+      btn.className = 'employee-item';
+      btn.setAttribute('role', 'listitem');
+      btn.setAttribute('aria-label', 'Wybierz profil: ' + escHtml(emp.name) + ', ' + escHtml(emp.role));
+      btn.innerHTML =
         '<div>' +
-          '<div class="emp-name">' + escHtml(emp.imie) + ' ' + escHtml(emp.inicjal) + '.</div>' +
-          '<div class="emp-role">' + escHtml(emp.rola) + '</div>' +
+          '<div class="emp-name">' + escHtml(emp.name) + '</div>' +
+          '<div class="emp-meta">' + escHtml(emp.role) + ' · ur. ' + escHtml(emp.year) + '</div>' +
         '</div>' +
-        '<span class="emp-arrow">→</span>';
-      div.onclick = function() { selectEmployee(emp); };
-      list.appendChild(div);
+        '<svg class="emp-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
+          '<path d="M6 3l5 5-5 5" stroke="rgba(255,255,255,0.40)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+        '</svg>';
+      btn.addEventListener('click', function() {
+        selectedEmployee = {
+          id:      emp.id,
+          name:    emp.name,
+          imie:    emp.imie,
+          inicjal: emp.inicjal,
+          year:    emp.year,
+          role:    emp.role,
+        };
+        saveEmployee(selectedEmployee);
+        renderMainScreen();
+        showScreen('s-main');
+      });
+      list.appendChild(btn);
     })(employeesList[i]);
   }
 }
 
-function selectEmployee(emp) {
-  selectedEmployee = emp;
-  saveEmployee({
-    id:      emp.id,
-    name:    emp.imie + ' ' + emp.inicjal + '.',
-    imie:    emp.imie,
-    inicjal: emp.inicjal,
-    rok:     emp.rok,
-    rola:    emp.rola
-  });
-  renderMainScreen();
-  showScreen('s-main');
-}
-
-// ============================================================
-// MAIN SCREEN
-// ============================================================
 function renderMainScreen() {
   if (!selectedEmployee) return;
-  document.getElementById('main-name').textContent  = selectedEmployee.imie + ' ' + selectedEmployee.inicjal + '.';
-  document.getElementById('main-role').textContent  = selectedEmployee.rola || '—';
-  document.getElementById('main-year').textContent  = 'ur. ' + (selectedEmployee.rok || '—');
-  document.getElementById('main-clinic-name').textContent =
-    (clinicData.nazwa || 'WE SMILE') + ' · ' + (clinicData.miasto || 'WARSZAWA').toUpperCase();
-
-  var tokenEl = document.getElementById('token-input');
-  if (tokenEl) tokenEl.value = '';
-  hideError('main-error');
+  document.getElementById('main-name').textContent = escHtml(selectedEmployee.name);
+  document.getElementById('main-meta').textContent = 'ur. ' + escHtml(selectedEmployee.year) + ' · ' + escHtml(selectedEmployee.role);
+  if (clinicData) {
+    document.getElementById('main-clinic-label').textContent = clinicData.nazwa + ' · ' + clinicData.miasto;
+    document.getElementById('select-clinic-label').textContent = clinicData.nazwa + ' · ' + clinicData.miasto;
+  }
+  // Wyczysc pole tokenu po kazdym powrocie
+  var ti = document.getElementById('token-input');
+  if (ti) ti.value = '';
+  hideTokenError();
 }
 
-// ============================================================
-// CONFIRM SCREEN
-// ============================================================
-function showConfirm(akcja) {
-  if (!selectedEmployee) {
+// ═══════════════════════════════════════════════════════════════
+// INICJALIZACJA
+// ═══════════════════════════════════════════════════════════════
+window.onload = function() {
+  startClock();
+  showScreen('s-loading');
+
+  // Sprawdz URL parametr ?token=...
+  var urlToken = '';
+  try {
+    var params = new URLSearchParams(window.location.search);
+    urlToken = params.get('token') || '';
+  } catch(e) {}
+
+  gasContext = 'init';
+  gasCall(function(ok, fail) {
+    google.script.run
+      .withSuccessHandler(ok)
+      .withFailureHandler(fail)
+      .pobierzDaneStartowe();
+  }, 10000);
+
+  // Zapisz urlToken do uzycia po inicjalizacji
+  window._urlToken = urlToken;
+};
+
+function handleInitSuccess(data) {
+  if (data && data.pracownicy) employeesList = data.pracownicy;
+  if (data && data.klinika)    clinicData    = data.klinika;
+  if (data && data.tokenWindow) TOKEN_WINDOW = data.tokenWindow;
+
+  var saved = loadEmployee();
+  if (saved) {
+    selectedEmployee = saved;
+    renderMainScreen();
+    showScreen('s-main');
+    // Pre-fill z URL jesli dostepny
+    if (window._urlToken) {
+      var ti = document.getElementById('token-input');
+      if (ti) ti.value = window._urlToken;
+    }
+  } else {
+    var clinicLabel = document.getElementById('select-clinic-label');
+    if (clinicLabel && clinicData) clinicLabel.textContent = clinicData.nazwa + ' · ' + clinicData.miasto;
+    buildEmployeeList();
     showScreen('s-select');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AKCJE — walidacja + przejscie do CONFIRM
+// ═══════════════════════════════════════════════════════════════
+function handleAction(akcja) {
+  if (!selectedEmployee) { showScreen('s-select'); return; }
+
+  var tokenVal = document.getElementById('token-input').value.trim().toLowerCase().replace(/[^a-f0-9]/g, '');
+  var inputEl  = document.getElementById('token-input');
+  var errEl    = document.getElementById('token-error');
+
+  if (!tokenVal || tokenVal.length < 4) {
+    errEl.textContent = 'Wpisz co najmniej 4 znaki tokenu z tabletu.';
+    errEl.classList.add('show');
+    inputEl.classList.add('error');
+    inputEl.focus();
     return;
   }
-  var tokenInput = document.getElementById('token-input');
-  var tv = tokenInput ? tokenInput.value.trim() : '';
-  if (!tv) {
-    showError('main-error', 'Wpisz token z tabletu przy wejściu.');
-    return;
-  }
+  errEl.classList.remove('show');
+  inputEl.classList.remove('error');
 
   currentAction = akcja;
-  var now = new Date();
-  var h   = ('0' + now.getHours()).slice(-2);
-  var m   = ('0' + now.getMinutes()).slice(-2);
-  var s   = ('0' + now.getSeconds()).slice(-2);
-  var d   = now.getFullYear() + '-' +
-            ('0'+(now.getMonth()+1)).slice(-2) + '-' +
-            ('0'+now.getDate()).slice(-2);
+  showConfirmScreen(akcja);
+}
 
-  document.getElementById('confirm-name').textContent   = selectedEmployee.imie;
-  document.getElementById('confirm-role').textContent   = selectedEmployee.rola || '';
-  document.getElementById('confirm-action').textContent = akcja === 'arrive' ? 'Przyjście ↑' : 'Wyjście ↓';
-  document.getElementById('confirm-clinic').textContent = clinicData.nazwa || 'We SMILE';
-  document.getElementById('confirm-date').textContent   = d;
-  document.getElementById('confirm-time').textContent   = h + ':' + m + ':' + s;
-  document.getElementById('confirm-token').textContent  = tv.substring(0, 8).toLowerCase();
-  document.getElementById('confirm-year').textContent   = selectedEmployee.rok || '—';
+function hideTokenError() {
+  var errEl   = document.getElementById('token-error');
+  var inputEl = document.getElementById('token-input');
+  if (errEl)   errEl.classList.remove('show');
+  if (inputEl) inputEl.classList.remove('error');
+}
 
-  hideError('confirm-error');
-  var cta = document.getElementById('confirm-cta');
-  if (cta) { cta.disabled = false; cta.textContent = 'Potwierdzam — to ja'; }
+// ═══════════════════════════════════════════════════════════════
+// EKRAN POTWIERDZENIA
+// ═══════════════════════════════════════════════════════════════
+function showConfirmScreen(akcja) {
+  var now         = new Date();
+  var actionLabel = akcja === 'P' ? 'Przyjście ↑' : 'Wyjście ↓';
+  var tokenInput  = document.getElementById('token-input').value.trim();
+
+  document.getElementById('confirm-name').textContent   = selectedEmployee.imie || selectedEmployee.name;
+  document.getElementById('confirm-role').textContent   = selectedEmployee.role;
+  document.getElementById('confirm-action').textContent = actionLabel;
+  document.getElementById('meta-time').textContent      = formatTime(now);
+  document.getElementById('meta-date').textContent      = formatDate(now);
+  document.getElementById('meta-year').textContent      = 'ur. ' + selectedEmployee.year;
+  document.getElementById('meta-token').textContent     = tokenInput.substring(0, 8) + (tokenInput.length > 8 ? '…' : '');
+  document.getElementById('meta-clinic').textContent    = clinicData.nazwa + ', ' + clinicData.miasto;
+
+  // Reset stanu przycisku
+  var btn = document.getElementById('confirm-btn');
+  btn.disabled    = false;
+  btn.textContent = 'Potwierdzam — to ja';
+  var ceErr = document.getElementById('confirm-error');
+  ceErr.classList.remove('show');
 
   showScreen('s-confirm');
 }
 
-// ============================================================
-// SUBMIT REGISTRATION
-// ============================================================
+// ═══════════════════════════════════════════════════════════════
+// REJESTRACJA
+// ═══════════════════════════════════════════════════════════════
 function submitRegistration() {
   if (!selectedEmployee || !currentAction) return;
 
-  var tokenInput = document.getElementById('token-input');
-  var tv         = tokenInput ? tokenInput.value.trim() : '';
+  var tokenInput = document.getElementById('token-input').value.trim();
+  var btn        = document.getElementById('confirm-btn');
+  btn.disabled    = true;
+  btn.textContent = 'Wysyłanie · · ·';
 
-  var cta = document.getElementById('confirm-cta');
-  if (cta) { cta.disabled = true; cta.textContent = 'Wysyłanie · · ·'; }
-  hideError('confirm-error');
+  var ceErr = document.getElementById('confirm-error');
+  ceErr.classList.remove('show');
 
   var payload = {
-    employeeId:  selectedEmployee.id,
-    tokenInput:  tv,
-    akcja:       currentAction,
-    timestamp:   Date.now()
+    employeeId: selectedEmployee.id,
+    tokenInput: tokenInput,
+    akcja:      currentAction,
+    timestamp:  Date.now(),
   };
 
-  google.script.run
-    .withSuccessHandler(function(resp) {
-      if (resp && resp.success) {
-        showSuccessScreen(resp);
-      } else {
-        var msg = (resp && resp.message) ? resp.message : 'Błąd rejestracji. Spróbuj ponownie.';
-        showError('confirm-error', msg);
-        if (cta) { cta.disabled = false; cta.textContent = 'Potwierdzam — to ja'; }
-      }
-    })
-    .withFailureHandler(function(err) {
-      showError('confirm-error', 'Błąd połączenia z serwerem. Sprawdź internet.');
-      if (cta) { cta.disabled = false; cta.textContent = 'Potwierdzam — to ja'; }
-    })
-    .weryfikujIRejestruj(payload);
+  gasContext = 'register';
+  gasCall(function(ok, fail) {
+    google.script.run
+      .withSuccessHandler(ok)
+      .withFailureHandler(fail)
+      .weryfikujIRejestruj(payload);
+  }, 10000);
+
+  // Przechowaj referencje do przycisku zeby odblokować go na blad
+  window._confirmBtn = btn;
 }
 
-// ============================================================
-// SUCCESS SCREEN
-// ============================================================
-function showSuccessScreen(resp) {
-  document.getElementById('success-name').textContent   = resp.imie || selectedEmployee.imie || '—';
-  document.getElementById('success-action').textContent = currentAction === 'arrive' ? 'PRZYJŚCIE ZAREJESTROWANE' : 'WYJŚCIE ZAREJESTROWANE';
-  document.getElementById('success-time').textContent   = resp.godzina || '—';
+function handleRegisterSuccess(result) {
+  var btn = window._confirmBtn;
+  if (btn) { btn.disabled = false; btn.textContent = 'Potwierdzam — to ja'; }
 
-  // Reset animacji paska
-  var bar = document.getElementById('success-bar');
-  if (bar) {
-    bar.style.animation = 'none';
-    void bar.offsetWidth; // reflow
-    bar.style.animation = 'shrink 3s linear forwards';
+  if (result && result.success) {
+    showSuccessScreen(result);
+  } else {
+    var msg     = (result && result.message) ? result.message : 'Błąd rejestracji.';
+    var attLeft = (result && result.attemptsLeft !== undefined) ? result.attemptsLeft : null;
+    var detail  = attLeft !== null && attLeft > 0
+      ? 'Pozostałe próby przed blokadą: ' + attLeft
+      : (attLeft === 0 ? 'Konto zostało tymczasowo zablokowane.' : '');
+
+    // Dla bledow tokenu zostajemy na confirm z komunikatem — latwiej poprawic token
+    var ceErr = document.getElementById('confirm-error');
+    if (ceErr) {
+      ceErr.textContent = msg + (detail ? ' ' + detail : '');
+      ceErr.classList.add('show');
+    }
   }
+}
 
+// ═══════════════════════════════════════════════════════════════
+// EKRAN SUKCESU
+// ═══════════════════════════════════════════════════════════════
+function showSuccessScreen(result) {
+  document.getElementById('success-name').textContent = escHtml(result.imie || (selectedEmployee && selectedEmployee.imie) || '—');
+  document.getElementById('success-sub').textContent  = currentAction === 'P' ? 'Zarejestrowano wejście' : 'Zarejestrowano wyjście';
+  document.getElementById('success-time').textContent = result.godzina || formatTime(new Date());
+
+  var bar = document.getElementById('success-bar');
+  bar.style.width = '100%';
   showScreen('s-success');
 
-  if (successTimer) clearTimeout(successTimer);
-  successTimer = setTimeout(function() {
-    showScreen('s-main');
-    renderMainScreen();
-  }, 3000);
+  var elapsed = 0;
+  if (successTimer) clearInterval(successTimer);
+  successTimer = setInterval(function() {
+    elapsed += 50;
+    var pct = Math.max(0, 100 - (elapsed / 3000) * 100);
+    bar.style.width = pct + '%';
+    if (elapsed >= 3000) {
+      clearInterval(successTimer);
+      showScreen('s-main');
+      renderMainScreen();
+    }
+  }, 50);
 }
 
-// ============================================================
-// ERROR HELPERS
-// ============================================================
-function showError(id, msg) {
-  var el = document.getElementById(id);
-  if (!el) return;
-  el.textContent = msg;
-  el.classList.add('visible');
-}
-function hideError(id) {
-  var el = document.getElementById(id);
-  if (el) el.classList.remove('visible');
+// ═══════════════════════════════════════════════════════════════
+// EKRAN BLEDU (#5)
+// ═══════════════════════════════════════════════════════════════
+function showError(title, message, detail, retryFn) {
+  document.getElementById('error-title').textContent   = title   || 'Błąd';
+  document.getElementById('error-message').textContent = message || 'Coś poszło nie tak.';
+  document.getElementById('error-detail').textContent  = detail  || '';
+
+  var retryBtn = document.getElementById('error-retry-btn');
+  errorRetryFn = retryFn || null;
+  if (retryFn) {
+    retryBtn.classList.add('show');
+  } else {
+    retryBtn.classList.remove('show');
+  }
+
+  showScreen('s-error');
 }
 
-function escHtml(str) {
-  return String(str)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-// ============================================================
+// ═══════════════════════════════════════════════════════════════
 // EVENT LISTENERS
-// ============================================================
-document.getElementById('switch-btn').onclick = function() {
+// ═══════════════════════════════════════════════════════════════
+document.getElementById('switch-btn').addEventListener('click', function() {
   buildEmployeeList();
   showScreen('s-select');
-};
+});
 
-document.getElementById('btn-arrive').onclick = function() { showConfirm('arrive'); };
-document.getElementById('btn-leave').onclick  = function() { showConfirm('leave'); };
+document.getElementById('btn-arrive').addEventListener('click', function() { handleAction('P'); });
+document.getElementById('btn-leave').addEventListener('click',  function() { handleAction('W'); });
 
-document.getElementById('confirm-cta').onclick = function() { submitRegistration(); };
-document.getElementById('confirm-cancel').onclick = function() {
+document.getElementById('token-input').addEventListener('input', function() {
+  hideTokenError();
+});
+document.getElementById('token-input').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') handleAction('P');
+});
+
+document.getElementById('confirm-btn').addEventListener('click', function() {
+  submitRegistration();
+});
+document.getElementById('cancel-btn').addEventListener('click', function() {
   showScreen('s-main');
   renderMainScreen();
-};
+});
 
-// Pozwol nacisnac Enter w polu tokenu by otworzyc potwierdzenie
-document.getElementById('token-input').onkeypress = function(e) {
-  if (e.key === 'Enter') { showConfirm('arrive'); }
-};
-
-// ============================================================
-// INICJALIZACJA
-// ============================================================
-window.onload = function() {
-  startClock();
-  startTokenDisplay();
-
-  showLoading(true);
-
-  google.script.run
-    .withSuccessHandler(function(data) {
-      showLoading(false);
-      if (data && data.pracownicy) employeesList = data.pracownicy;
-      if (data && data.klinika)    clinicData    = data.klinika;
-
-      // Pre-fill token z URL parametru jesli dostepny
-      var urlParams = {};
-      try {
-        var search = window.location.search;
-        if (search) {
-          search.substring(1).split('&').forEach(function(p) {
-            var kv = p.split('=');
-            if (kv[0] === 'token') {
-              urlParams.token = decodeURIComponent(kv[1] || '');
-            }
-          });
-        }
-      } catch(e) {}
-
-      var saved = loadEmployee();
-      if (saved) {
-        selectedEmployee = saved;
-        renderMainScreen();
-        showScreen('s-main');
-        if (urlParams.token) {
-          var ti = document.getElementById('token-input');
-          if (ti) ti.value = urlParams.token;
-        }
-      } else {
-        buildEmployeeList();
-        showScreen('s-select');
-      }
-    })
-    .withFailureHandler(function(err) {
-      showLoading(false);
-      var saved = loadEmployee();
-      if (saved) {
-        selectedEmployee = saved;
-        renderMainScreen();
-        showScreen('s-main');
-        showError('main-error', 'Błąd połączenia z serwerem. Dane pracownika z pamięci podręcznej.');
-      } else {
-        showScreen('s-select');
-        document.getElementById('employee-list').innerHTML =
-          '<div class="select-loading" style="color:rgba(255,100,100,0.6)">Błąd połączenia. Odśwież stronę.</div>';
-      }
-    })
-    .pobierzDaneStartowe();
-};
-
-function showLoading(vis) {
-  var el = document.getElementById('loading-overlay');
-  if (el) el.classList.toggle('visible', vis);
-}
+document.getElementById('error-back-btn').addEventListener('click', function() {
+  if (selectedEmployee) {
+    showScreen('s-main');
+    renderMainScreen();
+  } else {
+    showScreen('s-select');
+  }
+});
+document.getElementById('error-retry-btn').addEventListener('click', function() {
+  if (errorRetryFn) errorRetryFn();
+});
 </script>
 </body>
 </html>

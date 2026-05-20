@@ -1,15 +1,50 @@
-// ============================================================
+// ================================================================
 // RCP v3 — Code.gs
-// Google Apps Script backend — klinika We SMILE, Warszawa
-// ============================================================
+// System Rejestracji Czasu Pracy · Klinika We SMILE, Warszawa
+// ================================================================
+// ES5 (var/function) dla kompatybilnosci z Apps Script V8.
+// Brak polskich znakow w nazwach zmiennych i kluczach obiektow.
+// ================================================================
 
-// ============================================================
-// ROUTING
-// ============================================================
+// ── Konfiguracja globalna ────────────────────────────────────────
+
+var CONFIG = {
+  HMAC_SECRET:          '',
+  SHEET_ID:             '',
+  ADMIN_EMAIL:          '',
+  KLINIKA_ID:           '1',
+  TOKEN_WINDOW:         15000,          // 15 sekund — krotsze okno = trudniejszy replay
+  RATE_LIMIT_MAX:       5,              // max prob w oknie
+  RATE_LIMIT_WINDOW:    10 * 60 * 1000, // 10 minut w ms
+  RATE_LIMIT_LOCKOUT:   30 * 60 * 1000, // 30 minut blokady
+  LOCK_WAIT_MS:         10000,          // timeout na LockService
+};
+
+var ZAKLADKI = {
+  PRACOWNICY: 'Pracownicy',
+  KLINIKI:    'Kliniki',
+  EWIDENCJA:  'Ewidencja_Czasu',
+  LOGI:       'Logi_Audytowe',
+  ANOMALIE:   'Anomalie',
+};
+
+// ── Ladowanie konfiguracji z PropertiesService ───────────────────
+
+function zaladujKonfig() {
+  var props = PropertiesService.getScriptProperties();
+  CONFIG.HMAC_SECRET = props.getProperty('HMAC_SECRET') || '';
+  CONFIG.SHEET_ID    = props.getProperty('SHEET_ID')    || '';
+  CONFIG.ADMIN_EMAIL = props.getProperty('ADMIN_EMAIL') || '';
+  CONFIG.KLINIKA_ID  = props.getProperty('KLINIKA_ID')  || '1';
+}
+
+// ── Routing ──────────────────────────────────────────────────────
 
 function doGet(e) {
+  zaladujKonfig();
   var page = e.parameter.page;
   var output;
+
   if (page === 'tablet') {
     output = HtmlService.createHtmlOutputFromFile('Tablet')
       .setTitle('RCP · We SMILE · Tablet');
@@ -17,103 +52,47 @@ function doGet(e) {
     output = HtmlService.createHtmlOutputFromFile('Index')
       .setTitle('RCP · We SMILE');
   }
+
+  // PULAPKA 1 — XFrameOptionsMode moze byc null w niektorych srodowiskach
   if (HtmlService.XFrameOptionsMode && HtmlService.XFrameOptionsMode.ALLOWALL) {
     output.setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
   return output;
 }
 
-// ============================================================
-// KONFIGURACJA
-// ============================================================
-
-function getConfig() {
-  var props = PropertiesService.getScriptProperties();
-  return {
-    HMAC_SECRET:  props.getProperty('HMAC_SECRET')  || '',
-    SHEET_ID:     props.getProperty('SHEET_ID')     || '',
-    ADMIN_EMAIL:  props.getProperty('ADMIN_EMAIL')  || '',
-    KLINIKA_ID:   props.getProperty('KLINIKA_ID')   || '1'
-  };
-}
-
-var ZAKLADKI = {
-  PRACOWNICY:    'Pracownicy',
-  KLINIKI:       'Kliniki',
-  EWIDENCJA:     'Ewidencja_Czasu',
-  LOGI:          'Logi_Audytowe',
-  ANOMALIE:      'Anomalie'
-};
-
-// ============================================================
-// HMAC-SHA256 TOKEN
-// ============================================================
-
-function obliczToken(timestampMs) {
-  var cfg = getConfig();
-  if (!cfg.HMAC_SECRET) {
-    throw new Error('HMAC_SECRET nie jest skonfigurowany w Script Properties');
-  }
-  var timeSlot = Math.floor(timestampMs / 60000);
-  var message = Utilities.newBlob(String(timeSlot)).getBytes();
-  var key     = Utilities.newBlob(cfg.HMAC_SECRET).getBytes();
-  var hash    = Utilities.computeHmacSha256Signature(message, key);
-  var hex = hash.map(function(b) {
-    return ('0' + (b & 0xFF).toString(16)).slice(-2);
-  }).join('');
-  return hex.substring(0, 16);
-}
-
-function weryfikujToken(tokenInput) {
-  if (!tokenInput) return false;
-  var now = Date.now();
-  var input = tokenInput.toLowerCase().replace(/[^0-9a-f]/g, '');
-  for (var delta = -1; delta <= 1; delta++) {
-    var slotMs = (Math.floor(now / 60000) + delta) * 60000;
-    var token  = obliczToken(slotMs);
-    // Akceptuj pierwsze 4 znaki (1 sekcja) lub pelny token 16 znakow
-    if (input.length >= 4 && token.substring(0, input.length) === input) {
-      return true;
-    }
-  }
-  return false;
-}
-
-// ============================================================
-// DANE STARTOWE (wywolywane przez google.script.run)
-// ============================================================
+// ── pobierzDaneStartowe ──────────────────────────────────────────
 
 function pobierzDaneStartowe() {
-  var cfg    = getConfig();
-  var ss     = SpreadsheetApp.openById(cfg.SHEET_ID);
-  var shPrac = ss.getSheetByName(ZAKLADKI.PRACOWNICY);
-  var shKlin = ss.getSheetByName(ZAKLADKI.KLINIKI);
+  zaladujKonfig();
+  var ss = SpreadsheetApp.openById(CONFIG.SHEET_ID);
 
+  var sheetPrac = ss.getSheetByName(ZAKLADKI.PRACOWNICY);
   var pracownicy = [];
-  if (shPrac) {
-    var data = shPrac.getDataRange().getValues();
+  if (sheetPrac) {
+    var data = sheetPrac.getDataRange().getValues();
+    // Naglowek: ID|IMIE|NAZWISKO|INICJAL_NAZWISKA|ROK_URODZENIA|ROLA|EMAIL|STATUS|DATA_DODANIA
     for (var i = 1; i < data.length; i++) {
       var row = data[i];
       if (String(row[7]).toLowerCase() === 'aktywny') {
         pracownicy.push({
           id:      String(row[0]),
+          name:    String(row[1]) + ' ' + String(row[3]) + '.',
           imie:    String(row[1]),
           inicjal: String(row[3]),
-          rok:     String(row[4]),
-          rola:    String(row[5]),
-          name:    String(row[1]) + ' ' + String(row[3]) + '.'
+          year:    String(row[4]),
+          role:    String(row[5]),
         });
       }
     }
   }
 
+  var sheetKlin = ss.getSheetByName(ZAKLADKI.KLINIKI);
   var klinika = { nazwa: 'We SMILE', miasto: 'Warszawa' };
-  if (shKlin) {
-    var kdata = shKlin.getDataRange().getValues();
-    for (var j = 1; j < kdata.length; j++) {
-      if (String(kdata[j][0]) === cfg.KLINIKA_ID) {
-        klinika.nazwa  = String(kdata[j][1]);
-        klinika.miasto = String(kdata[j][3]);
+  if (sheetKlin) {
+    var kData = sheetKlin.getDataRange().getValues();
+    for (var j = 1; j < kData.length; j++) {
+      if (String(kData[j][0]) === CONFIG.KLINIKA_ID) {
+        klinika = { nazwa: String(kData[j][1]), miasto: String(kData[j][3]) };
         break;
       }
     }
@@ -122,415 +101,614 @@ function pobierzDaneStartowe() {
   return {
     pracownicy:  pracownicy,
     klinika:     klinika,
-    tokenWindow: 60
+    tokenWindow: CONFIG.TOKEN_WINDOW / 1000,
   };
 }
 
-// ============================================================
-// REJESTRACJA (wywolywana przez google.script.run)
-// ============================================================
-
-function weryfikujIRejestruj(payload) {
-  // payload = { employeeId, tokenInput, akcja, timestamp }
-  var cfg = getConfig();
-
-  // Rate limiting
-  var rlKey    = 'RL_' + Utilities.base64Encode(
-    Utilities.computeDigest(Utilities.DigestAlgorithm.MD5,
-    String(payload.employeeId || 'anon'))
-  ).substring(0, 12);
-  if (!sprawdzRateLimit(rlKey)) {
-    zapiszLog(cfg, 'BLOKADA_RATE_LIMIT', payload.employeeId, 'Przekroczono limit prób');
-    return { success: false, message: 'Zbyt wiele nieudanych prób. Spróbuj za 30 minut.' };
-  }
-
-  // Weryfikacja tokenu
-  if (!weryfikujToken(payload.tokenInput)) {
-    inkrementujNieudane(rlKey);
-    zapiszLog(cfg, 'NIEPRAWIDLOWY_TOKEN', payload.employeeId,
-              'Token: ' + String(payload.tokenInput).substring(0, 8));
-    return { success: false, message: 'Nieprawidłowy token. Sprawdź wyświetlacz przy wejściu.' };
-  }
-  resetujNieudane(rlKey);
-
-  // Weryfikacja pracownika
-  var ss    = SpreadsheetApp.openById(cfg.SHEET_ID);
-  var shPrac = ss.getSheetByName(ZAKLADKI.PRACOWNICY);
-  if (!shPrac) {
-    return { success: false, message: 'Błąd konfiguracji: brak arkusza Pracownicy.' };
-  }
-
-  var pdata     = shPrac.getDataRange().getValues();
-  var pracownik = null;
-  for (var i = 1; i < pdata.length; i++) {
-    if (String(pdata[i][0]) === String(payload.employeeId) &&
-        String(pdata[i][7]).toLowerCase() === 'aktywny') {
-      pracownik = {
-        id:      String(pdata[i][0]),
-        imie:    String(pdata[i][1]),
-        inicjal: String(pdata[i][3]),
-        rok:     String(pdata[i][4]),
-        rola:    String(pdata[i][5])
-      };
-      break;
-    }
-  }
-  if (!pracownik) {
-    return { success: false, message: 'Nie znaleziono aktywnego pracownika.' };
-  }
-
-  // Zapis wpisu
-  var now           = new Date();
-  var tokenSkrot    = obliczToken(Date.now()).substring(0, 8);
-  var imieNazwisko  = pracownik.imie + ' ' + pracownik.inicjal + '.';
-  var dzieniTygodnia = ['Niedziela','Poniedzialek','Wtorek','Sroda',
-                        'Czwartek','Piatek','Sobota'][now.getDay()];
-  var wpis = {
-    id:            Utilities.getUuid(),
-    idPracownika:  pracownik.id,
-    imieNazwisko:  imieNazwisko,
-    data:          Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd'),
-    godzina:       Utilities.formatDate(now, Session.getScriptTimeZone(), 'HH:mm:ss'),
-    dzien:         dzieniTygodnia,
-    typ:           payload.akcja === 'arrive' ? 'P' : 'W',
-    idKliniki:     cfg.KLINIKA_ID,
-    tokenSkrot:    tokenSkrot,
-    timestampUnix: String(Math.floor(now.getTime() / 1000)),
-    status:        'OK',
-    uwagi:         ''
-  };
-
-  zapiszWpis(ss, wpis);
-  zapiszLog(cfg, 'REJESTRACJA_OK', pracownik.id,
-            payload.akcja + ' ' + imieNazwisko);
-  sprawdzAnomalie(ss, cfg, pracownik, wpis, now);
-
-  return {
-    success:     true,
-    message:     'Zarejestrowano',
-    imie:        pracownik.imie,
-    inicjal:     pracownik.inicjal,
-    rok:         pracownik.rok,
-    rola:        pracownik.rola,
-    godzina:     wpis.godzina,
-    data:        wpis.data,
-    tokenSkrot:  tokenSkrot
-  };
-}
-
-// ============================================================
-// TOKEN DLA TABLETU (wywolywana przez google.script.run)
-// ============================================================
+// ── generujTokenTablet ───────────────────────────────────────────
 
 function generujTokenTablet() {
-  var now   = Date.now();
-  var token = obliczToken(now);
-  var sekundy = 60 - (Math.floor(now / 1000) % 60);
-  // Format: "a3f9 · 2e1c · 87b4 · f312"
-  var fmt = token.substring(0, 4) + ' · ' +
-            token.substring(4, 8) + ' · ' +
-            token.substring(8, 12) + ' · ' +
-            token.substring(12, 16);
+  zaladujKonfig();
+  var ts = new Date().getTime();
+  var token = obliczToken(ts);
+  var secsWindow = CONFIG.TOKEN_WINDOW / 1000;
+  var secsLeft = secsWindow - Math.floor((ts % CONFIG.TOKEN_WINDOW) / 1000);
+
   return {
-    token:        token,
-    tokenFormatted: fmt,
-    tokenUpper:   fmt.toUpperCase(),
-    sekundy:      sekundy,
-    timestamp:    now
+    token:        token.toUpperCase(),
+    secsLeft:     secsLeft,
+    secsWindow:   secsWindow,
+    timestamp:    ts,
   };
 }
 
-// ============================================================
-// ZAPIS DO SHEETS
-// ============================================================
+// ── HMAC-SHA256 ──────────────────────────────────────────────────
 
-function zapiszWpis(ss, wpis) {
-  var sh = ss.getSheetByName(ZAKLADKI.EWIDENCJA);
-  if (!sh) return;
-  sh.appendRow([
-    wpis.id, wpis.idPracownika, wpis.imieNazwisko, wpis.data,
-    wpis.godzina, wpis.dzien, wpis.typ, wpis.idKliniki,
-    wpis.tokenSkrot, wpis.timestampUnix, wpis.status, wpis.uwagi
-  ]);
+function obliczToken(timestamp) {
+  if (!CONFIG.HMAC_SECRET) {
+    throw new Error('HMAC_SECRET nie jest skonfigurowany w Script Properties');
+  }
+  var timeSlot = Math.floor(timestamp / CONFIG.TOKEN_WINDOW);
+  var message  = Utilities.newBlob(String(timeSlot)).getBytes();
+  var key      = Utilities.newBlob(CONFIG.HMAC_SECRET).getBytes();
+  var hash     = Utilities.computeHmacSha256Signature(message, key);
+  var hex = hash.map(function(b) {
+    return ('0' + (b & 0xFF).toString(16)).slice(-2);
+  }).join('');
+  return hex.substring(0, 16);
 }
 
-function zapiszLog(cfg, typZdarzenia, idPracownika, szczegoly) {
+// Okno weryfikacji ±1 — tolerancja na roznice zegara i granice okna
+function weryfikujToken(tokenInput) {
+  var ts    = new Date().getTime();
+  var slot  = Math.floor(ts / CONFIG.TOKEN_WINDOW);
+  var input = String(tokenInput).toLowerCase().replace(/[^a-f0-9]/g, '');
+  if (input.length < 4) return false;
+
+  for (var delta = -1; delta <= 1; delta++) {
+    var valid = obliczToken((slot + delta) * CONFIG.TOKEN_WINDOW);
+    if (valid.substring(0, input.length) === input) return true;
+  }
+  return false;
+}
+
+// ── Rate limiting z LockService ──────────────────────────────────
+
+function sprawdzRateLimit(employeeId) {
+  var props = PropertiesService.getScriptProperties();
+  var key   = 'rl_' + String(employeeId);
+  var now   = new Date().getTime();
+  var raw   = props.getProperty(key);
+  var state = raw ? JSON.parse(raw) : { count: 0, windowStart: now, locked: false, lockUntil: 0 };
+
+  // Sprawdz blokade
+  if (state.locked && now < state.lockUntil) {
+    var minLeft = Math.ceil((state.lockUntil - now) / 60000);
+    return {
+      allowed:      false,
+      attemptsLeft: 0,
+      reason:       'Konto zablokowane. Sprobuj ponownie za ' + minLeft + ' min.',
+    };
+  }
+
+  // Reset okna jesli minelo
+  if (now - state.windowStart > CONFIG.RATE_LIMIT_WINDOW) {
+    state = { count: 0, windowStart: now, locked: false, lockUntil: 0 };
+  }
+
+  var attemptsLeft = CONFIG.RATE_LIMIT_MAX - state.count;
+  return { allowed: true, attemptsLeft: attemptsLeft, state: state, key: key, now: now };
+}
+
+function zapiszNieudanaProbe(employeeId) {
+  var lock = LockService.getScriptLock();
   try {
-    var ss = SpreadsheetApp.openById(cfg.SHEET_ID);
-    var sh = ss.getSheetByName(ZAKLADKI.LOGI);
-    if (!sh) return;
+    lock.waitLock(CONFIG.LOCK_WAIT_MS);
+    var props = PropertiesService.getScriptProperties();
+    var key   = 'rl_' + String(employeeId);
+    var now   = new Date().getTime();
+    var raw   = props.getProperty(key);
+    var state = raw ? JSON.parse(raw) : { count: 0, windowStart: now, locked: false, lockUntil: 0 };
+
+    if (now - state.windowStart > CONFIG.RATE_LIMIT_WINDOW) {
+      state = { count: 0, windowStart: now, locked: false, lockUntil: 0 };
+    }
+    state.count++;
+
+    if (state.count >= CONFIG.RATE_LIMIT_MAX) {
+      state.locked    = true;
+      state.lockUntil = now + CONFIG.RATE_LIMIT_LOCKOUT;
+      wyslijAlert('RATE_LIMIT',
+        'Pracownik ID=' + employeeId + ' przekroczyl limit ' + CONFIG.RATE_LIMIT_MAX + ' blednych tokenow w 10 min. Blokada 30 min.',
+        null);
+    }
+    props.setProperty(key, JSON.stringify(state));
+    return CONFIG.RATE_LIMIT_MAX - state.count;
+  } catch(e) {
+    Logger.log('LockService error zapiszNieudanaProbe: ' + e.message);
+    return 0;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function resetRateLimit(employeeId) {
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(CONFIG.LOCK_WAIT_MS);
+    PropertiesService.getScriptProperties().deleteProperty('rl_' + String(employeeId));
+  } catch(e) {
+    Logger.log('LockService error resetRateLimit: ' + e.message);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ── weryfikujIRejestruj — glowna funkcja rejestracji ─────────────
+
+function weryfikujIRejestruj(payload) {
+  zaladujKonfig();
+
+  // Sanitizacja wejscia — obrona przed injection i za-dlugimi stringami
+  var employeeId = sanitizeEmployeeId(payload.employeeId);
+  var tokenInput = sanitizeTokenInput(payload.tokenInput);
+  var akcja      = String(payload.akcja || '').replace(/[^PW]/g, '').substring(0, 1); // tylko 'P' lub 'W'
+
+  // 1. Rate limiting
+  var rl = sprawdzRateLimit(employeeId);
+  if (!rl.allowed) {
+    zapiszLog('RATE_LIMIT_BLOKADA', employeeId, rl.reason);
+    return { success: false, message: rl.reason, attemptsLeft: 0 };
+  }
+
+  // 2. Weryfikacja tokenu
+  if (!weryfikujToken(tokenInput)) {
+    var attLeft = zapiszNieudanaProbe(employeeId);
+    zapiszLog('NIEPRAWIDLOWY_TOKEN', employeeId, 'Token: ' + tokenInput.substring(0, 8));
+
+    var msg = attLeft > 0
+      ? 'Nieprawidlowy token. Pozostale proby: ' + attLeft + '. Sprawdz tablet.'
+      : 'Nieprawidlowy token. Konto zostalo zablokowane na 30 minut.';
+    return { success: false, message: msg, attemptsLeft: attLeft };
+  }
+
+  // 2b. Walidacja akcji
+  if (akcja !== 'P' && akcja !== 'W') {
+    return { success: false, message: 'Nieprawidlowa akcja rejestracji.', attemptsLeft: 0 };
+  }
+
+  // 3. Pobierz pracownika
+  var pracownik = pobierzPracownika(employeeId);
+  if (!pracownik) {
+    zapiszLog('REJESTRACJA_BLAD', employeeId, 'Nieznany pracownik ID=' + employeeId);
+    return { success: false, message: 'Nie znaleziono pracownika w systemie. Skontaktuj sie z administratorem.', attemptsLeft: rl.attemptsLeft };
+  }
+  if (pracownik.status !== 'aktywny') {
+    zapiszLog('REJESTRACJA_BLAD', employeeId, 'Pracownik nieaktywny ID=' + employeeId);
+    return { success: false, message: 'Konto pracownika jest nieaktywne. Skontaktuj sie z administratorem.', attemptsLeft: 0 };
+  }
+
+  // 4. Reset rate limit po udanej weryfikacji
+  resetRateLimit(employeeId);
+
+  // 4b. Sprawdz duplikat — ta sama akcja w ciagu 60s
+  var ss0 = SpreadsheetApp.openById(CONFIG.SHEET_ID);
+  if (sprawdzDuplikat(employeeId, akcja, ss0)) {
+    zapiszLog('DUPLIKAT', employeeId, 'Duplikat ' + akcja + ' w ciagu 60s');
+    return { success: false, message: 'Rejestracja juz zostala zapisana (duplikat w ciagu 60s).', attemptsLeft: rl.attemptsLeft };
+  }
+
+  // 5. Zapisz wpis (z lockiem aby uniknac race condition przy rownoczesnych rejestracjach)
+  var now       = new Date();
+  var tokenSkrot = obliczToken(now.getTime()).substring(0, 8);
+  var rekordId  = zapiszEwidencje(pracownik, akcja, now, tokenSkrot);
+
+  // 6. Log audytowy
+  zapiszLog('REJESTRACJA_OK', employeeId,
+    'Akcja=' + akcja + ' Godz=' + formatGodzina(now) + ' Token=' + tokenSkrot);
+
+  // 7. Anomalie
+  sprawdzAnomalie(pracownik, akcja, now);
+
+  return {
+    success:    true,
+    message:    'Zarejestrowano pomyslnie.',
+    rekordId:   rekordId,
+    godzina:    formatGodzina(now),
+    data:       formatData(now),
+    imie:       pracownik.imie,
+    inicjal:    pracownik.inicjal,
+    year:       pracownik.rok_urodzenia,
+    role:       pracownik.rola,
+  };
+}
+
+// ── pobierzPracownika ────────────────────────────────────────────
+
+function pobierzPracownika(id) {
+  var ss    = SpreadsheetApp.openById(CONFIG.SHEET_ID);
+  var sheet = ss.getSheetByName(ZAKLADKI.PRACOWNICY);
+  if (!sheet) return null;
+
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(id)) {
+      return {
+        id:            String(data[i][0]),
+        imie:          String(data[i][1]),
+        nazwisko:      String(data[i][2]),
+        inicjal:       String(data[i][3]),
+        rok_urodzenia: String(data[i][4]),
+        rola:          String(data[i][5]),
+        email:         String(data[i][6]),
+        status:        String(data[i][7]).toLowerCase(),
+        name:          String(data[i][1]) + ' ' + String(data[i][3]) + '.',
+      };
+    }
+  }
+  return null;
+}
+
+// ── zapiszEwidencje (z LockService) ─────────────────────────────
+
+function zapiszEwidencje(pracownik, akcja, now, tokenSkrot) {
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(CONFIG.LOCK_WAIT_MS);
+    var ss    = SpreadsheetApp.openById(CONFIG.SHEET_ID);
+    var sheet = ss.getSheetByName(ZAKLADKI.EWIDENCJA);
+    if (!sheet) return null;
+
+    var dni = ['Niedziela','Poniedzialek','Wtorek','Sroda','Czwartek','Piatek','Sobota'];
+    var id  = 'E' + (sheet.getLastRow() + 1);
+
+    sheet.appendRow([
+      id,
+      pracownik.id,
+      pracownik.name,
+      formatData(now),
+      formatGodzina(now),
+      dni[now.getDay()],
+      akcja,
+      CONFIG.KLINIKA_ID,
+      tokenSkrot,
+      now.getTime(),
+      'OK',
+      '',
+    ]);
+    return id;
+  } catch(e) {
+    Logger.log('LockService error zapiszEwidencje: ' + e.message);
+    return null;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ── zapiszLog ────────────────────────────────────────────────────
+
+function zapiszLog(typZdarzenia, employeeId, szczegoly) {
+  try {
+    var ss    = SpreadsheetApp.openById(CONFIG.SHEET_ID);
+    var sheet = ss.getSheetByName(ZAKLADKI.LOGI);
+    if (!sheet) return;
+
     var now = new Date();
-    sh.appendRow([
-      Utilities.getUuid(),
-      Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss'),
+    sheet.appendRow([
+      'L' + (sheet.getLastRow() + 1),
+      now.toISOString(),
       typZdarzenia,
-      String(idPracownika || ''),
-      String(szczegoly || ''),
-      '' // IP hash - niedostepny w Apps Script
+      String(employeeId || ''),
+      String(szczegoly   || ''),
+      '',  // IP_HASH — niedostepny w Apps Script
     ]);
   } catch(e) {
-    // Nie blokuj rejestracji z powodu bledu logow
+    Logger.log('Blad zapisu logu: ' + e.message);
   }
 }
 
-function zapiszAnomalie(ss, idPracownika, imieNazwisko, typAnomAlii, opis) {
-  var sh = ss.getSheetByName(ZAKLADKI.ANOMALIE);
-  if (!sh) return;
-  var now = new Date();
-  sh.appendRow([
-    Utilities.getUuid(),
-    Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss'),
-    idPracownika,
-    imieNazwisko,
-    typAnomAlii,
-    opis,
-    'NOWA'
-  ]);
-}
+// ── Detekcja anomalii ────────────────────────────────────────────
 
-// ============================================================
-// DETEKCJA ANOMALII
-// ============================================================
+function sprawdzAnomalie(pracownik, akcja, now) {
+  var godz  = now.getHours();
+  var dzien = now.getDay(); // 0=niedziela, 6=sobota
 
-function sprawdzAnomalie(ss, cfg, pracownik, wpis, now) {
-  var godzina = now.getHours();
-  var dzienTygodnia = now.getDay();
-  var imieNazwisko = pracownik.imie + ' ' + pracownik.inicjal + '.';
-  var emailWyslany = false;
-
-  // NOCNA_REJESTRACJA: 22:00-06:00
-  if (godzina >= 22 || godzina < 6) {
-    zapiszAnomalie(ss, pracownik.id, imieNazwisko, 'NOCNA_REJESTRACJA',
-      'Rejestracja o ' + wpis.godzina + ' (' + wpis.typ + ')');
-    wyslijAlert(cfg, 'Nocna rejestracja', imieNazwisko, wpis);
-    emailWyslany = true;
+  if (godz >= 22 || godz < 6) {
+    zapiszAnomalie(pracownik, 'NOCNA_REJESTRACJA',
+      'Rejestracja o ' + formatGodzina(now) + ' (poza godz. 06:00-22:00)', true);
   }
 
-  // WEEKENDOWA_REJESTRACJA: sobota=6, niedziela=0
-  if (dzienTygodnia === 0 || dzienTygodnia === 6) {
-    zapiszAnomalie(ss, pracownik.id, imieNazwisko, 'WEEKENDOWA_REJESTRACJA',
-      'Rejestracja w weekend: ' + wpis.dzien + ' ' + wpis.data + ' (' + wpis.typ + ')');
-    if (!emailWyslany) {
-      wyslijAlert(cfg, 'Weekendowa rejestracja', imieNazwisko, wpis);
+  if (dzien === 0 || dzien === 6) {
+    zapiszAnomalie(pracownik, 'WEEKENDOWA_REJESTRACJA',
+      'Rejestracja w ' + (dzien === 6 ? 'sobote' : 'niedziele') + ' ' + formatData(now), true);
+  }
+
+  if (akcja === 'W') {
+    var ostatniePrzyjscie = znajdzOstatniePrzyjscie(pracownik.id, now);
+    if (ostatniePrzyjscie) {
+      var roznica = (now.getTime() - ostatniePrzyjscie) / (1000 * 60 * 60);
+      if (roznica < 2) {
+        zapiszAnomalie(pracownik, 'KROTKA_ZMIANA',
+          'Zmiana ' + roznica.toFixed(1) + 'h (min. 2h) — ' + formatData(now), false);
+      }
+      if (roznica > 12) {
+        zapiszAnomalie(pracownik, 'DLUGA_ZMIANA',
+          'Zmiana ' + roznica.toFixed(1) + 'h (max. 12h) — ' + formatData(now), true);
+      }
     }
   }
 
-  // Sprawdz poprzednie wpisy tylko dla WYJSCIA
-  if (wpis.typ === 'W') {
-    sprawdzAnomalieWyjscie(ss, cfg, pracownik, wpis, imieNazwisko);
-  }
-
-  // Sprawdz BRAK_WYJSCIA dla PRZYJSCIA
-  if (wpis.typ === 'P') {
-    sprawdzBrakWyjscia(ss, cfg, pracownik, wpis, imieNazwisko);
+  if (akcja === 'P') {
+    sprawdzBrakWyjscia(pracownik, now);
   }
 }
 
-function sprawdzAnomalieWyjscie(ss, cfg, pracownik, wpis, imieNazwisko) {
-  var sh = ss.getSheetByName(ZAKLADKI.EWIDENCJA);
-  if (!sh) return;
+function znajdzOstatniePrzyjscie(employeeId, now) {
+  try {
+    var ss    = SpreadsheetApp.openById(CONFIG.SHEET_ID);
+    var sheet = ss.getSheetByName(ZAKLADKI.EWIDENCJA);
+    if (!sheet) return null;
 
-  var data = sh.getDataRange().getValues();
-  // Szukaj ostatniego PRZYJSCIA tego pracownika tego samego dnia
-  var ostatniePrzyjscie = null;
-  for (var i = data.length - 1; i >= 1; i--) {
-    if (String(data[i][1]) === pracownik.id &&
-        String(data[i][3]) === wpis.data &&
-        String(data[i][6]) === 'P') {
-      ostatniePrzyjscie = data[i];
-      break;
+    var data    = getRecentEwidencjaData(sheet);
+    var dzisiaj = formatData(now);
+
+    for (var i = data.length - 1; i >= 0; i--) {
+      if (String(data[i][1]) === String(employeeId) &&
+          String(data[i][3]) === dzisiaj &&
+          String(data[i][6]) === 'P') {
+        return Number(data[i][9]);
+      }
     }
-  }
-  if (!ostatniePrzyjscie) return;
-
-  var gPrzyj = String(ostatniePrzyjscie[4]).split(':');
-  var gWyj   = wpis.godzina.split(':');
-  var minPrzyj = parseInt(gPrzyj[0]) * 60 + parseInt(gPrzyj[1]);
-  var minWyj   = parseInt(gWyj[0]) * 60 + parseInt(gWyj[1]);
-  var roznica  = minWyj - minPrzyj;
-
-  if (roznica < 120 && roznica >= 0) {
-    zapiszAnomalie(ss, pracownik.id, imieNazwisko, 'KROTKA_ZMIANA',
-      'Zmiana: ' + roznica + ' min (min 2h). ' + wpis.data);
-    // Brak emaila - moze byc przerwa
-  }
-
-  if (roznica > 720) {
-    zapiszAnomalie(ss, pracownik.id, imieNazwisko, 'DLUGA_ZMIANA',
-      'Zmiana: ' + Math.round(roznica / 60 * 10) / 10 + 'h (max 12h). ' + wpis.data);
-    wyslijAlert(cfg, 'Długa zmiana (' + Math.round(roznica / 60) + 'h)',
-                imieNazwisko, wpis);
+    return null;
+  } catch(e) {
+    return null;
   }
 }
 
-function sprawdzBrakWyjscia(ss, cfg, pracownik, wpis, imieNazwisko) {
-  var sh = ss.getSheetByName(ZAKLADKI.EWIDENCJA);
-  if (!sh) return;
+function sprawdzBrakWyjscia(pracownik, now) {
+  try {
+    var ss    = SpreadsheetApp.openById(CONFIG.SHEET_ID);
+    var sheet = ss.getSheetByName(ZAKLADKI.EWIDENCJA);
+    if (!sheet) return;
 
-  var wczoraj = new Date();
-  wczoraj.setDate(wczoraj.getDate() - 1);
-  var dataWczoraj = Utilities.formatDate(wczoraj, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+    var data     = getRecentEwidencjaData(sheet);
+    var wczoraj  = formatData(new Date(now.getTime() - 86400000));
+    var maP = false;
+    var maW = false;
 
-  var data = sh.getDataRange().getValues();
-  var byloP = false;
-  var byloW = false;
+    for (var i = 0; i < data.length; i++) {
+      if (String(data[i][1]) === String(pracownik.id) && String(data[i][3]) === wczoraj) {
+        if (data[i][6] === 'P') maP = true;
+        if (data[i][6] === 'W') maW = true;
+      }
+    }
+
+    if (maP && !maW) {
+      zapiszAnomalie(pracownik, 'BRAK_WYJSCIA',
+        'Przyjscie ' + wczoraj + ' bez rejestracji wyjscia — zamkniete automatycznie', true);
+
+      var lock = LockService.getScriptLock();
+      try {
+        lock.waitLock(CONFIG.LOCK_WAIT_MS);
+        sheet.appendRow([
+          'E_AUTO_' + now.getTime(),
+          pracownik.id,
+          pracownik.name,
+          wczoraj,
+          '23:59:00',
+          '',
+          'W',
+          CONFIG.KLINIKA_ID,
+          'AUTO',
+          new Date(now.getTime() - 86400000).setHours(23, 59, 0, 0),
+          'AUTO_ZAMKNIETE',
+          'Automatyczne zamkniecie — brak wyjscia',
+        ]);
+      } finally {
+        lock.releaseLock();
+      }
+    }
+  } catch(e) {
+    Logger.log('Blad sprawdzBrakWyjscia: ' + e.message);
+  }
+}
+
+function zapiszAnomalie(pracownik, typ, opis, wyslijEmail) {
+  try {
+    var ss    = SpreadsheetApp.openById(CONFIG.SHEET_ID);
+    var sheet = ss.getSheetByName(ZAKLADKI.ANOMALIE);
+    if (!sheet) return;
+
+    var now = new Date();
+    sheet.appendRow([
+      'A' + (sheet.getLastRow() + 1),
+      now.toISOString(),
+      pracownik.id,
+      pracownik.name,
+      typ,
+      opis,
+      'NOWA',
+    ]);
+
+    if (wyslijEmail) wyslijAlert(typ, opis, pracownik);
+  } catch(e) {
+    Logger.log('Blad zapiszAnomalie: ' + e.message);
+  }
+}
+
+// ── Alerty email ─────────────────────────────────────────────────
+
+function wyslijAlert(typ, opis, pracownik) {
+  if (!CONFIG.ADMIN_EMAIL) return;
+  try {
+    var temat = '[RCP We SMILE] Anomalia: ' + typ;
+    var tresc = 'System RCP v3 wykryl anomalie.\n\n' +
+      'Typ: ' + typ + '\n' +
+      'Opis: ' + opis + '\n' +
+      (pracownik ? 'Pracownik: ' + pracownik.name + ' (ID: ' + pracownik.id + ')\n' : '') +
+      'Czas: ' + new Date().toLocaleString('pl-PL') + '\n\n' +
+      'Sprawdz arkusz Anomalie w Google Sheets.\n' +
+      'Klinika We SMILE, Warszawa · RCP v3';
+    GmailApp.sendEmail(CONFIG.ADMIN_EMAIL, temat, tresc);
+  } catch(e) {
+    Logger.log('Blad wysylania alertu: ' + e.message);
+  }
+}
+
+// ── Trigger dzienny — automatyczne zamykanie zmian o 23:55 ───────
+// Uruchamiaj przez instalujTriggery() — dziala codziennie o 23:55.
+
+function autoZamknijOtwarteZmiany() {
+  zaladujKonfig();
+  var ss      = SpreadsheetApp.openById(CONFIG.SHEET_ID);
+  var sheet   = ss.getSheetByName(ZAKLADKI.EWIDENCJA);
+  var shPrac  = ss.getSheetByName(ZAKLADKI.PRACOWNICY);
+  if (!sheet || !shPrac) return;
+
+  var dzisiaj = formatData(new Date());
+  var data    = sheet.getDataRange().getValues();
+
+  // Zbierz wszystkich pracownikow z P dzisiaj
+  var maPMap = {};
+  var maWMap = {};
+  var nameMap = {};
 
   for (var i = 1; i < data.length; i++) {
-    if (String(data[i][1]) === pracownik.id && String(data[i][3]) === dataWczoraj) {
-      if (String(data[i][6]) === 'P') byloP = true;
-      if (String(data[i][6]) === 'W') byloW = true;
-    }
+    var dRow = data[i];
+    if (String(dRow[3]) !== dzisiaj) continue;
+    var pid = String(dRow[1]);
+    if (dRow[6] === 'P') { maPMap[pid] = true; nameMap[pid] = String(dRow[2]); }
+    if (dRow[6] === 'W') { maWMap[pid] = true; }
   }
 
-  if (byloP && !byloW) {
-    zapiszAnomalie(ss, pracownik.id, imieNazwisko, 'BRAK_WYJSCIA',
-      'Brak wyjścia z dnia ' + dataWczoraj + '. Automatyczne zamknięcie zmiany.');
-
-    // Automatycznie zamknij poprzednia zmiane jako brak wyjscia
-    var teraz = new Date();
-    var cfg2  = getConfig();
-    var szSs  = SpreadsheetApp.openById(cfg2.SHEET_ID);
-    var shEw  = szSs.getSheetByName(ZAKLADKI.EWIDENCJA);
-    if (shEw) {
-      shEw.appendRow([
-        Utilities.getUuid(), pracownik.id, imieNazwisko, dataWczoraj,
-        '23:59:59', '', 'W', cfg2.KLINIKA_ID, 'AUTO', '',
-        'BRAK_WYJSCIA_AUTO', 'Automatycznie dodane przez system'
-      ]);
-    }
-    wyslijAlert(cfg, 'Brak wyjścia z poprzedniego dnia', imieNazwisko, wpis);
-  }
-}
-
-// ============================================================
-// ALERTY EMAIL
-// ============================================================
-
-function wyslijAlert(cfg, tytulAnomalii, imieNazwisko, wpis) {
-  if (!cfg.ADMIN_EMAIL) return;
+  var lock = LockService.getScriptLock();
   try {
-    var temat = '[RCP We SMILE] Anomalia: ' + tytulAnomalii + ' — ' + imieNazwisko;
-    var tresc = 'Wykryto anomalię w systemie RCP v3.\n\n' +
-      'Pracownik:  ' + imieNazwisko + '\n' +
-      'Anomalia:   ' + tytulAnomalii + '\n' +
-      'Data:       ' + wpis.data + '\n' +
-      'Godzina:    ' + wpis.godzina + '\n' +
-      'Typ wpisu:  ' + (wpis.typ === 'P' ? 'PRZYJŚCIE' : 'WYJŚCIE') + '\n\n' +
-      'Sprawdź arkusz Anomalie w Google Sheets.\n\n' +
-      '— RCP v3, We SMILE Warszawa';
-    GmailApp.sendEmail(cfg.ADMIN_EMAIL, temat, tresc);
-  } catch(e) {
-    // Brak dostepu do Gmail - kontynuuj bez emaila
-  }
-}
+    lock.waitLock(CONFIG.LOCK_WAIT_MS);
+    for (var pid2 in maPMap) {
+      if (!maWMap[pid2]) {
+        sheet.appendRow([
+          'E_AUTO_' + new Date().getTime() + '_' + pid2,
+          pid2,
+          nameMap[pid2] || pid2,
+          dzisiaj,
+          '23:59:00',
+          '',
+          'W',
+          CONFIG.KLINIKA_ID,
+          'AUTO',
+          new Date().setHours(23, 59, 0, 0),
+          'AUTO_ZAMKNIETE',
+          'Trigger dobowy 23:55 — brak wyjscia',
+        ]);
 
-// ============================================================
-// RATE LIMITING
-// ============================================================
+        // Log anomalii
+        var shAno = ss.getSheetByName(ZAKLADKI.ANOMALIE);
+        if (shAno) {
+          shAno.appendRow([
+            'A_AUTO_' + new Date().getTime() + '_' + pid2,
+            new Date().toISOString(),
+            pid2,
+            nameMap[pid2] || pid2,
+            'BRAK_WYJSCIA',
+            'Zmiana ' + dzisiaj + ' zamknieta automatycznie przez trigger 23:55',
+            'AUTO',
+          ]);
+        }
 
-function sprawdzRateLimit(klucz) {
-  var props   = PropertiesService.getScriptProperties();
-  var rlData  = props.getProperty('RL_' + klucz);
-  var teraz   = Date.now();
-
-  if (!rlData) return true;
-
-  try {
-    var obj = JSON.parse(rlData);
-    // Resetuj jesli okno 10 minut minelo
-    if (teraz - obj.oknoStart > 600000) {
-      props.deleteProperty('RL_' + klucz);
-      return true;
+        // Alert email
+        if (CONFIG.ADMIN_EMAIL) {
+          try {
+            GmailApp.sendEmail(CONFIG.ADMIN_EMAIL,
+              '[RCP We SMILE] Auto-zamkniecie zmiany: ' + (nameMap[pid2] || pid2),
+              'Pracownik: ' + (nameMap[pid2] || pid2) + '\n' +
+              'Data: ' + dzisiaj + '\n' +
+              'Zmiana zamknieta automatycznie o 23:59 przez trigger dobowy.\n' +
+              'Brak rejestracji wyjscia.');
+          } catch(e2) {}
+        }
+      }
     }
-    // Blokada po 5 nieudanych probach
-    if (obj.nieudane >= 5) {
-      // Blokada 30 minut od ostatniej proby
-      if (teraz - obj.ostatnia < 1800000) return false;
-      props.deleteProperty('RL_' + klucz);
-      return true;
-    }
-    return true;
-  } catch(e) {
-    props.deleteProperty('RL_' + klucz);
-    return true;
+  } finally {
+    lock.releaseLock();
   }
 }
 
-function inkrementujNieudane(klucz) {
-  var props  = PropertiesService.getScriptProperties();
-  var rlData = props.getProperty('RL_' + klucz);
-  var teraz  = Date.now();
-  var obj;
+// ── Trigger onEdit — niezmienialnosc arkusza Ewidencja_Czasu ─────
+// Instalowany przez instalujTriggery() jako trigger na zdarzenie Edit.
 
+function onEditArkusza(e) {
+  zaladujKonfig();
   try {
-    obj = rlData ? JSON.parse(rlData) : null;
-  } catch(e) {
-    obj = null;
-  }
+    var range = e.range;
+    var sheet = range.getSheet();
+    if (sheet.getName() !== ZAKLADKI.EWIDENCJA) return;
 
-  if (!obj || teraz - obj.oknoStart > 600000) {
-    obj = { oknoStart: teraz, nieudane: 0, ostatnia: teraz };
-  }
-  obj.nieudane++;
-  obj.ostatnia = teraz;
-  props.setProperty('RL_' + klucz, JSON.stringify(obj));
+    // Zapisz alert audytowy
+    var user  = Session.getActiveUser ? Session.getActiveUser().getEmail() : 'nieznany';
+    var opis  = 'Edycja komorki ' + range.getA1Notation() +
+                ' przez ' + user +
+                ' — stara wartosc: ' + JSON.stringify(e.oldValue) +
+                ' — nowa wartosc: ' + JSON.stringify(e.value);
 
-  if (obj.nieudane >= 5) {
-    var cfg = getConfig();
-    zapiszLog(cfg, 'NIEPRAWIDLOWY_TOKEN_WIELOKROTNY', klucz,
-              obj.nieudane + ' nieudanych prob w 10 min');
-    wyslijAlert(cfg, 'Wielokrotny nieprawidłowy token (' + obj.nieudane + ' prób)',
-                'Nieznany (' + klucz + ')',
-                { data: '', godzina: '', typ: '?' });
+    zapiszLog('EDYCJA_EWIDENCJI', user, opis);
+
+    if (CONFIG.ADMIN_EMAIL) {
+      GmailApp.sendEmail(CONFIG.ADMIN_EMAIL,
+        '[RCP We SMILE] UWAGA: Edycja arkusza Ewidencja_Czasu',
+        'Wykryto bezposrednia edycje arkusza ewidencji czasu pracy.\n\n' +
+        opis + '\n\n' +
+        'Sprawdz arkusz Logi_Audytowe.\n' +
+        'Klinika We SMILE, Warszawa · RCP v3');
+    }
+  } catch(e2) {
+    Logger.log('Blad onEditArkusza: ' + e2.message);
   }
 }
 
-function resetujNieudane(klucz) {
-  PropertiesService.getScriptProperties().deleteProperty('RL_' + klucz);
+// ── Instalacja triggerow (uruchamiana raz przez admina) ──────────
+
+function instalujTriggery() {
+  // Usun stare triggery RCP zeby nie duplikowac
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    var fn = triggers[i].getHandlerFunction();
+    if (fn === 'autoZamknijOtwarteZmiany' || fn === 'onEditArkusza') {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
+
+  // Trigger dzienny o 23:55
+  ScriptApp.newTrigger('autoZamknijOtwarteZmiany')
+    .timeBased()
+    .atHour(23)
+    .nearMinute(55)
+    .everyDays(1)
+    .create();
+
+  // Trigger onEdit dla arkusza Sheets
+  zaladujKonfig();
+  var ss = SpreadsheetApp.openById(CONFIG.SHEET_ID);
+  ScriptApp.newTrigger('onEditArkusza')
+    .forSpreadsheet(ss)
+    .onEdit()
+    .create();
+
+  Logger.log('Triggery zainstalowane pomyslnie.');
+  return 'Triggery zainstalowane: autoZamknijOtwarteZmiany (dobowy 23:55) + onEditArkusza.';
 }
 
-// ============================================================
-// INICJALIZACJA ARKUSZA (uruchamiana raz przez admina)
-// ============================================================
+// ── Inicjalizacja arkusza ────────────────────────────────────────
 
 function inicjalizujArkusz() {
-  var cfg = getConfig();
-  var ss  = SpreadsheetApp.openById(cfg.SHEET_ID);
+  zaladujKonfig();
+  var ss = SpreadsheetApp.openById(CONFIG.SHEET_ID);
 
   var sheetsDefs = [
     {
       name: ZAKLADKI.PRACOWNICY,
-      headers: ['ID','IMIE','NAZWISKO','INICJAL_NAZWISKA','ROK_URODZENIA',
-                'ROLA','EMAIL','STATUS','DATA_DODANIA']
+      headers: ['ID','IMIE','NAZWISKO','INICJAL_NAZWISKA','ROK_URODZENIA','ROLA','EMAIL','STATUS','DATA_DODANIA'],
     },
     {
       name: ZAKLADKI.KLINIKI,
-      headers: ['ID','NAZWA','ADRES','MIASTO','STATUS']
+      headers: ['ID','NAZWA','ADRES','MIASTO','STATUS'],
     },
     {
       name: ZAKLADKI.EWIDENCJA,
-      headers: ['ID','ID_PRACOWNIKA','IMIE_NAZWISKO','DATA','GODZINA',
-                'DZIEN_TYGODNIA','TYP','ID_KLINIKI','TOKEN_SKROT',
-                'TIMESTAMP_UNIX','STATUS','UWAGI']
+      headers: ['ID','ID_PRACOWNIKA','IMIE_NAZWISKO','DATA','GODZINA','DZIEN_TYGODNIA','TYP','ID_KLINIKI','TOKEN_SKROT','TIMESTAMP_UNIX','STATUS','UWAGI'],
     },
     {
       name: ZAKLADKI.LOGI,
-      headers: ['ID','TIMESTAMP','TYP_ZDARZENIA','ID_PRACOWNIKA',
-                'SZCZEGOLY','IP_HASH']
+      headers: ['ID','TIMESTAMP','TYP_ZDARZENIA','ID_PRACOWNIKA','SZCZEGOLY','IP_HASH'],
     },
     {
       name: ZAKLADKI.ANOMALIE,
-      headers: ['ID','TIMESTAMP','ID_PRACOWNIKA','IMIE_NAZWISKO',
-                'TYP_ANOMALII','OPIS','STATUS']
-    }
+      headers: ['ID','TIMESTAMP','ID_PRACOWNIKA','IMIE_NAZWISKO','TYP_ANOMALII','OPIS','STATUS'],
+    },
   ];
 
   for (var i = 0; i < sheetsDefs.length; i++) {
     var def = sheetsDefs[i];
-    var sh  = ss.getSheetByName(def.name);
-    if (!sh) {
-      sh = ss.insertSheet(def.name);
-    }
+    var sh  = ss.getSheetByName(def.name) || ss.insertSheet(def.name);
     if (sh.getLastRow() === 0) {
       sh.appendRow(def.headers);
       sh.getRange(1, 1, 1, def.headers.length)
@@ -539,11 +717,72 @@ function inicjalizujArkusz() {
     }
   }
 
-  // Dodaj klinike jesli nie istnieje
   var shKlin = ss.getSheetByName(ZAKLADKI.KLINIKI);
   if (shKlin && shKlin.getLastRow() <= 1) {
     shKlin.appendRow(['1','We SMILE','ul. Przykladowa 1','Warszawa','aktywna']);
   }
 
-  return 'Arkusz zainicjalizowany pomyslnie.';
+  return 'Arkusz zainicjalizowany. Nastepny krok: uruchom instalujTriggery().';
+}
+
+// ── Helpers dat — Utilities.formatDate z timezone skryptu ────────
+// Zapobiega roznicom miedzy UTC a lokalnym czasem serwera.
+
+function getTz() {
+  try { return Session.getScriptTimeZone(); } catch(e) { return 'Europe/Warsaw'; }
+}
+
+function formatData(d) {
+  return Utilities.formatDate(d, getTz(), 'yyyy-MM-dd');
+}
+
+function formatGodzina(d) {
+  return Utilities.formatDate(d, getTz(), 'HH:mm:ss');
+}
+
+// ── Sanitizacja wejscia ───────────────────────────────────────────
+
+function sanitizeEmployeeId(val) {
+  // Tylko alphanumeryczne i myslnik/podkreslenie, max 50 znakow
+  return String(val || '').replace(/[^0-9a-zA-Z_\-]/g, '').substring(0, 50);
+}
+
+function sanitizeTokenInput(val) {
+  // Tylko hex lowercase, max 16 znakow
+  return String(val || '').toLowerCase().replace(/[^0-9a-f]/g, '').substring(0, 16);
+}
+
+// ── Optymalizacja Sheets — czytaj tylko ostatnie N wierszy ────────
+// Zapobiega freeze przy arkuszach > 10k wierszy.
+
+var SHEET_READ_LIMIT = 2000; // ostatnie 2000 wpisow = ~2 lata dla 10 pracownikow
+
+function getRecentEwidencjaData(sheet) {
+  var lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return [];
+  var startRow = Math.max(2, lastRow - SHEET_READ_LIMIT + 1);
+  var numRows  = lastRow - startRow + 1;
+  return sheet.getRange(startRow, 1, numRows, 12).getValues();
+}
+
+// ── Deduplication — blokada wielokrotnej rejestracji w 60s ───────
+
+function sprawdzDuplikat(employeeId, akcja, ss) {
+  var sheet = ss.getSheetByName(ZAKLADKI.EWIDENCJA);
+  if (!sheet) return false;
+
+  var data    = getRecentEwidencjaData(sheet);
+  var nowTs   = Date.now();
+  var dzisiaj = formatData(new Date());
+
+  for (var i = data.length - 1; i >= 0; i--) {
+    if (String(data[i][1]) === String(employeeId) &&
+        String(data[i][3]) === dzisiaj &&
+        String(data[i][6]) === akcja) {
+      var recTs = Number(data[i][9]);
+      if (nowTs - recTs < 60000) return true; // ten sam typ w ciagu 60s = duplikat
+      break;
+    }
+  }
+  return false;
 }

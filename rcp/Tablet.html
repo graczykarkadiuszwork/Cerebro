@@ -2,9 +2,7 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>RCP · We SMILE · Tablet</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,411 +10,385 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    :root {
-      --bg: #000;
-      --fg: #fff;
-      --mono: 'Space Mono', monospace;
-      --grotesk: 'Space Grotesk', sans-serif;
-    }
-
     html, body {
-      height: 100%;
-      background: var(--bg);
-      color: var(--fg);
-      font-family: var(--mono);
-      -webkit-font-smoothing: antialiased;
+      background: #000;
+      color: #fff;
+      font-family: 'Space Mono', monospace;
+      height: 100vh;
       overflow: hidden;
+      -webkit-font-smoothing: antialiased;
       user-select: none;
       -webkit-user-select: none;
     }
 
-    body {
+    .grid-bg {
       background-image:
-        repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,255,255,0.03) 39px, rgba(255,255,255,0.03) 40px),
-        repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,0.03) 39px, rgba(255,255,255,0.03) 40px);
+        repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,255,255,0.04) 39px, rgba(255,255,255,0.04) 40px),
+        repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,0.04) 39px, rgba(255,255,255,0.04) 40px);
     }
 
-    .layout {
+    .wrapper {
+      height: 100vh;
       display: flex;
       flex-direction: column;
-      height: 100%;
-      padding: 32px 40px;
+      padding: 32px 48px 36px;
     }
 
-    /* ── TOP BAR ── */
+    /* ── Top bar ── */
     .top-bar {
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: flex-start;
+      margin-bottom: 24px;
       flex-shrink: 0;
     }
-    .top-clinic {
-      font-size: 11px;
-      font-family: var(--mono);
-      font-weight: 700;
-      letter-spacing: 0.28em;
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-glyph { font-size: 20px; color: rgba(255,255,255,0.20); }
+    .brand-name {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.22em;
       text-transform: uppercase;
       color: rgba(255,255,255,0.30);
     }
-    .top-status {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .status-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.25);
-      animation: pulse 2s ease-in-out infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 0.25; }
-      50%       { opacity: 0.70; }
-    }
-    .top-label {
-      font-size: 9px;
-      font-family: var(--mono);
-      letter-spacing: 0.20em;
+    .brand-sub {
+      font-family: 'Space Mono', monospace;
+      font-size: 7px;
+      letter-spacing: 0.18em;
+      color: rgba(255,255,255,0.14);
+      margin-top: 2px;
       text-transform: uppercase;
-      color: rgba(255,255,255,0.20);
+    }
+    .clock-wrap { text-align: right; }
+    .clock-main {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 36px;
+      font-weight: 700;
+      letter-spacing: -1px;
+      color: #fff;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+    .clock-date {
+      font-family: 'Space Mono', monospace;
+      font-size: 8px;
+      color: rgba(255,255,255,0.25);
+      letter-spacing: 0.12em;
+      margin-top: 4px;
     }
 
-    /* ── CENTER CONTENT ── */
-    .center {
+    .separator { height: 1px; background: rgba(255,255,255,0.08); flex-shrink: 0; }
+
+    /* ── Token area ── */
+    .token-area {
       flex: 1;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 0;
+      text-align: center;
     }
-
     .token-eyebrow {
-      font-size: 10px;
-      font-family: var(--mono);
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
       letter-spacing: 0.30em;
       text-transform: uppercase;
-      color: rgba(255,255,255,0.18);
+      color: rgba(255,255,255,0.22);
       margin-bottom: 20px;
     }
 
+    /* Token — duzy i czytelny z odleglosci 1-2m */
     .token-display {
-      font-family: var(--grotesk);
+      font-family: 'Space Mono', monospace;
+      font-size: clamp(48px, 8vw, 88px);
       font-weight: 700;
-      font-size: clamp(52px, 8vw, 96px);
-      letter-spacing: 0.04em;
+      letter-spacing: 0.10em;
+      color: #fff;
       line-height: 1;
-      color: var(--fg);
-      text-align: center;
-      font-variant-numeric: tabular-nums;
       margin-bottom: 32px;
+      font-variant-numeric: tabular-nums;
+      word-break: break-all;
+      transition: color 0.3s;
     }
-    .token-display.expiring {
-      color: rgba(255,255,255,0.55);
-      transition: color 0.5s;
-    }
+    /* Sciemnij token gdy wygasa */
+    .token-display.expiring { color: rgba(255,255,255,0.55); }
+    /* Placeholder przed pierwszym pobraniem */
+    .token-display.placeholder { color: rgba(255,255,255,0.15); }
 
-    /* ── PROGRESS BAR ── */
-    .progress-wrap {
-      width: min(480px, 80%);
-      margin-bottom: 10px;
+    /* Progress bar — 4px dla widocznosci na slabych ekranach */
+    .progress-wrap { width: 100%; max-width: 600px; margin-bottom: 12px; }
+    .progress-header {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
     }
-    .progress-track {
-      height: 3px;
-      background: rgba(255,255,255,0.08);
-      border-radius: 2px;
-      overflow: hidden;
-    }
-    .progress-fill {
-      height: 3px;
-      background: rgba(255,255,255,0.60);
+    .progress-label { font-size: 8px; letter-spacing: 0.18em; color: rgba(255,255,255,0.22); text-transform: uppercase; }
+    .progress-secs  { font-size: 11px; font-variant-numeric: tabular-nums; letter-spacing: 0.10em; transition: color 0.3s; color: rgba(255,255,255,0.40); }
+    .progress-bar-bg  { height: 4px; background: rgba(255,255,255,0.10); border-radius: 2px; overflow: hidden; }
+    .progress-bar-fill {
+      height: 4px; background: #fff; width: 100%;
       border-radius: 2px;
       transition: width 1s linear, background 0.3s;
     }
-    .progress-fill.expiring {
-      background: rgba(255,255,255,0.25);
-    }
-    .progress-label {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 8px;
-    }
-    .progress-secs {
-      font-size: 10px;
-      font-family: var(--mono);
-      color: rgba(255,255,255,0.20);
-      font-variant-numeric: tabular-nums;
-    }
 
-    /* ── INSTRUCTION ── */
+    /* Instrukcja */
     .instruction {
-      margin-top: 36px;
-      text-align: center;
-    }
-    .instruction-main {
-      font-size: 14px;
-      font-family: var(--mono);
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,0.22);
-      margin-bottom: 6px;
-    }
-    .instruction-sub {
-      font-size: 10px;
-      font-family: var(--mono);
-      letter-spacing: 0.15em;
-      color: rgba(255,255,255,0.10);
-      text-transform: uppercase;
+      margin-top: 20px;
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 10px;
+      padding: 14px 28px;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: rgba(255,255,255,0.30);
     }
 
-    /* ── BOTTOM BAR ── */
+    /* Stan bledu */
+    .error-state {
+      display: none;
+      margin-top: 16px;
+      font-size: 10px;
+      font-family: 'Space Mono', monospace;
+      color: rgba(255,100,100,0.55);
+      letter-spacing: 0.15em;
+    }
+    .error-state.visible { display: block; }
+
+    /* ── Bottom bar ── */
     .bottom-bar {
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      flex-shrink: 0;
+      align-items: flex-end;
+      margin-top: 20px;
       padding-top: 16px;
       border-top: 1px solid rgba(255,255,255,0.06);
+      flex-shrink: 0;
     }
-    .bottom-clock {
-      font-family: var(--grotesk);
-      font-weight: 700;
-      font-size: 28px;
-      letter-spacing: -0.5px;
-      font-variant-numeric: tabular-nums;
-      color: rgba(255,255,255,0.45);
-    }
-    .bottom-meta {
-      text-align: right;
-    }
-    .bottom-date {
-      font-size: 10px;
-      font-family: var(--mono);
-      color: rgba(255,255,255,0.18);
-      letter-spacing: 0.12em;
-    }
-    .bottom-hmac {
-      font-size: 8px;
-      font-family: var(--mono);
-      color: rgba(255,255,255,0.10);
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      margin-top: 2px;
-    }
+    .prev-token-wrap {}
+    .prev-token-label { font-size: 7px; letter-spacing: 0.20em; text-transform: uppercase; color: rgba(255,255,255,0.12); margin-bottom: 4px; }
+    .prev-token-val   { font-size: 12px; letter-spacing: 0.12em; color: rgba(255,255,255,0.14); font-family: 'Space Mono', monospace; }
+    .legal-notes { text-align: right; }
+    .legal-notes div { font-size: 7px; letter-spacing: 0.18em; color: rgba(255,255,255,0.10); text-transform: uppercase; line-height: 1.6; }
 
-    /* ── ERROR STATE ── */
-    .error-state {
-      display: none;
-      text-align: center;
-      padding: 20px;
+    /* Status indicator */
+    .status-dot {
+      display: inline-block;
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.25);
+      margin-right: 6px;
+      animation: blink 2s ease-in-out infinite;
     }
-    .error-state.visible { display: block; }
-    .error-state p {
-      font-size: 11px;
-      font-family: var(--mono);
-      color: rgba(255,100,100,0.60);
-      letter-spacing: 0.15em;
-    }
+    @keyframes blink { 0%,100%{opacity:0.25} 50%{opacity:0.70} }
   </style>
 </head>
-<body>
+<body class="grid-bg">
+<div class="wrapper">
 
-<div class="layout">
-
-  <!-- TOP BAR -->
+  <!-- Top bar -->
   <div class="top-bar">
-    <span class="top-clinic">We SMILE · Warszawa</span>
-    <div class="top-status">
-      <div class="status-dot"></div>
-      <span class="top-label">Weryfikacja HMAC-SHA256 · Aktywny</span>
+    <div class="brand">
+      <span class="brand-glyph">◈</span>
+      <div>
+        <div class="brand-name">
+          <span class="status-dot"></span>We SMILE · Warszawa
+        </div>
+        <div class="brand-sub">Klinika stomatologiczna · System RCP v3</div>
+      </div>
+    </div>
+    <div class="clock-wrap">
+      <div class="clock-main" id="clock">00:00:00</div>
+      <div class="clock-date" id="date-display">—</div>
     </div>
   </div>
 
-  <!-- CENTER -->
-  <div class="center">
-    <div class="token-eyebrow">◈ Token wejścia · Podaj pracownikowi</div>
+  <div class="separator"></div>
 
-    <div class="token-display" id="token-display">
+  <!-- Token area -->
+  <div class="token-area">
+    <div class="token-eyebrow">HMAC-SHA256 · Token wejściowy · Ważny 15 sekund</div>
+
+    <div class="token-display placeholder" id="token-display">
       · · · · · · · · · · · · · ·
     </div>
 
     <div class="progress-wrap">
-      <div class="progress-track">
-        <div class="progress-fill" id="progress-fill" style="width:100%"></div>
+      <div class="progress-header">
+        <div class="progress-label">Ważność tokenu</div>
+        <div class="progress-secs" id="secs-left">—</div>
       </div>
-      <div class="progress-label">
-        <span class="progress-secs" id="secs-left">60s</span>
-        <span class="progress-secs" style="color:rgba(255,255,255,0.10)">Nowy token za</span>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progress-fill" style="width:100%"></div>
       </div>
     </div>
 
     <div class="error-state" id="error-state">
-      <p>Błąd połączenia z serwerem.<br>Odświeżanie · · ·</p>
+      Błąd połączenia — pobieranie tokenu · · ·
     </div>
 
     <div class="instruction">
-      <div class="instruction-main">Wpisz token na swoim telefonie</div>
-      <div class="instruction-sub">Token zmienia się co 60 sekund · Skopiuj z ekranu</div>
+      Otwórz aplikację na telefonie &nbsp;·&nbsp; Wpisz pierwsze 4 znaki tokenu &nbsp;·&nbsp; Zarejestruj obecność
     </div>
   </div>
 
-  <!-- BOTTOM BAR -->
+  <!-- Bottom bar -->
   <div class="bottom-bar">
-    <div class="bottom-clock" id="bottom-clock">00:00</div>
-    <div class="bottom-meta">
-      <div class="bottom-date" id="bottom-date">—</div>
-      <div class="bottom-hmac">HMAC-SHA256 · RCP v3</div>
+    <div class="prev-token-wrap">
+      <div class="prev-token-label">Poprzedni token</div>
+      <div class="prev-token-val" id="prev-token">— — — — · — — — — · — — — — · — — — —</div>
+    </div>
+    <div class="legal-notes">
+      <div>Okno weryfikacji ±1 · SHA-256 · Okno 15s</div>
+      <div>Art. 149 Kodeksu Pracy · RODO Art. 32</div>
     </div>
   </div>
 
 </div>
-
 <script>
-// ============================================================
-// STATE
-// ============================================================
-var currentToken    = null;
-var tokenFetchTimer = null;
-var clockTimer      = null;
-var countdownTimer  = null;
-var lastFetchAt     = 0;  // ms timestamp kiedy ostatnio pobrano token
-var secsAtFetch     = 0;  // ile sekund pozostalo przy ostatnim pobraniu
+// ═══════════════════════════════════════════════════════════════
+// STAN
+// ═══════════════════════════════════════════════════════════════
+var currentToken = '';
+var prevToken    = '';
+var TOKEN_WINDOW = 15;   // sekund — musi byc zgodne z backendem
+var fetchPending = false;
+var lastFetchAt  = 0;    // ms kiedy ostatnio pobrano token
+var secsAtFetch  = 0;    // ile sekund pozostalo przy ostatnim pobraniu
 
-// ============================================================
-// CLOCK + DATE
-// ============================================================
-function startClock() {
-  function tick() {
-    var now = new Date();
-    var h   = ('0' + now.getHours()).slice(-2);
-    var m   = ('0' + now.getMinutes()).slice(-2);
-    var s   = ('0' + now.getSeconds()).slice(-2);
-    var el  = document.getElementById('bottom-clock');
-    if (el) el.textContent = h + ':' + m;
+// ═══════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════
+function pad2(n) { return ('0' + n).slice(-2); }
 
-    var days   = ['Niedziela','Poniedziałek','Wtorek','Środa','Czwartek','Piątek','Sobota'];
-    var months = ['stycznia','lutego','marca','kwietnia','maja','czerwca',
-                  'lipca','sierpnia','września','października','listopada','grudnia'];
-    var dEl = document.getElementById('bottom-date');
-    if (dEl) {
-      dEl.textContent = days[now.getDay()] + ', ' +
-                        now.getDate() + ' ' + months[now.getMonth()] + ' ' + now.getFullYear();
-    }
-  }
-  tick();
-  if (clockTimer) clearInterval(clockTimer);
-  clockTimer = setInterval(tick, 1000);
+function formatTokenDisplay(hex) {
+  if (!hex || hex.length < 4) return '· · · · · · · · · · · · · ·';
+  // Grupy po 4 znaki rozdzielone kropkami: A3F9 · 2E1C · 87B4 · F312
+  return (hex.match(/.{1,4}/g) || [hex]).join(' · ').toUpperCase();
 }
 
-// ============================================================
-// PROGRESS COUNTDOWN
-// ============================================================
-function startCountdown() {
-  function tick() {
-    var now           = Date.now();
-    var elapsed       = Math.floor((now - lastFetchAt) / 1000);
-    var remaining     = Math.max(0, secsAtFetch - elapsed);
-    var totalSecs     = 60;
-    var pct           = (remaining / totalSecs) * 100;
-    var expiring      = remaining <= 12;
-
-    var fillEl        = document.getElementById('progress-fill');
-    var secsEl        = document.getElementById('secs-left');
-    var tokenEl       = document.getElementById('token-display');
-
-    if (fillEl) {
-      fillEl.style.width = pct + '%';
-      fillEl.classList.toggle('expiring', expiring);
-    }
-    if (secsEl) {
-      secsEl.textContent = remaining + 's';
-    }
-    if (tokenEl) {
-      tokenEl.classList.toggle('expiring', expiring);
-    }
-
-    // Gdy token dobiega konca, automatycznie pobierz nowy
-    if (remaining <= 2 && currentToken) {
-      // Pobierz z 2s wyprzedzeniem
-      fetchToken();
-    }
-  }
-
-  tick();
-  if (countdownTimer) clearInterval(countdownTimer);
-  countdownTimer = setInterval(tick, 1000);
+function formatClock(d) {
+  return pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds());
 }
 
-// ============================================================
-// TOKEN FETCH
-// ============================================================
-var fetchInProgress = false;
+function formatDateFull(d) {
+  var days   = ['Niedziela','Poniedziałek','Wtorek','Środa','Czwartek','Piątek','Sobota'];
+  var months = ['stycznia','lutego','marca','kwietnia','maja','czerwca',
+                'lipca','sierpnia','września','października','listopada','grudnia'];
+  return days[d.getDay()] + ', ' + d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+}
 
+function showErrorState(vis) {
+  var el = document.getElementById('error-state');
+  if (el) el.classList.toggle('visible', vis);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AKTUALIZACJA UI
+// ═══════════════════════════════════════════════════════════════
+function updateTokenUI(secsLeft) {
+  var pct       = Math.max(0, Math.min(100, (secsLeft / TOKEN_WINDOW) * 100));
+  var expiring  = secsLeft < 4;
+
+  var tokenEl   = document.getElementById('token-display');
+  var fillEl    = document.getElementById('progress-fill');
+  var secsEl    = document.getElementById('secs-left');
+
+  if (currentToken) {
+    tokenEl.textContent = formatTokenDisplay(currentToken);
+    tokenEl.classList.remove('placeholder');
+    tokenEl.classList.toggle('expiring', expiring);
+  }
+
+  if (fillEl) {
+    fillEl.style.width      = pct + '%';
+    fillEl.style.background = expiring ? 'rgba(255,255,255,0.40)' : '#fff';
+  }
+  if (secsEl) {
+    secsEl.textContent = secsLeft > 0 ? secsLeft + 's' : '0s';
+    secsEl.style.color = expiring ? 'rgba(255,255,255,0.70)' : 'rgba(255,255,255,0.40)';
+  }
+
+  // Aktualizuj poprzedni token
+  var prevEl = document.getElementById('prev-token');
+  if (prevEl) prevEl.textContent = prevToken ? formatTokenDisplay(prevToken) : '— — — — · — — — — · — — — — · — — — —';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// POBIERANIE TOKENU Z BACKENDU
+// ═══════════════════════════════════════════════════════════════
 function fetchToken() {
-  if (fetchInProgress) return;
-  fetchInProgress = true;
+  if (fetchPending) return;
+  fetchPending = true;
 
   google.script.run
     .withSuccessHandler(function(data) {
-      fetchInProgress = false;
+      fetchPending = false;
       if (!data || !data.token) {
-        showError(true);
-        scheduleNextFetch(10000);
+        showErrorState(true);
+        scheduleFetch(5000); // retry szybszy przy bledzie
         return;
       }
-      showError(false);
-      currentToken  = data.token;
-      lastFetchAt   = Date.now();
-      secsAtFetch   = data.sekundy || 60;
+      showErrorState(false);
 
-      // Wyswietl token UPPERCASE z separatorami
-      var t = data.token;
-      var formatted = t.substring(0,4).toUpperCase() + ' · ' +
-                      t.substring(4,8).toUpperCase() + ' · ' +
-                      t.substring(8,12).toUpperCase() + ' · ' +
-                      t.substring(12,16).toUpperCase();
+      // Zachowaj poprzedni token do wyswietlenia
+      if (currentToken && currentToken !== data.token.toLowerCase()) {
+        prevToken = currentToken;
+      }
+      currentToken = data.token.toLowerCase();
+      lastFetchAt  = Date.now();
+      secsAtFetch  = data.secsLeft  || TOKEN_WINDOW;
+      TOKEN_WINDOW = data.secsWindow || TOKEN_WINDOW;
 
-      var el = document.getElementById('token-display');
-      if (el) el.textContent = formatted;
-
-      // Zaplanuj nastepne pobranie na 55s
-      scheduleNextFetch(55000);
+      updateTokenUI(secsAtFetch);
     })
     .withFailureHandler(function(err) {
-      fetchInProgress = false;
-      showError(true);
-      scheduleNextFetch(10000); // retry po 10s jesli blad
+      fetchPending = false;
+      showErrorState(true);
+      // Jesli mamy cached token, dalej go pokazuj — nie zeruj ekranu
+      scheduleFetch(8000); // retry po 8s przy bledzie sieci
     })
     .generujTokenTablet();
 }
 
-function scheduleNextFetch(ms) {
-  if (tokenFetchTimer) clearTimeout(tokenFetchTimer);
-  tokenFetchTimer = setTimeout(fetchToken, ms);
+var fetchTimer = null;
+function scheduleFetch(ms) {
+  if (fetchTimer) clearTimeout(fetchTimer);
+  fetchTimer = setTimeout(fetchToken, ms);
 }
 
-// ============================================================
-// ERROR STATE
-// ============================================================
-function showError(vis) {
-  var el = document.getElementById('error-state');
-  if (el) el.classList.toggle('visible', vis);
+// ═══════════════════════════════════════════════════════════════
+// TICKER CO 1 SEKUNDĘ
+// ═══════════════════════════════════════════════════════════════
+function tick() {
+  var now  = new Date();
+  var clockEl = document.getElementById('clock');
+  var dateEl  = document.getElementById('date-display');
+  if (clockEl) clockEl.textContent = formatClock(now);
+  if (dateEl)  dateEl.textContent  = formatDateFull(now);
 
-  var tokenEl = document.getElementById('token-display');
-  if (vis && tokenEl) tokenEl.textContent = '· · · · · · · · · · · · · ·';
+  if (currentToken) {
+    // Oblicz ile sekund minelo od ostatniego pobrania
+    var elapsed   = Math.floor((Date.now() - lastFetchAt) / 1000);
+    var secsLeft  = Math.max(0, secsAtFetch - elapsed);
+    updateTokenUI(secsLeft);
+
+    // Pobierz nowy token 3s przed wygasniéciem (bufor na opoznienie sieci)
+    if (secsLeft <= 3 && !fetchPending) {
+      fetchToken();
+    }
+  }
 }
 
-// ============================================================
+// ═══════════════════════════════════════════════════════════════
 // INIT
-// ============================================================
+// ═══════════════════════════════════════════════════════════════
 window.onload = function() {
-  startClock();
-  startCountdown();
+  setInterval(tick, 1000);
   fetchToken();
+  tick();
 
-  // Uniemozliwij wybudzanie urzadzenia / powrot do trybu normalnego
+  // Blokuj kontekstowe menu (tryb kiosku)
   document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+  // Blokuj gesty przewijania na iOS
+  document.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
 };
 </script>
 </body>
