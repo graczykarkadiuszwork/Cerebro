@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <title>RCP · We SMILE · Tablet</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #000;
+      --fg: #fff;
+      --mono: 'Space Mono', monospace;
+      --grotesk: 'Space Grotesk', sans-serif;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: var(--mono);
+      -webkit-font-smoothing: antialiased;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      background-image:
+        repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,255,255,0.03) 39px, rgba(255,255,255,0.03) 40px),
+        repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,0.03) 39px, rgba(255,255,255,0.03) 40px);
+    }
+
+    .layout {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      padding: 32px 40px;
+    }
+
+    /* ── TOP BAR ── */
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .top-clinic {
+      font-size: 11px;
+      font-family: var(--mono);
+      font-weight: 700;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.30);
+    }
+    .top-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.25);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.25; }
+      50%       { opacity: 0.70; }
+    }
+    .top-label {
+      font-size: 9px;
+      font-family: var(--mono);
+      letter-spacing: 0.20em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.20);
+    }
+
+    /* ── CENTER CONTENT ── */
+    .center {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+    }
+
+    .token-eyebrow {
+      font-size: 10px;
+      font-family: var(--mono);
+      letter-spacing: 0.30em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.18);
+      margin-bottom: 20px;
+    }
+
+    .token-display {
+      font-family: var(--grotesk);
+      font-weight: 700;
+      font-size: clamp(52px, 8vw, 96px);
+      letter-spacing: 0.04em;
+      line-height: 1;
+      color: var(--fg);
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      margin-bottom: 32px;
+    }
+    .token-display.expiring {
+      color: rgba(255,255,255,0.55);
+      transition: color 0.5s;
+    }
+
+    /* ── PROGRESS BAR ── */
+    .progress-wrap {
+      width: min(480px, 80%);
+      margin-bottom: 10px;
+    }
+    .progress-track {
+      height: 3px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 3px;
+      background: rgba(255,255,255,0.60);
+      border-radius: 2px;
+      transition: width 1s linear, background 0.3s;
+    }
+    .progress-fill.expiring {
+      background: rgba(255,255,255,0.25);
+    }
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+    }
+    .progress-secs {
+      font-size: 10px;
+      font-family: var(--mono);
+      color: rgba(255,255,255,0.20);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ── INSTRUCTION ── */
+    .instruction {
+      margin-top: 36px;
+      text-align: center;
+    }
+    .instruction-main {
+      font-size: 14px;
+      font-family: var(--mono);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.22);
+      margin-bottom: 6px;
+    }
+    .instruction-sub {
+      font-size: 10px;
+      font-family: var(--mono);
+      letter-spacing: 0.15em;
+      color: rgba(255,255,255,0.10);
+      text-transform: uppercase;
+    }
+
+    /* ── BOTTOM BAR ── */
+    .bottom-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .bottom-clock {
+      font-family: var(--grotesk);
+      font-weight: 700;
+      font-size: 28px;
+      letter-spacing: -0.5px;
+      font-variant-numeric: tabular-nums;
+      color: rgba(255,255,255,0.45);
+    }
+    .bottom-meta {
+      text-align: right;
+    }
+    .bottom-date {
+      font-size: 10px;
+      font-family: var(--mono);
+      color: rgba(255,255,255,0.18);
+      letter-spacing: 0.12em;
+    }
+    .bottom-hmac {
+      font-size: 8px;
+      font-family: var(--mono);
+      color: rgba(255,255,255,0.10);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    /* ── ERROR STATE ── */
+    .error-state {
+      display: none;
+      text-align: center;
+      padding: 20px;
+    }
+    .error-state.visible { display: block; }
+    .error-state p {
+      font-size: 11px;
+      font-family: var(--mono);
+      color: rgba(255,100,100,0.60);
+      letter-spacing: 0.15em;
+    }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <span class="top-clinic">We SMILE · Warszawa</span>
+    <div class="top-status">
+      <div class="status-dot"></div>
+      <span class="top-label">Weryfikacja HMAC-SHA256 · Aktywny</span>
+    </div>
+  </div>
+
+  <!-- CENTER -->
+  <div class="center">
+    <div class="token-eyebrow">◈ Token wejścia · Podaj pracownikowi</div>
+
+    <div class="token-display" id="token-display">
+      · · · · · · · · · · · · · ·
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-track">
+        <div class="progress-fill" id="progress-fill" style="width:100%"></div>
+      </div>
+      <div class="progress-label">
+        <span class="progress-secs" id="secs-left">60s</span>
+        <span class="progress-secs" style="color:rgba(255,255,255,0.10)">Nowy token za</span>
+      </div>
+    </div>
+
+    <div class="error-state" id="error-state">
+      <p>Błąd połączenia z serwerem.<br>Odświeżanie · · ·</p>
+    </div>
+
+    <div class="instruction">
+      <div class="instruction-main">Wpisz token na swoim telefonie</div>
+      <div class="instruction-sub">Token zmienia się co 60 sekund · Skopiuj z ekranu</div>
+    </div>
+  </div>
+
+  <!-- BOTTOM BAR -->
+  <div class="bottom-bar">
+    <div class="bottom-clock" id="bottom-clock">00:00</div>
+    <div class="bottom-meta">
+      <div class="bottom-date" id="bottom-date">—</div>
+      <div class="bottom-hmac">HMAC-SHA256 · RCP v3</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+var currentToken    = null;
+var tokenFetchTimer = null;
+var clockTimer      = null;
+var countdownTimer  = null;
+var lastFetchAt     = 0;  // ms timestamp kiedy ostatnio pobrano token
+var secsAtFetch     = 0;  // ile sekund pozostalo przy ostatnim pobraniu
+
+// ============================================================
+// CLOCK + DATE
+// ============================================================
+function startClock() {
+  function tick() {
+    var now = new Date();
+    var h   = ('0' + now.getHours()).slice(-2);
+    var m   = ('0' + now.getMinutes()).slice(-2);
+    var s   = ('0' + now.getSeconds()).slice(-2);
+    var el  = document.getElementById('bottom-clock');
+    if (el) el.textContent = h + ':' + m;
+
+    var days   = ['Niedziela','Poniedziałek','Wtorek','Środa','Czwartek','Piątek','Sobota'];
+    var months = ['stycznia','lutego','marca','kwietnia','maja','czerwca',
+                  'lipca','sierpnia','września','października','listopada','grudnia'];
+    var dEl = document.getElementById('bottom-date');
+    if (dEl) {
+      dEl.textContent = days[now.getDay()] + ', ' +
+                        now.getDate() + ' ' + months[now.getMonth()] + ' ' + now.getFullYear();
+    }
+  }
+  tick();
+  if (clockTimer) clearInterval(clockTimer);
+  clockTimer = setInterval(tick, 1000);
+}
+
+// ============================================================
+// PROGRESS COUNTDOWN
+// ============================================================
+function startCountdown() {
+  function tick() {
+    var now           = Date.now();
+    var elapsed       = Math.floor((now - lastFetchAt) / 1000);
+    var remaining     = Math.max(0, secsAtFetch - elapsed);
+    var totalSecs     = 60;
+    var pct           = (remaining / totalSecs) * 100;
+    var expiring      = remaining <= 12;
+
+    var fillEl        = document.getElementById('progress-fill');
+    var secsEl        = document.getElementById('secs-left');
+    var tokenEl       = document.getElementById('token-display');
+
+    if (fillEl) {
+      fillEl.style.width = pct + '%';
+      fillEl.classList.toggle('expiring', expiring);
+    }
+    if (secsEl) {
+      secsEl.textContent = remaining + 's';
+    }
+    if (tokenEl) {
+      tokenEl.classList.toggle('expiring', expiring);
+    }
+
+    // Gdy token dobiega konca, automatycznie pobierz nowy
+    if (remaining <= 2 && currentToken) {
+      // Pobierz z 2s wyprzedzeniem
+      fetchToken();
+    }
+  }
+
+  tick();
+  if (countdownTimer) clearInterval(countdownTimer);
+  countdownTimer = setInterval(tick, 1000);
+}
+
+// ============================================================
+// TOKEN FETCH
+// ============================================================
+var fetchInProgress = false;
+
+function fetchToken() {
+  if (fetchInProgress) return;
+  fetchInProgress = true;
+
+  google.script.run
+    .withSuccessHandler(function(data) {
+      fetchInProgress = false;
+      if (!data || !data.token) {
+        showError(true);
+        scheduleNextFetch(10000);
+        return;
+      }
+      showError(false);
+      currentToken  = data.token;
+      lastFetchAt   = Date.now();
+      secsAtFetch   = data.sekundy || 60;
+
+      // Wyswietl token UPPERCASE z separatorami
+      var t = data.token;
+      var formatted = t.substring(0,4).toUpperCase() + ' · ' +
+                      t.substring(4,8).toUpperCase() + ' · ' +
+                      t.substring(8,12).toUpperCase() + ' · ' +
+                      t.substring(12,16).toUpperCase();
+
+      var el = document.getElementById('token-display');
+      if (el) el.textContent = formatted;
+
+      // Zaplanuj nastepne pobranie na 55s
+      scheduleNextFetch(55000);
+    })
+    .withFailureHandler(function(err) {
+      fetchInProgress = false;
+      showError(true);
+      scheduleNextFetch(10000); // retry po 10s jesli blad
+    })
+    .generujTokenTablet();
+}
+
+function scheduleNextFetch(ms) {
+  if (tokenFetchTimer) clearTimeout(tokenFetchTimer);
+  tokenFetchTimer = setTimeout(fetchToken, ms);
+}
+
+// ============================================================
+// ERROR STATE
+// ============================================================
+function showError(vis) {
+  var el = document.getElementById('error-state');
+  if (el) el.classList.toggle('visible', vis);
+
+  var tokenEl = document.getElementById('token-display');
+  if (vis && tokenEl) tokenEl.textContent = '· · · · · · · · · · · · · ·';
+}
+
+// ============================================================
+// INIT
+// ============================================================
+window.onload = function() {
+  startClock();
+  startCountdown();
+  fetchToken();
+
+  // Uniemozliwij wybudzanie urzadzenia / powrot do trybu normalnego
+  document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+};
+</script>
+</body>
+</html>

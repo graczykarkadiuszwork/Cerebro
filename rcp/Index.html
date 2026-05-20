@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <title>RCP · We SMILE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #000;
+      --fg: #fff;
+      --t35: rgba(255,255,255,0.35);
+      --t25: rgba(255,255,255,0.25);
+      --t15: rgba(255,255,255,0.15);
+      --t10: rgba(255,255,255,0.10);
+      --b12: rgba(255,255,255,0.12);
+      --b18: rgba(255,255,255,0.18);
+      --b60: rgba(255,255,255,0.60);
+      --f03: rgba(255,255,255,0.03);
+      --f06: rgba(255,255,255,0.06);
+      --mono: 'Space Mono', monospace;
+      --grotesk: 'Space Grotesk', sans-serif;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: var(--mono);
+      -webkit-font-smoothing: antialiased;
+      overflow: hidden;
+    }
+
+    body {
+      background-image:
+        repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,255,255,0.04) 39px, rgba(255,255,255,0.04) 40px),
+        repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,0.04) 39px, rgba(255,255,255,0.04) 40px);
+    }
+
+    .screen {
+      display: none;
+      flex-direction: column;
+      height: 100%;
+      max-width: 420px;
+      margin: 0 auto;
+      padding: 0 20px;
+      overflow-y: auto;
+    }
+    .screen.active { display: flex; }
+
+    /* ── LABEL / EYEBROW ── */
+    .label {
+      font-size: 8px;
+      font-family: var(--mono);
+      font-weight: 400;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--t25);
+    }
+
+    /* ── STATUS BAR ── */
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 20px;
+      padding-bottom: 4px;
+    }
+    .status-bar .clinic-name {
+      font-size: 8px;
+      font-family: var(--mono);
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--t25);
+    }
+    #clock {
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--t35);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ── TOKEN STRIP ── */
+    .token-strip {
+      border: 1px solid var(--b12);
+      border-radius: 10px;
+      padding: 11px 14px;
+      margin-top: 16px;
+      background: var(--f03);
+    }
+    .token-strip-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .token-glyph {
+      font-size: 18px;
+      color: rgba(255,255,255,0.15);
+      margin-right: 8px;
+    }
+    .token-label-row {
+      display: flex;
+      align-items: center;
+      flex: 1;
+      gap: 6px;
+    }
+    .token-meta {
+      font-size: 8px;
+      font-family: var(--mono);
+      color: rgba(255,255,255,0.25);
+      letter-spacing: 0.10em;
+    }
+    .token-countdown {
+      font-size: 8px;
+      font-family: var(--mono);
+      color: rgba(255,255,255,0.25);
+      font-variant-numeric: tabular-nums;
+      margin-left: auto;
+    }
+    .token-code {
+      font-size: 13px;
+      font-family: var(--mono);
+      color: rgba(255,255,255,0.50);
+      letter-spacing: 0.15em;
+      margin-bottom: 8px;
+    }
+    .token-bar-track {
+      height: 1px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 1px;
+      margin-bottom: 6px;
+      overflow: hidden;
+    }
+    .token-bar-fill {
+      height: 1px;
+      background: #fff;
+      border-radius: 1px;
+      transition: width 1s linear, background 0.3s;
+    }
+    .token-hint {
+      font-size: 7px;
+      font-family: var(--mono);
+      color: rgba(255,255,255,0.15);
+      letter-spacing: 0.10em;
+    }
+
+    /* ── SEPARATOR ── */
+    .sep {
+      height: 1px;
+      background: var(--b12);
+      margin-top: 16px;
+    }
+
+    /* ── PROFILE ROW ── */
+    .profile-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding-top: 20px;
+    }
+    .profile-name {
+      font-family: var(--grotesk);
+      font-weight: 700;
+      font-size: 36px;
+      line-height: 1.0;
+      letter-spacing: -1px;
+      color: var(--fg);
+    }
+    .profile-meta {
+      margin-top: 4px;
+    }
+    .profile-role {
+      font-size: 9px;
+      font-family: var(--mono);
+      color: var(--t35);
+      letter-spacing: 0.10em;
+    }
+    .profile-year {
+      font-size: 8px;
+      font-family: var(--mono);
+      color: var(--t25);
+      letter-spacing: 0.10em;
+      margin-top: 2px;
+    }
+    .switch-btn {
+      width: 40px;
+      height: 40px;
+      border: 1px solid var(--b12);
+      border-radius: 50%;
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: border-color 0.2s;
+      margin-top: 4px;
+    }
+    .switch-btn:hover { border-color: var(--b60); }
+    .switch-btn svg { color: var(--t35); transition: color 0.2s; }
+    .switch-btn:hover svg { color: var(--fg); }
+
+    /* ── TOKEN INPUT SECTION ── */
+    .token-input-section {
+      margin-top: 20px;
+    }
+    .token-input-label {
+      font-size: 8px;
+      font-family: var(--mono);
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--t25);
+      margin-bottom: 8px;
+    }
+    .token-input {
+      width: 100%;
+      background: var(--f03);
+      border: 1px solid var(--b12);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 16px;
+      font-family: var(--mono);
+      color: var(--fg);
+      letter-spacing: 0.15em;
+      outline: none;
+      transition: border-color 0.2s;
+      -webkit-appearance: none;
+    }
+    .token-input::placeholder { color: rgba(255,255,255,0.15); }
+    .token-input:focus { border-color: var(--b60); }
+
+    /* ── SPACER ── */
+    .spacer { flex: 1; }
+
+    /* ── ACTION BUTTONS ── */
+    .action-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding-bottom: 24px;
+      padding-top: 16px;
+    }
+    .action-btn {
+      height: 148px;
+      border-radius: 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 18px;
+      cursor: pointer;
+      border: 1px solid;
+      transition: background 0.18s, border-color 0.18s, color 0.18s;
+    }
+    .action-btn .btn-icon {
+      font-size: 30px;
+      line-height: 1;
+    }
+    .action-btn .btn-bottom {}
+    .action-btn .btn-label {
+      display: block;
+      font-size: 10px;
+      font-family: var(--mono);
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+    .action-btn .btn-sub {
+      display: block;
+      font-size: 8px;
+      font-family: var(--mono);
+      letter-spacing: 0.10em;
+      opacity: 0.5;
+      margin-top: 2px;
+    }
+
+    .btn-arrive {
+      background: var(--f06);
+      border-color: var(--b18);
+      color: rgba(255,255,255,0.50);
+    }
+    .btn-arrive:hover {
+      background: var(--fg);
+      border-color: var(--fg);
+      color: var(--bg);
+    }
+    .btn-leave {
+      background: transparent;
+      border-color: var(--b12);
+      color: rgba(255,255,255,0.40);
+    }
+    .btn-leave:hover {
+      background: transparent;
+      border-color: var(--b60);
+      color: var(--fg);
+    }
+
+    /* ── SELECT SCREEN ── */
+    #s-select {
+      padding-top: 20px;
+    }
+    .select-title {
+      font-family: var(--grotesk);
+      font-weight: 700;
+      font-size: 28px;
+      letter-spacing: -0.5px;
+      margin-bottom: 4px;
+    }
+    .select-subtitle {
+      font-size: 9px;
+      font-family: var(--mono);
+      color: var(--t25);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+    .employee-list {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .employee-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .employee-item:hover { opacity: 0.7; }
+    .employee-item:last-child { border-bottom: none; }
+    .emp-name {
+      font-family: var(--grotesk);
+      font-weight: 700;
+      font-size: 18px;
+      letter-spacing: -0.3px;
+    }
+    .emp-role {
+      font-size: 8px;
+      font-family: var(--mono);
+      color: var(--t25);
+      letter-spacing: 0.10em;
+      margin-top: 2px;
+    }
+    .emp-arrow {
+      font-size: 14px;
+      color: var(--t15);
+    }
+    .select-loading {
+      text-align: center;
+      padding: 40px 0;
+      font-size: 9px;
+      font-family: var(--mono);
+      color: var(--t25);
+      letter-spacing: 0.15em;
+    }
+
+    /* ── CONFIRM SCREEN ── */
+    #s-confirm {
+      padding-top: 20px;
+    }
+    .confirm-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid var(--b12);
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: 8px;
+      font-family: var(--mono);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--t25);
+      margin-bottom: 24px;
+    }
+    .confirm-name {
+      font-family: var(--grotesk);
+      font-weight: 700;
+      font-size: 54px;
+      line-height: 1.0;
+      letter-spacing: -2px;
+      color: var(--fg);
+    }
+    .confirm-role {
+      font-size: 9px;
+      font-family: var(--mono);
+      color: rgba(255,255,255,0.30);
+      letter-spacing: 0.10em;
+      margin-top: 6px;
+      margin-bottom: 20px;
+    }
+    .confirm-registering {
+      font-size: 8px;
+      font-family: var(--mono);
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--t25);
+      margin-bottom: 6px;
+    }
+    .confirm-action {
+      font-family: var(--grotesk);
+      font-weight: 700;
+      font-size: 28px;
+      letter-spacing: -0.5px;
+      margin-bottom: 20px;
+    }
+    .confirm-meta-table {
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+    .confirm-meta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 11px 16px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .confirm-meta-row:first-child { border-top: none; }
+    .confirm-meta-key {
+      font-size: 8px;
+      font-family: var(--mono);
+      color: rgba(255,255,255,0.25);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+    .confirm-meta-val {
+      font-size: 11px;
+      font-family: var(--mono);
+      color: rgba(255,255,255,0.45);
+      letter-spacing: 0.10em;
+    }
+    .confirm-meta-val.highlight {
+      color: #fff;
+      font-size: 13px;
+    }
+    .confirm-cta {
+      width: 100%;
+      background: var(--fg);
+      color: var(--bg);
+      border: none;
+      border-radius: 14px;
+      padding: 20px;
+      font-size: 10px;
+      font-family: var(--mono);
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: opacity 0.18s;
+    }
+    .confirm-cta:hover { opacity: 0.88; }
+    .confirm-cta:disabled { opacity: 0.40; cursor: default; }
+    .confirm-cancel {
+      display: block;
+      text-align: center;
+      margin-top: 14px;
+      margin-bottom: 24px;
+      font-size: 9px;
+      font-family: var(--mono);
+      color: rgba(255,255,255,0.20);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: color 0.18s;
+      background: none;
+      border: none;
+      width: 100%;
+    }
+    .confirm-cancel:hover { color: var(--fg); }
+
+    /* ── SUCCESS SCREEN ── */
+    #s-success {
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+    .success-ring-outer {
+      width: 80px;
+      height: 80px;
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+    }
+    .success-ring-inner {
+      width: 62px;
+      height: 62px;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .success-check {
+      font-size: 22px;
+      color: var(--fg);
+    }
+    .success-name {
+      font-family: var(--grotesk);
+      font-weight: 700;
+      font-size: 44px;
+      letter-spacing: -1.5px;
+      line-height: 1;
+    }
+    .success-action {
+      font-size: 9px;
+      font-family: var(--mono);
+      color: rgba(255,255,255,0.30);
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      margin-top: 8px;
+      margin-bottom: 16px;
+    }
+    .success-time-pill {
+      display: inline-block;
+      border: 1px solid var(--b12);
+      border-radius: 20px;
+      padding: 6px 16px;
+      font-size: 14px;
+      font-family: var(--mono);
+      font-variant-numeric: tabular-nums;
+      color: var(--t35);
+      margin-bottom: 28px;
+    }
+    .success-bar-track {
+      width: 160px;
+      height: 1px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 1px;
+      overflow: hidden;
+      margin: 0 auto 10px;
+    }
+    .success-bar-fill {
+      height: 1px;
+      background: #fff;
+      width: 100%;
+      animation: shrink 3s linear forwards;
+    }
+    @keyframes shrink {
+      from { width: 100%; }
+      to   { width: 0%; }
+    }
+    .success-hint {
+      font-size: 8px;
+      font-family: var(--mono);
+      color: rgba(255,255,255,0.15);
+      letter-spacing: 0.15em;
+    }
+
+    /* ── ERROR MESSAGE ── */
+    .error-msg {
+      display: none;
+      font-size: 9px;
+      font-family: var(--mono);
+      color: rgba(255,100,100,0.80);
+      letter-spacing: 0.10em;
+      margin-top: 8px;
+      padding: 8px 12px;
+      border: 1px solid rgba(255,100,100,0.20);
+      border-radius: 8px;
+    }
+    .error-msg.visible { display: block; }
+
+    /* ── LOADING OVERLAY ── */
+    .loading-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .loading-overlay.visible { display: flex; }
+    .loading-dots {
+      font-size: 9px;
+      font-family: var(--mono);
+      color: var(--t35);
+      letter-spacing: 0.3em;
+    }
+
+    @media (max-height: 600px) {
+      .profile-name { font-size: 28px; }
+      .action-btn { height: 110px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- LOADING OVERLAY -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="loading-dots">ŁADOWANIE · · ·</div>
+</div>
+
+<!-- ═══════════════════════════════════════ EKRAN GŁÓWNY -->
+<div class="screen" id="s-main">
+
+  <div class="status-bar">
+    <span class="clinic-name" id="main-clinic-name">WE SMILE · WARSZAWA</span>
+    <span id="clock">00:00</span>
+  </div>
+
+  <!-- Token strip -->
+  <div class="token-strip">
+    <div class="token-strip-top">
+      <div class="token-label-row">
+        <span class="token-glyph">◈</span>
+        <span class="token-meta">HMAC-SHA256 · Token aktywny</span>
+      </div>
+      <span class="token-countdown" id="token-countdown">60s</span>
+    </div>
+    <div class="token-code" id="token-display">— — — — · — — — — · — — — — · — — — —</div>
+    <div class="token-bar-track">
+      <div class="token-bar-fill" id="token-bar" style="width:100%"></div>
+    </div>
+    <div class="token-hint">Klucz rotuje co 60s · SHA-256 · Okno ±1</div>
+  </div>
+
+  <div class="sep"></div>
+
+  <!-- Profile -->
+  <div class="profile-row">
+    <div>
+      <div class="label" style="margin-bottom:6px">Pracownik</div>
+      <div class="profile-name" id="main-name">—</div>
+      <div class="profile-meta">
+        <div class="profile-role" id="main-role">—</div>
+        <div class="profile-year" id="main-year">—</div>
+      </div>
+    </div>
+    <button class="switch-btn" id="switch-btn" title="Zmień pracownika">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="8" r="4"/>
+        <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Token input -->
+  <div class="token-input-section">
+    <div class="token-input-label">Token z tabletu przy wejściu</div>
+    <input type="text" class="token-input" id="token-input"
+      placeholder="a3f9" maxlength="16" autocomplete="off"
+      autocorrect="off" autocapitalize="off" spellcheck="false">
+    <div class="error-msg" id="main-error"></div>
+  </div>
+
+  <div class="spacer"></div>
+
+  <!-- Action buttons -->
+  <div class="action-grid">
+    <button class="action-btn btn-arrive" id="btn-arrive">
+      <span class="btn-icon">↑</span>
+      <div class="btn-bottom">
+        <span class="btn-label">Przyjście</span>
+        <span class="btn-sub">Rejestruj wejście</span>
+      </div>
+    </button>
+    <button class="action-btn btn-leave" id="btn-leave">
+      <span class="btn-icon">↓</span>
+      <div class="btn-bottom">
+        <span class="btn-label">Wyjście</span>
+        <span class="btn-sub">Rejestruj wyjście</span>
+      </div>
+    </button>
+  </div>
+
+</div><!-- /s-main -->
+
+<!-- ═══════════════════════════════════════ EKRAN WYBORU PRACOWNIKA -->
+<div class="screen" id="s-select">
+  <div style="padding-top:20px; padding-bottom:16px; flex-shrink:0">
+    <div class="label" style="margin-bottom:8px">We SMILE · Warszawa</div>
+    <div class="select-title">Kim jesteś?</div>
+    <div class="select-subtitle">Wybierz swój profil</div>
+  </div>
+  <div class="employee-list" id="employee-list">
+    <div class="select-loading">Ładowanie listy · · ·</div>
+  </div>
+  <div style="padding-bottom:20px; padding-top:10px; flex-shrink:0">
+    <div style="font-size:7px; font-family:var(--mono); color:rgba(255,255,255,0.12); letter-spacing:0.15em; text-align:center; text-transform:uppercase">
+      Wybór jest zapamiętywany na tym urządzeniu
+    </div>
+  </div>
+</div><!-- /s-select -->
+
+<!-- ═══════════════════════════════════════ EKRAN POTWIERDZENIA -->
+<div class="screen" id="s-confirm">
+
+  <div class="confirm-tag">◈ Weryfikacja obecności</div>
+
+  <div class="confirm-name" id="confirm-name">—</div>
+  <div class="confirm-role" id="confirm-role">—</div>
+
+  <div class="confirm-registering">Rejestrujesz</div>
+  <div class="confirm-action" id="confirm-action">—</div>
+
+  <div class="confirm-meta-table">
+    <div class="confirm-meta-row">
+      <span class="confirm-meta-key">Klinika</span>
+      <span class="confirm-meta-val" id="confirm-clinic">We SMILE</span>
+    </div>
+    <div class="confirm-meta-row">
+      <span class="confirm-meta-key">Data</span>
+      <span class="confirm-meta-val" id="confirm-date">—</span>
+    </div>
+    <div class="confirm-meta-row">
+      <span class="confirm-meta-key">Godzina</span>
+      <span class="confirm-meta-val highlight" id="confirm-time">—</span>
+    </div>
+    <div class="confirm-meta-row">
+      <span class="confirm-meta-key">Token (skrót)</span>
+      <span class="confirm-meta-val" id="confirm-token">—</span>
+    </div>
+    <div class="confirm-meta-row">
+      <span class="confirm-meta-key">Rok ur.</span>
+      <span class="confirm-meta-val" id="confirm-year">—</span>
+    </div>
+  </div>
+
+  <button class="confirm-cta" id="confirm-cta">Potwierdzam — to ja</button>
+  <div class="error-msg" id="confirm-error"></div>
+  <button class="confirm-cancel" id="confirm-cancel">Anuluj</button>
+
+</div><!-- /s-confirm -->
+
+<!-- ═══════════════════════════════════════ EKRAN SUKCESU -->
+<div class="screen" id="s-success">
+  <div class="success-ring-outer">
+    <div class="success-ring-inner">
+      <span class="success-check">✓</span>
+    </div>
+  </div>
+  <div class="success-name" id="success-name">—</div>
+  <div class="success-action" id="success-action">—</div>
+  <div class="success-time-pill" id="success-time">—</div>
+  <div class="success-bar-track">
+    <div class="success-bar-fill" id="success-bar"></div>
+  </div>
+  <div class="success-hint">Powrót za 3s</div>
+</div><!-- /s-success -->
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+var selectedEmployee = null; // { id, name, imie, inicjal, rok, rola }
+var currentAction    = null; // 'arrive' | 'leave'
+var employeesList    = [];
+var clinicData       = { nazwa: 'We SMILE', miasto: 'Warszawa' };
+var successTimer     = null;
+var clockTimer       = null;
+var tokenTimer       = null;
+
+// ============================================================
+// LOCALSTORAGE (z try-catch dla Safari private mode)
+// ============================================================
+function saveEmployee(emp) {
+  try { localStorage.setItem('rcp_employee', JSON.stringify(emp)); } catch(e) {}
+}
+function loadEmployee() {
+  try {
+    var s = localStorage.getItem('rcp_employee');
+    return s ? JSON.parse(s) : null;
+  } catch(e) { return null; }
+}
+function clearEmployee() {
+  try { localStorage.removeItem('rcp_employee'); } catch(e) {}
+}
+
+// ============================================================
+// SCREEN SWITCHING
+// ============================================================
+function showScreen(id) {
+  var screens = document.querySelectorAll('.screen');
+  for (var i = 0; i < screens.length; i++) {
+    screens[i].classList.remove('active');
+  }
+  document.getElementById(id).classList.add('active');
+}
+
+// ============================================================
+// CLOCK
+// ============================================================
+function startClock() {
+  function tick() {
+    var now = new Date();
+    var h = ('0' + now.getHours()).slice(-2);
+    var m = ('0' + now.getMinutes()).slice(-2);
+    var s = ('0' + now.getSeconds()).slice(-2);
+    var el = document.getElementById('clock');
+    if (el) el.textContent = h + ':' + m + ':' + s;
+  }
+  tick();
+  if (clockTimer) clearInterval(clockTimer);
+  clockTimer = setInterval(tick, 1000);
+}
+
+// ============================================================
+// TOKEN DISPLAY STRIP
+// ============================================================
+function startTokenDisplay() {
+  function updateTokenDisplay() {
+    var now         = Date.now();
+    var secsInSlot  = Math.floor(now / 1000) % 60;
+    var remaining   = 60 - secsInSlot;
+    var pct         = (remaining / 60) * 100;
+
+    var barEl = document.getElementById('token-bar');
+    var cdEl  = document.getElementById('token-countdown');
+    if (barEl) {
+      barEl.style.width = pct + '%';
+      barEl.style.background = remaining <= 12 ? 'rgba(255,255,255,0.4)' : '#fff';
+    }
+    if (cdEl) cdEl.textContent = remaining + 's';
+  }
+
+  updateTokenDisplay();
+  if (tokenTimer) clearInterval(tokenTimer);
+  tokenTimer = setInterval(updateTokenDisplay, 1000);
+
+  // Pasek tokenu na ekranie glownym jest wizualny tylko
+  // Nie pokazujemy prawdziwego tokenu po stronie telefonu (bezpieczenstwo)
+  var dispEl = document.getElementById('token-display');
+  if (dispEl) dispEl.textContent = '· · · · · wpisz z tabletu · · · · ·';
+}
+
+// ============================================================
+// EMPLOYEE LIST
+// ============================================================
+function buildEmployeeList() {
+  var list = document.getElementById('employee-list');
+  if (!list) return;
+
+  if (employeesList.length === 0) {
+    list.innerHTML = '<div class="select-loading">Brak aktywnych pracowników</div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  for (var i = 0; i < employeesList.length; i++) {
+    (function(emp) {
+      var div = document.createElement('div');
+      div.className = 'employee-item';
+      div.innerHTML =
+        '<div>' +
+          '<div class="emp-name">' + escHtml(emp.imie) + ' ' + escHtml(emp.inicjal) + '.</div>' +
+          '<div class="emp-role">' + escHtml(emp.rola) + '</div>' +
+        '</div>' +
+        '<span class="emp-arrow">→</span>';
+      div.onclick = function() { selectEmployee(emp); };
+      list.appendChild(div);
+    })(employeesList[i]);
+  }
+}
+
+function selectEmployee(emp) {
+  selectedEmployee = emp;
+  saveEmployee({
+    id:      emp.id,
+    name:    emp.imie + ' ' + emp.inicjal + '.',
+    imie:    emp.imie,
+    inicjal: emp.inicjal,
+    rok:     emp.rok,
+    rola:    emp.rola
+  });
+  renderMainScreen();
+  showScreen('s-main');
+}
+
+// ============================================================
+// MAIN SCREEN
+// ============================================================
+function renderMainScreen() {
+  if (!selectedEmployee) return;
+  document.getElementById('main-name').textContent  = selectedEmployee.imie + ' ' + selectedEmployee.inicjal + '.';
+  document.getElementById('main-role').textContent  = selectedEmployee.rola || '—';
+  document.getElementById('main-year').textContent  = 'ur. ' + (selectedEmployee.rok || '—');
+  document.getElementById('main-clinic-name').textContent =
+    (clinicData.nazwa || 'WE SMILE') + ' · ' + (clinicData.miasto || 'WARSZAWA').toUpperCase();
+
+  var tokenEl = document.getElementById('token-input');
+  if (tokenEl) tokenEl.value = '';
+  hideError('main-error');
+}
+
+// ============================================================
+// CONFIRM SCREEN
+// ============================================================
+function showConfirm(akcja) {
+  if (!selectedEmployee) {
+    showScreen('s-select');
+    return;
+  }
+  var tokenInput = document.getElementById('token-input');
+  var tv = tokenInput ? tokenInput.value.trim() : '';
+  if (!tv) {
+    showError('main-error', 'Wpisz token z tabletu przy wejściu.');
+    return;
+  }
+
+  currentAction = akcja;
+  var now = new Date();
+  var h   = ('0' + now.getHours()).slice(-2);
+  var m   = ('0' + now.getMinutes()).slice(-2);
+  var s   = ('0' + now.getSeconds()).slice(-2);
+  var d   = now.getFullYear() + '-' +
+            ('0'+(now.getMonth()+1)).slice(-2) + '-' +
+            ('0'+now.getDate()).slice(-2);
+
+  document.getElementById('confirm-name').textContent   = selectedEmployee.imie;
+  document.getElementById('confirm-role').textContent   = selectedEmployee.rola || '';
+  document.getElementById('confirm-action').textContent = akcja === 'arrive' ? 'Przyjście ↑' : 'Wyjście ↓';
+  document.getElementById('confirm-clinic').textContent = clinicData.nazwa || 'We SMILE';
+  document.getElementById('confirm-date').textContent   = d;
+  document.getElementById('confirm-time').textContent   = h + ':' + m + ':' + s;
+  document.getElementById('confirm-token').textContent  = tv.substring(0, 8).toLowerCase();
+  document.getElementById('confirm-year').textContent   = selectedEmployee.rok || '—';
+
+  hideError('confirm-error');
+  var cta = document.getElementById('confirm-cta');
+  if (cta) { cta.disabled = false; cta.textContent = 'Potwierdzam — to ja'; }
+
+  showScreen('s-confirm');
+}
+
+// ============================================================
+// SUBMIT REGISTRATION
+// ============================================================
+function submitRegistration() {
+  if (!selectedEmployee || !currentAction) return;
+
+  var tokenInput = document.getElementById('token-input');
+  var tv         = tokenInput ? tokenInput.value.trim() : '';
+
+  var cta = document.getElementById('confirm-cta');
+  if (cta) { cta.disabled = true; cta.textContent = 'Wysyłanie · · ·'; }
+  hideError('confirm-error');
+
+  var payload = {
+    employeeId:  selectedEmployee.id,
+    tokenInput:  tv,
+    akcja:       currentAction,
+    timestamp:   Date.now()
+  };
+
+  google.script.run
+    .withSuccessHandler(function(resp) {
+      if (resp && resp.success) {
+        showSuccessScreen(resp);
+      } else {
+        var msg = (resp && resp.message) ? resp.message : 'Błąd rejestracji. Spróbuj ponownie.';
+        showError('confirm-error', msg);
+        if (cta) { cta.disabled = false; cta.textContent = 'Potwierdzam — to ja'; }
+      }
+    })
+    .withFailureHandler(function(err) {
+      showError('confirm-error', 'Błąd połączenia z serwerem. Sprawdź internet.');
+      if (cta) { cta.disabled = false; cta.textContent = 'Potwierdzam — to ja'; }
+    })
+    .weryfikujIRejestruj(payload);
+}
+
+// ============================================================
+// SUCCESS SCREEN
+// ============================================================
+function showSuccessScreen(resp) {
+  document.getElementById('success-name').textContent   = resp.imie || selectedEmployee.imie || '—';
+  document.getElementById('success-action').textContent = currentAction === 'arrive' ? 'PRZYJŚCIE ZAREJESTROWANE' : 'WYJŚCIE ZAREJESTROWANE';
+  document.getElementById('success-time').textContent   = resp.godzina || '—';
+
+  // Reset animacji paska
+  var bar = document.getElementById('success-bar');
+  if (bar) {
+    bar.style.animation = 'none';
+    void bar.offsetWidth; // reflow
+    bar.style.animation = 'shrink 3s linear forwards';
+  }
+
+  showScreen('s-success');
+
+  if (successTimer) clearTimeout(successTimer);
+  successTimer = setTimeout(function() {
+    showScreen('s-main');
+    renderMainScreen();
+  }, 3000);
+}
+
+// ============================================================
+// ERROR HELPERS
+// ============================================================
+function showError(id, msg) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('visible');
+}
+function hideError(id) {
+  var el = document.getElementById(id);
+  if (el) el.classList.remove('visible');
+}
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ============================================================
+// EVENT LISTENERS
+// ============================================================
+document.getElementById('switch-btn').onclick = function() {
+  buildEmployeeList();
+  showScreen('s-select');
+};
+
+document.getElementById('btn-arrive').onclick = function() { showConfirm('arrive'); };
+document.getElementById('btn-leave').onclick  = function() { showConfirm('leave'); };
+
+document.getElementById('confirm-cta').onclick = function() { submitRegistration(); };
+document.getElementById('confirm-cancel').onclick = function() {
+  showScreen('s-main');
+  renderMainScreen();
+};
+
+// Pozwol nacisnac Enter w polu tokenu by otworzyc potwierdzenie
+document.getElementById('token-input').onkeypress = function(e) {
+  if (e.key === 'Enter') { showConfirm('arrive'); }
+};
+
+// ============================================================
+// INICJALIZACJA
+// ============================================================
+window.onload = function() {
+  startClock();
+  startTokenDisplay();
+
+  showLoading(true);
+
+  google.script.run
+    .withSuccessHandler(function(data) {
+      showLoading(false);
+      if (data && data.pracownicy) employeesList = data.pracownicy;
+      if (data && data.klinika)    clinicData    = data.klinika;
+
+      // Pre-fill token z URL parametru jesli dostepny
+      var urlParams = {};
+      try {
+        var search = window.location.search;
+        if (search) {
+          search.substring(1).split('&').forEach(function(p) {
+            var kv = p.split('=');
+            if (kv[0] === 'token') {
+              urlParams.token = decodeURIComponent(kv[1] || '');
+            }
+          });
+        }
+      } catch(e) {}
+
+      var saved = loadEmployee();
+      if (saved) {
+        selectedEmployee = saved;
+        renderMainScreen();
+        showScreen('s-main');
+        if (urlParams.token) {
+          var ti = document.getElementById('token-input');
+          if (ti) ti.value = urlParams.token;
+        }
+      } else {
+        buildEmployeeList();
+        showScreen('s-select');
+      }
+    })
+    .withFailureHandler(function(err) {
+      showLoading(false);
+      var saved = loadEmployee();
+      if (saved) {
+        selectedEmployee = saved;
+        renderMainScreen();
+        showScreen('s-main');
+        showError('main-error', 'Błąd połączenia z serwerem. Dane pracownika z pamięci podręcznej.');
+      } else {
+        showScreen('s-select');
+        document.getElementById('employee-list').innerHTML =
+          '<div class="select-loading" style="color:rgba(255,100,100,0.6)">Błąd połączenia. Odśwież stronę.</div>';
+      }
+    })
+    .pobierzDaneStartowe();
+};
+
+function showLoading(vis) {
+  var el = document.getElementById('loading-overlay');
+  if (el) el.classList.toggle('visible', vis);
+}
+</script>
+</body>
+</html>
