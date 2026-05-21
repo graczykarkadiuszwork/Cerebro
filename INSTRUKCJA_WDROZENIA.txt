@@ -1,0 +1,89 @@
+================================================================================
+  INSTRUKCJA WDROŻENIA SYSTEMU REJESTRACJI CZASU PRACY
+================================================================================
+
+WYMAGANIA:
+----------
+- Node.js (wersja 18 lub wyższa)
+- pnpm (npm install -g pnpm)
+- Git
+
+
+KROK 1: POBRANIE PROJEKTU
+-------------------------
+1. Otwórz terminal/wiersz poleceń
+2. Przejdź do folderu, gdzie chcesz zainstalować projekt
+3. Wpisz:
+   git clone <adres-repozytorium>
+   cd cerebro
+
+
+KROK 2: INSTALACJA ZALEŻNOŚCI
+-----------------------------
+1. W folderze projektu wpisz:
+   pnpm install
+
+Czekaj aż instalacja się skończy (kilka minut).
+
+
+KROK 3: URUCHOMIENIE APLIKACJI
+------------------------------
+1. Wpisz w terminalu:
+   pnpm run dev
+
+2. Otwórz przeglądarkę i przejdź na:
+   http://localhost:3000
+
+Aplikacja powinna się załadować.
+
+
+KROK 4: ZALOGOWANIE DO GOOGLE SHEETS (jeśli wymagane)
+-----------------------------------------------------
+1. Projekt może integrować się z Google Sheets
+2. Jeśli pojawi się prośba o autoryzację, kliknij na link
+3. Zaloguj się swoim kontem Google
+4. Udziel wymaganych uprawnień
+
+
+KROK 5: BUDOWANIE DO PRODUKCJI
+------------------------------
+Gdy aplikacja jest gotowa do wdrożenia na serwerze:
+
+1. Wpisz:
+   pnpm run build
+
+2. Uruchom produkcję:
+   pnpm start
+
+
+ROZWIĄZYWANIE PROBLEMÓW
+----------------------
+
+Problem: "pnpm: command not found"
+Rozwiązanie: Zainstaluj pnpm - wpisz: npm install -g pnpm
+
+Problem: Port 3000 jest już zajęty
+Rozwiązanie: Wpisz: PORT=3001 pnpm run dev
+
+Problem: Brak dostępu do Google Sheets
+Rozwiązanie: Sprawdź klucze API w konfiguracji projektu
+
+
+WAŻNE PLIKI
+-----------
+- package.json - konfiguracja projektu
+- next.config.mjs - ustawienia Next.js
+- tsconfig.json - konfiguracja TypeScript
+- app/ - kod aplikacji
+- components/ - komponenty UI
+- google-apps-script/ - skrypty dla Google Sheets
+
+
+WSPARCIE
+--------
+W przypadku problemów sprawdź dokumentację:
+- Next.js: https://nextjs.org/docs
+- React: https://react.dev
+- pnpm: https://pnpm.io
+
+================================================================================

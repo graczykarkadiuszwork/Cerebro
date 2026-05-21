@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>RCP · We SMILE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      background: #000;
+      color: #fff;
+      font-family: 'Space Mono', monospace;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Globalny focus ring — WCAG AA ── */
+    :focus-visible {
+      outline: 2px solid rgba(255,255,255,0.85);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+
+    .grid-bg {
+      background-image:
+        repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,255,255,0.04) 39px, rgba(255,255,255,0.04) 40px),
+        repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,0.04) 39px, rgba(255,255,255,0.04) 40px);
+    }
+
+    .screen {
+      display: none;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    .screen.active { display: flex; }
+
+    /* ── Shared ── */
+    .label {
+      font-family: 'Space Mono', monospace;
+      font-size: 8px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.45);
+    }
+    .muted { color: rgba(255,255,255,0.50); }
+    .mono { font-family: 'Space Mono', monospace; }
+    .grotesk { font-family: 'Space Grotesk', sans-serif; }
+
+    /* ── s-main ── */
+    #s-main { padding: 20px 20px 24px; }
+
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .status-clock {
+      font-size: 12px;
+      color: rgba(255,255,255,0.55);
+      letter-spacing: 0.05em;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .token-strip {
+      margin-top: 16px;
+      border: 1px solid rgba(255,255,255,0.20);
+      border-radius: 10px;
+      padding: 11px 14px;
+      background: rgba(255,255,255,0.02);
+    }
+    .token-strip-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 7px;
+    }
+    .token-strip-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .token-glyph { font-size: 16px; color: rgba(255,255,255,0.35); }
+    .token-label { font-size: 8px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(255,255,255,0.45); }
+    .token-countdown { font-size: 8px; color: rgba(255,255,255,0.50); font-variant-numeric: tabular-nums; }
+    .token-code { font-size: 13px; letter-spacing: 0.15em; color: rgba(255,255,255,0.65); margin-bottom: 8px; }
+    .token-bar-wrap { height: 2px; background: rgba(255,255,255,0.12); border-radius: 1px; overflow: hidden; margin-bottom: 6px; }
+    .token-bar-fill { height: 2px; background: #fff; width: 100%; transition: width 1s linear, background 0.3s; }
+    .token-hint { font-size: 7px; letter-spacing: 0.15em; color: rgba(255,255,255,0.30); }
+
+    .separator { height: 1px; background: rgba(255,255,255,0.10); margin-top: 16px; }
+
+    .profile-row {
+      margin-top: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .profile-name {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 36px;
+      font-weight: 700;
+      letter-spacing: -1px;
+      color: #fff;
+      line-height: 1.1;
+    }
+    .profile-meta { font-size: 9px; color: rgba(255,255,255,0.45); margin-top: 5px; letter-spacing: 0.08em; }
+
+    .switch-btn {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.25);
+      background: transparent;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: border-color 0.15s;
+    }
+    .switch-btn:hover { border-color: rgba(255,255,255,0.70); }
+
+    /* ── Pole tokenu ── */
+    .token-input-wrap { margin-top: 20px; }
+    .token-input-label { font-size: 8px; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(255,255,255,0.45); margin-bottom: 8px; }
+    .token-input {
+      width: 100%;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.22);
+      border-radius: 10px;
+      padding: 13px 14px;
+      font-family: 'Space Mono', monospace;
+      font-size: 15px;
+      letter-spacing: 0.15em;
+      color: #fff;
+      outline: none;
+      text-transform: lowercase;
+      transition: border-color 0.15s;
+    }
+    .token-input:focus { border-color: rgba(255,255,255,0.65); }
+    .token-input.error { border-color: rgba(255,180,180,0.65); }
+    .field-error { font-size: 8px; color: rgba(255,200,200,0.85); margin-top: 6px; letter-spacing: 0.10em; min-height: 14px; }
+
+    /* ── Pole PINu ── */
+    .pin-input-wrap { margin-top: 14px; }
+    .pin-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .pin-digit {
+      flex: 1;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.22);
+      border-radius: 10px;
+      padding: 13px 6px;
+      font-family: 'Space Mono', monospace;
+      font-size: 20px;
+      letter-spacing: 0.1em;
+      color: #fff;
+      outline: none;
+      text-align: center;
+      -webkit-appearance: none;
+      -moz-appearance: textfield;
+      transition: border-color 0.15s;
+    }
+    .pin-digit:focus { border-color: rgba(255,255,255,0.65); }
+    .pin-digit.error { border-color: rgba(255,180,180,0.65); }
+    /* Ukryj strzalki w input[number] */
+    .pin-digit::-webkit-outer-spin-button,
+    .pin-digit::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .pin-error { font-size: 8px; color: rgba(255,200,200,0.85); margin-top: 6px; letter-spacing: 0.10em; min-height: 14px; }
+
+    .spacer { flex: 1; }
+
+    .action-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .action-btn {
+      height: 148px;
+      border-radius: 14px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: left;
+      border: 1px solid;
+    }
+    /* Przyjscie */
+    .action-btn-arrive {
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(255,255,255,0.30);
+    }
+    .action-btn-arrive:hover, .action-btn-arrive:focus-visible {
+      background: #fff;
+      border-color: #fff;
+    }
+    .action-btn-arrive:hover .btn-icon,
+    .action-btn-arrive:hover .btn-label,
+    .action-btn-arrive:hover .btn-sublabel,
+    .action-btn-arrive:focus-visible .btn-icon,
+    .action-btn-arrive:focus-visible .btn-label,
+    .action-btn-arrive:focus-visible .btn-sublabel { color: #000 !important; }
+    /* Wyjscie */
+    .action-btn-leave {
+      background: transparent;
+      border-color: rgba(255,255,255,0.22);
+    }
+    .action-btn-leave:hover, .action-btn-leave:focus-visible {
+      border-color: rgba(255,255,255,0.70);
+    }
+
+    .btn-icon { font-size: 30px; line-height: 1; }
+    .btn-arrive-icon { color: rgba(255,255,255,0.70); }
+    .btn-leave-icon  { color: rgba(255,255,255,0.60); }
+    .btn-label { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 3px; }
+    .btn-arrive-label { color: rgba(255,255,255,0.70); }
+    .btn-leave-label  { color: rgba(255,255,255,0.60); }
+    .btn-sublabel { font-size: 8px; color: rgba(255,255,255,0.40); }
+
+    /* ── s-select ── */
+    #s-select { padding: 48px 24px 32px; }
+    .select-heading { font-family: 'Space Grotesk', sans-serif; font-size: 28px; font-weight: 700; letter-spacing: -0.5px; color: #fff; }
+    .select-hint { font-size: 9px; color: rgba(255,255,255,0.45); margin-top: 6px; letter-spacing: 0.1em; }
+    .employee-list { display: flex; flex-direction: column; gap: 8px; margin-top: 32px; }
+    .employee-item {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 12px;
+      padding: 16px 18px;
+      display: flex; align-items: center; justify-content: space-between;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: left; width: 100%;
+    }
+    .employee-item:hover, .employee-item:focus-visible {
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(255,255,255,0.45);
+    }
+    .emp-name { font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 700; color: #fff; letter-spacing: -0.3px; }
+    .emp-meta { font-size: 9px; color: rgba(255,255,255,0.45); margin-top: 3px; letter-spacing: 0.08em; }
+    .emp-chevron { color: rgba(255,255,255,0.35); flex-shrink: 0; }
+    .footer-legal { margin-top: auto; padding-top: 32px; font-size: 7px; letter-spacing: 0.15em; color: rgba(255,255,255,0.20); text-transform: uppercase; text-align: center; }
+
+    /* ── s-confirm ── */
+    #s-confirm { padding: 40px 24px 32px; }
+    .confirm-tag {
+      display: inline-flex; align-items: center; gap: 7px;
+      border: 1px solid rgba(255,255,255,0.20);
+      border-radius: 20px; padding: 6px 12px;
+      align-self: flex-start; margin-bottom: 32px;
+    }
+    .confirm-tag-glyph { font-size: 14px; color: rgba(255,255,255,0.40); }
+    .confirm-tag-text { font-size: 8px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(255,255,255,0.45); }
+    .confirm-name { font-family: 'Space Grotesk', sans-serif; font-size: 54px; font-weight: 700; letter-spacing: -2px; color: #fff; line-height: 1; margin-bottom: 8px; }
+    .confirm-role { font-size: 9px; color: rgba(255,255,255,0.45); letter-spacing: 0.12em; margin-bottom: 28px; }
+    .confirm-action-label { font-size: 8px; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(255,255,255,0.45); margin-bottom: 6px; }
+    .confirm-action { font-family: 'Space Grotesk', sans-serif; font-size: 28px; font-weight: 700; color: #fff; margin-bottom: 24px; }
+    .meta-table { border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; margin-bottom: 28px; overflow: hidden; }
+    .meta-row { display: flex; justify-content: space-between; align-items: center; padding: 11px 16px; }
+    .meta-row + .meta-row { border-top: 1px solid rgba(255,255,255,0.08); }
+    .meta-key { font-size: 8px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(255,255,255,0.40); }
+    .meta-val { font-size: 11px; color: rgba(255,255,255,0.60); letter-spacing: 0.05em; }
+    .meta-val.highlight { color: #fff; }
+    .confirm-btn {
+      width: 100%; background: #fff; color: #000;
+      border: none; border-radius: 14px; padding: 20px;
+      font-family: 'Space Mono', monospace; font-size: 10px; font-weight: 700;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      cursor: pointer; margin-bottom: 12px; transition: opacity 0.15s;
+    }
+    .confirm-btn:hover { opacity: 0.88; }
+    .confirm-btn:disabled { opacity: 0.4; cursor: default; }
+    .cancel-btn {
+      background: transparent; border: none;
+      color: rgba(255,255,255,0.45);
+      font-family: 'Space Mono', monospace; font-size: 10px;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      cursor: pointer; padding: 8px; transition: color 0.15s;
+      text-align: center; width: 100%;
+    }
+    .cancel-btn:hover { color: #fff; }
+
+    /* ── s-success ── */
+    #s-success { align-items: center; justify-content: center; padding: 40px 24px; }
+    .success-ring-outer {
+      position: relative; width: 80px; height: 80px; margin-bottom: 28px;
+    }
+    .success-ring-outer::before {
+      content: ''; position: absolute; inset: 0;
+      border-radius: 50%; border: 1px solid rgba(255,255,255,0.10);
+    }
+    .success-ring-outer::after {
+      content: ''; position: absolute; inset: 8px;
+      border-radius: 50%; border: 1px solid rgba(255,255,255,0.25);
+    }
+    .success-check {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .success-name { font-family: 'Space Grotesk', sans-serif; font-size: 44px; font-weight: 700; letter-spacing: -1.5px; color: #fff; text-align: center; margin-bottom: 6px; }
+    .success-sub { font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(255,255,255,0.45); margin-bottom: 20px; }
+    .success-time-pill {
+      border: 1px solid rgba(255,255,255,0.22); border-radius: 20px;
+      padding: 8px 18px; font-size: 14px; color: #fff;
+      letter-spacing: 0.08em; font-variant-numeric: tabular-nums; margin-bottom: 32px;
+    }
+    .success-bar-wrap { width: 160px; height: 2px; background: rgba(255,255,255,0.15); border-radius: 1px; overflow: hidden; margin-bottom: 12px; }
+    .success-bar-fill { height: 2px; background: #fff; width: 100%; transition: width 50ms linear; }
+    .success-hint { font-size: 8px; color: rgba(255,255,255,0.30); letter-spacing: 0.12em; }
+
+    /* ── s-error ── */
+    #s-error { align-items: center; justify-content: center; padding: 40px 24px; text-align: center; }
+    .error-icon {
+      width: 80px; height: 80px;
+      border: 1px solid rgba(255,255,255,0.20);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 28px;
+    }
+    .error-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 24px; font-weight: 700; color: #fff;
+      letter-spacing: -0.5px; margin-bottom: 10px;
+    }
+    .error-message {
+      font-size: 11px; color: rgba(255,255,255,0.55);
+      line-height: 1.6; letter-spacing: 0.04em;
+      max-width: 280px; margin-bottom: 32px;
+    }
+    .error-attempts {
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 10px; padding: 10px 16px;
+      font-size: 9px; color: rgba(255,255,255,0.50);
+      letter-spacing: 0.14em; text-transform: uppercase;
+      margin-bottom: 24px;
+    }
+    .error-retry-btn {
+      width: 100%; background: #fff; color: #000;
+      border: none; border-radius: 14px; padding: 18px;
+      font-family: 'Space Mono', monospace; font-size: 10px; font-weight: 700;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      cursor: pointer; margin-bottom: 12px; transition: opacity 0.15s;
+    }
+    .error-retry-btn:hover { opacity: 0.88; }
+    .error-back-btn {
+      background: transparent; border: none;
+      color: rgba(255,255,255,0.40);
+      font-family: 'Space Mono', monospace; font-size: 10px;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      cursor: pointer; padding: 8px; transition: color 0.15s;
+      text-align: center; width: 100%;
+    }
+    .error-back-btn:hover { color: #fff; }
+
+    /* ── s-loading ── */
+    #s-loading { align-items: center; justify-content: center; padding: 40px; }
+    .loading-text { font-size: 9px; letter-spacing: 0.22em; color: rgba(255,255,255,0.45); text-transform: uppercase; }
+
+    /* ── Animacja pulsowania (timeout) ── */
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .pulsing { animation: pulse 1.2s ease-in-out infinite; }
+  </style>
+</head>
+<body class="grid-bg">
+
+<!-- LOADING -->
+<div id="s-loading" class="screen active" role="status" aria-live="polite">
+  <div class="loading-text" id="loading-text">Ladowanie...</div>
+</div>
+
+<!-- SELECT EMPLOYEE -->
+<div id="s-select" class="screen" role="main" aria-label="Wybor pracownika">
+  <div class="label" id="select-clinic-label">We SMILE · Warszawa</div>
+  <div class="select-heading" style="margin-top:12px">Wybierz profil</div>
+  <div class="select-hint">Profil zostanie zapamietany na tym urzadzeniu</div>
+  <div class="employee-list" id="employee-list" role="list"></div>
+  <div class="footer-legal">Art. 149 KP · Ewidencja Czasu Pracy · RODO Art. 32</div>
+</div>
+
+<!-- MAIN -->
+<div id="s-main" class="screen" role="main" aria-label="Glowny ekran rejestracji">
+  <div class="status-bar">
+    <div class="label" id="main-clinic-label">We SMILE · Warszawa</div>
+    <div class="status-clock" id="main-clock" aria-live="off">00:00:00</div>
+  </div>
+
+  <!-- Token strip -->
+  <div class="token-strip" role="status" aria-label="Status tokenu">
+    <div class="token-strip-header">
+      <div class="token-strip-left">
+        <span class="token-glyph" aria-hidden="true">◈</span>
+        <span class="token-label">HMAC-SHA256 · Token aktywny</span>
+      </div>
+      <span class="token-countdown" id="token-countdown" aria-label="Czas do rotacji tokenu">60s</span>
+    </div>
+    <div class="token-code" id="token-display" aria-label="Aktualny token">— — — —</div>
+    <div class="token-bar-wrap" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" aria-label="Pasek waznosci tokenu">
+      <div class="token-bar-fill" id="token-bar"></div>
+    </div>
+    <div class="token-hint">Klucz rotuje co 60s · SHA-256 · Token + PIN wymagane</div>
+  </div>
+
+  <div class="separator"></div>
+
+  <!-- Profile -->
+  <div class="profile-row">
+    <div>
+      <div class="label">Zalogowany jako</div>
+      <div class="profile-name" id="main-name">—</div>
+      <div class="profile-meta" id="main-meta">—</div>
+    </div>
+    <button class="switch-btn" id="switch-btn" aria-label="Zmien pracownika">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <circle cx="8" cy="5" r="2.5" stroke="rgba(255,255,255,0.65)" stroke-width="1.2"/>
+        <path d="M2.5 13.5C2.5 11 4.8 9 8 9s5.5 2 5.5 4.5" stroke="rgba(255,255,255,0.65)" stroke-width="1.2" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Token input -->
+  <div class="token-input-wrap">
+    <div class="token-input-label" id="token-input-label">Token z tabletu (4 znaki)</div>
+    <input
+      type="text"
+      id="token-input"
+      class="token-input"
+      placeholder="np. a3f9"
+      maxlength="16"
+      autocomplete="off"
+      autocorrect="off"
+      spellcheck="false"
+      aria-labelledby="token-input-label"
+      aria-describedby="token-error"
+    >
+    <div class="field-error" id="token-error" role="alert" aria-live="assertive"></div>
+  </div>
+
+  <!-- PIN input -->
+  <div class="pin-input-wrap">
+    <div class="token-input-label" id="pin-label">Twoj PIN (4 cyfry)</div>
+    <div class="pin-row" role="group" aria-labelledby="pin-label">
+      <input type="number" class="pin-digit" id="pin-0" min="0" max="9" maxlength="1" inputmode="numeric" placeholder="·" aria-label="Cyfra PIN 1">
+      <input type="number" class="pin-digit" id="pin-1" min="0" max="9" maxlength="1" inputmode="numeric" placeholder="·" aria-label="Cyfra PIN 2">
+      <input type="number" class="pin-digit" id="pin-2" min="0" max="9" maxlength="1" inputmode="numeric" placeholder="·" aria-label="Cyfra PIN 3">
+      <input type="number" class="pin-digit" id="pin-3" min="0" max="9" maxlength="1" inputmode="numeric" placeholder="·" aria-label="Cyfra PIN 4">
+    </div>
+    <div class="pin-error" id="pin-error" role="alert" aria-live="assertive"></div>
+  </div>
+
+  <!-- Action buttons -->
+  <div class="action-grid">
+    <button class="action-btn action-btn-arrive" id="btn-arrive" aria-label="Zarejestruj przyjscie">
+      <div class="btn-icon btn-arrive-icon" aria-hidden="true">↑</div>
+      <div>
+        <div class="btn-label btn-arrive-label">Przyjscie</div>
+        <div class="btn-sublabel">Rejestruj wejscie</div>
+      </div>
+    </button>
+    <button class="action-btn action-btn-leave" id="btn-leave" aria-label="Zarejestruj wyjscie">
+      <div class="btn-icon btn-leave-icon" aria-hidden="true">↓</div>
+      <div>
+        <div class="btn-label btn-leave-label">Wyjscie</div>
+        <div class="btn-sublabel">Rejestruj wyjscie</div>
+      </div>
+    </button>
+  </div>
+</div>
+
+<!-- CONFIRM -->
+<div id="s-confirm" class="screen" role="main" aria-label="Potwierdzenie rejestracji">
+  <div class="confirm-tag">
+    <span class="confirm-tag-glyph" aria-hidden="true">◈</span>
+    <span class="confirm-tag-text">Weryfikacja obecnosci</span>
+  </div>
+  <div class="confirm-name" id="confirm-name">—</div>
+  <div class="confirm-role" id="confirm-role">—</div>
+  <div class="confirm-action-label">Rejestrujesz</div>
+  <div class="confirm-action" id="confirm-action">—</div>
+  <div class="meta-table" role="table" aria-label="Szczegoly rejestracji">
+    <div class="meta-row" role="row"><span class="meta-key" role="rowheader">Godzina</span><span class="meta-val highlight" id="meta-time" role="cell">—</span></div>
+    <div class="meta-row" role="row"><span class="meta-key" role="rowheader">Data</span><span class="meta-val" id="meta-date" role="cell">—</span></div>
+    <div class="meta-row" role="row"><span class="meta-key" role="rowheader">Rok urodzenia</span><span class="meta-val" id="meta-year" role="cell">—</span></div>
+    <div class="meta-row" role="row"><span class="meta-key" role="rowheader">Token</span><span class="meta-val" id="meta-token" role="cell">—</span></div>
+    <div class="meta-row" role="row"><span class="meta-key" role="rowheader">Klinika</span><span class="meta-val" id="meta-clinic" role="cell">—</span></div>
+  </div>
+  <button class="confirm-btn" id="confirm-btn">Potwierdzam — to ja</button>
+  <button class="cancel-btn" id="cancel-btn">Anuluj</button>
+</div>
+
+<!-- SUCCESS -->
+<div id="s-success" class="screen" role="main" aria-label="Rejestracja zakonczona sukcesem" aria-live="polite">
+  <div class="success-ring-outer" aria-hidden="true">
+    <div class="success-check">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <path d="M4 10l4 4 8-8" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+  </div>
+  <div class="success-name" id="success-name">—</div>
+  <div class="success-sub" id="success-sub">—</div>
+  <div class="success-time-pill" id="success-time">—</div>
+  <div class="success-bar-wrap" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="Odliczanie powrotu"><div class="success-bar-fill" id="success-bar"></div></div>
+  <div class="success-hint">Powrot za 3s</div>
+</div>
+
+<!-- ERROR -->
+<div id="s-error" class="screen" role="alert" aria-label="Blad rejestracji">
+  <div class="error-icon" aria-hidden="true">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <path d="M12 8v5M12 16h.01" stroke="rgba(255,255,255,0.70)" stroke-width="1.5" stroke-linecap="round"/>
+      <circle cx="12" cy="12" r="9" stroke="rgba(255,255,255,0.25)" stroke-width="1.2"/>
+    </svg>
+  </div>
+  <div class="error-title" id="error-title">Blad rejestracji</div>
+  <div class="error-message" id="error-message">Sprobuj ponownie.</div>
+  <div class="error-attempts" id="error-attempts" style="display:none"></div>
+  <button class="error-retry-btn" id="error-retry-btn">Sprobuj ponownie</button>
+  <button class="error-back-btn" id="error-back-btn">Powrot do ekranu glownego</button>
+</div>
+
+<script>
+// ── Stan aplikacji ─────────────────────────────────────────────
+var selectedEmployee = null;
+var currentAction = null;
+var employeesList = [];
+var clinicData = { nazwa: 'We SMILE', miasto: 'Warszawa' };
+var clockInterval = null;
+var successTimer = null;
+var requestTimer = null; // timeout GAS request
+var REQUEST_TIMEOUT_MS = 10000;
+
+// ── localStorage z pelnym fallback ────────────────────────────
+function saveEmployee(emp) {
+  try {
+    localStorage.setItem('rcp_emp_v4', JSON.stringify(emp));
+  } catch(e) { /* Private mode lub brak dostępu */ }
+}
+function loadEmployee() {
+  try {
+    var s = localStorage.getItem('rcp_emp_v4');
+    if (!s) return null;
+    var parsed = JSON.parse(s);
+    // Walidacja — musi miec id i name
+    if (!parsed || !parsed.id || !parsed.name) return null;
+    return parsed;
+  } catch(e) { return null; }
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+function pad2(n) { return ('0' + n).slice(-2); }
+function formatTime(d) { return pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds()); }
+function formatDate(d) {
+  var days   = ['Niedz.','Pon.','Wt.','Sr.','Czw.','Pt.','Sob.'];
+  var months = ['sty','lut','mar','kwi','maj','cze','lip','sie','wrz','paz','lis','gru'];
+  return days[d.getDay()] + ' ' + d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+}
+function formatTokenDisplay(hex) {
+  return hex.replace(/(.{4})/g, '$1 · ').replace(/ · $/, '');
+}
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+function showScreen(id) {
+  var screens = document.querySelectorAll('.screen');
+  for (var i = 0; i < screens.length; i++) screens[i].classList.remove('active');
+  var el = document.getElementById(id);
+  if (el) {
+    el.classList.add('active');
+    // Przesuniecie focusu na pierwszy element interaktywny dla czytnikow ekranu
+    var firstFocusable = el.querySelector('button, input, [tabindex="0"]');
+    if (firstFocusable) firstFocusable.focus();
+  }
+}
+
+// ── Zegar + pasek tokenu ──────────────────────────────────────
+function startClock() {
+  if (clockInterval) clearInterval(clockInterval);
+  function tick() {
+    var now = new Date();
+    var secsIn = Math.floor((now.getTime() % 60000) / 1000);
+    var secsLeft = 60 - secsIn;
+    var clockEl = document.getElementById('main-clock');
+    if (clockEl) clockEl.textContent = formatTime(now);
+    var cd = document.getElementById('token-countdown');
+    if (cd) cd.textContent = secsLeft + 's';
+    var bar = document.getElementById('token-bar');
+    if (bar) {
+      var pct = (secsLeft / 60) * 100;
+      bar.style.width = pct + '%';
+      bar.style.background = secsLeft < 12 ? 'rgba(255,255,255,0.5)' : '#fff';
+    }
+  }
+  tick();
+  clockInterval = setInterval(tick, 1000);
+}
+
+// Token refresh — co 55s i przy starcie
+function startTokenRefresh() {
+  function fetchToken() {
+    google.script.run
+      .withSuccessHandler(function(data) {
+        if (data && data.token) {
+          var el = document.getElementById('token-display');
+          if (el) el.textContent = formatTokenDisplay(data.token.toLowerCase());
+        }
+      })
+      .withFailureHandler(function() {
+        // Cichy blad — token bedzie odswiezony przy nastepnej probie
+      })
+      .generujTokenTablet();
+  }
+  fetchToken();
+  setInterval(fetchToken, 55000);
+}
+
+// ── Lista pracownikow ─────────────────────────────────────────
+function buildEmployeeList() {
+  var list = document.getElementById('employee-list');
+  if (!list) return;
+  list.innerHTML = '';
+
+  if (!employeesList || employeesList.length === 0) {
+    var empty = document.createElement('div');
+    empty.style.cssText = 'color:rgba(255,255,255,0.4);font-size:11px;padding:20px 0;text-align:center;';
+    empty.textContent = 'Brak aktywnych pracownikow w bazie.';
+    list.appendChild(empty);
+    return;
+  }
+
+  for (var i = 0; i < employeesList.length; i++) {
+    (function(emp) {
+      var btn = document.createElement('button');
+      btn.className = 'employee-item';
+      btn.setAttribute('role', 'listitem');
+      btn.setAttribute('aria-label', 'Wybierz: ' + emp.name + ', ' + emp.role);
+      btn.innerHTML =
+        '<div>' +
+          '<div class="emp-name">' + escapeHtml(emp.name) + '</div>' +
+          '<div class="emp-meta">' + escapeHtml(emp.role) + ' · ur. ' + escapeHtml(emp.year) + '</div>' +
+        '</div>' +
+        '<svg class="emp-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
+          '<path d="M6 3l5 5-5 5" stroke="rgba(255,255,255,0.40)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+        '</svg>';
+      btn.addEventListener('click', function() {
+        selectedEmployee = emp;
+        saveEmployee(emp);
+        renderMainScreen();
+        showScreen('s-main');
+      });
+      list.appendChild(btn);
+    })(employeesList[i]);
+  }
+}
+
+function renderMainScreen() {
+  if (!selectedEmployee) return;
+  var nameEl = document.getElementById('main-name');
+  var metaEl = document.getElementById('main-meta');
+  var clinicEl = document.getElementById('main-clinic-label');
+  if (nameEl) nameEl.textContent = selectedEmployee.name;
+  if (metaEl) metaEl.textContent = 'ur. ' + selectedEmployee.year + ' · ' + selectedEmployee.role;
+  if (clinicEl && clinicData) {
+    clinicEl.textContent = clinicData.nazwa + ' · ' + clinicData.miasto;
+  }
+}
+
+// ── PIN helpers ────────────────────────────────────────────────
+function getPinValue() {
+  var pin = '';
+  for (var i = 0; i < 4; i++) {
+    var el = document.getElementById('pin-' + i);
+    if (!el) return '';
+    pin += el.value.replace(/\D/g,'').substring(0,1);
+  }
+  return pin;
+}
+
+function clearPin() {
+  for (var i = 0; i < 4; i++) {
+    var el = document.getElementById('pin-' + i);
+    if (el) { el.value = ''; el.classList.remove('error'); }
+  }
+  var err = document.getElementById('pin-error');
+  if (err) err.textContent = '';
+}
+
+function setupPinInputs() {
+  for (var i = 0; i < 4; i++) {
+    (function(idx) {
+      var el = document.getElementById('pin-' + idx);
+      if (!el) return;
+
+      el.addEventListener('input', function() {
+        // Dopuszczaj tylko jedna cyfre
+        var v = this.value.replace(/\D/g,'');
+        this.value = v ? v.substring(v.length - 1) : '';
+        // Auto-fokus na nastepne pole
+        if (this.value && idx < 3) {
+          var next = document.getElementById('pin-' + (idx + 1));
+          if (next) next.focus();
+        }
+        // Wyczysc blad przy wpisywaniu
+        this.classList.remove('error');
+        var errEl = document.getElementById('pin-error');
+        if (errEl) errEl.textContent = '';
+      });
+
+      el.addEventListener('keydown', function(e) {
+        // Backspace — wróc do poprzedniego pola
+        if (e.key === 'Backspace' && !this.value && idx > 0) {
+          var prev = document.getElementById('pin-' + (idx - 1));
+          if (prev) { prev.value = ''; prev.focus(); }
+        }
+      });
+
+      // Zapobiegaj wpisywaniu wiecej niz 1 znaku przez select-all+paste
+      el.addEventListener('paste', function(e) {
+        e.preventDefault();
+        var pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g,'');
+        for (var k = 0; k < Math.min(pasted.length, 4 - idx); k++) {
+          var targetEl = document.getElementById('pin-' + (idx + k));
+          if (targetEl) targetEl.value = pasted[k];
+        }
+        var lastFilled = Math.min(idx + pasted.length, 3);
+        var lastEl = document.getElementById('pin-' + lastFilled);
+        if (lastEl) lastEl.focus();
+      });
+    })(i);
+  }
+}
+
+// ── Inicjalizacja ──────────────────────────────────────────────
+window.onload = function() {
+  startClock();
+  setupPinInputs();
+
+  google.script.run
+    .withSuccessHandler(function(data) {
+      employeesList = data.pracownicy || [];
+      clinicData = data.klinika || { nazwa: 'We SMILE', miasto: 'Warszawa' };
+
+      var saved = loadEmployee();
+      if (saved) {
+        // Zweryfikuj ze zapisany pracownik nadal jest aktywny na liscie
+        var stilActive = false;
+        for (var k = 0; k < employeesList.length; k++) {
+          if (employeesList[k].id === saved.id) { stilActive = true; break; }
+        }
+        if (stilActive) {
+          selectedEmployee = saved;
+          renderMainScreen();
+          showScreen('s-main');
+        } else {
+          buildEmployeeList();
+          showScreen('s-select');
+        }
+      } else {
+        buildEmployeeList();
+        var clinicLabel = document.getElementById('select-clinic-label');
+        if (clinicLabel) clinicLabel.textContent = clinicData.nazwa + ' · ' + clinicData.miasto;
+        showScreen('s-select');
+      }
+
+      startTokenRefresh();
+    })
+    .withFailureHandler(function(err) {
+      var txt = document.getElementById('loading-text');
+      if (txt) txt.textContent = 'Blad polaczenia. Odswiez strone.';
+    })
+    .pobierzDaneStartowe();
+};
+
+// ── Zmiana pracownika ─────────────────────────────────────────
+document.getElementById('switch-btn').addEventListener('click', function() {
+  buildEmployeeList();
+  showScreen('s-select');
+});
+
+// ── Akcje ─────────────────────────────────────────────────────
+document.getElementById('btn-arrive').addEventListener('click', function() { handleAction('P'); });
+document.getElementById('btn-leave').addEventListener('click', function() { handleAction('W'); });
+
+function handleAction(akcja) {
+  var tokenVal  = document.getElementById('token-input').value.trim();
+  var pinVal    = getPinValue();
+  var tokenErr  = document.getElementById('token-error');
+  var pinErr    = document.getElementById('pin-error');
+  var tokenInp  = document.getElementById('token-input');
+  var hasError  = false;
+
+  // Walidacja tokenu
+  if (!tokenVal || tokenVal.replace(/[^a-fA-F0-9]/g,'').length < 4) {
+    if (tokenErr) tokenErr.textContent = 'Wpisz token z tabletu (min. 4 znaki hex).';
+    if (tokenInp) tokenInp.classList.add('error');
+    hasError = true;
+  } else {
+    if (tokenErr) tokenErr.textContent = '';
+    if (tokenInp) tokenInp.classList.remove('error');
+  }
+
+  // Walidacja PINu
+  if (pinVal.length !== 4) {
+    if (pinErr) pinErr.textContent = 'Wpisz pelny 4-cyfrowy PIN.';
+    for (var i = 0; i < 4; i++) {
+      var d = document.getElementById('pin-' + i);
+      if (d && !d.value) d.classList.add('error');
+    }
+    hasError = true;
+  } else {
+    if (pinErr) pinErr.textContent = '';
+  }
+
+  if (hasError) return;
+
+  currentAction = akcja;
+  showConfirmScreen(akcja);
+}
+
+function showConfirmScreen(akcja) {
+  var now = new Date();
+  var tokenInput = document.getElementById('token-input').value.trim();
+  var actionLabel = akcja === 'P' ? 'Przyjscie' : 'Wyjscie';
+
+  document.getElementById('confirm-name').textContent   = selectedEmployee.name;
+  document.getElementById('confirm-role').textContent   = selectedEmployee.role;
+  document.getElementById('confirm-action').textContent = actionLabel;
+  document.getElementById('meta-time').textContent      = formatTime(now);
+  document.getElementById('meta-date').textContent      = formatDate(now);
+  document.getElementById('meta-year').textContent      = 'ur. ' + selectedEmployee.year;
+  document.getElementById('meta-token').textContent     = tokenInput.substring(0, 8) + (tokenInput.length > 8 ? '…' : '');
+  document.getElementById('meta-clinic').textContent    = clinicData.nazwa + ', ' + clinicData.miasto;
+
+  showScreen('s-confirm');
+}
+
+// ── Potwierdzenie ──────────────────────────────────────────────
+document.getElementById('confirm-btn').addEventListener('click', function() {
+  var btn = this;
+  btn.disabled = true;
+  btn.textContent = 'Wysylanie...';
+
+  var tokenInput = document.getElementById('token-input').value.trim();
+  var pinVal = getPinValue();
+
+  // Timeout — jesli GAS nie odpowie w REQUEST_TIMEOUT_MS
+  if (requestTimer) clearTimeout(requestTimer);
+  requestTimer = setTimeout(function() {
+    btn.disabled = false;
+    btn.textContent = 'Potwierdzam — to ja';
+    showErrorScreen(
+      'Brak odpowiedzi serwera',
+      'Serwer nie odpowiedzial w ciagu 10 sekund. Sprawdz polaczenie z internetem i sprobuj ponownie.',
+      null,
+      false
+    );
+  }, REQUEST_TIMEOUT_MS);
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      clearTimeout(requestTimer);
+      btn.disabled = false;
+      btn.textContent = 'Potwierdzam — to ja';
+
+      if (result && result.success) {
+        showSuccessScreen(result);
+      } else {
+        var msg = (result && result.message) ? result.message : 'Nieznany blad serwera.';
+        var left = (result && result.attemptsLeft !== undefined) ? result.attemptsLeft : null;
+        showErrorScreen('Blad rejestracji', msg, left, true);
+      }
+    })
+    .withFailureHandler(function(err) {
+      clearTimeout(requestTimer);
+      btn.disabled = false;
+      btn.textContent = 'Potwierdzam — to ja';
+      showErrorScreen(
+        'Blad polaczenia',
+        'Nie mozna polaczyc sie z serwerem. Sprawdz WiFi i sprobuj ponownie.',
+        null,
+        false
+      );
+    })
+    .weryfikujIRejestruj({
+      employeeId: selectedEmployee.id,
+      tokenInput: tokenInput,
+      pinInput:   pinVal,
+      akcja:      currentAction,
+      timestamp:  new Date().getTime(),
+    });
+});
+
+// ── Anuluj ─────────────────────────────────────────────────────
+document.getElementById('cancel-btn').addEventListener('click', function() {
+  showScreen('s-main');
+});
+
+// ── Ekran sukcesu ──────────────────────────────────────────────
+function showSuccessScreen(result) {
+  var actionSub = currentAction === 'P' ? 'Zarejestrowano wejscie' : 'Zarejestrowano wyjscie';
+  document.getElementById('success-name').textContent = selectedEmployee.name;
+  document.getElementById('success-sub').textContent  = actionSub;
+  document.getElementById('success-time').textContent = result.godzina || formatTime(new Date());
+
+  var bar = document.getElementById('success-bar');
+  bar.style.width = '100%';
+
+  // Wyczysc pola
+  document.getElementById('token-input').value = '';
+  clearPin();
+
+  showScreen('s-success');
+
+  var elapsed = 0;
+  if (successTimer) clearInterval(successTimer);
+  successTimer = setInterval(function() {
+    elapsed += 50;
+    var pct = Math.max(0, 100 - (elapsed / 3000) * 100);
+    bar.style.width = pct + '%';
+    if (elapsed >= 3000) {
+      clearInterval(successTimer);
+      showScreen('s-main');
+    }
+  }, 50);
+}
+
+// ── Ekran bledu ────────────────────────────────────────────────
+function showErrorScreen(title, message, attemptsLeft, showRetry) {
+  document.getElementById('error-title').textContent   = title;
+  document.getElementById('error-message').textContent = message;
+
+  var attemptsEl = document.getElementById('error-attempts');
+  if (attemptsLeft !== null && attemptsLeft !== undefined) {
+    attemptsEl.textContent = 'Pozostalo prob przed blokada: ' + attemptsLeft;
+    attemptsEl.style.display = 'block';
+  } else {
+    attemptsEl.style.display = 'none';
+  }
+
+  var retryBtn = document.getElementById('error-retry-btn');
+  retryBtn.style.display = showRetry ? 'block' : 'none';
+
+  showScreen('s-error');
+}
+
+// Przycisk retry — wróc do ekranu potwierdzenia
+document.getElementById('error-retry-btn').addEventListener('click', function() {
+  showConfirmScreen(currentAction);
+});
+
+// Przycisk powrot — wróc do glownego
+document.getElementById('error-back-btn').addEventListener('click', function() {
+  showScreen('s-main');
+});
+</script>
+</body>
+</html>
