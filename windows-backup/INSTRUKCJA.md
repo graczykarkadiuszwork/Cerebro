@@ -1,7 +1,32 @@
-# Automatyczny backup Windows — Instrukcja
+# Automatyczny backup z wersjonowaniem — Instrukcja
 
-Backup kopiuje wskazany folder na jeden lub wiele dysków o wybranej godzinie.
-Działa w tle, nie spowalnia komputera, zapisuje logi z każdego uruchomienia.
+System przeznaczony do archiwizacji dokumentacji medycznej.
+**Nic nie jest nigdy kasowane.** Każda zmiana dokumentu jest pamiętana z datą i godziną.
+
+---
+
+## Jak działa wersjonowanie
+
+Na każdym dysku docelowym powstają dwa podfoldery:
+
+```
+D:\Backup\Dokumenty\
+├── aktualny\          ← zawsze najnowsza wersja wszystkich plików
+└── historia\
+    ├── 2025-05-23_0200\   ← pliki, które ZMIENIŁY SIĘ 23 maja o 02:00
+    ├── 2025-05-24_0200\   ← pliki, które ZMIENIŁY SIĘ 24 maja o 02:00
+    └── 2025-05-25_0200\   ← pliki, które ZMIENIŁY SIĘ 25 maja o 02:00
+```
+
+**Jak odczytać historię:**
+Każdy folder w `historia\` zawiera poprzednie wersje plików, które zmieniły się
+podczas tamtego backupu. Jeśli dokument był zmieniany 10 razy, masz 10 poprzednich
+wersji w 10 różnych folderach dat.
+
+**Co się nigdy nie dzieje:**
+- żaden plik nie jest kasowany — ani z `aktualny\`, ani z `historia\`
+- jeśli dysk zewnętrzny nie jest podłączony, backup do niego jest pominięty,
+  ale pozostałe miejsca są nadal kopiowane
 
 ---
 
@@ -9,15 +34,15 @@ Działa w tle, nie spowalnia komputera, zapisuje logi z każdego uruchomienia.
 
 ### Krok 1 — Skonfiguruj backup
 
-Otwórz plik **`KONFIGURACJA.ps1`** w Notatniku i ustaw trzy rzeczy:
+Otwórz plik **`KONFIGURACJA.ps1`** w Notatniku i ustaw:
 
 ```
-$FOLDER_ZRODLOWY = "C:\Users\TwojeImie\Dokumenty"   ← skąd kopiować
-$FOLDERY_DOCELOWE = @(                               ← dokąd kopiować
-    "D:\Backup\Dokumenty",
+$FOLDER_ZRODLOWY = "C:\Users\Jan\Dokumenty"   ← skąd kopiować
+$FOLDERY_DOCELOWE = @(
+    "D:\Backup\Dokumenty",                    ← dokąd (ile chcesz)
     "E:\Backup\Dokumenty"
 )
-$GODZINA = 2                                         ← o której godzinie (2 = 02:00)
+$GODZINA = 2    ← o której godzinie (2 = 02:00 w nocy)
 $MINUTA  = 0
 ```
 
@@ -29,24 +54,19 @@ Zapisz plik i zamknij.
 
 1. Kliknij **prawym przyciskiem** na plik `setup.ps1`
 2. Wybierz **"Uruchom z programem PowerShell jako administrator"**
-3. Potwierdź literą **T** i Enter
-4. Opcjonalnie uruchom backup testowy — wpisz **T** i Enter
+3. Sprawdź wyświetloną konfigurację i potwierdź literą **T**
+4. Opcjonalnie uruchom backup testowy — wpisz **T**
 
-Gotowe. Backup będzie uruchamiał się automatycznie każdej nocy.
-
----
-
-### Krok 3 — Sprawdź czy działa
-
-Po pierwszym automatycznym backupie zajrzyj do folderu **`logi\`** —
-znajdziesz tam plik `.log` z wynikami (OK lub ewentualne błędy).
+Gotowe. Od teraz backup uruchamia się automatycznie każdej nocy.
 
 ---
 
-## Zmiana ustawień po instalacji
+### Krok 3 — Sprawdź po pierwszym backupie
 
-Edytuj **`KONFIGURACJA.ps1`** i uruchom `setup.ps1` ponownie jako administrator.
-Stare zadanie zostanie automatycznie zastąpione nowym.
+Zajrzyj do folderu docelowego (np. `D:\Backup\Dokumenty\`):
+- podfolder `aktualny\` — bieżąca kopia wszystkich plików
+- podfolder `historia\` — tu będą trafiać poprzednie wersje
+- podfolder `logi\` — tu skrypt składa logi z każdego uruchomienia
 
 ---
 
@@ -55,79 +75,76 @@ Stare zadanie zostanie automatycznie zastąpione nowym.
 | Plik | Opis |
 |------|------|
 | `KONFIGURACJA.ps1` | **Edytuj ten plik** — wszystkie ustawienia |
-| `backup.ps1` | Główny skrypt backupu — nie edytuj |
-| `setup.ps1` | Instalator — uruchom raz jako administrator |
-| `logi\` | Folder z logami — tworzony automatycznie |
+| `backup.ps1` | Główna logika — nie edytuj |
+| `setup.ps1` | Instalator harmonogramu — uruchom raz jako administrator |
+| `logi\` | Logi sesji — tworzone automatycznie obok skryptów |
 
 ---
 
-## Dyski zewnętrzne i pendrive'y
+## Zmiana ustawień po instalacji
 
-Jeśli dysk docelowy nie jest podłączony w momencie backupu:
-- backup do tego dysku jest **pominięty** (nie powoduje błędu)
-- pozostałe miejsca docelowe są nadal kopiowane
-- w logu pojawia się wpis "POMINIĘTO: Dysk X: nie jest podłączony"
+Edytuj `KONFIGURACJA.ps1` i uruchom `setup.ps1` ponownie jako administrator.
+Stare zadanie zostanie zastąpione nowym.
 
 ---
 
-## Powiadomienia
+## Jak odzyskać poprzednią wersję dokumentu
 
-Gdy backup się zakończy, na pasku zadań pojawi się dymek z wynikiem:
-- zielony/szary = OK
-- żółty = pominięto (brak dysku)
-- czerwony = błąd (sprawdź log)
-
-Powiadomienia można wyłączyć w `KONFIGURACJA.ps1` ustawiając `$POWIADOMIENIA = $false`.
+1. Otwórz dysk docelowy (np. `D:\Backup\Dokumenty\`)
+2. Wejdź do folderu `historia\`
+3. Znajdź folder z datą bliską tej, kiedy dokument wyglądał tak jak chcesz
+4. Skopiuj plik stamtąd w wybrane miejsce
 
 ---
 
-## Logi
+## Ostrzeżenie o miejscu na dysku
 
-Logi zapisywane są w folderze `logi\` obok skryptów.
-Każdy backup tworzy nowy plik `backup_YYYY-MM-DD_HH-mm.log`.
-Logi starsze niż 30 dni kasowane są automatycznie (można zmienić w konfiguracji).
+Historia rośnie z każdym backupem — nic nie jest kasowane.
+Skrypt sprawdza wolne miejsce i wyświetla ostrzeżenie (dymek + wpis w logu),
+gdy zostaje mniej niż `$OSTRZEZENIE_GB` GB (domyślnie 20 GB).
+
+Gdy dysk zaczyna się zapełniać: podłącz większy dysk zewnętrzny
+i przenieś całą zawartość tam — struktura `aktualny\` i `historia\` jest samodzielna.
 
 ---
 
 ## Ręczne uruchomienie backupu
 
-**Sposób 1** — przez Harmonogram zadań:
-1. Otwórz Start → wpisz "Harmonogram zadań"
-2. Znajdź zadanie `AutoBackup_Cerebro`
-3. Kliknij prawym → "Uruchom"
+**Przez Harmonogram zadań:**
+Start → „Harmonogram zadań" → `AutoBackup_Cerebro` → prawy klik → „Uruchom"
 
-**Sposób 2** — bezpośrednio z PowerShell:
+**Przez PowerShell:**
 ```
 powershell -File "C:\ścieżka\do\backup.ps1"
 ```
 
 ---
 
-## Odinstalowanie
+## Odinstalowanie harmonogramu
 
-Aby usunąć automatyczny backup:
-1. Otwórz Start → wpisz "Harmonogram zadań"
-2. Znajdź `AutoBackup_Cerebro`
-3. Kliknij prawym → "Usuń"
+Start → „Harmonogram zadań" → znajdź `AutoBackup_Cerebro` → prawy klik → „Usuń"
 
-Pliki skryptów możesz zostawić lub skasować — nie wpływają na system.
+Pliki i całą historię możesz zostawić lub przenieść — harmonogram to tylko wpis w systemie.
 
 ---
 
 ## Najczęstsze pytania
 
 **Backup działa gdy komputer jest wyłączony?**
-Nie. Komputer musi być włączony. Jeśli o wybranej godzinie jest wyłączony,
-zadanie uruchomi się przy kolejnym starcie (opcja "Uruchom jeśli pominięto").
+Nie. Przy kolejnym uruchomieniu komputera zadanie uruchomi się automatycznie
+(opcja „Uruchom jeśli pominięto" jest włączona).
 
-**Backup usuwa pliki z kopii gdy usunę je ze źródła?**
-Nie. Domyślnie backup tylko kopiuje nowe i zmienione pliki,
-nie kasuje niczego z miejsca docelowego. To bezpieczniejsza opcja.
+**Co jeśli zmieniłem plik wielokrotnie między backupami?**
+Backup zapisuje stan pliku z momentu uruchomienia. Zmiany między backupami
+w jednej dobie są nadpisywane — tylko wersja z poprzedniego backupu trafia do historii.
+Jeśli potrzeba częstszego wersjonowania, zmień `$GODZINA` na kilka razy dziennie
+(setup.ps1 tworzy jedno zadanie z jedną godziną — dla kilku godzin uruchom setup raz,
+a potem dodaj kolejne zadania ręcznie w Harmonogramie zadań).
 
-**Jak dodać kolejny folder docelowy?**
-Otwórz `KONFIGURACJA.ps1`, dodaj linię do `$FOLDERY_DOCELOWE`,
-uruchom ponownie `setup.ps1` jako administrator.
+**Jak dodać kolejne miejsce docelowe?**
+Otwórz `KONFIGURACJA.ps1`, dodaj wiersz do `$FOLDERY_DOCELOWE`,
+uruchom `setup.ps1` jako administrator.
 
 **Co oznaczają kody w logu robocopy?**
-0 = brak zmian, 1 = skopiowano pliki, 2–7 = sukces z informacjami.
-Kod 8 lub wyższy oznacza błąd — szczegóły w logu robocopy w folderze `logi\`.
+0 = brak nowych plików, 1 = skopiowano nowe/zmienione, 2–7 = sukces z dodatkowymi info.
+Kod 8 lub wyższy to błąd — szczegóły w pliku `robocopy_*.log` w folderze `logi\`.

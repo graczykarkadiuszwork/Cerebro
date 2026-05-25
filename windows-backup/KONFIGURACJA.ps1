@@ -18,9 +18,13 @@ $FOLDER_ZRODLOWY = "C:\Users\Jan\Dokumenty"
 #  (ostatnia linia BEZ przecinka).
 #
 #  Przykłady:
-#    "D:\Backup"                  — drugi dysk wewnętrzny
-#    "E:\Backup"                  — pendrive lub dysk zewnętrzny
-#    "\\NAS\backup\dokumenty"     — dysk sieciowy (NAS)
+#    "D:\Backup"              — drugi dysk wewnętrzny
+#    "E:\Backup"              — pendrive lub dysk zewnętrzny
+#    "\\NAS\backup\medyczne"  — dysk sieciowy (NAS)
+#
+#  W każdym miejscu docelowym powstaną dwa podfoldery:
+#    aktualny\  — zawsze najnowsza wersja wszystkich plików
+#    historia\  — poprzednie wersje plików posortowane wg daty zmiany
 # --------------------------------------------------------------
 $FOLDERY_DOCELOWE = @(
     "D:\Backup\Dokumenty",
@@ -40,10 +44,12 @@ $MINUTA  = 0
 
 
 # --------------------------------------------------------------
-#  ILE DNI przechowywać logi?
-#  Logi starsze niż podana liczba dni będą kasowane automatycznie.
+#  OSTRZEŻENIE O MIEJSCU NA DYSKU
+#  Jeśli wolnego miejsca na dysku będzie mniej niż podana
+#  liczba gigabajtów (GB), backup wyświetli ostrzeżenie.
+#  Historia nigdy nie jest kasowana automatycznie.
 # --------------------------------------------------------------
-$DNI_LOGOW = 30
+$OSTRZEZENIE_GB = 20
 
 
 # --------------------------------------------------------------
