@@ -347,11 +347,11 @@ body { background: var(--bg-base); color: var(--text-main); line-height: 1.5; ov
 <script>
 /* global google */
 
-// Wartość wstrzyknięta przez szablon GAS: t.APP_PAGE = page
+// Wartosc wstrzyknieta przez szablon GAS: t.APP_PAGE = page
 var APP_PAGE = "<?= APP_PAGE ?>";
 
 // ============================================================
-//  PSX — pomocnicze narzędzia
+//  PSX — pomocnicze narzedzia
 // ============================================================
 var PSX = {
   theme: {
@@ -377,11 +377,11 @@ var PSX = {
     }
   },
   /**
-   * Wywołuje funkcję callBackend() po stronie GAS.
+   * Wywoluje funkcje callBackend() po stronie GAS.
    * @param {string}   action    Nazwa akcji
-   * @param {Array}    args      Tablica argumentów
+   * @param {Array}    args      Tablica argumentow
    * @param {Function} onSuccess Callback sukcesu
-   * @param {Function} [onFail]  Opcjonalny callback błędu
+   * @param {Function} [onFail]  Opcjonalny callback bledu
    */
   call: function (action, args, onSuccess, onFail) {
     google.script.run
@@ -394,7 +394,7 @@ var PSX = {
         if (onSuccess) onSuccess(res);
       })
       .withFailureHandler(function (err) {
-        var msg = (err && err.message) ? err.message : 'Krytyczny błąd połączenia sieciowego.';
+        var msg = (err && err.message) ? err.message : 'Krytyczny blad polaczenia sieciowego.';
         if (onFail) onFail(msg);
         else PSX.toast.show(msg, 'error');
       })
@@ -403,12 +403,12 @@ var PSX = {
 };
 
 // ============================================================
-//  TABLET — wyświetlanie tokenu
+//  TABLET — wyswietlanie tokenu
 // ============================================================
 var Tablet = {
   init: function () {
     this.refresh();
-    // Odświeżenie co 30 s zsynchronizowane z oknem serwera
+    // Odswiezenie co 30 s zsynchronizowane z oknem serwera
     var self = this;
     setInterval(function () { self.refresh(); }, 30000);
   },
@@ -426,7 +426,7 @@ var Tablet = {
     if (!bar) return;
     bar.style.transition = 'none';
     bar.style.transform  = 'scaleX(1)';
-    // Krótkie opóźnienie, by reset zdążył się wyrenderować
+    // Krotkie opoznienie, by reset zdazyl sie wyrenderowac
     setTimeout(function () {
       bar.style.transition = 'transform 30s linear';
       bar.style.transform  = 'scaleX(0)';
@@ -435,7 +435,7 @@ var Tablet = {
 };
 
 // ============================================================
-//  WORKER — rejestracja odbić
+//  WORKER — rejestracja odbic
 // ============================================================
 var Worker = {
   currentEmpId:      null,
@@ -492,12 +492,12 @@ var Worker = {
             document.getElementById('w-profile-name').textContent = '👤 ' + res.worker.imie + ' ' + res.worker.nazwisko;
             Worker._checkHistory();
           } else {
-            PSX.toast.show((res && res.message) || 'Nieprawidłowy PIN.', 'error');
+            PSX.toast.show((res && res.message) || 'Nieprawidlowy PIN.', 'error');
             Worker.currentPin = '';
             Worker._updPin();
           }
         }, function (err) {
-          PSX.toast.show('Błąd połączenia: ' + err, 'error');
+          PSX.toast.show('Blad polaczenia: ' + err, 'error');
           Worker.currentPin = '';
           Worker._updPin();
         });
@@ -522,7 +522,7 @@ var Worker = {
   _checkHistory: function () {
     PSX.call('pobierzHistoriePracownika', [Worker.currentEmpId], function (res) {
       if (!res || !res.ok) {
-        PSX.toast.show((res && res.message) || 'Błąd weryfikacji profilu.', 'error');
+        PSX.toast.show((res && res.message) || 'Blad weryfikacji profilu.', 'error');
         Worker.resetToAuth();
         return;
       }
@@ -549,21 +549,21 @@ var Worker = {
       var wrap = document.createElement('div');
       wrap.style.cssText = 'background:rgba(255,255,255,.03); padding:14px; border-radius:10px; margin-bottom:12px; border:1px solid var(--border);';
 
-      // Używamy textContent/createTextNode zamiast innerHTML tam gdzie wstawiamy dane z serwera
+      // Uzywamy textContent/createTextNode zamiast innerHTML tam gdzie wstawiamy dane z serwera
       var title = document.createElement('div');
       title.style.cssText = 'font-weight:bold; margin-bottom:4px; color:var(--warn);';
       title.textContent = '📅 Data: ' + log.data;
 
       var desc = document.createElement('div');
       desc.style.cssText = 'font-size:12px; margin-bottom:12px; color:var(--text-muted);';
-      desc.textContent = 'Wejście o ' + log.ostatniaGodzina + ' — brak zarejestrowanego wyjścia.';
+      desc.textContent = 'Wejscie o ' + log.ostatniaGodzina + ' — brak zarejestrowanego wyjscia.';
 
       var timeRow = document.createElement('div');
       timeRow.style.cssText = 'display:flex; align-items:center; gap:8px; margin-bottom:12px;';
 
       var lbl = document.createElement('span');
       lbl.style.fontSize = '13px';
-      lbl.textContent = 'Godzina wyjścia:';
+      lbl.textContent = 'Godzina wyjscia:';
 
       var inH = document.createElement('input');
       inH.type = 'text'; inH.placeholder = 'HH'; inH.maxLength = 2;
@@ -583,7 +583,7 @@ var Worker = {
       var btn = document.createElement('button');
       btn.className = 'psx-btn psx-btn-warn';
       btn.style.cssText = 'width:100%; padding:10px; font-size:13px;';
-      btn.textContent = 'Zapisz i zamknij ten dzień';
+      btn.textContent = 'Zapisz i zamknij ten dzien';
 
       btn.addEventListener('click', function () {
         var h = inH.value.trim();
@@ -592,18 +592,18 @@ var Worker = {
         var mN = parseInt(m, 10);
 
         if (!h || !m || isNaN(hN) || isNaN(mN) || hN < 0 || hN > 23 || mN < 0 || mN > 59) {
-          PSX.toast.show('Wprowadź prawidłową godzinę (00-23) i minuty (00-59).', 'error');
+          PSX.toast.show('Wprowadz prawidlowa godzine (00-23) i minuty (00-59).', 'error');
           return;
         }
         var godzina = (hN < 10 ? '0' : '') + hN + ':' + (mN < 10 ? '0' : '') + mN;
 
-        PSX.toast.show('Zapisywanie zaległych godzin…', 'info');
+        PSX.toast.show('Zapisywanie zaleglych godzin…', 'info');
         PSX.call('uzupelnijBrakujaceOdbicie', [Worker.currentEmpId, log.data, godzina, log.typ], function (r) {
           if (r && r.ok) {
-            PSX.toast.show('Zaległy dzień uzupełniony!', 'success');
+            PSX.toast.show('Zalegly dzien uzupelniony!', 'success');
             Worker._checkHistory();
           } else {
-            PSX.toast.show((r && r.message) || 'Nie udało się zapisać.', 'error');
+            PSX.toast.show((r && r.message) || 'Nie udalo sie zapisac.', 'error');
           }
         });
       });
@@ -630,24 +630,24 @@ var Worker = {
         if (res && res.ok) {
           var akcjaLabel = actionType === 'WEJSCIE' ? 'WEJŚCIE' : 'WYJŚCIE';
           document.getElementById('w-success-msg').textContent =
-            res.imie + ', Twoje zdarzenie [' + akcjaLabel + '] zostało zapisane o godzinie ' + res.godzina;
+            res.imie + ', Twoje zdarzenie [' + akcjaLabel + '] zostalo zapisane o godzinie ' + res.godzina;
           Worker._show('w-step-success');
           setTimeout(function () { Worker.resetToAuth(); }, 4000);
         } else {
-          PSX.toast.show((res && res.message) || 'Błąd rejestracji.', 'error');
+          PSX.toast.show((res && res.message) || 'Blad rejestracji.', 'error');
           Worker.currentTabletCode = '';
           Worker._updCode();
         }
       },
       function (err) {
-        PSX.toast.show('Błąd zapisu: ' + err, 'error');
+        PSX.toast.show('Blad zapisu: ' + err, 'error');
       }
     );
   }
 };
 
 // ============================================================
-//  ADMIN — panel zarządzania
+//  ADMIN — panel zarzadzania
 // ============================================================
 var Admin = {
   token:      null,
@@ -681,7 +681,7 @@ var Admin = {
             PSX.toast.show('Zalogowano poprawnie.', 'success');
             Admin.loadPanelData();
           } else {
-            PSX.toast.show((res && res.message) || 'Błędny PIN.', 'error');
+            PSX.toast.show((res && res.message) || 'Bledny PIN.', 'error');
             Admin.currentPin = '';
             document.getElementById('a-pin-display').textContent = '';
           }
@@ -727,14 +727,14 @@ var Admin = {
   _renderEwidencja: function (arr) {
     var tbody = document.getElementById('table-ewidencja-body');
     if (!arr || !arr.length) {
-      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Brak wpisów.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Brak wpisow.</td></tr>';
       return;
     }
     var sorted = arr.slice().sort(function (a, b) { return b.ts.localeCompare(a.ts); });
     var html = '';
     sorted.forEach(function (r) {
       var cls = r.akcja === 'WEJSCIE' ? 'badge-in' : 'badge-out';
-      var lbl = r.akcja === 'WEJSCIE' ? 'Wejście' : 'Wyjście';
+      var lbl = r.akcja === 'WEJSCIE' ? 'Wejscie' : 'Wyjscie';
       html += '<tr>' +
         '<td>' + _esc(_fmtTs(r.ts)) + '</td>' +
         '<td style="font-weight:600;">' + _esc(r.imie + ' ' + r.nazwisko) +
@@ -749,7 +749,7 @@ var Admin = {
   _renderWorkers: function (arr) {
     var tbody = document.getElementById('table-workers-body');
     if (!arr || !arr.length) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">Brak pracowników.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">Brak pracownikow.</td></tr>';
       return;
     }
     tbody.innerHTML = '';
@@ -771,7 +771,7 @@ var Admin = {
         '<td>' + aktCell + '</td>' +
         '<td style="text-align:right;"></td>';
 
-      // Przyciski budujemy bez inline-onclick (unikamy XSS przez zamknięcie w closure)
+      // Przyciski budujemy bez inline-onclick (unikamy XSS przez zamkniecie w closure)
       var actionCell = tr.querySelector('td:last-child');
 
       var btnEdit = document.createElement('button');
@@ -783,7 +783,7 @@ var Admin = {
       var btnDel = document.createElement('button');
       btnDel.className = 'psx-btn psx-btn-secondary';
       btnDel.style.cssText = 'padding:4px 8px; font-size:11px; color:var(--accent); border-color:rgba(255,74,90,.2);';
-      btnDel.textContent = 'Usuń';
+      btnDel.textContent = 'Usun';
       btnDel.addEventListener('click', function () { Admin.deleteWorker(w.id); });
 
       actionCell.appendChild(btnEdit);
@@ -827,15 +827,15 @@ var Admin = {
     var nazwisko = document.getElementById('np-nazwisko').value.trim();
 
     if (!imie || !nazwisko) {
-      PSX.toast.show('Imię i nazwisko są wymagane.', 'error');
+      PSX.toast.show('Imie i nazwisko sa wymagane.', 'error');
       return;
     }
     if (pin.length > 0 && pin.length !== 4) {
-      PSX.toast.show('PIN musi mieć dokładnie 4 cyfry.', 'error');
+      PSX.toast.show('PIN musi miec dokladnie 4 cyfry.', 'error');
       return;
     }
     if (pin.length > 0 && !/^\d{4}$/.test(pin)) {
-      PSX.toast.show('PIN może zawierać wyłącznie cyfry.', 'error');
+      PSX.toast.show('PIN moze zawierac wylacznie cyfry.', 'error');
       return;
     }
 
@@ -855,19 +855,19 @@ var Admin = {
         document.getElementById('modal-worker').classList.remove('show');
         Admin.loadPanelData();
       } else {
-        PSX.toast.show((res && res.message) || 'Nie udało się zapisać.', 'error');
+        PSX.toast.show((res && res.message) || 'Nie udalo sie zapisac.', 'error');
       }
     });
   },
 
   deleteWorker: function (id) {
-    if (!confirm('Czy na pewno usunąć tego pracownika? Operacja jest nieodwracalna.')) return;
+    if (!confirm('Czy na pewno usunac tego pracownika? Operacja jest nieodwracalna.')) return;
     PSX.call('usunPracownika', [id, Admin.token], function (res) {
       if (res && res.ok) {
-        PSX.toast.show('Pracownik usunięty.', 'success');
+        PSX.toast.show('Pracownik usuniety.', 'success');
         Admin.loadPanelData();
       } else {
-        PSX.toast.show((res && res.message) || 'Nie udało się usunąć.', 'error');
+        PSX.toast.show((res && res.message) || 'Nie udalo sie usunac.', 'error');
       }
     });
   },
@@ -875,7 +875,7 @@ var Admin = {
   exportCSV: function () {
     var arr = this.panelData && this.panelData.ewidencja;
     if (!arr || !arr.length) { PSX.toast.show('Brak danych do eksportu.', 'info'); return; }
-    var csv = '﻿Data i godzina;Pracownik ID;Imię;Nazwisko;Zdarzenie;Data;Godzina;Źródło\r\n';
+    var csv = '﻿Data i godzina;Pracownik ID;Imie;Nazwisko;Zdarzenie;Data;Godzina;Źrodlo\r\n';
     arr.forEach(function (r) {
       csv += [_fmtTs(r.ts), r.id, r.imie, r.nazwisko, r.akcja, r.data, r.godzina, r.zrodlo]
         .map(function (v) { return '"' + String(v || '').replace(/"/g, '""') + '"'; })
@@ -902,14 +902,14 @@ var Admin = {
     document.getElementById('btn-export').addEventListener('click', function () { Admin.exportCSV(); });
     document.getElementById('btn-clear-cache').addEventListener('click', function () {
       PSX.call('wyczyscCacheZabezpieczen', [Admin.token], function (res) {
-        PSX.toast.show(res && res.ok ? 'Cache blokad zresetowany.' : 'Błąd resetu cache.', res && res.ok ? 'success' : 'error');
+        PSX.toast.show(res && res.ok ? 'Cache blokad zresetowany.' : 'Blad resetu cache.', res && res.ok ? 'success' : 'error');
       });
     });
   }
 };
 
 // ============================================================
-//  Narzędzia pomocnicze
+//  Narzedzia pomocnicze
 // ============================================================
 function _esc(s) {
   return String(s == null ? '' : s)

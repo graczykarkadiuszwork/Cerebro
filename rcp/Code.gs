@@ -1,20 +1,20 @@
 /**
- * We SMILE — RCP v5.1 — Kompletny backend
+ * We SMILE - RCP v5.1 - Kompletny backend
  *
  * Schemat arkuszy:
- *   Pracownicy : [ID, Imię, Nazwisko, Rola, Status, PIN_HASH]
- *   Ewidencja  : [Timestamp, EmpID, Imię, Nazwisko, Akcja, Data, Godzina, Źródło]
+ *   Pracownicy : [ID, Imie, Nazwisko, Rola, Status, PIN_HASH]
+ *   Ewidencja  : [Timestamp, EmpID, Imie, Nazwisko, Akcja, Data, Godzina, Źrodlo]
  *   Anomalie   : [Timestamp, EmpID, Opis]
  *   Logi       : [Timestamp, EmpID, Kontekst, Opis]
  *
- * Przed pierwszym wdrożeniem uruchom:
- *   1. setupSheets()         — tworzy arkusze z nagłówkami
- *   2. setupInitialAdminPin('TWÓJ_PIN')  — ustawia hash PIN-u administratora
- *   3. setupHmacSecret()     — generuje losowy sekret HMAC
+ * Przed pierwszym wdrozeniem uruchom:
+ *   1. setupSheets()         - tworzy arkusze z naglowkami
+ *   2. setupInitialAdminPin('TWÓJ_PIN')  - ustawia hash PIN-u administratora
+ *   3. setupHmacSecret()     - generuje losowy sekret HMAC
  */
 
 const CONFIG = {
-  APP_NAME: 'We SMILE — RCP',
+  APP_NAME: 'We SMILE - RCP',
   APP_VERSION: '5.1.0',
   TOKEN_LENGTH: 4,
   TOKEN_WINDOW_SECONDS: 30,
@@ -51,7 +51,7 @@ function doGet(e) {
 }
 
 /**
- * Jednolity dyspozytor wywoływany z frontendu przez:
+ * Jednolity dyspozytor wywolywany z frontendu przez:
  *   google.script.run.callBackend(action, JSON.stringify(args))
  */
 function callBackend(action, argsJson) {
@@ -76,7 +76,7 @@ function callBackend(action, argsJson) {
     return dispatch[action]();
   } catch (err) {
     _logError('callBackend[' + sanitize(String(action), 50) + ']', err);
-    return { ok: false, message: 'Błąd wewnętrzny serwera.' };
+    return { ok: false, message: 'Blad wewnetrzny serwera.' };
   }
 }
 
@@ -94,7 +94,7 @@ function sanitize(v, max) {
   return String(v).trim().substring(0, max || 200);
 }
 
-/** SHA-256 z solą z PropertiesService */
+/** SHA-256 z sola z PropertiesService */
 function hashPin(pin) {
   const salt = _props().getProperty('PIN_SALT') || 'wesmile_rcp_salt_v1';
   const raw  = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(pin) + salt);
@@ -158,7 +158,7 @@ function refreshAdminSession(token) {
 
 function requireAdmin(token) {
   if (!validateAdminSession(token)) {
-    return { ok: false, errorType: 'UNAUTHORIZED', message: 'Sesja wygasła. Zaloguj się ponownie.' };
+    return { ok: false, errorType: 'UNAUTHORIZED', message: 'Sesja wygasla. Zaloguj sie ponownie.' };
   }
   return null;
 }
@@ -198,22 +198,22 @@ function _getPracownicy() {
   const sh = _sheet(SHEETS.PRACOWNICY);
   if (!sh || sh.getLastRow() < 2) return [];
   return sh.getDataRange().getValues().slice(1);
-  // Kolumny: 0=ID, 1=Imię, 2=Nazwisko, 3=Rola, 4=Status, 5=PIN_HASH
+  // Kolumny: 0=ID, 1=Imie, 2=Nazwisko, 3=Rola, 4=Status, 5=PIN_HASH
 }
 
 function identyfikujPracownikaPoPIN(pin) {
   if (!pin || String(pin).length !== CONFIG.WORKER_PIN_LENGTH) {
-    return { ok: false, message: 'PIN musi mieć dokładnie ' + CONFIG.WORKER_PIN_LENGTH + ' cyfry.' };
+    return { ok: false, message: 'PIN musi miec dokladnie ' + CONFIG.WORKER_PIN_LENGTH + ' cyfry.' };
   }
   if (!checkRateLimit('pin_global')) {
-    return { ok: false, message: 'Zbyt wiele prób. Odczekaj ' + Math.ceil(CONFIG.RATE_WINDOW_SECONDS / 60) + ' minut.' };
+    return { ok: false, message: 'Zbyt wiele prob. Odczekaj ' + Math.ceil(CONFIG.RATE_WINDOW_SECONDS / 60) + ' minut.' };
   }
 
   const hash = hashPin(String(pin));
   const row  = _getPracownicy().find(r => String(r[5]) === hash && String(r[4]).toLowerCase() === 'aktywny');
 
   if (!row) {
-    return { ok: false, message: 'Błędny PIN lub konto jest nieaktywne.' };
+    return { ok: false, message: 'Bledny PIN lub konto jest nieaktywne.' };
   }
 
   resetRateLimit('pin_global');
@@ -232,7 +232,7 @@ function pobierzHistoriePracownika(empId) {
 
   const sh = _sheet(SHEETS.EWIDENCJA);
   const allRows = (sh && sh.getLastRow() >= 2) ? sh.getDataRange().getValues().slice(1) : [];
-  // Kolumny: 0=Timestamp, 1=EmpID, 2=Imię, 3=Nazwisko, 4=Akcja, 5=Data, 6=Godzina, 7=Źródło
+  // Kolumny: 0=Timestamp, 1=EmpID, 2=Imie, 3=Nazwisko, 4=Akcja, 5=Data, 6=Godzina, 7=Źrodlo
 
   const empRows = allRows.filter(r => String(r[1]) === String(empId));
   const today   = todayPL();
@@ -247,7 +247,7 @@ function pobierzHistoriePracownika(empId) {
     ostatniaGodzinaDzis = String(last[6]);
   }
 
-  // Brakujące odbicia (ostatnie zdarzenie danego dnia = WEJSCIE)
+  // Brakujace odbicia (ostatnie zdarzenie danego dnia = WEJSCIE)
   const dayMap = {};
   empRows.forEach(r => {
     const d = String(r[5]);
@@ -285,13 +285,13 @@ function uzupelnijBrakujaceOdbicie(empId, data, godzina, typ) {
     return { ok: false, message: 'Brak wymaganych danych.' };
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) {
-    return { ok: false, message: 'Nieprawidłowy format daty.' };
+    return { ok: false, message: 'Nieprawidlowy format daty.' };
   }
   if (!/^\d{2}:\d{2}$/.test(godzina)) {
-    return { ok: false, message: 'Nieprawidłowy format godziny.' };
+    return { ok: false, message: 'Nieprawidlowy format godziny.' };
   }
   if (typ !== 'WEJSCIE' && typ !== 'WYJSCIE') {
-    return { ok: false, message: 'Nieprawidłowy typ zdarzenia.' };
+    return { ok: false, message: 'Nieprawidlowy typ zdarzenia.' };
   }
 
   const rows   = _getPracownicy();
@@ -299,7 +299,7 @@ function uzupelnijBrakujaceOdbicie(empId, data, godzina, typ) {
   if (!worker) return { ok: false, message: 'Pracownik nie istnieje.' };
 
   const ts = data + 'T' + godzina + ':00';
-  _sheet(SHEETS.EWIDENCJA).appendRow([ts, empId, String(worker[1]), String(worker[2]), typ, data, godzina, 'uzupełnienie']);
+  _sheet(SHEETS.EWIDENCJA).appendRow([ts, empId, String(worker[1]), String(worker[2]), typ, data, godzina, 'uzupelnienie']);
 
   return { ok: true };
 }
@@ -310,15 +310,15 @@ function uzupelnijBrakujaceOdbicie(empId, data, godzina, typ) {
 
 function weryfikujIRejestruj(empId, tabletKod, pin, akcja) {
   if (!empId || !tabletKod || !pin || !akcja) {
-    return { ok: false, message: 'Brak wymaganych parametrów.' };
+    return { ok: false, message: 'Brak wymaganych parametrow.' };
   }
   if (akcja !== 'WEJSCIE' && akcja !== 'WYJSCIE') {
-    return { ok: false, message: 'Nieprawidłowy typ akcji.' };
+    return { ok: false, message: 'Nieprawidlowy typ akcji.' };
   }
 
   const rlKey = 'reg_' + sanitize(empId, 20);
   if (!checkRateLimit(rlKey)) {
-    return { ok: false, message: 'Zbyt wiele prób rejestracji. Spróbuj za chwilę.' };
+    return { ok: false, message: 'Zbyt wiele prob rejestracji. Sprobuj za chwile.' };
   }
 
   // Weryfikacja PIN
@@ -328,21 +328,21 @@ function weryfikujIRejestruj(empId, tabletKod, pin, akcja) {
 
   if (!worker)                                         return { ok: false, message: 'Pracownik nie istnieje.' };
   if (String(worker[4]).toLowerCase() !== 'aktywny')  return { ok: false, message: 'Konto jest nieaktywne.' };
-  if (String(worker[5]) !== hash)                     return { ok: false, message: 'Błędny PIN.' };
+  if (String(worker[5]) !== hash)                     return { ok: false, message: 'Bledny PIN.' };
 
   // Weryfikacja tokenu tabletu
   if (!weryfikujToken(String(tabletKod))) {
-    return { ok: false, message: 'Kod autoryzacyjny jest nieważny lub wygasł.' };
+    return { ok: false, message: 'Kod autoryzacyjny jest niewazny lub wygasl.' };
   }
 
   // Deduplikacja
   const dedupKey = 'dedup_' + sanitize(empId, 20);
   if (_cache().get(dedupKey)) {
-    return { ok: false, message: 'Zdarzenie zostało już zarejestrowane. Chwilę odczekaj.' };
+    return { ok: false, message: 'Zdarzenie zostalo juz zarejestrowane. Chwile odczekaj.' };
   }
   _cache().put(dedupKey, '1', CONFIG.DEDUP_SECONDS);
 
-  // Sprawdzenie sekwencji (nie można dwa razy WEJSCIE lub WYJSCIE pod rząd)
+  // Sprawdzenie sekwencji (nie mozna dwa razy WEJSCIE lub WYJSCIE pod rzad)
   const ewidSh  = _sheet(SHEETS.EWIDENCJA);
   const allRows = (ewidSh && ewidSh.getLastRow() >= 2) ? ewidSh.getDataRange().getValues().slice(1) : [];
   const today   = todayPL();
@@ -355,9 +355,9 @@ function weryfikujIRejestruj(empId, tabletKod, pin, akcja) {
         new Date().toISOString(),
         empId,
         'Duplikacja zdarzenia: ' + String(worker[1]) + ' ' + String(worker[2]) +
-          ' — próba podwójnego ' + akcja
+          ' - proba podwojnego ' + akcja
       ]);
-      return { ok: false, message: 'Błąd sekwencji: poprzednie zdarzenie to już ' + akcja + '.' };
+      return { ok: false, message: 'Blad sekwencji: poprzednie zdarzenie to juz ' + akcja + '.' };
     }
   }
 
@@ -386,7 +386,7 @@ function weryfikujAdminPIN(pin) {
     return { ok: false, message: 'Brak PIN.' };
   }
   if (!checkRateLimit('admin_login')) {
-    return { ok: false, message: 'Zbyt wiele prób logowania. Odczekaj ' + Math.ceil(CONFIG.RATE_WINDOW_SECONDS / 60) + ' minut.' };
+    return { ok: false, message: 'Zbyt wiele prob logowania. Odczekaj ' + Math.ceil(CONFIG.RATE_WINDOW_SECONDS / 60) + ' minut.' };
   }
 
   const savedHash = _props().getProperty('ADMIN_PIN_HASH');
@@ -395,7 +395,7 @@ function weryfikujAdminPIN(pin) {
   }
 
   if (hashPin(String(pin)) !== savedHash) {
-    return { ok: false, message: 'Błędny PIN administratora.' };
+    return { ok: false, message: 'Bledny PIN administratora.' };
   }
 
   resetRateLimit('admin_login');
@@ -458,14 +458,14 @@ function zapiszPracownika(workerData, token) {
   if (authErr) return authErr;
 
   if (!workerData || !sanitize(workerData.imie, 1) || !sanitize(workerData.nazwisko, 1)) {
-    return { ok: false, message: 'Imię i nazwisko są wymagane.' };
+    return { ok: false, message: 'Imie i nazwisko sa wymagane.' };
   }
   const pin = sanitize(workerData.pin, 10);
   if (pin.length > 0 && pin.length !== CONFIG.WORKER_PIN_LENGTH) {
-    return { ok: false, message: 'PIN musi mieć dokładnie ' + CONFIG.WORKER_PIN_LENGTH + ' cyfry.' };
+    return { ok: false, message: 'PIN musi miec dokladnie ' + CONFIG.WORKER_PIN_LENGTH + ' cyfry.' };
   }
   if (pin.length > 0 && !/^\d+$/.test(pin)) {
-    return { ok: false, message: 'PIN może zawierać wyłącznie cyfry.' };
+    return { ok: false, message: 'PIN moze zawierac wylacznie cyfry.' };
   }
 
   const sh     = _sheet(SHEETS.PRACOWNICY);
@@ -533,15 +533,15 @@ function wyczyscCacheZabezpieczen(token) {
 }
 
 // ============================================================
-//  NARZĘDZIA KONFIGURACYJNE (uruchamiaj ręcznie z edytora GAS)
+//  NARZĘDZIA KONFIGURACYJNE (uruchamiaj recznie z edytora GAS)
 // ============================================================
 
-/** Tworzy arkusze z nagłówkami jeśli nie istnieją */
+/** Tworzy arkusze z naglowkami jesli nie istnieja */
 function setupSheets() {
   const ss = _ss();
   const defs = [
-    { name: SHEETS.PRACOWNICY, headers: ['ID', 'Imię', 'Nazwisko', 'Rola', 'Status', 'PIN_HASH'] },
-    { name: SHEETS.EWIDENCJA,  headers: ['Timestamp', 'EmpID', 'Imię', 'Nazwisko', 'Akcja', 'Data', 'Godzina', 'Źródło'] },
+    { name: SHEETS.PRACOWNICY, headers: ['ID', 'Imie', 'Nazwisko', 'Rola', 'Status', 'PIN_HASH'] },
+    { name: SHEETS.EWIDENCJA,  headers: ['Timestamp', 'EmpID', 'Imie', 'Nazwisko', 'Akcja', 'Data', 'Godzina', 'Źrodlo'] },
     { name: SHEETS.ANOMALIE,   headers: ['Timestamp', 'EmpID', 'Opis'] },
     { name: SHEETS.LOGI,       headers: ['Timestamp', 'EmpID', 'Kontekst', 'Opis'] }
   ];
@@ -553,22 +553,22 @@ function setupSheets() {
   Logger.log('Arkusze zainicjalizowane.');
 }
 
-/** Ustawia hash PIN-u administratora. Wywołaj z argumentem, np. setupInitialAdminPin('1234') */
+/** Ustawia hash PIN administratora. Parametr: setupInitialAdminPin('1234') */
 function setupInitialAdminPin(pin) {
   if (!pin) throw new Error('Podaj PIN jako argument funkcji.');
-  if (String(pin).length < 4) throw new Error('PIN musi mieć co najmniej 4 znaki.');
+  if (String(pin).length < 4) throw new Error('PIN musi miec conajmniej 4 znaki.');
   _props().setProperty('ADMIN_PIN_HASH', hashPin(String(pin)));
-  Logger.log('Hash PIN administratora został zapisany.');
+  Logger.log('Hash PIN administratora zapisany.');
 }
 
-/** Generuje losowy sekret HMAC i zapisuje go w PropertiesService */
+/** Generuje losowy sekret HMAC i zapisuje w PropertiesService */
 function setupHmacSecret() {
   const secret = Utilities.getUuid() + '-' + Utilities.getUuid();
   _props().setProperty('HMAC_SECRET', secret);
   Logger.log('HMAC_SECRET wygenerowany i zapisany.');
 }
 
-/** Generuje losową sól dla PIN i zapisuje w PropertiesService */
+/** Generuje losowa sol dla PIN i zapisuje w PropertiesService */
 function setupPinSalt() {
   const salt = Utilities.getUuid();
   _props().setProperty('PIN_SALT', salt);
