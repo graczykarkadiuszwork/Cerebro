@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>We SMILE — RCP</title>
+
+<script>
+  (function () {
+    try {
+      var saved = localStorage.getItem('wesmile-theme');
+      if (!saved) {
+        saved = (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark';
+      }
+      document.documentElement.setAttribute('data-theme', saved);
+    } catch (e) {}
+  })();
+</script>
+
+<style>
+/* ================================================================
+ * DESIGN SYSTEM: PSX × NOIRE — Premium Dark/Light Fluid UI
+ * ================================================================ */
+:root {
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --bg-base:    #0a0a0c;
+  --bg-surface: #121216;
+  --bg-card:    #18181f;
+  --border:     #24242e;
+  --text-main:  #f3f3f6;
+  --text-muted: #8e8e9c;
+  --accent:     #ff4a5a;
+  --success:    #00e676;
+  --warn:       #ffb300;
+  --primary:    #2979ff;
+  --shadow-sm:  0 2px 8px rgba(0,0,0,.5);
+  --shadow-md:  0 8px 24px rgba(0,0,0,.7);
+  --radius-sm:  6px;
+  --radius-md:  12px;
+  --radius-lg:  20px;
+  --transition: .2s cubic-bezier(.4,0,.2,1);
+  --focus-ring: 0 0 0 3px rgba(255,74,90,.4);
+}
+[data-theme="light"] {
+  --bg-base:    #f4f4f7;
+  --bg-surface: #ffffff;
+  --bg-card:    #f9f9fb;
+  --border:     #e2e2e9;
+  --text-main:  #111115;
+  --text-muted: #626272;
+  --shadow-sm:  0 2px 8px rgba(0,0,0,.05);
+  --shadow-md:  0 8px 24px rgba(0,0,0,.08);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: var(--font); -webkit-font-smoothing: antialiased; }
+body { background: var(--bg-base); color: var(--text-main); line-height: 1.5; overflow-x: hidden; }
+
+.view-panel           { display: none; min-height: 100vh; position: relative; }
+.view-panel.active    { display: flex; flex-direction: column; }
+
+.psx-container        { width: 100%; margin: 0 auto; padding: 24px; flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.psx-card             { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px; box-shadow: var(--shadow-md); position: relative; overflow: hidden; }
+.psx-title            { font-size: 24px; font-weight: 700; letter-spacing: -.5px; margin-bottom: 4px; }
+.psx-subtitle         { font-size: 14px; color: var(--text-muted); }
+
+/* Keypad */
+.psx-keypad           { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin: 24px 0; }
+.psx-key              { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); font-size: 24px; font-weight: 600; padding: 18px 0; cursor: pointer; user-select: none; transition: var(--transition); color: var(--text-main); display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
+.psx-key:active       { background: var(--border); transform: scale(.96); }
+.psx-key-clear        { color: var(--accent); }
+.psx-key-back         { color: var(--text-muted); font-size: 20px; }
+
+/* Buttons */
+.psx-btn              { background: var(--accent); color: #fff; border: none; border-radius: var(--radius-md); font-size: 15px; font-weight: 600; padding: 14px 20px; cursor: pointer; transition: var(--transition); display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-shadow: var(--shadow-sm); }
+.psx-btn:disabled     { opacity: .4; cursor: not-allowed; transform: none !important; }
+.psx-btn:active       { transform: scale(.98); }
+.psx-btn-secondary    { background: var(--bg-surface); border: 1px solid var(--border); color: var(--text-main); }
+.psx-btn-secondary:active { background: var(--border); }
+.psx-btn-success      { background: var(--success); color: #000; }
+.psx-btn-primary      { background: var(--primary); }
+.psx-btn-warn         { background: var(--warn); color: #000; }
+
+.psx-input            { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 14px; color: var(--text-main); font-size: 14px; transition: var(--transition); width: 100%; }
+.psx-input:focus      { outline: none; border-color: var(--accent); box-shadow: var(--focus-ring); }
+
+/* App Header */
+.app-header           { background: var(--bg-surface); border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.app-header .brand    { font-weight: 800; font-size: 18px; letter-spacing: -.5px; display: flex; align-items: center; gap: 8px; }
+.brand .diamond       { color: var(--accent); font-size: 14px; }
+.theme-btn            { background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; padding: 4px; transition: var(--transition); }
+.theme-btn:hover      { color: var(--text-main); }
+
+/* Toast */
+.psx-toast            { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(100px); opacity: 0; background: #fff; color: #000; padding: 12px 24px; border-radius: 50px; font-size: 14px; font-weight: 600; box-shadow: var(--shadow-md); z-index: 10000; transition: .3s cubic-bezier(.175,.885,.32,1.275); display: flex; align-items: center; gap: 8px; pointer-events: none; max-width: 90vw; text-align: center; }
+.psx-toast.show       { transform: translateX(-50%) translateY(0); opacity: 1; }
+.psx-toast.toast-error   { background: var(--accent); color: #fff; }
+.psx-toast.toast-success { background: var(--success); color: #fff; }
+.psx-toast.toast-info    { background: var(--primary); color: #fff; }
+
+/* Admin Layout */
+.admin-grid           { display: grid; grid-template-columns: 260px 1fr; flex: 1; min-height: 0; }
+@media (max-width: 768px) { .admin-grid { grid-template-columns: 1fr; } }
+.admin-sidebar        { background: var(--bg-surface); border-right: 1px solid var(--border); padding: 16px; }
+.admin-menu-item      { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-radius: var(--radius-md); font-weight: 500; font-size: 14px; color: var(--text-muted); cursor: pointer; margin-bottom: 4px; transition: var(--transition); }
+.admin-menu-item:hover,
+.admin-menu-item.active { background: rgba(255,74,90,.08); color: var(--accent); }
+.admin-content        { padding: 24px; overflow-y: auto; }
+.admin-panel-section  { display: none; }
+.admin-panel-section.active { display: block; }
+
+/* Tables */
+.psx-table-wrap       { width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg-card); margin-top: 16px; }
+.psx-table            { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+.psx-table th         { background: var(--bg-surface); padding: 12px 16px; font-weight: 600; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+.psx-table td         { padding: 12px 16px; border-bottom: 1px solid var(--border); color: var(--text-main); }
+.psx-table tr:last-child td { border-bottom: none; }
+
+/* Badges */
+.badge                { display: inline-flex; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.badge-in             { background: rgba(0,230,118,.15); color: var(--success); }
+.badge-out            { background: rgba(41,121,255,.15); color: var(--primary); }
+
+/* Modal */
+.modal-backdrop       { position: fixed; inset: 0; background: rgba(0,0,0,.6); backdrop-filter: blur(4px); z-index: 999; display: none; align-items: center; justify-content: center; }
+.modal-backdrop.show  { display: flex; }
+</style>
+</head>
+<body>
+
+<!-- ===================== TABLET VIEW ===================== -->
+<div id="view-tablet" class="view-panel">
+  <header class="app-header">
+    <div class="brand"><span class="diamond">&#9672;</span> We SMILE — RCP</div>
+    <button class="theme-btn" data-theme-toggle aria-label="Przełącz motyw">&#9789;</button>
+  </header>
+
+  <div class="psx-container" style="max-width:500px;">
+    <div class="psx-card" style="text-align:center; padding:40px 24px;">
+      <div class="psx-subtitle" style="text-transform:uppercase; font-weight:700; letter-spacing:1px; margin-bottom:8px;">Aktywny Kod Autoryzacyjny</div>
+      <div id="t-token-display" style="font-size:64px; font-weight:800; letter-spacing:4px; color:var(--accent); margin:8px 0; min-height:80px; text-shadow:0 4px 20px rgba(255,74,90,.2);">----</div>
+      <div style="background:var(--border); height:4px; border-radius:2px; width:100%; max-width:240px; margin:0 auto 24px auto; overflow:hidden;">
+        <div id="t-progress-bar" style="background:var(--accent); height:100%; width:100%; transform-origin:left; transition:transform 30s linear;"></div>
+      </div>
+      <p class="psx-subtitle" style="font-size:13px; max-width:320px; margin:0 auto;">Kod odświeża się automatycznie co 30 sekund. Wpisz go na swoim urządzeniu mobilnym, aby zatwierdzić obecność.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== WORKER VIEW ===================== -->
+<div id="view-worker" class="view-panel">
+  <div class="psx-container" style="max-width:460px;">
+
+    <!-- Krok 1: autoryzacja PIN -->
+    <div id="w-step-auth" class="psx-card" style="display:block;">
+      <div style="text-align:center;">
+        <h2 class="psx-title">Rejestracja Czasu Pracy</h2>
+        <p class="psx-subtitle">Wprowadź swój osobisty numer PIN</p>
+      </div>
+      <div style="margin:20px 0; text-align:center;">
+        <div id="w-pin-display" style="font-size:32px; letter-spacing:12px; font-weight:bold; color:var(--accent); min-height:40px;"></div>
+      </div>
+      <div class="psx-keypad" id="w-auth-keypad">
+        <div class="psx-key" data-val="1">1</div><div class="psx-key" data-val="2">2</div><div class="psx-key" data-val="3">3</div>
+        <div class="psx-key" data-val="4">4</div><div class="psx-key" data-val="5">5</div><div class="psx-key" data-val="6">6</div>
+        <div class="psx-key" data-val="7">7</div><div class="psx-key" data-val="8">8</div><div class="psx-key" data-val="9">9</div>
+        <div class="psx-key psx-key-clear" data-val="C">C</div><div class="psx-key" data-val="0">0</div><div class="psx-key psx-key-back" data-val="&#x232B;">&#x232B;</div>
+      </div>
+    </div>
+
+    <!-- Krok 2: uzupełnienie brakujących odbić -->
+    <div id="w-step-missing" class="psx-card" style="display:none; border-color:var(--warn);">
+      <h2 class="psx-title" style="color:var(--warn);">&#9888;&#65039; Brakujące odbicia</h2>
+      <p class="psx-subtitle" style="margin-bottom:16px;">Uzupełnij zaległe wyjścia zanim zarejestrujesz dzisiejszy dzień.</p>
+      <div id="w-missing-list"></div>
+      <button class="psx-btn psx-btn-secondary" style="width:100%; margin-top:12px;" onclick="Worker.resetToAuth()">Anuluj i wróć</button>
+    </div>
+
+    <!-- Krok 3: kod tabletu + akcja -->
+    <div id="w-step-action" class="psx-card" style="display:none;">
+      <h2 class="psx-title" id="w-profile-name">&#128100; Pracownik</h2>
+      <p class="psx-subtitle" id="w-profile-status" style="margin-bottom:16px;"></p>
+
+      <div style="border-top:1px solid var(--border); padding-top:16px;">
+        <p style="font-size:11px; text-transform:uppercase; color:var(--text-muted); text-align:center; margin-bottom:8px;">Wpisz 4-cyfrowy kod wyświetlany na tablecie</p>
+        <div id="w-code-display" style="font-size:32px; letter-spacing:12px; font-weight:bold; color:var(--success); text-align:center; min-height:40px; margin-bottom:16px;"></div>
+
+        <div class="psx-keypad" id="w-code-keypad" style="margin-bottom:20px;">
+          <div class="psx-key" data-val="1">1</div><div class="psx-key" data-val="2">2</div><div class="psx-key" data-val="3">3</div>
+          <div class="psx-key" data-val="4">4</div><div class="psx-key" data-val="5">5</div><div class="psx-key" data-val="6">6</div>
+          <div class="psx-key" data-val="7">7</div><div class="psx-key" data-val="8">8</div><div class="psx-key" data-val="9">9</div>
+          <div class="psx-key psx-key-clear" data-val="C">C</div><div class="psx-key" data-val="0">0</div><div class="psx-key psx-key-back" data-val="&#x232B;">&#x232B;</div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <button class="psx-btn psx-btn-success" id="w-btn-wejscie" style="padding:16px;">&#9989; WEJŚCIE</button>
+          <button class="psx-btn psx-btn-primary"  id="w-btn-wyjscie" style="padding:16px;">&#128682; WYJŚCIE</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Krok 4: sukces -->
+    <div id="w-step-success" class="psx-card" style="display:none; text-align:center; padding:40px 20px;">
+      <div style="font-size:48px; color:var(--success); margin-bottom:15px;">&#10003;</div>
+      <h2 class="psx-title" style="color:var(--success);">Zarejestrowano!</h2>
+      <p class="psx-subtitle" id="w-success-msg" style="font-size:16px; margin-top:10px;"></p>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===================== ADMIN VIEW ===================== -->
+<div id="view-admin" class="view-panel">
+
+  <!-- Overlay logowania -->
+  <div id="admin-login-overlay" style="position:absolute; inset:0; background:var(--bg-base); z-index:100; display:flex; align-items:center; justify-content:center;">
+    <div class="psx-card" style="width:100%; max-width:360px;">
+      <div style="text-align:center; margin-bottom:16px;">
+        <h2 class="psx-title">Panel Administratora</h2>
+        <p class="psx-subtitle">Wprowadź kod PIN administratora</p>
+      </div>
+      <div style="margin:16px 0; text-align:center;">
+        <div id="a-pin-display" style="font-size:32px; letter-spacing:12px; font-weight:bold; color:var(--accent); min-height:40px;"></div>
+      </div>
+      <div class="psx-keypad" id="admin-auth-keypad">
+        <div class="psx-key" data-val="1">1</div><div class="psx-key" data-val="2">2</div><div class="psx-key" data-val="3">3</div>
+        <div class="psx-key" data-val="4">4</div><div class="psx-key" data-val="5">5</div><div class="psx-key" data-val="6">6</div>
+        <div class="psx-key" data-val="7">7</div><div class="psx-key" data-val="8">8</div><div class="psx-key" data-val="9">9</div>
+        <div class="psx-key psx-key-clear" data-val="C">C</div><div class="psx-key" data-val="0">0</div><div class="psx-key psx-key-back" data-val="&#x232B;">&#x232B;</div>
+      </div>
+    </div>
+  </div>
+
+  <header class="app-header">
+    <div class="brand"><span class="diamond">&#9672;</span> We SMILE — Panel Kontrolny</div>
+    <div style="display:flex; align-items:center; gap:16px;">
+      <button class="theme-btn" data-theme-toggle aria-label="Przełącz motyw">&#9789;</button>
+      <button class="psx-btn psx-btn-secondary" style="padding:6px 12px; font-size:12px;" id="btn-logout">Wyloguj</button>
+    </div>
+  </header>
+
+  <div class="admin-grid">
+    <aside class="admin-sidebar">
+      <div class="admin-menu-item active" data-target="sec-dashboard">&#128202; Ewidencja zdarzeń</div>
+      <div class="admin-menu-item" data-target="sec-workers">&#128101; Zarządzanie pracownikami</div>
+      <div class="admin-menu-item" data-target="sec-anomalies">&#9888;&#65039; Anomalie bezpieczeństwa</div>
+    </aside>
+
+    <main class="admin-content">
+
+      <section id="sec-dashboard" class="admin-panel-section active">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+          <div>
+            <h2 class="psx-title">Logi ewidencji czasu pracy</h2>
+            <p class="psx-subtitle">Pełna historia wszystkich zarejestrowanych zdarzeń</p>
+          </div>
+          <button class="psx-btn" id="btn-export">&#128229; Eksportuj CSV</button>
+        </div>
+        <div class="psx-table-wrap">
+          <table class="psx-table">
+            <thead>
+              <tr><th>Data i godzina</th><th>Pracownik</th><th>Zdarzenie</th><th>Źródło</th></tr>
+            </thead>
+            <tbody id="table-ewidencja-body">
+              <tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Ładowanie danych&hellip;</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="sec-workers" class="admin-panel-section">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+          <div>
+            <h2 class="psx-title">Lista pracowników</h2>
+            <p class="psx-subtitle">Dodawaj, edytuj uprawnienia i zarządzaj PIN-ami</p>
+          </div>
+          <button class="psx-btn" id="btn-add-worker">&#10133; Dodaj pracownika</button>
+        </div>
+        <div class="psx-table-wrap">
+          <table class="psx-table">
+            <thead>
+              <tr><th>ID</th><th>Imię i nazwisko</th><th>Rola</th><th>Status PIN</th><th>Konto</th><th style="text-align:right;">Akcje</th></tr>
+            </thead>
+            <tbody id="table-workers-body">
+              <tr><td colspan="6" style="text-align:center; color:var(--text-muted);">Ładowanie pracowników&hellip;</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="sec-anomalies" class="admin-panel-section">
+        <h2 class="psx-title">Logi bezpieczeństwa i anomalie</h2>
+        <p class="psx-subtitle">Automatycznie wykryte nieprawidłowości w sekwencjach zdarzeń</p>
+        <div class="psx-table-wrap">
+          <table class="psx-table">
+            <thead>
+              <tr><th>Znacznik czasu</th><th>Pracownik ID</th><th>Opis wykrytego problemu</th></tr>
+            </thead>
+            <tbody id="table-anomalies-body">
+              <tr><td colspan="3" style="text-align:center; color:var(--text-muted);">Brak anomalii.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top:15px; text-align:right;">
+          <button class="psx-btn psx-btn-secondary" style="font-size:12px; padding:8px 16px;" id="btn-clear-cache">Resetuj cache blokad anty-bruteforce</button>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- Modal edycji pracownika -->
+<div class="modal-backdrop" id="modal-worker">
+  <div class="psx-card" style="width:100%; max-width:400px;">
+    <h3 class="psx-title" id="modal-worker-title" style="margin-bottom:20px;">Dane Pracownika</h3>
+    <input type="hidden" id="np-id">
+
+    <div style="margin-bottom:12px;">
+      <label class="psx-subtitle" style="display:block; margin-bottom:4px;">Imię</label>
+      <input type="text" id="np-imie" class="psx-input" autocomplete="off">
+    </div>
+    <div style="margin-bottom:12px;">
+      <label class="psx-subtitle" style="display:block; margin-bottom:4px;">Nazwisko</label>
+      <input type="text" id="np-nazwisko" class="psx-input" autocomplete="off">
+    </div>
+    <div style="margin-bottom:12px;">
+      <label class="psx-subtitle" style="display:block; margin-bottom:4px;">Stanowisko / Rola</label>
+      <input type="text" id="np-rola" class="psx-input" autocomplete="off">
+    </div>
+    <div style="margin-bottom:20px;">
+      <label class="psx-subtitle" style="display:block; margin-bottom:4px;">Nowy 4-cyfrowy PIN (pozostaw puste, by nie zmieniać)</label>
+      <input type="password" id="np-pin" class="psx-input" maxlength="4" placeholder="&bull;&bull;&bull;&bull;" autocomplete="new-password">
+    </div>
+    <div style="margin-bottom:24px; display:flex; align-items:center; gap:8px;">
+      <input type="checkbox" id="np-aktywny" style="width:16px; height:16px; accent-color:var(--accent);">
+      <label for="np-aktywny" class="psx-subtitle" style="cursor:pointer; user-select:none; color:var(--text-main);">Konto aktywne</label>
+    </div>
+
+    <div style="display:flex; justify-content:flex-end; gap:8px;">
+      <button class="psx-btn psx-btn-secondary" id="btn-modal-cancel">Anuluj</button>
+      <button class="psx-btn" id="btn-modal-save">Zapisz</button>
+    </div>
+  </div>
+</div>
+
+<div id="global-toast" class="psx-toast"></div>
+
+<script>
+/* global google */
+
+// Wartość wstrzyknięta przez szablon GAS: t.APP_PAGE = page
+var APP_PAGE = "<?= APP_PAGE ?>";
+
+// ============================================================
+//  PSX — pomocnicze narzędzia
+// ============================================================
+var PSX = {
+  theme: {
+    init: function () {
+      document.querySelectorAll('[data-theme-toggle]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+          document.documentElement.setAttribute('data-theme', next);
+          try { localStorage.setItem('wesmile-theme', next); } catch (e) {}
+        });
+      });
+    }
+  },
+  toast: {
+    _tid: null,
+    show: function (msg, type) {
+      var node = document.getElementById('global-toast');
+      if (!node) return;
+      clearTimeout(this._tid);
+      node.textContent = msg;
+      node.className = 'psx-toast toast-' + (type || 'info') + ' show';
+      this._tid = setTimeout(function () { node.classList.remove('show'); }, 3500);
+    }
+  },
+  /**
+   * Wywołuje funkcję callBackend() po stronie GAS.
+   * @param {string}   action    Nazwa akcji
+   * @param {Array}    args      Tablica argumentów
+   * @param {Function} onSuccess Callback sukcesu
+   * @param {Function} [onFail]  Opcjonalny callback błędu
+   */
+  call: function (action, args, onSuccess, onFail) {
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (res && res.errorType === 'UNAUTHORIZED') {
+          PSX.toast.show(res.message, 'error');
+          Admin.logout();
+          return;
+        }
+        if (onSuccess) onSuccess(res);
+      })
+      .withFailureHandler(function (err) {
+        var msg = (err && err.message) ? err.message : 'Krytyczny błąd połączenia sieciowego.';
+        if (onFail) onFail(msg);
+        else PSX.toast.show(msg, 'error');
+      })
+      .callBackend(action, JSON.stringify(args || []));
+  }
+};
+
+// ============================================================
+//  TABLET — wyświetlanie tokenu
+// ============================================================
+var Tablet = {
+  init: function () {
+    this.refresh();
+    // Odświeżenie co 30 s zsynchronizowane z oknem serwera
+    var self = this;
+    setInterval(function () { self.refresh(); }, 30000);
+  },
+  refresh: function () {
+    PSX.call('generujBiezacyToken', [], function (token) {
+      var disp = document.getElementById('t-token-display');
+      if (disp && token) {
+        disp.textContent = token;
+        Tablet._startBar();
+      }
+    });
+  },
+  _startBar: function () {
+    var bar = document.getElementById('t-progress-bar');
+    if (!bar) return;
+    bar.style.transition = 'none';
+    bar.style.transform  = 'scaleX(1)';
+    // Krótkie opóźnienie, by reset zdążył się wyrenderować
+    setTimeout(function () {
+      bar.style.transition = 'transform 30s linear';
+      bar.style.transform  = 'scaleX(0)';
+    }, 50);
+  }
+};
+
+// ============================================================
+//  WORKER — rejestracja odbić
+// ============================================================
+var Worker = {
+  currentEmpId:      null,
+  currentPin:        '',
+  currentTabletCode: '',
+
+  init: function () {
+    this.resetToAuth();
+    this._bindAuthKeypad();
+    this._bindCodeKeypad();
+    document.getElementById('w-btn-wejscie').addEventListener('click', function () { Worker.submitLog('WEJSCIE'); });
+    document.getElementById('w-btn-wyjscie').addEventListener('click', function () { Worker.submitLog('WYJSCIE'); });
+  },
+
+  resetToAuth: function () {
+    this.currentEmpId      = null;
+    this.currentPin        = '';
+    this.currentTabletCode = '';
+    this._updPin();
+    this._updCode();
+    this._show('w-step-auth');
+  },
+
+  _show: function (id) {
+    ['w-step-auth', 'w-step-missing', 'w-step-action', 'w-step-success'].forEach(function (s) {
+      document.getElementById(s).style.display = (s === id) ? 'block' : 'none';
+    });
+  },
+
+  _updPin: function () {
+    document.getElementById('w-pin-display').textContent = '•'.repeat(this.currentPin.length);
+  },
+  _updCode: function () {
+    document.getElementById('w-code-display').textContent = '•'.repeat(this.currentTabletCode.length);
+  },
+
+  _bindAuthKeypad: function () {
+    document.getElementById('w-auth-keypad').addEventListener('click', function (e) {
+      var key = e.target.closest('.psx-key');
+      if (!key) return;
+      var val = key.getAttribute('data-val');
+
+      if (val === 'C')           Worker.currentPin = '';
+      else if (val === '⌫') Worker.currentPin = Worker.currentPin.slice(0, -1);
+      else if (Worker.currentPin.length < 4) Worker.currentPin += val;
+
+      Worker._updPin();
+
+      if (Worker.currentPin.length === 4) {
+        PSX.toast.show('Weryfikacja kodu PIN…', 'info');
+        PSX.call('identyfikujPracownikaPoPIN', [Worker.currentPin], function (res) {
+          if (res && res.ok) {
+            Worker.currentEmpId = res.worker.id;
+            document.getElementById('w-profile-name').textContent = '👤 ' + res.worker.imie + ' ' + res.worker.nazwisko;
+            Worker._checkHistory();
+          } else {
+            PSX.toast.show((res && res.message) || 'Nieprawidłowy PIN.', 'error');
+            Worker.currentPin = '';
+            Worker._updPin();
+          }
+        }, function (err) {
+          PSX.toast.show('Błąd połączenia: ' + err, 'error');
+          Worker.currentPin = '';
+          Worker._updPin();
+        });
+      }
+    });
+  },
+
+  _bindCodeKeypad: function () {
+    document.getElementById('w-code-keypad').addEventListener('click', function (e) {
+      var key = e.target.closest('.psx-key');
+      if (!key) return;
+      var val = key.getAttribute('data-val');
+
+      if (val === 'C')           Worker.currentTabletCode = '';
+      else if (val === '⌫') Worker.currentTabletCode = Worker.currentTabletCode.slice(0, -1);
+      else if (Worker.currentTabletCode.length < 4) Worker.currentTabletCode += val;
+
+      Worker._updCode();
+    });
+  },
+
+  _checkHistory: function () {
+    PSX.call('pobierzHistoriePracownika', [Worker.currentEmpId], function (res) {
+      if (!res || !res.ok) {
+        PSX.toast.show((res && res.message) || 'Błąd weryfikacji profilu.', 'error');
+        Worker.resetToAuth();
+        return;
+      }
+      if (res.licznikBrakow > 0) {
+        Worker._showMissingForm(res.brakujaceOdbicia);
+      } else {
+        var status = 'Stan dzisiejszy: brak rejestracji.';
+        if (res.ostatniaAkcjaDzis) {
+          status = 'Ostatnie odbicie: ' +
+            (res.ostatniaAkcjaDzis === 'WEJSCIE' ? '✅ WEJŚCIE' : '🚪 WYJŚCIE') +
+            ' o ' + res.ostatniaGodzinaDzis;
+        }
+        document.getElementById('w-profile-status').textContent = status;
+        Worker._show('w-step-action');
+      }
+    });
+  },
+
+  _showMissingForm: function (logs) {
+    var list = document.getElementById('w-missing-list');
+    list.innerHTML = '';
+
+    logs.forEach(function (log) {
+      var wrap = document.createElement('div');
+      wrap.style.cssText = 'background:rgba(255,255,255,.03); padding:14px; border-radius:10px; margin-bottom:12px; border:1px solid var(--border);';
+
+      // Używamy textContent/createTextNode zamiast innerHTML tam gdzie wstawiamy dane z serwera
+      var title = document.createElement('div');
+      title.style.cssText = 'font-weight:bold; margin-bottom:4px; color:var(--warn);';
+      title.textContent = '📅 Data: ' + log.data;
+
+      var desc = document.createElement('div');
+      desc.style.cssText = 'font-size:12px; margin-bottom:12px; color:var(--text-muted);';
+      desc.textContent = 'Wejście o ' + log.ostatniaGodzina + ' — brak zarejestrowanego wyjścia.';
+
+      var timeRow = document.createElement('div');
+      timeRow.style.cssText = 'display:flex; align-items:center; gap:8px; margin-bottom:12px;';
+
+      var lbl = document.createElement('span');
+      lbl.style.fontSize = '13px';
+      lbl.textContent = 'Godzina wyjścia:';
+
+      var inH = document.createElement('input');
+      inH.type = 'text'; inH.placeholder = 'HH'; inH.maxLength = 2;
+      inH.className = 'psx-input'; inH.style.cssText = 'width:50px; text-align:center; padding:6px;';
+
+      var sep = document.createTextNode(' : ');
+
+      var inM = document.createElement('input');
+      inM.type = 'text'; inM.placeholder = 'MM'; inM.maxLength = 2;
+      inM.className = 'psx-input'; inM.style.cssText = 'width:50px; text-align:center; padding:6px;';
+
+      timeRow.appendChild(lbl);
+      timeRow.appendChild(inH);
+      timeRow.appendChild(sep);
+      timeRow.appendChild(inM);
+
+      var btn = document.createElement('button');
+      btn.className = 'psx-btn psx-btn-warn';
+      btn.style.cssText = 'width:100%; padding:10px; font-size:13px;';
+      btn.textContent = 'Zapisz i zamknij ten dzień';
+
+      btn.addEventListener('click', function () {
+        var h = inH.value.trim();
+        var m = inM.value.trim();
+        var hN = parseInt(h, 10);
+        var mN = parseInt(m, 10);
+
+        if (!h || !m || isNaN(hN) || isNaN(mN) || hN < 0 || hN > 23 || mN < 0 || mN > 59) {
+          PSX.toast.show('Wprowadź prawidłową godzinę (00-23) i minuty (00-59).', 'error');
+          return;
+        }
+        var godzina = (hN < 10 ? '0' : '') + hN + ':' + (mN < 10 ? '0' : '') + mN;
+
+        PSX.toast.show('Zapisywanie zaległych godzin…', 'info');
+        PSX.call('uzupelnijBrakujaceOdbicie', [Worker.currentEmpId, log.data, godzina, log.typ], function (r) {
+          if (r && r.ok) {
+            PSX.toast.show('Zaległy dzień uzupełniony!', 'success');
+            Worker._checkHistory();
+          } else {
+            PSX.toast.show((r && r.message) || 'Nie udało się zapisać.', 'error');
+          }
+        });
+      });
+
+      wrap.appendChild(title);
+      wrap.appendChild(desc);
+      wrap.appendChild(timeRow);
+      wrap.appendChild(btn);
+      list.appendChild(wrap);
+    });
+
+    Worker._show('w-step-missing');
+  },
+
+  submitLog: function (actionType) {
+    if (this.currentTabletCode.length !== 4) {
+      PSX.toast.show('Wpisz kompletny 4-cyfrowy kod autoryzacji.', 'error');
+      return;
+    }
+    PSX.toast.show('Rejestrowanie w bazie…', 'info');
+    PSX.call('weryfikujIRejestruj',
+      [this.currentEmpId, this.currentTabletCode, this.currentPin, actionType],
+      function (res) {
+        if (res && res.ok) {
+          var akcjaLabel = actionType === 'WEJSCIE' ? 'WEJŚCIE' : 'WYJŚCIE';
+          document.getElementById('w-success-msg').textContent =
+            res.imie + ', Twoje zdarzenie [' + akcjaLabel + '] zostało zapisane o godzinie ' + res.godzina;
+          Worker._show('w-step-success');
+          setTimeout(function () { Worker.resetToAuth(); }, 4000);
+        } else {
+          PSX.toast.show((res && res.message) || 'Błąd rejestracji.', 'error');
+          Worker.currentTabletCode = '';
+          Worker._updCode();
+        }
+      },
+      function (err) {
+        PSX.toast.show('Błąd zapisu: ' + err, 'error');
+      }
+    );
+  }
+};
+
+// ============================================================
+//  ADMIN — panel zarządzania
+// ============================================================
+var Admin = {
+  token:      null,
+  panelData:  null,
+  currentPin: '',
+
+  init: function () {
+    this._bindAuthKeypad();
+    this._bindNavigation();
+    this._bindInteractions();
+  },
+
+  _bindAuthKeypad: function () {
+    document.getElementById('admin-auth-keypad').addEventListener('click', function (e) {
+      var key = e.target.closest('.psx-key');
+      if (!key) return;
+      var val = key.getAttribute('data-val');
+
+      if (val === 'C')           Admin.currentPin = '';
+      else if (val === '⌫') Admin.currentPin = Admin.currentPin.slice(0, -1);
+      else if (Admin.currentPin.length < 4) Admin.currentPin += val;
+
+      document.getElementById('a-pin-display').textContent = '•'.repeat(Admin.currentPin.length);
+
+      if (Admin.currentPin.length === 4) {
+        PSX.toast.show('Logowanie…', 'info');
+        PSX.call('weryfikujAdminPIN', [Admin.currentPin], function (res) {
+          if (res && res.ok) {
+            Admin.token = res.token;
+            document.getElementById('admin-login-overlay').style.display = 'none';
+            PSX.toast.show('Zalogowano poprawnie.', 'success');
+            Admin.loadPanelData();
+          } else {
+            PSX.toast.show((res && res.message) || 'Błędny PIN.', 'error');
+            Admin.currentPin = '';
+            document.getElementById('a-pin-display').textContent = '';
+          }
+        });
+      }
+    });
+  },
+
+  _bindNavigation: function () {
+    var items = document.querySelectorAll('.admin-sidebar .admin-menu-item');
+    items.forEach(function (item) {
+      item.addEventListener('click', function () {
+        items.forEach(function (i) { i.classList.remove('active'); });
+        item.classList.add('active');
+        var target = item.getAttribute('data-target');
+        document.querySelectorAll('.admin-panel-section').forEach(function (s) { s.classList.remove('active'); });
+        var sec = document.getElementById(target);
+        if (sec) sec.classList.add('active');
+      });
+    });
+  },
+
+  logout: function () {
+    this.token     = null;
+    this.panelData = null;
+    this.currentPin = '';
+    document.getElementById('a-pin-display').textContent = '';
+    document.getElementById('admin-login-overlay').style.display = 'flex';
+  },
+
+  loadPanelData: function () {
+    if (!this.token) return;
+    PSX.call('pobierzPanelAdmina', [this.token], function (res) {
+      if (res && res.ok) {
+        Admin.panelData = res;
+        Admin._renderEwidencja(res.ewidencja);
+        Admin._renderWorkers(res.pracownicy);
+        Admin._renderAnomalies(res.anomalie);
+      }
+    });
+  },
+
+  _renderEwidencja: function (arr) {
+    var tbody = document.getElementById('table-ewidencja-body');
+    if (!arr || !arr.length) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Brak wpisów.</td></tr>';
+      return;
+    }
+    var sorted = arr.slice().sort(function (a, b) { return b.ts.localeCompare(a.ts); });
+    var html = '';
+    sorted.forEach(function (r) {
+      var cls = r.akcja === 'WEJSCIE' ? 'badge-in' : 'badge-out';
+      var lbl = r.akcja === 'WEJSCIE' ? 'Wejście' : 'Wyjście';
+      html += '<tr>' +
+        '<td>' + _esc(_fmtTs(r.ts)) + '</td>' +
+        '<td style="font-weight:600;">' + _esc(r.imie + ' ' + r.nazwisko) +
+          ' <span style="font-weight:normal; font-size:11px; color:var(--text-muted);">(' + _esc(r.id) + ')</span></td>' +
+        '<td><span class="badge ' + cls + '">' + lbl + '</span></td>' +
+        '<td style="color:var(--text-muted); font-size:12px;">' + _esc(r.zrodlo) + '</td>' +
+        '</tr>';
+    });
+    tbody.innerHTML = html;
+  },
+
+  _renderWorkers: function (arr) {
+    var tbody = document.getElementById('table-workers-body');
+    if (!arr || !arr.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">Brak pracowników.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = '';
+    arr.forEach(function (w) {
+      var tr = document.createElement('tr');
+
+      var pinCell = w.maPin
+        ? '<span style="color:var(--success);">● Aktywny</span>'
+        : '<span style="color:var(--accent);">○ Brak</span>';
+      var aktCell = w.aktywny
+        ? '<span style="color:var(--success); font-weight:600;">Aktywne</span>'
+        : '<span style="color:var(--text-muted);">Zablokowane</span>';
+
+      tr.innerHTML =
+        '<td style="font-family:monospace; color:var(--text-muted);">' + _esc(w.id) + '</td>' +
+        '<td style="font-weight:600;">' + _esc(w.imie + ' ' + w.nazwisko) + '</td>' +
+        '<td>' + _esc(w.rola || '—') + '</td>' +
+        '<td>' + pinCell + '</td>' +
+        '<td>' + aktCell + '</td>' +
+        '<td style="text-align:right;"></td>';
+
+      // Przyciski budujemy bez inline-onclick (unikamy XSS przez zamknięcie w closure)
+      var actionCell = tr.querySelector('td:last-child');
+
+      var btnEdit = document.createElement('button');
+      btnEdit.className = 'psx-btn psx-btn-secondary';
+      btnEdit.style.cssText = 'padding:4px 8px; font-size:11px; margin-right:6px;';
+      btnEdit.textContent = 'Edytuj';
+      btnEdit.addEventListener('click', function () { Admin.openWorkerModal(w); });
+
+      var btnDel = document.createElement('button');
+      btnDel.className = 'psx-btn psx-btn-secondary';
+      btnDel.style.cssText = 'padding:4px 8px; font-size:11px; color:var(--accent); border-color:rgba(255,74,90,.2);';
+      btnDel.textContent = 'Usuń';
+      btnDel.addEventListener('click', function () { Admin.deleteWorker(w.id); });
+
+      actionCell.appendChild(btnEdit);
+      actionCell.appendChild(btnDel);
+      tbody.appendChild(tr);
+    });
+  },
+
+  _renderAnomalies: function (arr) {
+    var tbody = document.getElementById('table-anomalies-body');
+    if (!arr || !arr.length) {
+      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--text-muted);">Brak anomalii.</td></tr>';
+      return;
+    }
+    var html = '';
+    arr.forEach(function (a) {
+      html += '<tr>' +
+        '<td>' + _esc(_fmtTs(a.ts)) + '</td>' +
+        '<td style="font-family:monospace;">' + _esc(a.id) + '</td>' +
+        '<td style="color:var(--accent); font-weight:500;">' + _esc(a.opis) + '</td>' +
+        '</tr>';
+    });
+    tbody.innerHTML = html;
+  },
+
+  openWorkerModal: function (w) {
+    var isNew = !w;
+    document.getElementById('modal-worker-title').textContent = isNew ? 'Nowy Pracownik' : 'Edycja Pracownika';
+    document.getElementById('np-id').value       = isNew ? '' : (w.id       || '');
+    document.getElementById('np-imie').value     = isNew ? '' : (w.imie     || '');
+    document.getElementById('np-nazwisko').value = isNew ? '' : (w.nazwisko || '');
+    document.getElementById('np-rola').value     = isNew ? '' : (w.rola     || '');
+    document.getElementById('np-aktywny').checked = isNew ? true : (w.aktywny !== false);
+    document.getElementById('np-pin').value = '';
+    document.getElementById('modal-worker').classList.add('show');
+  },
+
+  saveWorkerFromModal: function () {
+    var pin = document.getElementById('np-pin').value.trim();
+    var imie = document.getElementById('np-imie').value.trim();
+    var nazwisko = document.getElementById('np-nazwisko').value.trim();
+
+    if (!imie || !nazwisko) {
+      PSX.toast.show('Imię i nazwisko są wymagane.', 'error');
+      return;
+    }
+    if (pin.length > 0 && pin.length !== 4) {
+      PSX.toast.show('PIN musi mieć dokładnie 4 cyfry.', 'error');
+      return;
+    }
+    if (pin.length > 0 && !/^\d{4}$/.test(pin)) {
+      PSX.toast.show('PIN może zawierać wyłącznie cyfry.', 'error');
+      return;
+    }
+
+    var w = {
+      id:       document.getElementById('np-id').value,
+      imie:     imie,
+      nazwisko: nazwisko,
+      rola:     document.getElementById('np-rola').value.trim(),
+      pin:      pin,
+      aktywny:  document.getElementById('np-aktywny').checked
+    };
+
+    PSX.toast.show('Zapisywanie profilu…', 'info');
+    PSX.call('zapiszPracownika', [w, Admin.token], function (res) {
+      if (res && res.ok) {
+        PSX.toast.show('Profil pracownika zapisany.', 'success');
+        document.getElementById('modal-worker').classList.remove('show');
+        Admin.loadPanelData();
+      } else {
+        PSX.toast.show((res && res.message) || 'Nie udało się zapisać.', 'error');
+      }
+    });
+  },
+
+  deleteWorker: function (id) {
+    if (!confirm('Czy na pewno usunąć tego pracownika? Operacja jest nieodwracalna.')) return;
+    PSX.call('usunPracownika', [id, Admin.token], function (res) {
+      if (res && res.ok) {
+        PSX.toast.show('Pracownik usunięty.', 'success');
+        Admin.loadPanelData();
+      } else {
+        PSX.toast.show((res && res.message) || 'Nie udało się usunąć.', 'error');
+      }
+    });
+  },
+
+  exportCSV: function () {
+    var arr = this.panelData && this.panelData.ewidencja;
+    if (!arr || !arr.length) { PSX.toast.show('Brak danych do eksportu.', 'info'); return; }
+    var csv = '﻿Data i godzina;Pracownik ID;Imię;Nazwisko;Zdarzenie;Data;Godzina;Źródło\r\n';
+    arr.forEach(function (r) {
+      csv += [_fmtTs(r.ts), r.id, r.imie, r.nazwisko, r.akcja, r.data, r.godzina, r.zrodlo]
+        .map(function (v) { return '"' + String(v || '').replace(/"/g, '""') + '"'; })
+        .join(';') + '\r\n';
+    });
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a');
+    a.href   = url;
+    a.setAttribute('download', 'RCP_Ewidencja_' + (this.panelData.dzisiaj || 'eksport') + '.csv');
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  },
+
+  _bindInteractions: function () {
+    document.getElementById('btn-logout').addEventListener('click', function () { Admin.logout(); });
+    document.getElementById('btn-add-worker').addEventListener('click', function () { Admin.openWorkerModal(null); });
+    document.getElementById('btn-modal-cancel').addEventListener('click', function () {
+      document.getElementById('modal-worker').classList.remove('show');
+    });
+    document.getElementById('btn-modal-save').addEventListener('click', function () { Admin.saveWorkerFromModal(); });
+    document.getElementById('btn-export').addEventListener('click', function () { Admin.exportCSV(); });
+    document.getElementById('btn-clear-cache').addEventListener('click', function () {
+      PSX.call('wyczyscCacheZabezpieczen', [Admin.token], function (res) {
+        PSX.toast.show(res && res.ok ? 'Cache blokad zresetowany.' : 'Błąd resetu cache.', res && res.ok ? 'success' : 'error');
+      });
+    });
+  }
+};
+
+// ============================================================
+//  Narzędzia pomocnicze
+// ============================================================
+function _esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function _fmtTs(iso) {
+  try {
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return String(iso);
+    var p = function (n) { return (n < 10 ? '0' : '') + n; };
+    return p(d.getDate()) + '.' + p(d.getMonth() + 1) + '.' + d.getFullYear() +
+      ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  } catch (e) { return String(iso); }
+}
+
+// ============================================================
+//  Bootstrap
+// ============================================================
+var App = {
+  init: function () {
+    PSX.theme.init();
+    var page = (['tablet', 'worker', 'admin'].indexOf(APP_PAGE) !== -1) ? APP_PAGE : 'tablet';
+    var view = document.getElementById('view-' + page);
+    if (view) view.classList.add('active');
+
+    if (page === 'tablet')      Tablet.init();
+    else if (page === 'worker') Worker.init();
+    else if (page === 'admin')  Admin.init();
+  }
+};
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', function () { App.init(); });
+} else {
+  App.init();
+}
+</script>
+</body>
+</html>
