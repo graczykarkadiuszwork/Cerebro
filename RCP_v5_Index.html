@@ -1,0 +1,1383 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>We SMILE — RCP</title>
+
+<!-- FOUC prevention: apply saved theme before CSS paints. -->
+<script>
+  (function () {
+    try {
+      var saved = localStorage.getItem('wesmile-theme');
+      if (!saved) {
+        saved = (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark';
+      }
+      document.documentElement.setAttribute('data-theme', saved);
+    } catch (e) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  })();
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* ============================ PSX × NOIRE ============================== */
+:root {
+  /* Brand */
+  --psx-blue: #3D7EFF;
+  --psx-blue-dim: #2A5FCC;
+  --psx-blue-glow: rgba(61, 126, 255, 0.28);
+
+  /* Dark mode (default) */
+  --bg: #0A0A0C;
+  --bg-1: #111114;
+  --bg-2: #18181C;
+  --bg-3: #202026;
+  --surface: #131317;
+  --border: #2A2A31;
+  --border-strong: #3A3A44;
+  --text: #F4F4F6;
+  --text-2: #B6B6C0;
+  --text-3: #74747F;
+  --accent: var(--psx-blue);
+  --green: #38D39F;
+  --green-dim: rgba(56, 211, 159, 0.14);
+  --red: #FF5C72;
+  --red-dim: rgba(255, 92, 114, 0.16);
+  --amber: #FFC24B;
+  --amber-dim: rgba(255, 194, 75, 0.16);
+
+  /* Typography */
+  --mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --sans: 'IBM Plex Sans', system-ui, sans-serif;
+
+  /* Spacing — 4px grid */
+  --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px;
+  --s5: 20px; --s6: 24px; --s7: 32px; --s8: 40px;
+  --s10: 48px; --s12: 64px; --s14: 80px; --s16: 96px;
+
+  /* Radius */
+  --r-sm: 8px; --r-md: 14px; --r-lg: 22px; --r-pill: 999px;
+
+  /* Shadow */
+  --shadow-1: 0 2px 8px rgba(0,0,0,0.35);
+  --shadow-2: 0 8px 30px rgba(0,0,0,0.45);
+  --shadow-glow: 0 0 0 1px var(--psx-blue-glow), 0 0 28px var(--psx-blue-glow);
+
+  /* Transition */
+  --t-fast: 120ms cubic-bezier(0.22, 1, 0.36, 1);
+  --t-base: 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  --t-slow: 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+[data-theme="light"] {
+  --bg: #F4F5F8;
+  --bg-1: #FFFFFF;
+  --bg-2: #EEF0F4;
+  --bg-3: #E4E7EE;
+  --surface: #FFFFFF;
+  --border: #DDE1E9;
+  --border-strong: #C7CCD7;
+  --text: #14151A;
+  --text-2: #4A4D58;
+  --text-3: #888D9A;
+  --green-dim: rgba(56, 211, 159, 0.18);
+  --red-dim: rgba(255, 92, 114, 0.14);
+  --amber-dim: rgba(255, 194, 75, 0.20);
+  --shadow-1: 0 2px 8px rgba(20,20,30,0.08);
+  --shadow-2: 0 8px 30px rgba(20,20,30,0.12);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+  transition: background var(--t-base), color var(--t-base);
+  overflow-x: hidden;
+}
+
+.label {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  font-weight: 500;
+}
+
+/* ---------------- Views / screens ---------------- */
+.view { display: none; min-height: 100vh; }
+.view.active { display: block; }
+.screen { display: none; }
+.screen.active { display: block; }
+
+.wrap {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--s6) var(--s4) var(--s10);
+}
+
+/* ---------------- App header ---------------- */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--s5) var(--s6);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-1);
+}
+.brand {
+  display: flex; align-items: center; gap: var(--s3);
+  font-family: var(--mono); font-weight: 600; font-size: 18px;
+  letter-spacing: 0.04em;
+}
+.brand .diamond { color: var(--accent); font-size: 20px; }
+.clock-block { text-align: right; font-family: var(--mono); }
+.clock-block .clock { font-size: 22px; font-weight: 600; letter-spacing: 0.06em; }
+.clock-block .date { font-size: 12px; color: var(--text-3); letter-spacing: 0.1em; }
+
+/* ---------------- Theme toggle ---------------- */
+.theme-btn {
+  width: 40px; height: 40px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  color: var(--text-2);
+  cursor: pointer;
+  font-size: 17px;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: all var(--t-fast);
+}
+.theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ---------------- Token display ---------------- */
+.token-block { text-align: center; padding: var(--s10) var(--s4) var(--s7); }
+.token-row {
+  display: flex; justify-content: center; gap: var(--s4);
+  margin: var(--s5) 0 var(--s6);
+}
+.token-digit {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: clamp(56px, 14vw, 132px);
+  line-height: 1;
+  width: clamp(72px, 18vw, 168px);
+  height: clamp(104px, 24vw, 224px);
+  display: flex; align-items: center; justify-content: center;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  color: var(--text);
+  box-shadow: var(--shadow-1);
+  transition: all var(--t-base);
+}
+.token-digit.pulse { box-shadow: var(--shadow-glow); border-color: var(--accent); }
+
+/* small token (instruction box) */
+.token-row.small { gap: var(--s2); margin: var(--s3) 0 0; }
+.token-row.small .token-digit {
+  font-size: 30px; width: 46px; height: 60px; border-radius: var(--r-sm);
+  box-shadow: none;
+}
+
+/* ---------------- Timer bar ---------------- */
+.timer-track {
+  height: 8px; width: 100%; max-width: 480px; margin: 0 auto;
+  background: var(--bg-3); border-radius: var(--r-pill); overflow: hidden;
+}
+.timer-fill {
+  height: 100%; width: 100%;
+  background: linear-gradient(90deg, var(--psx-blue-dim), var(--psx-blue));
+  border-radius: var(--r-pill);
+  transition: width 1000ms linear;
+}
+.timer-fill.low { background: linear-gradient(90deg, #cc4a3a, var(--red)); }
+
+/* ---------------- Instruction boxes ---------------- */
+.instr-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4);
+  max-width: 600px; margin: var(--s8) auto 0;
+}
+.instr {
+  border-radius: var(--r-md); padding: var(--s5); border: 1px solid var(--border);
+  background: var(--surface);
+}
+.instr.green { border-color: rgba(56,211,159,0.4); background: var(--green-dim); }
+.instr.blue { border-color: var(--psx-blue-glow); background: rgba(61,126,255,0.10); }
+.instr h4 { font-family: var(--mono); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: var(--s2); }
+.instr.green h4 { color: var(--green); }
+.instr.blue h4 { color: var(--accent); }
+.instr p { font-size: 14px; color: var(--text-2); line-height: 1.5; }
+
+/* ---------------- Legal footer ---------------- */
+.legal {
+  margin-top: var(--s12); text-align: center;
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em;
+  color: var(--text-3); line-height: 1.8;
+}
+
+/* ---------------- Cards ---------------- */
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: var(--s6);
+  box-shadow: var(--shadow-1);
+}
+.card + .card { margin-top: var(--s4); }
+.card-title { font-family: var(--mono); font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-3); margin-bottom: var(--s4); }
+
+/* ---------------- Search ---------------- */
+.search-input {
+  width: 100%; padding: var(--s4) var(--s5);
+  background: var(--bg-2); border: 1px solid var(--border);
+  border-radius: var(--r-md); color: var(--text);
+  font-family: var(--sans); font-size: 16px;
+  transition: border-color var(--t-fast);
+}
+.search-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--psx-blue-glow); }
+.search-input::placeholder { color: var(--text-3); }
+
+/* ---------------- Worker list ---------------- */
+.worker-list { margin-top: var(--s4); display: flex; flex-direction: column; gap: var(--s2); }
+.worker-item {
+  display: flex; align-items: center; gap: var(--s4);
+  padding: var(--s4); border-radius: var(--r-md);
+  border: 1px solid var(--border); background: var(--surface);
+  cursor: pointer; transition: all var(--t-fast); text-align: left; width: 100%;
+}
+.worker-item:hover { border-color: var(--accent); transform: translateX(2px); }
+.worker-avatar {
+  width: 46px; height: 46px; flex: 0 0 46px; border-radius: var(--r-pill);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-weight: 600; font-size: 16px;
+  background: var(--bg-3); color: var(--accent); border: 1px solid var(--border-strong);
+}
+.worker-meta { flex: 1; min-width: 0; }
+.worker-name { font-weight: 600; font-size: 16px; }
+.worker-role { font-size: 13px; color: var(--text-3); }
+.worker-chev { color: var(--text-3); font-family: var(--mono); }
+
+/* ---------------- Skeleton ---------------- */
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-2) 25%, var(--bg-3) 50%, var(--bg-2) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+  border-radius: var(--r-sm);
+}
+.skeleton-row { height: 70px; border-radius: var(--r-md); margin-bottom: var(--s2); }
+@keyframes skeleton-pulse { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* empty / error states */
+.state-box { text-align: center; padding: var(--s10) var(--s4); color: var(--text-3); }
+.state-box .ico { font-size: 36px; margin-bottom: var(--s3); opacity: 0.7; }
+.state-box p { font-size: 14px; line-height: 1.6; }
+
+/* ---------------- PIN / code fields ---------------- */
+.field-label { display: block; margin-bottom: var(--s2); }
+.pin-row { display: flex; gap: var(--s3); justify-content: center; margin-bottom: var(--s6); }
+.pin-cell {
+  width: 58px; height: 70px; text-align: center;
+  font-family: var(--mono); font-weight: 600; font-size: 30px;
+  background: var(--bg-2); border: 1px solid var(--border-strong);
+  border-radius: var(--r-md); color: var(--text);
+  transition: all var(--t-fast);
+  -moz-appearance: textfield;
+}
+.pin-cell::-webkit-outer-spin-button, .pin-cell::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.pin-cell:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--psx-blue-glow); }
+.pin-cell.filled { border-color: var(--accent); }
+.pin-cell.err { border-color: var(--red); background: var(--red-dim); animation: shake 380ms; }
+@keyframes shake { 0%,100%{transform:translateX(0);} 20%,60%{transform:translateX(-6px);} 40%,80%{transform:translateX(6px);} }
+
+/* ---------------- Buttons ---------------- */
+.btn {
+  position: relative;
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--s2);
+  font-family: var(--mono); font-weight: 600; font-size: 15px;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  padding: var(--s4) var(--s6); border-radius: var(--r-md);
+  border: 1px solid transparent; cursor: pointer;
+  transition: all var(--t-fast); user-select: none;
+}
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn-arrive { background: var(--green); color: #04130E; }
+.btn-arrive:hover:not(:disabled) { filter: brightness(1.08); }
+.btn-leave { background: var(--bg-2); color: var(--text); border-color: var(--border-strong); }
+.btn-leave:hover:not(:disabled) { border-color: var(--red); color: var(--red); }
+.btn-primary { background: var(--accent); color: #04122E; }
+.btn-primary:hover:not(:disabled) { filter: brightness(1.08); }
+.btn-ghost { background: transparent; color: var(--text-2); border-color: var(--border); }
+.btn-ghost:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.btn-block { width: 100%; }
+.btn-loading { color: transparent !important; pointer-events: none; }
+.btn-loading::after {
+  content: '\2022\2022\2022';
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  color: currentColor; letter-spacing: 4px; font-size: 22px;
+  animation: btn-dots 1s steps(4, end) infinite; opacity: 0.9;
+}
+.btn-arrive.btn-loading::after { color: #04130E; }
+.btn-primary.btn-loading::after { color: #04122E; }
+@keyframes btn-dots { 0%{clip-path: inset(0 100% 0 0);} 100%{clip-path: inset(0 0 0 0);} }
+
+.btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s3); margin-top: var(--s4); }
+.link-ghost { background: none; border: none; color: var(--text-3); font-family: var(--mono); font-size: 13px; cursor: pointer; margin-top: var(--s4); }
+.link-ghost:hover { color: var(--accent); }
+
+/* ---------------- Selected worker banner ---------------- */
+.sel-banner { display: flex; align-items: center; gap: var(--s4); margin-bottom: var(--s6); }
+.sel-banner .worker-avatar { width: 56px; height: 56px; flex-basis: 56px; font-size: 20px; }
+
+/* ---------------- Toast ---------------- */
+.toast {
+  position: fixed; left: 50%; bottom: var(--s8); transform: translateX(-50%) translateY(20px);
+  background: var(--bg-1); color: var(--text); border: 1px solid var(--border-strong);
+  padding: var(--s4) var(--s6); border-radius: var(--r-md);
+  box-shadow: var(--shadow-2); font-size: 14px; font-weight: 500;
+  opacity: 0; pointer-events: none; transition: all var(--t-base); z-index: 9000;
+  max-width: 90vw;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.success { border-color: var(--green); }
+.toast.error { border-color: var(--red); }
+.toast.info { border-color: var(--accent); }
+
+/* ---------------- Success overlay ---------------- */
+.success-overlay {
+  position: fixed; inset: 0; z-index: 8000;
+  background: var(--bg); display: none;
+  flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: var(--s6);
+}
+.success-overlay.show { display: flex; }
+.check-ring {
+  width: 120px; height: 120px; border-radius: var(--r-pill);
+  background: var(--green-dim); border: 2px solid var(--green);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 60px; color: var(--green); margin-bottom: var(--s6);
+  animation: check-pop 480ms cubic-bezier(0.18, 1.4, 0.4, 1);
+}
+@keyframes check-pop { 0%{transform: scale(0); opacity: 0;} 60%{transform: scale(1.12);} 100%{transform: scale(1); opacity: 1;} }
+.success-name { font-size: 30px; font-weight: 700; margin-bottom: var(--s2); }
+.success-action { font-family: var(--mono); font-size: 16px; letter-spacing: 0.1em; color: var(--green); text-transform: uppercase; }
+.success-time { font-family: var(--mono); font-size: 48px; font-weight: 700; margin: var(--s5) 0; letter-spacing: 0.06em; }
+.countdown-track { height: 4px; width: 200px; background: var(--bg-3); border-radius: var(--r-pill); overflow: hidden; }
+.countdown-fill { height: 100%; width: 100%; background: var(--green); transition: width 100ms linear; }
+
+/* ---------------- Modal ---------------- */
+.modal-bg {
+  position: fixed; inset: 0; z-index: 7000;
+  background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+  display: none; align-items: center; justify-content: center; padding: var(--s4);
+}
+.modal-bg.show { display: flex; }
+.modal-box {
+  background: var(--bg-1); border: 1px solid var(--border-strong);
+  border-radius: var(--r-lg); padding: var(--s8); width: 100%; max-width: 420px;
+  box-shadow: var(--shadow-2); text-align: center;
+}
+.modal-box h3 { font-size: 20px; margin-bottom: var(--s2); }
+.modal-box .sub { color: var(--text-3); font-size: 14px; margin-bottom: var(--s6); }
+
+/* ---------------- Admin dashboard ---------------- */
+.admin-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: var(--s6); gap: var(--s4); flex-wrap: wrap;
+}
+.session-pill {
+  font-family: var(--mono); font-size: 12px; letter-spacing: 0.1em;
+  color: var(--text-2); background: var(--bg-2); border: 1px solid var(--border);
+  border-radius: var(--r-pill); padding: var(--s2) var(--s4);
+}
+.session-pill b { color: var(--accent); }
+
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s3); margin-bottom: var(--s4); }
+.stat {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: var(--s5); text-align: center;
+}
+.stat .num { font-family: var(--mono); font-size: 34px; font-weight: 700; color: var(--accent); }
+.stat .lbl { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-3); margin-top: var(--s1); }
+
+.ev-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.ev-table th {
+  text-align: left; font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--text-3); padding: var(--s2) var(--s3);
+  border-bottom: 1px solid var(--border);
+}
+.ev-table td { padding: var(--s3); border-bottom: 1px solid var(--border); }
+.ev-table tr:last-child td { border-bottom: none; }
+
+.badge {
+  font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+  padding: 3px 10px; border-radius: var(--r-pill); display: inline-block;
+}
+.badge.in { background: var(--green-dim); color: var(--green); }
+.badge.out { background: var(--red-dim); color: var(--red); }
+.badge.warn { background: var(--amber-dim); color: var(--amber); }
+.badge.auto { background: var(--bg-3); color: var(--text-3); }
+
+.anomaly-item {
+  display: flex; align-items: flex-start; gap: var(--s3);
+  padding: var(--s4); border: 1px solid var(--border); border-radius: var(--r-md);
+  margin-bottom: var(--s2); background: var(--surface);
+}
+.anomaly-item.closed { opacity: 0.55; }
+.anomaly-item .ai-body { flex: 1; }
+.anomaly-item .ai-desc { font-size: 14px; }
+.anomaly-item .ai-time { font-family: var(--mono); font-size: 11px; color: var(--text-3); margin-top: 2px; }
+
+.worker-admin-item {
+  display: flex; align-items: center; gap: var(--s4);
+  padding: var(--s3) var(--s4); border: 1px solid var(--border); border-radius: var(--r-md);
+  margin-bottom: var(--s2); background: var(--surface);
+}
+.worker-admin-item .worker-meta { flex: 1; }
+
+/* ---------------- Responsive ---------------- */
+@media (max-width: 600px) {
+  .instr-grid { grid-template-columns: 1fr; }
+  .stat-grid { grid-template-columns: 1fr 1fr; }
+  .btn-grid { grid-template-columns: 1fr; }
+  .pin-cell { width: 48px; height: 60px; font-size: 26px; }
+  .app-header { padding: var(--s4); }
+}
+/* Tablet landscape — emphasize the token */
+@media (min-width: 900px) and (orientation: landscape) {
+  .token-digit { font-size: 150px; width: 180px; height: 240px; }
+  .token-block { padding-top: var(--s12); }
+}
+/* Tablet portrait */
+@media (min-width: 600px) and (max-width: 900px) and (orientation: portrait) {
+  .token-digit { font-size: 110px; width: 130px; height: 180px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+.focus-ring:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+
+<!-- ===================== TABLET VIEW ===================== -->
+<div id="view-tablet" class="view">
+  <header class="app-header">
+    <div class="brand"><span class="diamond">&#9672;</span> We SMILE</div>
+    <div style="display:flex;align-items:center;gap:var(--s4)">
+      <div class="clock-block">
+        <div class="clock" id="t-clock">--:--</div>
+        <div class="date" id="t-date">—</div>
+      </div>
+      <button class="theme-btn focus-ring" data-theme-toggle aria-label="Przełącz motyw">&#9789;</button>
+    </div>
+  </header>
+
+  <div class="token-block">
+    <div class="label">Kod aktualny</div>
+    <div class="token-row" id="td-row" aria-live="polite">
+      <span class="token-digit" id="td-0">0</span>
+      <span class="token-digit" id="td-1">0</span>
+      <span class="token-digit" id="td-2">0</span>
+      <span class="token-digit" id="td-3">0</span>
+    </div>
+    <div class="timer-track"><div class="timer-fill" id="t-timer"></div></div>
+
+    <div class="instr-grid">
+      <div class="instr green">
+        <h4>Krok 1</h4>
+        <p>Podaj ten kod osobie rejestrującej czas.</p>
+      </div>
+      <div class="instr blue">
+        <h4>Krok 2</h4>
+        <p>Wpisz ten kod w aplikacji:</p>
+        <div class="token-row small">
+          <span class="token-digit" id="tc-0">0</span>
+          <span class="token-digit" id="tc-1">0</span>
+          <span class="token-digit" id="tc-2">0</span>
+          <span class="token-digit" id="tc-3">0</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="legal">
+      We SMILE &middot; Rejestracja Czasu Pracy v5<br>
+      Kod odświeża się automatycznie &middot; Nie udostępniaj kodu osobom niepowołanym
+    </div>
+  </div>
+</div>
+
+<!-- ===================== WORKER VIEW ===================== -->
+<div id="view-worker" class="view">
+  <header class="app-header">
+    <div class="brand"><span class="diamond">&#9672;</span> We SMILE</div>
+    <button class="theme-btn focus-ring" data-theme-toggle aria-label="Przełącz motyw">&#9789;</button>
+  </header>
+
+  <div class="wrap">
+    <!-- Screen: select worker -->
+    <div id="scr-select" class="screen active">
+      <div class="label" style="margin-bottom:var(--s3)">Wybierz pracownika</div>
+      <input class="search-input focus-ring" id="w-search" type="text" placeholder="Szukaj po imieniu lub nazwisku…" autocomplete="off">
+
+      <div id="w-skeleton" class="worker-list" style="display:none">
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
+      </div>
+      <div id="w-list" class="worker-list"></div>
+      <div id="w-empty" class="state-box" style="display:none">
+        <div class="ico">&#128269;</div>
+        <p>Brak pracowników pasujących do wyszukiwania.</p>
+      </div>
+      <div id="w-error" class="state-box" style="display:none">
+        <div class="ico">&#9888;</div>
+        <p>Nie udało się wczytać listy. <button class="link-ghost" id="w-retry">Spróbuj ponownie</button></p>
+      </div>
+    </div>
+
+    <!-- Screen: registration form -->
+    <div id="scr-form" class="screen">
+      <div class="sel-banner">
+        <div class="worker-avatar" id="f-avatar">??</div>
+        <div class="worker-meta">
+          <div class="worker-name" id="f-name">—</div>
+          <div class="worker-role" id="f-role">—</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <label class="label field-label">Kod z tabletu</label>
+        <div class="pin-row" id="code-row">
+          <input class="pin-cell focus-ring" id="code-0" type="number" inputmode="numeric" maxlength="1" aria-label="Kod cyfra 1">
+          <input class="pin-cell focus-ring" id="code-1" type="number" inputmode="numeric" maxlength="1" aria-label="Kod cyfra 2">
+          <input class="pin-cell focus-ring" id="code-2" type="number" inputmode="numeric" maxlength="1" aria-label="Kod cyfra 3">
+          <input class="pin-cell focus-ring" id="code-3" type="number" inputmode="numeric" maxlength="1" aria-label="Kod cyfra 4">
+        </div>
+
+        <label class="label field-label">Twój PIN</label>
+        <div class="pin-row" id="pin-row">
+          <input class="pin-cell focus-ring" id="pin-0" type="password" inputmode="numeric" maxlength="1" aria-label="PIN cyfra 1">
+          <input class="pin-cell focus-ring" id="pin-1" type="password" inputmode="numeric" maxlength="1" aria-label="PIN cyfra 2">
+          <input class="pin-cell focus-ring" id="pin-2" type="password" inputmode="numeric" maxlength="1" aria-label="PIN cyfra 3">
+          <input class="pin-cell focus-ring" id="pin-3" type="password" inputmode="numeric" maxlength="1" aria-label="PIN cyfra 4">
+        </div>
+
+        <div class="btn-grid">
+          <button class="btn btn-arrive focus-ring" id="btn-in">WEJŚCIE</button>
+          <button class="btn btn-leave focus-ring" id="btn-out">WYJŚCIE</button>
+        </div>
+      </div>
+
+      <div style="text-align:center">
+        <button class="link-ghost focus-ring" id="btn-change">&larr; Zmień pracownika</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== ADMIN VIEW ===================== -->
+<div id="view-admin" class="view">
+  <header class="app-header">
+    <div class="brand"><span class="diamond">&#9672;</span> We SMILE</div>
+    <div style="display:flex;align-items:center;gap:var(--s4)">
+      <div class="clock-block">
+        <div class="clock" id="a-clock">--:--</div>
+        <div class="date" id="a-date">—</div>
+      </div>
+      <button class="theme-btn focus-ring" data-theme-toggle aria-label="Przełącz motyw">&#9789;</button>
+    </div>
+  </header>
+
+  <!-- Token display (same as tablet) + Admin entry -->
+  <div id="admin-locked">
+    <div class="token-block">
+      <div class="label">Kod aktualny</div>
+      <div class="token-row" id="atd-row" aria-live="polite">
+        <span class="token-digit" id="atd-0">0</span>
+        <span class="token-digit" id="atd-1">0</span>
+        <span class="token-digit" id="atd-2">0</span>
+        <span class="token-digit" id="atd-3">0</span>
+      </div>
+      <div class="timer-track"><div class="timer-fill" id="a-timer"></div></div>
+      <div style="margin-top:var(--s8)">
+        <button class="btn btn-ghost focus-ring" id="btn-admin-open">Admin &#8599;</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin dashboard -->
+  <div id="admin-dash" class="wrap" style="display:none">
+    <div class="admin-bar">
+      <div class="session-pill">Sesja: <b id="sess-timer">15:00</b></div>
+      <div style="display:flex;gap:var(--s2)">
+        <button class="btn btn-ghost focus-ring" id="btn-export">Eksport CSV</button>
+        <button class="btn btn-ghost focus-ring" id="btn-logout">Wyloguj</button>
+      </div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat"><div class="num" id="st-active">0</div><div class="lbl">Aktywni</div></div>
+      <div class="stat"><div class="num" id="st-present">0</div><div class="lbl">Obecni</div></div>
+      <div class="stat"><div class="num" id="st-events">0</div><div class="lbl">Zdarzenia</div></div>
+      <div class="stat"><div class="num" id="st-anom">0</div><div class="lbl">Anomalie</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Ewidencja dzisiaj</div>
+      <div id="ev-skeleton">
+        <div class="skeleton skeleton-row" style="height:40px"></div>
+        <div class="skeleton skeleton-row" style="height:40px"></div>
+      </div>
+      <table class="ev-table" id="ev-table" style="display:none">
+        <thead><tr><th>Godzina</th><th>Pracownik</th><th>Akcja</th><th>Źródło</th></tr></thead>
+        <tbody id="ev-body"></tbody>
+      </table>
+      <div id="ev-empty" class="state-box" style="display:none"><p>Brak zdarzeń w dniu dzisiejszym.</p></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Anomalie</div>
+      <div id="anom-list"></div>
+      <div id="anom-empty" class="state-box" style="display:none"><p>Brak otwartych anomalii.</p></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Pracownicy</div>
+      <div id="workers-admin"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== Admin login modal ===================== -->
+<div class="modal-bg" id="admin-modal">
+  <div class="modal-box">
+    <h3>Logowanie administratora</h3>
+    <p class="sub">Wprowadź PIN administratora</p>
+    <div class="pin-row" id="ap-row">
+      <input class="pin-cell focus-ring" id="ap-0" type="password" inputmode="numeric" maxlength="1" aria-label="PIN cyfra 1">
+      <input class="pin-cell focus-ring" id="ap-1" type="password" inputmode="numeric" maxlength="1" aria-label="PIN cyfra 2">
+      <input class="pin-cell focus-ring" id="ap-2" type="password" inputmode="numeric" maxlength="1" aria-label="PIN cyfra 3">
+      <input class="pin-cell focus-ring" id="ap-3" type="password" inputmode="numeric" maxlength="1" aria-label="PIN cyfra 4">
+    </div>
+    <button class="btn btn-primary btn-block focus-ring" id="btn-admin-login">Zaloguj</button>
+    <button class="link-ghost focus-ring" id="btn-admin-cancel">Anuluj</button>
+  </div>
+</div>
+
+<!-- ===================== Set-PIN modal ===================== -->
+<div class="modal-bg" id="setpin-modal">
+  <div class="modal-box">
+    <h3>Ustaw PIN</h3>
+    <p class="sub" id="np-sub">—</p>
+    <div class="pin-row" id="np-row">
+      <input class="pin-cell focus-ring" id="np-0" type="password" inputmode="numeric" maxlength="1" aria-label="Nowy PIN cyfra 1">
+      <input class="pin-cell focus-ring" id="np-1" type="password" inputmode="numeric" maxlength="1" aria-label="Nowy PIN cyfra 2">
+      <input class="pin-cell focus-ring" id="np-2" type="password" inputmode="numeric" maxlength="1" aria-label="Nowy PIN cyfra 3">
+      <input class="pin-cell focus-ring" id="np-3" type="password" inputmode="numeric" maxlength="1" aria-label="Nowy PIN cyfra 4">
+    </div>
+    <button class="btn btn-primary btn-block focus-ring" id="btn-setpin-save">Zapisz PIN</button>
+    <button class="link-ghost focus-ring" id="btn-setpin-cancel">Anuluj</button>
+  </div>
+</div>
+
+<!-- ===================== Success overlay ===================== -->
+<div class="success-overlay" id="success-overlay" role="alertdialog" aria-live="assertive">
+  <div class="check-ring">&#10003;</div>
+  <div class="success-name" id="su-name">—</div>
+  <div class="success-action" id="su-action">—</div>
+  <div class="success-time" id="su-time">--:--</div>
+  <div class="countdown-track"><div class="countdown-fill" id="su-countdown"></div></div>
+</div>
+
+<script>
+/* ======================================================================
+ *  APP_PAGE injected by GAS template (Code.gs doGet -> t.page)
+ * ====================================================================== */
+var APP_PAGE = '<?= page ?>';
+
+/* ============================ PSX namespace =========================== */
+var PSX = {};
+
+/* ---------------- Theme ---------------- */
+PSX.theme = {
+  KEY: 'wesmile-theme',
+  get: function () {
+    try { return localStorage.getItem(this.KEY) || document.documentElement.getAttribute('data-theme') || 'dark'; }
+    catch (e) { return 'dark'; }
+  },
+  set: function (mode) {
+    document.documentElement.setAttribute('data-theme', mode);
+    try { localStorage.setItem(this.KEY, mode); } catch (e) {}
+    var icon = (mode === 'light') ? '☼' : '☽'; // sun / moon
+    var btns = document.querySelectorAll('[data-theme-toggle]');
+    for (var i = 0; i < btns.length; i++) btns[i].textContent = icon;
+  },
+  toggle: function () { this.set(this.get() === 'light' ? 'dark' : 'light'); },
+  init: function () {
+    var self = this;
+    this.set(this.get());
+    var btns = document.querySelectorAll('[data-theme-toggle]');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].addEventListener('click', function () { self.toggle(); });
+    }
+  }
+};
+
+/* ---------------- Toast ---------------- */
+PSX.toast = {
+  el: null, timer: null,
+  show: function (msg, type, ms) {
+    if (!this.el) {
+      this.el = document.createElement('div');
+      this.el.className = 'toast';
+      document.body.appendChild(this.el);
+    }
+    this.el.textContent = msg;
+    this.el.className = 'toast ' + (type || 'info') + ' show';
+    clearTimeout(this.timer);
+    var self = this;
+    this.timer = setTimeout(function () { self.el.className = 'toast ' + (type || 'info'); }, ms || 3200);
+  }
+};
+
+/* ---------------- PIN/code input groups ---------------- */
+PSX.pins = {
+  setup: function (prefix, count, onComplete) {
+    var cells = [];
+    for (var i = 0; i < count; i++) cells.push(document.getElementById(prefix + i));
+    for (var j = 0; j < count; j++) {
+      (function (idx) {
+        var cell = cells[idx];
+        if (!cell) return;
+        cell.addEventListener('input', function () {
+          // keep single digit only
+          var v = (cell.value || '').replace(/[^0-9]/g, '');
+          cell.value = v.slice(-1);
+          if (cell.value) {
+            cell.classList.add('filled');
+            if (idx < count - 1) cells[idx + 1].focus();
+          } else {
+            cell.classList.remove('filled');
+          }
+          var full = PSX.pins.get(prefix, count);
+          if (full.length === count && typeof onComplete === 'function') onComplete(full);
+        });
+        cell.addEventListener('keydown', function (e) {
+          if (e.key === 'Backspace' && !cell.value && idx > 0) {
+            cells[idx - 1].focus();
+            cells[idx - 1].value = '';
+            cells[idx - 1].classList.remove('filled');
+            e.preventDefault();
+          }
+          if (e.key === 'ArrowLeft' && idx > 0) cells[idx - 1].focus();
+          if (e.key === 'ArrowRight' && idx < count - 1) cells[idx + 1].focus();
+        });
+        cell.addEventListener('paste', function (e) {
+          e.preventDefault();
+          var data = (e.clipboardData || window.clipboardData).getData('text') || '';
+          var digits = data.replace(/[^0-9]/g, '').split('');
+          for (var k = 0; k < count && k < digits.length; k++) {
+            if (cells[idx + k]) {
+              cells[idx + k].value = digits[k];
+              cells[idx + k].classList.add('filled');
+            }
+          }
+          var last = Math.min(count - 1, idx + digits.length);
+          if (cells[last]) cells[last].focus();
+          var full = PSX.pins.get(prefix, count);
+          if (full.length === count && typeof onComplete === 'function') onComplete(full);
+        });
+      })(j);
+    }
+  },
+  get: function (prefix, count) {
+    var s = '';
+    for (var i = 0; i < count; i++) {
+      var c = document.getElementById(prefix + i);
+      if (c && c.value) s += c.value.replace(/[^0-9]/g, '');
+    }
+    return s;
+  },
+  clear: function (prefix, count) {
+    for (var i = 0; i < count; i++) {
+      var c = document.getElementById(prefix + i);
+      if (c) { c.value = ''; c.classList.remove('filled', 'err'); }
+    }
+  },
+  markError: function (prefix, count) {
+    for (var i = 0; i < count; i++) {
+      var c = document.getElementById(prefix + i);
+      if (c) c.classList.add('err');
+    }
+    setTimeout(function () { PSX.pins.clear(prefix, count); var f = document.getElementById(prefix + '0'); if (f) f.focus(); }, 800);
+  }
+};
+
+/* ---------------- Success overlay ---------------- */
+PSX.success = {
+  show: function (imie, akcja, godzina, onReset) {
+    var ov = document.getElementById('success-overlay');
+    document.getElementById('su-name').textContent = imie;
+    document.getElementById('su-action').textContent = akcja;
+    document.getElementById('su-time').textContent = godzina;
+    ov.classList.add('show');
+    var fill = document.getElementById('su-countdown');
+    fill.style.transition = 'none'; fill.style.width = '100%';
+    var total = 4000, start = Date.now();
+    void fill.offsetWidth;
+    var tick = setInterval(function () {
+      var elapsed = Date.now() - start;
+      var pct = Math.max(0, 100 - (elapsed / total) * 100);
+      fill.style.transition = 'width 100ms linear';
+      fill.style.width = pct + '%';
+      if (elapsed >= total) {
+        clearInterval(tick);
+        ov.classList.remove('show');
+        if (typeof onReset === 'function') onReset();
+      }
+    }, 100);
+  }
+};
+
+/* ---------------- Clock ---------------- */
+PSX.clock = {
+  start: function (clockId, dateId, onTick) {
+    var DNI = ['niedziela','poniedziałek','wtorek','środa','czwartek','piątek','sobota'];
+    var MIES = ['stycznia','lutego','marca','kwietnia','maja','czerwca','lipca','sierpnia','września','października','listopada','grudnia'];
+    function pad(n) { return (n < 10 ? '0' : '') + n; }
+    function update() {
+      var d = new Date();
+      var ce = document.getElementById(clockId);
+      var de = document.getElementById(dateId);
+      if (ce) ce.textContent = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+      if (de) de.textContent = DNI[d.getDay()] + ', ' + d.getDate() + ' ' + MIES[d.getMonth()] + ' ' + d.getFullYear();
+      if (typeof onTick === 'function') onTick(d);
+    }
+    update();
+    return setInterval(update, 1000);
+  }
+};
+
+/* ---------------- GAS call wrapper (15s timeout) ---------------- */
+PSX.callGAS = function (fn, args, ok, err) {
+  var done = false;
+  var timer = setTimeout(function () {
+    if (done) return; done = true;
+    if (typeof err === 'function') err('Przekroczono czas oczekiwania. Sprawdź połączenie.');
+  }, 15000);
+  function success(res) { if (done) return; done = true; clearTimeout(timer); if (typeof ok === 'function') ok(res); }
+  function failure(e) { if (done) return; done = true; clearTimeout(timer); if (typeof err === 'function') err((e && e.message) ? e.message : String(e)); }
+
+  if (typeof google === 'undefined' || !google.script || !google.script.run) {
+    // Local preview fallback (no GAS backend).
+    clearTimeout(timer); done = true;
+    if (typeof err === 'function') err('Brak połączenia z backendem (podgląd lokalny).');
+    return;
+  }
+  var runner = google.script.run.withSuccessHandler(success).withFailureHandler(failure);
+  runner[fn].apply(runner, args || []);
+};
+
+/* ======================================================================
+ *  TABLET module
+ * ====================================================================== */
+var Tablet = {
+  windowSeconds: 30,
+  setDigits: function (token, prefix) {
+    for (var i = 0; i < 4; i++) {
+      var el = document.getElementById(prefix + i);
+      if (el) el.textContent = token.charAt(i) || '0';
+    }
+  },
+  updateDisplay: function (token) {
+    this.setDigits(token, 'td-');
+    this.setDigits(token, 'tc-');
+    var row = document.getElementById('td-row');
+    if (row) {
+      var cells = row.children;
+      for (var i = 0; i < cells.length; i++) cells[i].classList.add('pulse');
+      setTimeout(function () { for (var j = 0; j < cells.length; j++) cells[j].classList.remove('pulse'); }, 400);
+    }
+  },
+  updateTimer: function (secsLeft) {
+    var fill = document.getElementById('t-timer');
+    if (!fill) return;
+    var pct = Math.max(0, Math.min(100, (secsLeft / this.windowSeconds) * 100));
+    fill.style.width = pct + '%';
+    fill.className = 'timer-fill' + (secsLeft <= 5 ? ' low' : '');
+  },
+  fetchToken: function () {
+    var self = this;
+    PSX.callGAS('generujTokenTablet', [], function (res) {
+      self.windowSeconds = res.windowSeconds || 30;
+      self.updateDisplay(res.token);
+      self._secsLeft = res.secondsLeft;
+      self.updateTimer(res.secondsLeft);
+    }, function (msg) {
+      PSX.toast.show('Błąd kodu: ' + msg, 'error');
+    });
+  },
+  init: function () {
+    var self = this;
+    PSX.clock.start('t-clock', 't-date');
+    this.fetchToken();
+    // Local countdown + periodic refetch on window boundary.
+    setInterval(function () {
+      if (typeof self._secsLeft === 'number') {
+        self._secsLeft = Math.max(0, self._secsLeft - 1);
+        self.updateTimer(self._secsLeft);
+        if (self._secsLeft <= 0) self.fetchToken();
+      }
+    }, 1000);
+  }
+};
+
+/* ======================================================================
+ *  WORKER module
+ * ====================================================================== */
+var Worker = {
+  STATE: { workers: [], filtered: [], selected: null, busy: false },
+
+  setState: function (s) {
+    var ids = ['w-skeleton', 'w-list', 'w-empty', 'w-error'];
+    var map = { loading: 'w-skeleton', list: 'w-list', empty: 'w-empty', error: 'w-error' };
+    for (var i = 0; i < ids.length; i++) {
+      var el = document.getElementById(ids[i]);
+      if (el) el.style.display = (ids[i] === map[s]) ? '' : 'none';
+    }
+  },
+
+  loadWorkers: function () {
+    var self = this;
+    this.setState('loading');
+    PSX.callGAS('pobierzDaneStartowe', ['worker'], function (res) {
+      self.STATE.workers = (res && res.pracownicy) ? res.pracownicy : [];
+      self.STATE.filtered = self.STATE.workers.slice();
+      self.renderList();
+    }, function () {
+      self.setState('error');
+    });
+  },
+
+  renderList: function () {
+    var list = document.getElementById('w-list');
+    var arr = this.STATE.filtered;
+    if (!arr.length) { this.setState('empty'); return; }
+    this.setState('list');
+    list.innerHTML = '';
+    var self = this;
+    arr.forEach(function (w) {
+      var btn = document.createElement('button');
+      btn.className = 'worker-item focus-ring';
+      var ini = (w.imie ? w.imie.charAt(0) : '') + (w.nazwisko ? w.nazwisko.charAt(0) : '');
+      btn.innerHTML =
+        '<span class="worker-avatar">' + escapeHtml(ini.toUpperCase()) + '</span>' +
+        '<span class="worker-meta"><span class="worker-name">' + escapeHtml(w.imie + ' ' + w.nazwisko) + '</span>' +
+        '<span class="worker-role">' + escapeHtml(w.rola || '—') + '</span></span>' +
+        '<span class="worker-chev">&rarr;</span>';
+      btn.addEventListener('click', function () { self.selectWorker(w); });
+      list.appendChild(btn);
+    });
+  },
+
+  selectWorker: function (w) {
+    this.STATE.selected = w;
+    var ini = ((w.imie ? w.imie.charAt(0) : '') + (w.nazwisko ? w.nazwisko.charAt(0) : '')).toUpperCase();
+    document.getElementById('f-avatar').textContent = ini;
+    document.getElementById('f-name').textContent = w.imie + ' ' + w.nazwisko;
+    document.getElementById('f-role').textContent = w.rola || '—';
+    PSX.pins.clear('code-', 4);
+    PSX.pins.clear('pin-', 4);
+    document.getElementById('scr-select').classList.remove('active');
+    document.getElementById('scr-form').classList.add('active');
+    var first = document.getElementById('code-0');
+    if (first) first.focus();
+  },
+
+  goToSelect: function () {
+    this.STATE.selected = null;
+    document.getElementById('scr-form').classList.remove('active');
+    document.getElementById('scr-select').classList.add('active');
+  },
+
+  setButtonsLoading: function (bool) {
+    this.STATE.busy = bool;
+    var bin = document.getElementById('btn-in');
+    var bout = document.getElementById('btn-out');
+    bin.disabled = bool; bout.disabled = bool;
+    bin.classList.toggle('btn-loading', bool && this._loadingBtn === 'in');
+    bout.classList.toggle('btn-loading', bool && this._loadingBtn === 'out');
+  },
+
+  submitRegistration: function (akcja) {
+    if (this.STATE.busy || !this.STATE.selected) return;
+    var kod = PSX.pins.get('code-', 4);
+    var pin = PSX.pins.get('pin-', 4);
+    if (kod.length !== 4) { PSX.toast.show('Wpisz 4-cyfrowy kod z tabletu.', 'error'); PSX.pins.markError('code-', 4); return; }
+    if (pin.length !== 4) { PSX.toast.show('Wpisz swój 4-cyfrowy PIN.', 'error'); PSX.pins.markError('pin-', 4); return; }
+
+    this._loadingBtn = (akcja === 'WEJSCIE') ? 'in' : 'out';
+    this.setButtonsLoading(true);
+    var self = this;
+    PSX.callGAS('weryfikujIRejestruj', [this.STATE.selected.id, kod, pin, akcja], function (res) {
+      self.setButtonsLoading(false);
+      if (res && res.ok) {
+        PSX.success.show(res.imie, res.message, res.godzina, function () { self.resetAfterSuccess(); });
+      } else {
+        var msg = (res && res.message) ? res.message : 'Wystąpił błąd.';
+        PSX.toast.show(msg, 'error');
+        if (msg.indexOf('kod') !== -1 || msg.indexOf('Kod') !== -1) PSX.pins.markError('code-', 4);
+        else if (msg.indexOf('PIN') !== -1) PSX.pins.markError('pin-', 4);
+      }
+    }, function (msg) {
+      self.setButtonsLoading(false);
+      PSX.toast.show(msg, 'error');
+    });
+  },
+
+  resetAfterSuccess: function () {
+    PSX.pins.clear('code-', 4);
+    PSX.pins.clear('pin-', 4);
+    this.goToSelect();
+  },
+
+  init: function () {
+    var self = this;
+    PSX.pins.setup('code-', 4);
+    PSX.pins.setup('pin-', 4);
+    this.loadWorkers();
+
+    document.getElementById('w-search').addEventListener('input', function (e) {
+      var q = e.target.value.toLowerCase().trim();
+      self.STATE.filtered = self.STATE.workers.filter(function (w) {
+        return (w.imie + ' ' + w.nazwisko + ' ' + (w.rola || '')).toLowerCase().indexOf(q) !== -1;
+      });
+      self.renderList();
+    });
+    document.getElementById('w-retry').addEventListener('click', function () { self.loadWorkers(); });
+    document.getElementById('btn-change').addEventListener('click', function () { self.goToSelect(); });
+    document.getElementById('btn-in').addEventListener('click', function () { self.submitRegistration('WEJSCIE'); });
+    document.getElementById('btn-out').addEventListener('click', function () { self.submitRegistration('WYJSCIE'); });
+  }
+};
+
+/* ======================================================================
+ *  ADMIN module
+ * ====================================================================== */
+var Admin = {
+  ADMIN: { sessionToken: '', data: null, windowSeconds: 30, secsLeft: 0, setPinEmp: null },
+
+  adminSession: {
+    remaining: 0, timer: null, activityTimer: null,
+    start: function (ttl) {
+      this.remaining = ttl || 900;
+      this.countdown();
+      this.activity();
+    },
+    countdown: function () {
+      var self = this;
+      clearInterval(this.timer);
+      this.timer = setInterval(function () {
+        self.remaining = Math.max(0, self.remaining - 1);
+        var m = Math.floor(self.remaining / 60), s = self.remaining % 60;
+        var el = document.getElementById('sess-timer');
+        if (el) el.textContent = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+        if (self.remaining <= 0) { Admin.adminSession.logout('Sesja wygasła.'); }
+      }, 1000);
+    },
+    activity: function () {
+      var self = this;
+      clearInterval(this.activityTimer);
+      // Sliding renewal every 60s while session active.
+      this.activityTimer = setInterval(function () {
+        if (!Admin.ADMIN.sessionToken) return;
+        PSX.callGAS('przedluzSesjeAdmin', [Admin.ADMIN.sessionToken], function (res) {
+          if (res && res.ok) { Admin.ADMIN.sessionToken = res.sessionToken; self.remaining = res.ttlSeconds || self.remaining; }
+        });
+      }, 60000);
+    },
+    logout: function (msg) {
+      clearInterval(this.timer); clearInterval(this.activityTimer);
+      var token = Admin.ADMIN.sessionToken;
+      Admin.ADMIN.sessionToken = '';
+      if (token) PSX.callGAS('wylogujAdmin', [token]);
+      document.getElementById('admin-dash').style.display = 'none';
+      document.getElementById('admin-locked').style.display = '';
+      if (msg) PSX.toast.show(msg, 'info');
+    }
+  },
+
+  setTokenDigits: function (token) {
+    for (var i = 0; i < 4; i++) {
+      var el = document.getElementById('atd-' + i);
+      if (el) el.textContent = token.charAt(i) || '0';
+    }
+  },
+  updateTimer: function (secsLeft) {
+    var fill = document.getElementById('a-timer');
+    if (!fill) return;
+    var pct = Math.max(0, Math.min(100, (secsLeft / this.ADMIN.windowSeconds) * 100));
+    fill.style.width = pct + '%';
+    fill.className = 'timer-fill' + (secsLeft <= 5 ? ' low' : '');
+  },
+  fetchToken: function () {
+    var self = this;
+    PSX.callGAS('generujTokenTablet', [], function (res) {
+      self.ADMIN.windowSeconds = res.windowSeconds || 30;
+      self.ADMIN.secsLeft = res.secondsLeft;
+      self.setTokenDigits(res.token);
+      self.updateTimer(res.secondsLeft);
+    });
+  },
+
+  login: function () {
+    var pin = PSX.pins.get('ap-', 4);
+    if (pin.length !== 4) { PSX.pins.markError('ap-', 4); return; }
+    var self = this;
+    var btn = document.getElementById('btn-admin-login');
+    btn.classList.add('btn-loading'); btn.disabled = true;
+    PSX.callGAS('weryfikujAdminPIN', [pin], function (res) {
+      btn.classList.remove('btn-loading'); btn.disabled = false;
+      if (res && res.ok) {
+        self.ADMIN.sessionToken = res.sessionToken;
+        PSX.pins.clear('ap-', 4);
+        document.getElementById('admin-modal').classList.remove('show');
+        document.getElementById('admin-locked').style.display = 'none';
+        document.getElementById('admin-dash').style.display = '';
+        self.adminSession.start(res.ttlSeconds);
+        self.loadDashboard();
+      } else {
+        PSX.toast.show((res && res.message) || 'Błąd logowania.', 'error');
+        PSX.pins.markError('ap-', 4);
+      }
+    }, function (msg) {
+      btn.classList.remove('btn-loading'); btn.disabled = false;
+      PSX.toast.show(msg, 'error');
+    });
+  },
+
+  loadDashboard: function () {
+    var self = this;
+    document.getElementById('ev-skeleton').style.display = '';
+    document.getElementById('ev-table').style.display = 'none';
+    PSX.callGAS('pobierzDaneAdminaSecure', [this.ADMIN.sessionToken], function (res) {
+      if (!res || !res.ok) { self.adminSession.logout((res && res.message) || 'Sesja wygasła.'); return; }
+      self.ADMIN.sessionToken = res.sessionToken || self.ADMIN.sessionToken;
+      self.ADMIN.data = res;
+      document.getElementById('st-active').textContent = res.stats.pracownicyAktywni;
+      document.getElementById('st-present').textContent = res.stats.obecni;
+      document.getElementById('st-events').textContent = res.stats.zdarzeniaDzis;
+      document.getElementById('st-anom').textContent = res.stats.anomalieOtwarte;
+      self.renderEvidence(res.ewidencja);
+      self.renderAnomalies(res.anomalie);
+      self.renderWorkers(res.pracownicy);
+    });
+  },
+
+  renderEvidence: function (ev) {
+    document.getElementById('ev-skeleton').style.display = 'none';
+    var body = document.getElementById('ev-body');
+    var table = document.getElementById('ev-table');
+    var empty = document.getElementById('ev-empty');
+    body.innerHTML = '';
+    if (!ev || !ev.length) { table.style.display = 'none'; empty.style.display = ''; return; }
+    empty.style.display = 'none'; table.style.display = '';
+    ev.forEach(function (r) {
+      var tr = document.createElement('tr');
+      var badge = r.akcja === 'WEJSCIE' ? '<span class="badge in">Wejście</span>' : '<span class="badge out">Wyjście</span>';
+      var src = r.zrodlo === 'auto' ? '<span class="badge auto">auto</span>' : escapeHtml(r.zrodlo);
+      tr.innerHTML = '<td>' + escapeHtml(r.godzina) + '</td><td>' + escapeHtml(r.imie + ' ' + r.nazwisko) + '</td><td>' + badge + '</td><td>' + src + '</td>';
+      body.appendChild(tr);
+    });
+  },
+
+  renderAnomalies: function (an) {
+    var list = document.getElementById('anom-list');
+    var empty = document.getElementById('anom-empty');
+    list.innerHTML = '';
+    var open = (an || []).filter(function (a) { return a.status === 'OTWARTA'; });
+    if (!open.length) { empty.style.display = ''; return; }
+    empty.style.display = 'none';
+    var self = this;
+    open.forEach(function (a) {
+      var div = document.createElement('div');
+      div.className = 'anomaly-item';
+      div.innerHTML =
+        '<span class="badge warn">!</span>' +
+        '<div class="ai-body"><div class="ai-desc">' + escapeHtml(a.opis) + '</div>' +
+        '<div class="ai-time">' + escapeHtml(formatTs(a.timestamp)) + '</div></div>';
+      var btn = document.createElement('button');
+      btn.className = 'btn btn-ghost focus-ring';
+      btn.style.padding = '6px 12px'; btn.style.fontSize = '12px';
+      btn.textContent = 'Zamknij';
+      btn.addEventListener('click', function () { self.closeAnomaly(a.id, btn); });
+      div.appendChild(btn);
+      list.appendChild(div);
+    });
+  },
+
+  closeAnomaly: function (id, btn) {
+    var self = this;
+    btn.classList.add('btn-loading'); btn.disabled = true;
+    PSX.callGAS('zamknijAnomalieSecure', [this.ADMIN.sessionToken, id], function (res) {
+      if (res && res.ok) {
+        self.ADMIN.sessionToken = res.sessionToken || self.ADMIN.sessionToken;
+        PSX.toast.show('Anomalia zamknięta.', 'success');
+        self.loadDashboard();
+      } else {
+        btn.classList.remove('btn-loading'); btn.disabled = false;
+        PSX.toast.show((res && res.message) || 'Nie udało się zamknąć.', 'error');
+      }
+    }, function (msg) {
+      btn.classList.remove('btn-loading'); btn.disabled = false;
+      PSX.toast.show(msg, 'error');
+    });
+  },
+
+  renderWorkers: function (pr) {
+    var box = document.getElementById('workers-admin');
+    box.innerHTML = '';
+    var self = this;
+    (pr || []).forEach(function (w) {
+      var ini = ((w.imie ? w.imie.charAt(0) : '') + (w.nazwisko ? w.nazwisko.charAt(0) : '')).toUpperCase();
+      var div = document.createElement('div');
+      div.className = 'worker-admin-item';
+      div.innerHTML =
+        '<span class="worker-avatar">' + escapeHtml(ini) + '</span>' +
+        '<span class="worker-meta"><span class="worker-name">' + escapeHtml(w.imie + ' ' + w.nazwisko) + '</span>' +
+        '<span class="worker-role">' + escapeHtml(w.rola || '—') + (w.hasPin ? '' : ' · brak PIN') + '</span></span>';
+      var btn = document.createElement('button');
+      btn.className = 'btn btn-ghost focus-ring';
+      btn.style.padding = '6px 12px'; btn.style.fontSize = '12px';
+      btn.textContent = 'Ustaw PIN';
+      btn.addEventListener('click', function () { self.openSetPinModal(w.id, w.imie + ' ' + w.nazwisko); });
+      div.appendChild(btn);
+      box.appendChild(div);
+    });
+  },
+
+  openSetPinModal: function (empId, name) {
+    this.ADMIN.setPinEmp = empId;
+    document.getElementById('np-sub').textContent = name;
+    PSX.pins.clear('np-', 4);
+    document.getElementById('setpin-modal').classList.add('show');
+    var f = document.getElementById('np-0'); if (f) f.focus();
+  },
+
+  confirmSetPin: function () {
+    var pin = PSX.pins.get('np-', 4);
+    if (pin.length !== 4) { PSX.pins.markError('np-', 4); return; }
+    var self = this;
+    var btn = document.getElementById('btn-setpin-save');
+    btn.classList.add('btn-loading'); btn.disabled = true;
+    PSX.callGAS('ustawPINPracownikaSecure', [this.ADMIN.sessionToken, this.ADMIN.setPinEmp, pin], function (res) {
+      btn.classList.remove('btn-loading'); btn.disabled = false;
+      if (res && res.ok) {
+        self.ADMIN.sessionToken = res.sessionToken || self.ADMIN.sessionToken;
+        document.getElementById('setpin-modal').classList.remove('show');
+        PSX.toast.show('PIN zapisany.', 'success');
+        self.loadDashboard();
+      } else {
+        PSX.toast.show((res && res.message) || 'Nie udało się zapisać.', 'error');
+        PSX.pins.markError('np-', 4);
+      }
+    }, function (msg) {
+      btn.classList.remove('btn-loading'); btn.disabled = false;
+      PSX.toast.show(msg, 'error');
+    });
+  },
+
+  eksportujCSV: function (ewidencja, dzisiaj) {
+    var rows = [['Godzina', 'ID', 'Imie', 'Nazwisko', 'Akcja', 'Zrodlo']];
+    (ewidencja || []).forEach(function (r) {
+      rows.push([r.godzina, r.empId, r.imie, r.nazwisko, r.akcja, r.zrodlo]);
+    });
+    var csv = rows.map(function (row) {
+      return row.map(function (c) { return '"' + String(c == null ? '' : c).replace(/"/g, '""') + '"'; }).join(',');
+    }).join('\r\n');
+    var blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = 'ewidencja_' + (dzisiaj || 'export') + '.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  },
+
+  init: function () {
+    var self = this;
+    PSX.clock.start('a-clock', 'a-date');
+    PSX.pins.setup('ap-', 4, function () { self.login(); });
+    PSX.pins.setup('np-', 4);
+    this.fetchToken();
+    setInterval(function () {
+      if (typeof self.ADMIN.secsLeft === 'number') {
+        self.ADMIN.secsLeft = Math.max(0, self.ADMIN.secsLeft - 1);
+        self.updateTimer(self.ADMIN.secsLeft);
+        if (self.ADMIN.secsLeft <= 0) self.fetchToken();
+      }
+    }, 1000);
+
+    document.getElementById('btn-admin-open').addEventListener('click', function () {
+      document.getElementById('admin-modal').classList.add('show');
+      var f = document.getElementById('ap-0'); if (f) f.focus();
+    });
+    document.getElementById('btn-admin-cancel').addEventListener('click', function () {
+      document.getElementById('admin-modal').classList.remove('show');
+      PSX.pins.clear('ap-', 4);
+    });
+    document.getElementById('btn-admin-login').addEventListener('click', function () { self.login(); });
+    document.getElementById('btn-logout').addEventListener('click', function () { self.adminSession.logout('Wylogowano.'); });
+    document.getElementById('btn-setpin-save').addEventListener('click', function () { self.confirmSetPin(); });
+    document.getElementById('btn-setpin-cancel').addEventListener('click', function () {
+      document.getElementById('setpin-modal').classList.remove('show'); PSX.pins.clear('np-', 4);
+    });
+    document.getElementById('btn-export').addEventListener('click', function () {
+      if (self.ADMIN.data) self.eksportujCSV(self.ADMIN.data.ewidencja, self.ADMIN.data.dzisiaj);
+      else PSX.toast.show('Brak danych do eksportu.', 'info');
+    });
+  }
+};
+
+/* ============================ Helpers ============================== */
+function escapeHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function formatTs(iso) {
+  try {
+    var d = new Date(iso);
+    function p(n){return (n<10?'0':'')+n;}
+    return p(d.getDate()) + '.' + p(d.getMonth()+1) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  } catch (e) { return iso; }
+}
+
+/* ============================ App.init ============================== */
+var App = {
+  init: function () {
+    PSX.theme.init();
+    var page = (APP_PAGE === 'worker' || APP_PAGE === 'admin') ? APP_PAGE : 'tablet';
+
+    var view = document.getElementById('view-' + page);
+    if (view) view.classList.add('active');
+
+    if (page === 'tablet') Tablet.init();
+    else if (page === 'worker') Worker.init();
+    else if (page === 'admin') Admin.init();
+  }
+};
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', function () { App.init(); });
+} else {
+  App.init();
+}
+</script>
+</body>
+</html>

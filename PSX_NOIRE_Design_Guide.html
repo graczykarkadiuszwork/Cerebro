@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PSX × NOIRE — System Projektowy · We SMILE RCP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --psx-blue: #3D7EFF; --psx-blue-dim: #2A5FCC; --psx-blue-glow: rgba(61,126,255,0.28);
+  --bg: #0A0A0C; --bg-1: #111114; --bg-2: #18181C; --bg-3: #202026;
+  --surface: #131317; --border: #2A2A31; --border-strong: #3A3A44;
+  --text: #F4F4F6; --text-2: #B6B6C0; --text-3: #74747F;
+  --green: #38D39F; --green-dim: rgba(56,211,159,0.14);
+  --red: #FF5C72; --red-dim: rgba(255,92,114,0.16);
+  --amber: #FFC24B; --amber-dim: rgba(255,194,75,0.16);
+  --mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:20px;--s6:24px;--s7:32px;--s8:40px;--s10:48px;--s12:64px;--s16:96px;
+  --r-sm:8px;--r-md:14px;--r-lg:22px;--r-pill:999px;
+  --shadow-1:0 2px 8px rgba(0,0,0,0.35); --shadow-2:0 8px 30px rgba(0,0,0,0.45);
+  --shadow-glow:0 0 0 1px var(--psx-blue-glow),0 0 28px var(--psx-blue-glow);
+  --t-fast:120ms cubic-bezier(0.22,1,0.36,1); --t-base:200ms cubic-bezier(0.22,1,0.36,1); --t-slow:300ms cubic-bezier(0.22,1,0.36,1);
+}
+[data-theme="light"]{
+  --bg:#F4F5F8;--bg-1:#FFFFFF;--bg-2:#EEF0F4;--bg-3:#E4E7EE;--surface:#FFFFFF;
+  --border:#DDE1E9;--border-strong:#C7CCD7;--text:#14151A;--text-2:#4A4D58;--text-3:#888D9A;
+  --green-dim:rgba(56,211,159,0.18);--red-dim:rgba(255,92,114,0.14);--amber-dim:rgba(255,194,75,0.20);
+  --shadow-1:0 2px 8px rgba(20,20,30,0.08);--shadow-2:0 8px 30px rgba(20,20,30,0.12);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased;transition:background var(--t-base),color var(--t-base);}
+.container{max-width:980px;margin:0 auto;padding:var(--s8) var(--s5) var(--s16);}
+
+/* Header */
+.guide-header{position:sticky;top:0;z-index:50;background:rgba(10,10,12,0.82);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);}
+[data-theme="light"] .guide-header{background:rgba(244,245,248,0.85);}
+.guide-header .inner{max-width:980px;margin:0 auto;padding:var(--s4) var(--s5);display:flex;align-items:center;justify-content:space-between;}
+.gh-brand{font-family:var(--mono);font-weight:600;font-size:16px;letter-spacing:0.04em;}
+.gh-brand .d{color:var(--psx-blue);}
+.theme-btn{width:40px;height:40px;border-radius:var(--r-pill);border:1px solid var(--border);background:var(--bg-2);color:var(--text-2);cursor:pointer;font-size:17px;}
+.theme-btn:hover{border-color:var(--psx-blue);color:var(--psx-blue);}
+
+h1{font-size:clamp(40px,7vw,72px);font-weight:700;letter-spacing:-0.02em;line-height:1.05;margin-bottom:var(--s4);}
+.tagline{font-family:var(--mono);color:var(--text-3);letter-spacing:0.12em;text-transform:uppercase;font-size:13px;margin-bottom:var(--s12);}
+h2{font-size:30px;font-weight:700;margin:var(--s12) 0 var(--s4);letter-spacing:-0.01em;}
+h2 .num{font-family:var(--mono);color:var(--psx-blue);font-size:18px;margin-right:var(--s3);vertical-align:middle;}
+h3{font-size:18px;font-weight:600;margin:var(--s6) 0 var(--s3);}
+p{color:var(--text-2);margin-bottom:var(--s3);max-width:68ch;}
+code{font-family:var(--mono);background:var(--bg-2);border:1px solid var(--border);border-radius:6px;padding:2px 7px;font-size:0.88em;color:var(--psx-blue);}
+.label{font-family:var(--mono);font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-3);}
+.section{border-top:1px solid var(--border);padding-top:var(--s4);}
+
+/* Swatches */
+.swatch-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:var(--s3);margin:var(--s4) 0;}
+.swatch{border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;background:var(--surface);}
+.swatch .chip{height:72px;}
+.swatch .meta{padding:var(--s3);font-family:var(--mono);font-size:11px;}
+.swatch .meta .nm{color:var(--text);font-weight:600;}
+.swatch .meta .hx{color:var(--text-3);text-transform:uppercase;}
+
+/* Type scale */
+.type-row{display:flex;align-items:baseline;gap:var(--s4);border-bottom:1px solid var(--border);padding:var(--s3) 0;}
+.type-row .sz{font-family:var(--mono);color:var(--text-3);font-size:12px;width:90px;flex:0 0 90px;}
+.type-sans{font-family:var(--sans);} .type-mono{font-family:var(--mono);}
+
+/* Spacing scale */
+.space-row{display:flex;align-items:center;gap:var(--s4);margin-bottom:var(--s2);font-family:var(--mono);font-size:12px;color:var(--text-3);}
+.space-bar{height:14px;background:var(--psx-blue);border-radius:4px;}
+
+/* Token grid */
+.token-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:var(--s3);margin:var(--s4) 0;}
+.token-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:var(--s4);font-family:var(--mono);font-size:12px;}
+.token-card .v{color:var(--psx-blue);font-weight:600;font-size:14px;}
+.token-card .k{color:var(--text-3);margin-top:2px;}
+.demo-radius{height:48px;background:var(--bg-3);margin-top:var(--s2);}
+.demo-shadow{height:40px;background:var(--bg-1);margin-top:var(--s2);border-radius:var(--r-sm);}
+
+/* Demo blocks */
+.demo{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:var(--s7);margin:var(--s4) 0;}
+.demo-row{display:flex;flex-wrap:wrap;gap:var(--s4);align-items:center;}
+
+/* Buttons (live) */
+.btn{font-family:var(--mono);font-weight:600;font-size:14px;letter-spacing:0.08em;text-transform:uppercase;padding:14px 22px;border-radius:var(--r-md);border:1px solid transparent;cursor:pointer;transition:all var(--t-fast);position:relative;}
+.btn-arrive{background:var(--green);color:#04130E;} .btn-arrive:hover{filter:brightness(1.08);}
+.btn-leave{background:var(--bg-2);color:var(--text);border-color:var(--border-strong);} .btn-leave:hover{border-color:var(--red);color:var(--red);}
+.btn-primary{background:var(--psx-blue);color:#04122E;} .btn-primary:hover{filter:brightness(1.08);}
+.btn-ghost{background:transparent;color:var(--text-2);border-color:var(--border);} .btn-ghost:hover{border-color:var(--psx-blue);color:var(--psx-blue);}
+.btn-loading{color:transparent!important;}
+.btn-loading::after{content:'\2022\2022\2022';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#04130E;letter-spacing:4px;font-size:20px;animation:btn-dots 1s steps(4,end) infinite;}
+@keyframes btn-dots{0%{clip-path:inset(0 100% 0 0);}100%{clip-path:inset(0 0 0 0);}}
+
+/* PIN */
+.pin-row{display:flex;gap:var(--s3);}
+.pin-cell{width:54px;height:66px;text-align:center;font-family:var(--mono);font-weight:600;font-size:28px;background:var(--bg-2);border:1px solid var(--border-strong);border-radius:var(--r-md);color:var(--text);}
+.pin-cell.filled{border-color:var(--psx-blue);}
+.pin-cell.err{border-color:var(--red);background:var(--red-dim);}
+
+/* Token display */
+.token-disp{display:flex;gap:var(--s3);}
+.token-digit{font-family:var(--mono);font-weight:700;font-size:64px;width:80px;height:108px;display:flex;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--r-md);box-shadow:var(--shadow-1);}
+.token-digit.pulse{box-shadow:var(--shadow-glow);border-color:var(--psx-blue);}
+
+/* Timer */
+.timer-track{height:8px;width:100%;background:var(--bg-3);border-radius:var(--r-pill);overflow:hidden;margin:var(--s2) 0;}
+.timer-fill{height:100%;background:linear-gradient(90deg,var(--psx-blue-dim),var(--psx-blue));border-radius:var(--r-pill);}
+.timer-fill.low{background:linear-gradient(90deg,#cc4a3a,var(--red));}
+
+/* Worker card */
+.worker-item{display:flex;align-items:center;gap:var(--s4);padding:var(--s4);border-radius:var(--r-md);border:1px solid var(--border);background:var(--surface);cursor:pointer;transition:all var(--t-fast);}
+.worker-item:hover{border-color:var(--psx-blue);transform:translateX(2px);}
+.worker-avatar{width:46px;height:46px;border-radius:var(--r-pill);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:600;background:var(--bg-3);color:var(--psx-blue);border:1px solid var(--border-strong);}
+.worker-name{font-weight:600;} .worker-role{font-size:13px;color:var(--text-3);}
+
+/* Toast */
+.toast-demo{display:inline-flex;background:var(--bg-1);border:1px solid var(--border-strong);padding:14px 22px;border-radius:var(--r-md);box-shadow:var(--shadow-2);font-weight:500;}
+.toast-demo.success{border-color:var(--green);} .toast-demo.error{border-color:var(--red);} .toast-demo.info{border-color:var(--psx-blue);}
+
+/* Modal */
+.modal-demo{background:var(--bg-1);border:1px solid var(--border-strong);border-radius:var(--r-lg);padding:var(--s7);max-width:360px;box-shadow:var(--shadow-2);text-align:center;}
+
+/* Badge */
+.badge{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:0.08em;padding:3px 10px;border-radius:var(--r-pill);display:inline-block;}
+.badge.in{background:var(--green-dim);color:var(--green);} .badge.out{background:var(--red-dim);color:var(--red);}
+.badge.warn{background:var(--amber-dim);color:var(--amber);} .badge.auto{background:var(--bg-3);color:var(--text-3);}
+
+/* Skeleton */
+.skeleton{background:linear-gradient(90deg,var(--bg-2) 25%,var(--bg-3) 50%,var(--bg-2) 75%);background-size:200% 100%;animation:skeleton-pulse 1.4s ease-in-out infinite;border-radius:var(--r-md);height:60px;}
+@keyframes skeleton-pulse{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+
+/* Check */
+.check-ring{width:90px;height:90px;border-radius:var(--r-pill);background:var(--green-dim);border:2px solid var(--green);display:flex;align-items:center;justify-content:center;font-size:46px;color:var(--green);}
+
+/* Tables for a11y / breakpoints */
+.tbl{width:100%;border-collapse:collapse;font-size:14px;margin:var(--s3) 0;}
+.tbl th{text-align:left;font-family:var(--mono);font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-3);padding:var(--s2) var(--s3);border-bottom:1px solid var(--border);}
+.tbl td{padding:var(--s3);border-bottom:1px solid var(--border);color:var(--text-2);}
+.tbl td code{font-size:12px;}
+
+/* Callout */
+.callout{border-left:3px solid var(--psx-blue);background:rgba(61,126,255,0.07);padding:var(--s4) var(--s5);border-radius:0 var(--r-md) var(--r-md) 0;margin:var(--s4) 0;}
+.callout.green{border-color:var(--green);background:var(--green-dim);}
+.callout.amber{border-color:var(--amber);background:var(--amber-dim);}
+.callout p{margin:0;color:var(--text-2);}
+
+ul.clean{list-style:none;padding:0;} ul.clean li{padding:var(--s2) 0;padding-left:var(--s5);position:relative;color:var(--text-2);}
+ul.clean li::before{content:'\25B8';position:absolute;left:0;color:var(--psx-blue);}
+
+.toc{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:var(--s2);margin:var(--s6) 0 var(--s10);}
+.toc a{font-family:var(--mono);font-size:13px;color:var(--text-2);text-decoration:none;padding:var(--s2) var(--s3);border:1px solid var(--border);border-radius:var(--r-sm);transition:all var(--t-fast);}
+.toc a:hover{border-color:var(--psx-blue);color:var(--psx-blue);}
+.toc a .n{color:var(--psx-blue);margin-right:var(--s2);}
+
+@media (max-width:600px){h1{font-size:44px;}.token-digit{font-size:44px;width:56px;height:78px;}}
+</style>
+</head>
+<body data-theme="dark">
+
+<header class="guide-header">
+  <div class="inner">
+    <div class="gh-brand"><span class="d">&#9672;</span> PSX × NOIRE</div>
+    <button class="theme-btn" id="themeToggle" aria-label="Przełącz motyw">&#9789;</button>
+  </div>
+</header>
+
+<div class="container">
+  <div class="label">System projektowy · We SMILE RCP v5</div>
+  <h1>PSX&nbsp;×&nbsp;NOIRE</h1>
+  <p class="tagline">Minimalizm noeinoi × estetyka konsolowego sprzętu PSX</p>
+
+  <nav class="toc">
+    <a href="#filozofia"><span class="n">01</span>Filozofia</a>
+    <a href="#kolory"><span class="n">02</span>Kolory</a>
+    <a href="#typografia"><span class="n">03</span>Typografia</a>
+    <a href="#odstepy"><span class="n">04</span>Odstępy</a>
+    <a href="#tokeny"><span class="n">05</span>Tokeny</a>
+    <a href="#komponenty"><span class="n">06</span>Komponenty</a>
+    <a href="#animacje"><span class="n">07</span>Animacje</a>
+    <a href="#dostepnosc"><span class="n">08</span>Dostępność</a>
+    <a href="#tryby"><span class="n">09</span>Tryby kolorów</a>
+    <a href="#breakpointy"><span class="n">10</span>Breakpointy</a>
+    <a href="#wzorce"><span class="n">11</span>Wzorce UX</a>
+    <a href="#ia"><span class="n">12</span>Architektura informacji</a>
+    <a href="#stany"><span class="n">13</span>Maszyna stanów</a>
+    <a href="#przyszlosc"><span class="n">14</span>Przyszłe moduły</a>
+  </nav>
+
+  <!-- 01 -->
+  <section id="filozofia" class="section">
+    <h2><span class="num">01</span>Filozofia i inspiracje</h2>
+    <p>PSX × NOIRE łączy dwa źródła: surowy minimalizm <code>noeinoi.com</code> — czerń, ogromne odstępy, jedna mocna barwa akcentująca — z taktylną estetyką sprzętu konsolowego PSX: monospaced cyfry, geometryczne ramki, „sprzętowe” poczucie precyzji.</p>
+    <p>Zasada nadrzędna: <strong>interfejs jest niewidoczny, dopóki nie jest potrzebny.</strong> Na tablecie liczy się jeden element — kod. W aplikacji pracownika liczy się jedna decyzja — wejście albo wyjście. Wszystko inne schodzi na drugi plan.</p>
+    <div class="callout"><p><strong>Trzy filary:</strong> (1) jeden cel na ekran, (2) cyfry zawsze monospaced i wyrównane, (3) niebieski PSX <code>#3D7EFF</code> wyłącznie dla akcji i fokusu — nigdy dekoracyjnie.</p></div>
+  </section>
+
+  <!-- 02 -->
+  <section id="kolory" class="section">
+    <h2><span class="num">02</span>System kolorów</h2>
+    <h3>Tryb ciemny (domyślny)</h3>
+    <div class="swatch-grid">
+      <div class="swatch"><div class="chip" style="background:#0A0A0C"></div><div class="meta"><div class="nm">bg</div><div class="hx">#0A0A0C</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#111114"></div><div class="meta"><div class="nm">bg-1</div><div class="hx">#111114</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#18181C"></div><div class="meta"><div class="nm">bg-2</div><div class="hx">#18181C</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#202026"></div><div class="meta"><div class="nm">bg-3</div><div class="hx">#202026</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#3D7EFF"></div><div class="meta"><div class="nm">PSX blue</div><div class="hx">#3D7EFF</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#38D39F"></div><div class="meta"><div class="nm">green</div><div class="hx">#38D39F</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#FF5C72"></div><div class="meta"><div class="nm">red</div><div class="hx">#FF5C72</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#FFC24B"></div><div class="meta"><div class="nm">amber</div><div class="hx">#FFC24B</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#F4F4F6"></div><div class="meta"><div class="nm">text</div><div class="hx">#F4F4F6</div></div></div>
+    </div>
+    <h3>Tryb jasny</h3>
+    <div class="swatch-grid">
+      <div class="swatch"><div class="chip" style="background:#F4F5F8"></div><div class="meta"><div class="nm">bg</div><div class="hx">#F4F5F8</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#FFFFFF"></div><div class="meta"><div class="nm">bg-1</div><div class="hx">#FFFFFF</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#EEF0F4"></div><div class="meta"><div class="nm">bg-2</div><div class="hx">#EEF0F4</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#3D7EFF"></div><div class="meta"><div class="nm">PSX blue</div><div class="hx">#3D7EFF</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#14151A"></div><div class="meta"><div class="nm">text</div><div class="hx">#14151A</div></div></div>
+    </div>
+    <p>Akcenty (blue/green/red/amber) są wspólne dla obu trybów — różnią się tylko tła i tekst, co gwarantuje spójną semantykę kolorów niezależnie od motywu.</p>
+  </section>
+
+  <!-- 03 -->
+  <section id="typografia" class="section">
+    <h2><span class="num">03</span>Typografia</h2>
+    <p><strong>IBM Plex Mono</strong> dla wszystkiego liczbowego i „sprzętowego”: kody, PIN-y, zegar, etykiety, znaczniki. <strong>IBM Plex Sans</strong> dla treści czytanej: nazwiska, opisy, komunikaty.</p>
+    <div class="demo">
+      <div class="type-row"><span class="sz">96px / mono</span><span class="type-mono" style="font-size:96px;font-weight:700;line-height:1">7</span></div>
+      <div class="type-row"><span class="sz">48px / sans</span><span class="type-sans" style="font-size:48px;font-weight:700">Anna Nowak</span></div>
+      <div class="type-row"><span class="sz">30px / sans</span><span class="type-sans" style="font-size:30px;font-weight:600">Zarejestrowano</span></div>
+      <div class="type-row"><span class="sz">18px / sans</span><span class="type-sans" style="font-size:18px">Treść standardowa interfejsu</span></div>
+      <div class="type-row"><span class="sz">14px / sans</span><span class="type-sans" style="font-size:14px">Drugorzędny opis i metadane</span></div>
+      <div class="type-row"><span class="sz">11px / mono</span><span class="type-mono" style="font-size:11px;letter-spacing:0.2em;text-transform:uppercase">KOD AKTUALNY</span></div>
+      <div class="type-row"><span class="sz">9px / mono</span><span class="type-mono" style="font-size:9px;letter-spacing:0.1em">stopka prawna · v5</span></div>
+    </div>
+    <table class="tbl">
+      <tr><th>Rola</th><th>Font</th><th>Letter-spacing</th><th>Line-height</th></tr>
+      <tr><td>Cyfry kodu/PIN</td><td><code>mono 700</code></td><td>0</td><td>1.0</td></tr>
+      <tr><td>Etykiety (UPPERCASE)</td><td><code>mono 500</code></td><td>0.2em</td><td>1.4</td></tr>
+      <tr><td>Nagłówki</td><td><code>sans 700</code></td><td>-0.01em</td><td>1.1</td></tr>
+      <tr><td>Treść</td><td><code>sans 400</code></td><td>0</td><td>1.6</td></tr>
+    </table>
+  </section>
+
+  <!-- 04 -->
+  <section id="odstepy" class="section">
+    <h2><span class="num">04</span>System odstępów — siatka 4px</h2>
+    <p>Wszystkie odstępy są wielokrotnościami 4px. Tokeny od <code>--s1</code> do <code>--s16</code>.</p>
+    <div class="demo">
+      <div class="space-row"><span style="width:60px">s1</span><span class="space-bar" style="width:4px"></span>4px</div>
+      <div class="space-row"><span style="width:60px">s2</span><span class="space-bar" style="width:8px"></span>8px</div>
+      <div class="space-row"><span style="width:60px">s3</span><span class="space-bar" style="width:12px"></span>12px</div>
+      <div class="space-row"><span style="width:60px">s4</span><span class="space-bar" style="width:16px"></span>16px</div>
+      <div class="space-row"><span style="width:60px">s6</span><span class="space-bar" style="width:24px"></span>24px</div>
+      <div class="space-row"><span style="width:60px">s8</span><span class="space-bar" style="width:40px"></span>40px</div>
+      <div class="space-row"><span style="width:60px">s12</span><span class="space-bar" style="width:64px"></span>64px</div>
+      <div class="space-row"><span style="width:60px">s16</span><span class="space-bar" style="width:96px"></span>96px</div>
+    </div>
+  </section>
+
+  <!-- 05 -->
+  <section id="tokeny" class="section">
+    <h2><span class="num">05</span>Radius · Cień · Przejście</h2>
+    <div class="token-grid">
+      <div class="token-card"><div class="v">8px</div><div class="k">--r-sm</div><div class="demo-radius" style="border-radius:8px"></div></div>
+      <div class="token-card"><div class="v">14px</div><div class="k">--r-md</div><div class="demo-radius" style="border-radius:14px"></div></div>
+      <div class="token-card"><div class="v">22px</div><div class="k">--r-lg</div><div class="demo-radius" style="border-radius:22px"></div></div>
+      <div class="token-card"><div class="v">999px</div><div class="k">--r-pill</div><div class="demo-radius" style="border-radius:999px"></div></div>
+    </div>
+    <div class="token-grid">
+      <div class="token-card"><div class="v">shadow-1</div><div class="k">elewacja kart</div><div class="demo-shadow" style="box-shadow:var(--shadow-1)"></div></div>
+      <div class="token-card"><div class="v">shadow-2</div><div class="k">modale, toast</div><div class="demo-shadow" style="box-shadow:var(--shadow-2)"></div></div>
+      <div class="token-card"><div class="v">glow</div><div class="k">fokus / akcja</div><div class="demo-shadow" style="box-shadow:var(--shadow-glow)"></div></div>
+    </div>
+    <table class="tbl">
+      <tr><th>Token</th><th>Wartość</th><th>Zastosowanie</th></tr>
+      <tr><td><code>--t-fast</code></td><td>120ms</td><td>hover, fokus, drobne stany</td></tr>
+      <tr><td><code>--t-base</code></td><td>200ms</td><td>przejścia widoków, motyw</td></tr>
+      <tr><td><code>--t-slow</code></td><td>300ms</td><td>nakładki, modale</td></tr>
+    </table>
+    <p>Wszystkie używają easingu <code>cubic-bezier(0.22, 1, 0.36, 1)</code> — szybki start, miękkie wyhamowanie.</p>
+  </section>
+
+  <!-- 06 -->
+  <section id="komponenty" class="section">
+    <h2><span class="num">06</span>Galeria komponentów</h2>
+
+    <h3>Przyciski</h3>
+    <div class="demo"><div class="demo-row">
+      <button class="btn btn-arrive">Wejście</button>
+      <button class="btn btn-leave">Wyjście</button>
+      <button class="btn btn-primary">Zaloguj</button>
+      <button class="btn btn-ghost">Admin &#8599;</button>
+      <button class="btn btn-arrive btn-loading">Wejście</button>
+    </div></div>
+
+    <h3>Pola PIN / kodu</h3>
+    <div class="demo"><div class="demo-row">
+      <div class="pin-row"><div class="pin-cell filled">7</div><div class="pin-cell filled">4</div><div class="pin-cell">&nbsp;</div><div class="pin-cell">&nbsp;</div></div>
+      <div class="pin-row"><div class="pin-cell err">&nbsp;</div><div class="pin-cell err">&nbsp;</div><div class="pin-cell err">&nbsp;</div><div class="pin-cell err">&nbsp;</div></div>
+    </div></div>
+
+    <h3>Wyświetlacz kodu (tablet)</h3>
+    <div class="demo">
+      <div class="token-disp"><div class="token-digit pulse">4</div><div class="token-digit">8</div><div class="token-digit">1</div><div class="token-digit">6</div></div>
+      <p style="margin-top:var(--s3)"><span class="badge warn">!</span> Kod to zawsze 4 cyfry dziesiętne (0000–9999), nigdy HEX. Każda cyfra w osobnym polu.</p>
+    </div>
+
+    <h3>Paski czasu</h3>
+    <div class="demo">
+      <div class="timer-track"><div class="timer-fill" style="width:70%"></div></div>
+      <div class="timer-track"><div class="timer-fill low" style="width:14%"></div></div>
+    </div>
+
+    <h3>Karty pracownika</h3>
+    <div class="demo">
+      <div class="worker-item"><div class="worker-avatar">AN</div><div style="flex:1"><div class="worker-name">Anna Nowak</div><div class="worker-role">Higienistka</div></div><span style="color:var(--text-3)">&rarr;</span></div>
+    </div>
+
+    <h3>Toasty</h3>
+    <div class="demo"><div class="demo-row">
+      <span class="toast-demo success">Zarejestrowano wejście</span>
+      <span class="toast-demo error">Nieprawidłowy PIN. Pozostało prób: 3.</span>
+      <span class="toast-demo info">Sesja przedłużona</span>
+    </div></div>
+
+    <h3>Modal</h3>
+    <div class="demo"><div class="modal-demo">
+      <h3 style="margin-top:0">Logowanie administratora</h3>
+      <p style="font-size:14px">Wprowadź PIN administratora</p>
+      <div class="pin-row" style="justify-content:center;margin:var(--s4) 0"><div class="pin-cell filled">&bull;</div><div class="pin-cell filled">&bull;</div><div class="pin-cell">&nbsp;</div><div class="pin-cell">&nbsp;</div></div>
+      <button class="btn btn-primary" style="width:100%">Zaloguj</button>
+    </div></div>
+
+    <h3>Odznaki</h3>
+    <div class="demo"><div class="demo-row">
+      <span class="badge in">Wejście</span><span class="badge out">Wyjście</span><span class="badge warn">Anomalia</span><span class="badge auto">auto</span>
+    </div></div>
+
+    <h3>Skeleton (ładowanie)</h3>
+    <div class="demo"><div class="skeleton" style="margin-bottom:var(--s2)"></div><div class="skeleton"></div></div>
+
+    <h3>Sukces</h3>
+    <div class="demo" style="text-align:center"><div style="display:inline-block"><div class="check-ring">&#10003;</div></div></div>
+  </section>
+
+  <!-- 07 -->
+  <section id="animacje" class="section">
+    <h2><span class="num">07</span>Zasady animacji</h2>
+    <ul class="clean">
+      <li>Każda animacja ma cel — komunikuje zmianę stanu, nigdy dekoruje.</li>
+      <li>Czas trwania ≤ 300ms; mikrointerakcje 120ms.</li>
+      <li>Easing wejścia/wyjścia: <code>cubic-bezier(0.22,1,0.36,1)</code>.</li>
+      <li>Sukces używa „pop” ze sprężystością (<code>cubic-bezier(0.18,1.4,0.4,1)</code>) — jedyny wyjątek od reguły miękkości.</li>
+      <li>Skeleton pulsuje 1.4s — wystarczająco wolno, by nie irytować.</li>
+      <li><code>prefers-reduced-motion</code> wyłącza wszystkie animacje.</li>
+    </ul>
+  </section>
+
+  <!-- 08 -->
+  <section id="dostepnosc" class="section">
+    <h2><span class="num">08</span>Dostępność — WCAG 2.2 AA</h2>
+    <table class="tbl">
+      <tr><th>Para</th><th>Kontrast</th><th>Wynik</th></tr>
+      <tr><td>text / bg (dark)</td><td>~17:1</td><td>AAA</td></tr>
+      <tr><td>text-2 / bg (dark)</td><td>~8:1</td><td>AAA</td></tr>
+      <tr><td>PSX blue / bg (dark)</td><td>~5.2:1</td><td>AA</td></tr>
+      <tr><td>green / green-dim</td><td>≥4.5:1</td><td>AA</td></tr>
+    </table>
+    <ul class="clean">
+      <li>Każdy element interaktywny ma widoczny fokus (<code>.focus-ring</code>, outline 2px niebieski + offset).</li>
+      <li>Pola kodu i PIN mają <code>aria-label</code> per cyfra; nakładka sukcesu jest <code>role="alertdialog"</code> z <code>aria-live="assertive"</code>.</li>
+      <li>Strefa wyświetlania kodu na tablecie ma <code>aria-live="polite"</code>.</li>
+      <li>Cele dotykowe ≥ 44×44px (pola PIN 54–58px szer.).</li>
+      <li>Kolor nie jest jedynym nośnikiem znaczenia — wejście/wyjście mają też tekst i ikonę.</li>
+      <li>Nawigacja klawiaturą: strzałki między polami, Backspace cofa fokus, paste rozkłada cyfry.</li>
+    </ul>
+  </section>
+
+  <!-- 09 -->
+  <section id="tryby" class="section">
+    <h2><span class="num">09</span>Wytyczne trybu ciemnego i jasnego</h2>
+    <p>Domyślnie ciemny — tablet zwykle wisi w recepcji o zmiennym oświetleniu, czerń redukuje olśnienie. Tryb wykrywany jest przed pierwszym malowaniem (inline script w <code>&lt;head&gt;</code>), co eliminuje FOUC, i zapisywany w <code>localStorage</code> pod kluczem <code>wesmile-theme</code>.</p>
+    <div class="callout green"><p>Przełącz motyw przyciskiem w prawym górnym rogu tej strony — cały przewodnik renderuje się żywcem w wybranym trybie.</p></div>
+    <ul class="clean">
+      <li>Nigdy czysta czerń <code>#000</code> jako tło — używamy <code>#0A0A0C</code>, by uniknąć smużenia OLED.</li>
+      <li>W trybie jasnym cienie są subtelniejsze i chłodniejsze.</li>
+      <li>Akcenty semantyczne pozostają identyczne w obu trybach.</li>
+    </ul>
+  </section>
+
+  <!-- 10 -->
+  <section id="breakpointy" class="section">
+    <h2><span class="num">10</span>Breakpointy responsywne</h2>
+    <table class="tbl">
+      <tr><th>Zakres</th><th>Kontekst</th><th>Zachowanie</th></tr>
+      <tr><td>&le; 600px</td><td>telefon pracownika</td><td>kolumna pojedyncza, PIN 48px, przyciski w stosie</td></tr>
+      <tr><td>600–900px portrait</td><td>tablet pionowo</td><td>cyfra kodu 110px</td></tr>
+      <tr><td>&ge; 900px landscape</td><td>tablet recepcji</td><td>cyfra kodu 150px, maksymalna ekspozycja</td></tr>
+    </table>
+  </section>
+
+  <!-- 11 -->
+  <section id="wzorce" class="section">
+    <h2><span class="num">11</span>Wzorce UX</h2>
+    <h3>Stan pusty</h3>
+    <div class="demo" style="text-align:center;color:var(--text-3)"><div style="font-size:36px">&#128269;</div><p>Brak pracowników pasujących do wyszukiwania.</p></div>
+    <h3>Stan błędu</h3>
+    <div class="demo" style="text-align:center;color:var(--text-3)"><div style="font-size:36px">&#9888;</div><p>Nie udało się wczytać listy. <span style="color:var(--psx-blue)">Spróbuj ponownie</span></p></div>
+    <h3>Stan ładowania</h3>
+    <div class="demo"><div class="skeleton"></div></div>
+    <h3>Stan sukcesu</h3>
+    <p>Pełnoekranowa nakładka z animacją „check-pop”, imieniem pracownika z odpowiedzi backendu, komunikatem („Zarejestrowano wejście/wyjście”), godziną i 4-sekundowym paskiem odliczania do automatycznego resetu.</p>
+    <div class="callout amber"><p>Komunikaty są zawsze konkretne i po polsku, np. <em>„Nieprawidłowy kod. Sprawdź tablet.”</em> oraz <em>„Nieprawidłowy PIN. Pozostało prób: X.”</em></p></div>
+  </section>
+
+  <!-- 12 -->
+  <section id="ia" class="section">
+    <h2><span class="num">12</span>Architektura informacji RCP</h2>
+    <ul class="clean">
+      <li><code>?page=tablet</code> — wyświetlacz kodu + instrukcje. Brak danych wrażliwych, brak „poprzedniego kodu”.</li>
+      <li><code>?page=worker</code> — wybór pracownika → formularz (kod z tabletu + PIN) → sukces.</li>
+      <li><code>?page=admin</code> — ten sam wyświetlacz kodu + wejście administratora → pulpit (statystyki, ewidencja, anomalie, pracownicy).</li>
+    </ul>
+    <p>Routing realizuje <code>doGet</code> w Code.gs przez wstrzyknięcie zmiennej <code>page</code> do szablonu (klient czyta ją jako <code>APP_PAGE</code>).</p>
+  </section>
+
+  <!-- 13 -->
+  <section id="stany" class="section">
+    <h2><span class="num">13</span>Maszyna stanów</h2>
+    <h3>Pracownik</h3>
+    <p><code>SELECT</code> → (wybór) → <code>FORM</code> → (submit) → <code>LOADING</code> → <code>SUCCESS</code> (4s) → <code>SELECT</code>. Każdy błąd wraca do <code>FORM</code> z oznaczeniem pola błędem.</p>
+    <h3>Sesja administratora</h3>
+    <p><code>LOCKED</code> → (PIN OK) → <code>ACTIVE</code> (TTL 15min, przedłużenie co 60s) → (timeout/logout) → <code>LOCKED</code>. Sesja jest tokenem podpisanym HMAC, weryfikowanym wyłącznie po stronie backendu.</p>
+    <h3>Kod (token)</h3>
+    <p>Okno 30s; klient odlicza lokalnie, na granicy okna pobiera nowy token. Backend akceptuje bieżące okno + 1 okno karencji.</p>
+  </section>
+
+  <!-- 14 -->
+  <section id="przyszlosc" class="section">
+    <h2><span class="num">14</span>Przyszłe moduły ekosystemu</h2>
+    <p>Każdy kolejny moduł We SMILE (grafik, urlopy, płace, magazyn) powinien dziedziczyć ten sam plik tokenów CSS i namespace <code>PSX</code>.</p>
+    <ul class="clean">
+      <li>Reużyj <code>PSX.theme</code>, <code>PSX.toast</code>, <code>PSX.pins</code>, <code>PSX.callGAS</code> — nie powielaj.</li>
+      <li>Każdy nowy widok = jeden cel; akcent niebieski tylko dla akcji głównej.</li>
+      <li>Wszystkie sekrety w Script Properties; nic wrażliwego w HTML.</li>
+      <li>Stany puste/błędu/ładowania/sukcesu są obowiązkowe dla każdego widoku z danymi.</li>
+      <li>Polski język, monospaced cyfry, siatka 4px — bez wyjątków.</li>
+    </ul>
+    <p class="tagline" style="margin-top:var(--s10)">PSX × NOIRE · We SMILE RCP v5 · system żywy</p>
+  </section>
+</div>
+
+<script>
+(function () {
+  var KEY = 'wesmile-theme';
+  function apply(m){ document.body.setAttribute('data-theme', m); document.documentElement.setAttribute('data-theme', m);
+    var b=document.getElementById('themeToggle'); if(b) b.textContent = (m==='light'?'☼':'☽'); }
+  var saved; try { saved = localStorage.getItem(KEY); } catch(e){}
+  if(!saved) saved = (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) ? 'light':'dark';
+  apply(saved);
+  document.getElementById('themeToggle').addEventListener('click', function(){
+    var next = document.body.getAttribute('data-theme')==='light' ? 'dark':'light';
+    apply(next); try { localStorage.setItem(KEY, next); } catch(e){}
+  });
+})();
+</script>
+</body>
+</html>
