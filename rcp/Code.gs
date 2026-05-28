@@ -212,9 +212,8 @@ function setupRCP() {
     if (sh.getLastRow() === 0) sh.appendRow(def.h);
   });
 
-  // Kolumna PIN jako tekst — format '@' chroni wiodące zera ("0371", "0316", "0484")
+  // Pracownicy
   const pSh = spreadsheet.getSheetByName('Pracownicy');
-  pSh.getRange(1, 6, Math.max(pSh.getMaxRows(), 100), 1).setNumberFormat('@');
 
   // Dodaj pracowników tylko jeśli arkusz jest pusty (tylko nagłówek)
   if (pSh.getLastRow() <= 1) {
