@@ -58,12 +58,14 @@ function getDashboard(token, year, month) {
 
     const rcpMap = {};
     ewidRows.forEach(r => {
-      const ds = String(r[5]);
+      const ds = _sheetDate(r[5]);
       if (!ds.startsWith(pfx)) return;
       const k = String(r[1]) + '_' + ds;
       if (!rcpMap[k]) rcpMap[k] = { e: [], x: [] };
-      if (String(r[4]) === 'WEJSCIE') rcpMap[k].e.push(String(r[6]));
-      else if (String(r[4]) === 'WYJSCIE') rcpMap[k].x.push(String(r[6]));
+      const akcja = String(r[4]).trim();
+      const godz  = _sheetTime(r[6]);
+      if (akcja === 'WEJSCIE') rcpMap[k].e.push(godz);
+      else if (akcja === 'WYJSCIE') rcpMap[k].x.push(godz);
     });
 
     // Czytaj Statusy
@@ -71,7 +73,7 @@ function getDashboard(token, year, month) {
     const stMap  = {};
     if (stSh && stSh.getLastRow() >= 2) {
       stSh.getDataRange().getValues().slice(1).forEach(r => {
-        const ds = String(r[0]);
+        const ds = _sheetDate(r[0]);
         if (!ds.startsWith(pfx)) return;
         stMap[String(r[1]) + '_' + ds] = { status: String(r[2]), notes: String(r[3] || '') };
       });
@@ -132,6 +134,23 @@ function getDashboard(token, year, month) {
 function _t2m(t) {
   const p = String(t).split(':');
   return parseInt(p[0], 10) * 60 + parseInt(p[1], 10);
+}
+
+// Sheets auto-konwertuje daty/godziny na obiekty Date — obsługujemy oba formaty
+function _sheetDate(v) {
+  if (v instanceof Date) return Utilities.formatDate(v, 'Europe/Warsaw', 'yyyy-MM-dd');
+  return String(v);
+}
+
+function _sheetTime(v) {
+  if (v instanceof Date) return Utilities.formatDate(v, 'Europe/Warsaw', 'HH:mm');
+  const s = String(v);
+  // Sheets może też zwrócić ułamek doby (np. 0.35 = 08:24)
+  if (!isNaN(s) && s.indexOf(':') === -1) {
+    const mins = Math.round(parseFloat(s) * 1440);
+    return String(Math.floor(mins / 60)).padStart(2, '0') + ':' + String(mins % 60).padStart(2, '0');
+  }
+  return s;
 }
 
 // ── Zapis statusu dnia ───────────────────────────────────────
