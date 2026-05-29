@@ -24,51 +24,65 @@ body{background:#0f0f11;color:#f0f0f2;min-height:100vh}
 .key.clr{color:#e84560;font-weight:800;font-size:16px}
 
 /* ── APP BAR ── */
-.app-bar{background:#1c1c1e;border-bottom:1px solid #2a2a2e;padding:10px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:10}
-.app-title{font-weight:800;font-size:15px}
+.app-bar{background:#1c1c1e;border-bottom:1px solid #2a2a2e;padding:10px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:sticky;top:0;z-index:10}
+.app-title{font-weight:800;font-size:15px;white-space:nowrap}
 .month-nav{display:flex;align-items:center;gap:6px}
 .nav-btn{background:#2c2c2e;border:none;border-radius:8px;color:#f0f0f2;width:34px;height:34px;cursor:pointer;font-size:14px}
 .nav-btn:hover{background:#3a3a3c}
 .month-label{font-size:13px;font-weight:700;min-width:110px;text-align:center}
-.norma-group{display:flex;align-items:center;gap:6px;margin-left:4px}
-.norma-lbl{font-size:12px;color:#888}
-.norma-inp{background:#2a2a2e;border:1px solid #3a3a3c;border-radius:8px;color:#f0f0f2;font-size:14px;font-weight:700;padding:5px 8px;width:72px;text-align:right}
-.norma-inp:focus{outline:none;border-color:#e84560}
+.norma-group{display:flex;align-items:center;gap:6px;background:#2a2a2e;border-radius:10px;padding:5px 10px}
+.norma-lbl{font-size:12px;color:#888;white-space:nowrap}
+.norma-inp{background:transparent;border:none;color:#f0f0f2;font-size:15px;font-weight:700;width:64px;text-align:right}
+.norma-inp:focus{outline:none}
+.norma-tick{font-size:13px;color:#00a86b;opacity:0;transition:.4s;min-width:14px}
+.norma-tick.on{opacity:1}
 .bar-right{display:flex;gap:8px;margin-left:auto}
 .btn-sm{background:#2c2c2e;border:none;border-radius:8px;color:#f0f0f2;padding:7px 14px;cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap}
 .btn-sm:hover{background:#3a3a3c}
 .btn-red{background:#e84560;color:#fff}
 .btn-red:hover{background:#c73451}
 
-/* ── MAIN ── */
-.page-wrap{max-width:900px;margin:0 auto;padding:20px 20px 40px}
+/* ── PAGE ── */
+.page-wrap{max-width:960px;margin:0 auto;padding:16px 20px 40px}
 
 /* ── EMPLOYEE SELECTOR ── */
-.sel-label{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:#555;margin-bottom:6px}
-.emp-sel-wrap{position:relative;margin-bottom:20px}
-.emp-input{width:100%;background:#1c1c1e;border:1px solid #3a3a3c;border-radius:12px;color:#f0f0f2;font-size:15px;font-weight:600;padding:12px 16px;cursor:text}
+.sel-lbl{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:#555;margin-bottom:6px}
+.emp-sel-wrap{position:relative;margin-bottom:16px}
+.emp-input{width:100%;background:#1c1c1e;border:1px solid #3a3a3c;border-radius:12px;color:#f0f0f2;font-size:15px;font-weight:600;padding:12px 16px}
 .emp-input:focus{outline:none;border-color:#e84560}
 .emp-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#1c1c1e;border:1px solid #3a3a3c;border-radius:12px;z-index:20;max-height:220px;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.6);display:none}
-.emp-opt{padding:11px 16px;cursor:pointer;font-size:14px;font-weight:500;border-radius:0}
-.emp-opt:first-child{border-radius:12px 12px 0 0}
-.emp-opt:last-child{border-radius:0 0 12px 12px}
-.emp-opt:only-child{border-radius:12px}
+.emp-opt{padding:11px 16px;cursor:pointer;font-size:14px;font-weight:500}
 .emp-opt:hover{background:#2a2a2e}
 .emp-opt-none{padding:11px 16px;color:#555;font-size:13px}
 
-/* ── SUMMARY CARD ── */
-.emp-card{background:#1c1c1e;border:1px solid #2a2a2e;border-radius:16px;padding:20px;margin-bottom:16px}
-.emp-name{font-size:18px;font-weight:800;margin-bottom:2px}
-.emp-role{font-size:12px;color:#888;background:#2a2a2e;padding:2px 10px;border-radius:20px;display:inline-block;margin-bottom:16px}
-.stats-row{display:flex;gap:20px;flex-wrap:wrap}
-.stat{display:flex;flex-direction:column;gap:4px}
-.stat-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:#555}
-.stat-val{font-size:22px;font-weight:800;line-height:1}
-.clr-ok{color:#00a86b}
-.clr-warn{color:#ffb300}
-.clr-bad{color:#e84560}
+/* ── EMPLOYEE CARD ── */
+.emp-card{background:#1c1c1e;border:1px solid #2a2a2e;border-radius:16px;padding:18px 20px;margin-bottom:12px;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.emp-info{}
+.emp-name{font-size:18px;font-weight:800;margin-bottom:4px}
+.emp-role{font-size:12px;color:#888;background:#2a2a2e;padding:2px 10px;border-radius:20px;display:inline-block}
+.emp-hours{text-align:right}
+.hours-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:#555;margin-bottom:4px}
+.hours-val{font-size:26px;font-weight:800;line-height:1}
+.hours-ok{color:#00a86b}
+.hours-bad{color:#e84560}
+.hours-neutral{color:#f0f0f2}
 
-/* ── DAILY TABLE ── */
+/* ── VIEW TOGGLE ── */
+.view-toggle{display:flex;gap:6px;margin-bottom:12px}
+.vbtn{background:#2a2a2e;border:1px solid #3a3a3c;border-radius:8px;color:#888;padding:6px 16px;cursor:pointer;font-size:13px;font-weight:600}
+.vbtn.on{background:#e84560;border-color:#e84560;color:#fff}
+
+/* ── ANNOTATION ── */
+.note-wrap{margin-bottom:14px}
+.note-lbl{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:#555;margin-bottom:6px}
+.note-ta{width:100%;background:#1c1c1e;border:1px solid #3a3a3c;border-radius:10px;color:#f0f0f2;font-size:13px;padding:10px 14px;resize:vertical;min-height:58px;line-height:1.5}
+.note-ta.warn{border-color:#e84560}
+.note-ta:focus{outline:none;border-color:#888}
+.note-save-row{display:flex;align-items:center;gap:8px;margin-top:4px}
+.note-tick{font-size:12px;color:#00a86b;opacity:0;transition:.4s}
+.note-tick.on{opacity:1}
+
+/* ── LIST TABLE ── */
 .table-wrap{overflow-x:auto;border-radius:12px;border:1px solid #2a2a2e}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th{background:#111;color:#555;font-weight:600;padding:9px 14px;text-align:left;border-bottom:1px solid #222;white-space:nowrap}
@@ -80,10 +94,21 @@ tr.wknd td{color:#555}
 .t-hours{font-weight:700;color:#00a86b}
 .t-miss{color:#e84560;font-weight:700}
 
+/* ── CALENDAR ── */
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal-head{text-align:center;font-size:11px;font-weight:700;color:#555;padding:6px 0}
+.cal-cell{background:#1c1c1e;border:1px solid #252528;border-radius:7px;padding:6px 5px;min-height:70px;font-size:11px}
+.cal-wknd{background:#161618;border-color:#1f1f22}
+.cal-empty{background:transparent;border-color:transparent}
+.cal-dn{font-size:12px;font-weight:700;color:#555;margin-bottom:3px}
+.cal-in,.cal-out{font-family:monospace;font-size:10px;color:#ccc;font-weight:600;white-space:nowrap}
+.cal-h{font-size:10px;color:#00a86b;font-weight:700;margin-top:2px}
+.cal-miss{color:#e84560;font-weight:700;font-size:12px}
+
 /* ── HINT / ERROR ── */
-.hint{text-align:center;color:#444;padding:48px;font-size:15px}
+.hint{text-align:center;color:#444;padding:40px;font-size:15px}
 .hint-err{color:#e84560}
-.retry-btn{background:#2a2a2e;border:1px solid #3a3a3c;border-radius:8px;color:#f0f0f2;padding:6px 14px;cursor:pointer;font-size:13px;margin-top:10px;display:inline-block}
+.retry-btn{background:#2a2a2e;border:1px solid #3a3a3c;border-radius:8px;color:#f0f0f2;padding:7px 16px;cursor:pointer;font-size:13px;margin-top:10px;display:inline-block}
 
 /* ── TOAST ── */
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);opacity:0;background:#e84560;color:#fff;padding:10px 22px;border-radius:40px;font-size:14px;font-weight:600;pointer-events:none;transition:.25s;z-index:99;max-width:90vw;text-align:center}
@@ -92,8 +117,9 @@ tr.wknd td{color:#555}
 
 @media(max-width:600px){
   .app-bar{gap:8px;padding:8px 12px}
-  .page-wrap{padding:12px 12px 32px}
-  .stats-row{gap:14px}
+  .page-wrap{padding:10px 10px 32px}
+  .emp-card{flex-direction:column}
+  .emp-hours{text-align:left}
 }
 </style>
 </head>
@@ -129,8 +155,9 @@ tr.wknd td{color:#555}
     </div>
     <div class="norma-group">
       <span class="norma-lbl">Norma:</span>
-      <input id="etat-inp" type="number" class="norma-inp" min="0" step="0.5" placeholder="h">
-      <span class="norma-lbl">h/mies.</span>
+      <input id="etat-inp" type="number" class="norma-inp" min="0" step="0.5" placeholder="0">
+      <span class="norma-lbl">h</span>
+      <span id="norma-tick" class="norma-tick">✓</span>
     </div>
     <div class="bar-right">
       <button id="btn-csv" class="btn-sm">📥 CSV</button>
@@ -139,15 +166,13 @@ tr.wknd td{color:#555}
   </header>
 
   <div class="page-wrap">
-    <div class="sel-label">Pracownik</div>
+    <div class="sel-lbl">Pracownik</div>
     <div class="emp-sel-wrap">
       <input type="text" id="emp-input" class="emp-input"
              placeholder="Wpisz imię lub nazwisko…" autocomplete="off">
       <div id="emp-dropdown" class="emp-dropdown"></div>
     </div>
-    <div id="emp-data">
-      <div class="hint">Wybierz pracownika z listy powyżej</div>
-    </div>
+    <div id="emp-data"></div>
   </div>
 </div>
 
@@ -157,17 +182,18 @@ tr.wknd td{color:#555}
 /* global google */
 
 var S = {
-  token: null,
-  year:  new Date().getFullYear(),
-  month: new Date().getMonth() + 1,
-  data:  null,
-  selId: null
+  token:  null,
+  year:   new Date().getFullYear(),
+  month:  new Date().getMonth() + 1,
+  data:   null,
+  selId:  null,
+  view:   'list'   // 'list' | 'cal'
 };
 
 var MONTHS = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec',
               'Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
 
-// ── Helpers ───────────────────────────────────────────────────
+// ── Utilities ─────────────────────────────────────────────────
 
 var _tt;
 function toast(msg, ok) {
@@ -182,20 +208,14 @@ function gas(action, args, cb) {
   google.script.run
     .withSuccessHandler(function(res) {
       try { cb(res); } catch(ex) {
-        showErr('Błąd renderowania: ' + ex.message);
+        toast('Błąd: ' + ex.message, false);
+        console.error(ex);
       }
     })
     .withFailureHandler(function(e) {
-      showErr((e && e.message) || 'Błąd połączenia');
+      toast((e && e.message) || 'Błąd połączenia', false);
     })
     .callRCP(action, JSON.stringify(args || []));
-}
-
-function showErr(msg) {
-  document.getElementById('emp-data').innerHTML =
-    '<div class="hint hint-err">' + esc(msg) +
-    '<br><button class="retry-btn" onclick="loadMonth()">Ponów</button></div>';
-  toast(msg, false);
 }
 
 function esc(s) {
@@ -258,7 +278,7 @@ document.getElementById('btn-next').addEventListener('click', function() {
   updateMonthLabel(); loadMonth();
 });
 
-// ── Norma (etat) ──────────────────────────────────────────────
+// ── Norma ─────────────────────────────────────────────────────
 
 function saveEtat() {
   var val = parseFloat(document.getElementById('etat-inp').value);
@@ -266,10 +286,14 @@ function saveEtat() {
   gas('setEtat', [S.token, S.year, S.month, val], function(res) {
     if (res && res.ok) {
       if (S.data) S.data.etat = val;
-      toast('Norma zapisana.', true);
-      refreshEmpDisplay();
+      var tk = document.getElementById('norma-tick');
+      tk.className = 'norma-tick on';
+      setTimeout(function(){ tk.className = 'norma-tick'; }, 2000);
+      if (S.selId) refreshEmpDisplay();
     } else if (res && res.errorType === 'UNAUTHORIZED') {
       doLogout();
+    } else {
+      toast('Błąd zapisu normy: ' + ((res && res.msg) || ''), false);
     }
   });
 }
@@ -311,7 +335,6 @@ document.getElementById('emp-input').addEventListener('focus', function() {
   renderOpts(_emps);
   document.getElementById('emp-dropdown').style.display = 'block';
 });
-
 document.getElementById('emp-input').addEventListener('input', function() {
   var q = this.value.toLowerCase();
   renderOpts(_emps.filter(function(e) {
@@ -319,11 +342,8 @@ document.getElementById('emp-input').addEventListener('input', function() {
   }));
   document.getElementById('emp-dropdown').style.display = 'block';
 });
-
 document.getElementById('emp-input').addEventListener('blur', function() {
-  setTimeout(function() {
-    document.getElementById('emp-dropdown').style.display = 'none';
-  }, 160);
+  setTimeout(function(){ document.getElementById('emp-dropdown').style.display = 'none'; }, 160);
 });
 
 function pickEmp(emp) {
@@ -335,7 +355,9 @@ function pickEmp(emp) {
 
 function getEmp(id) {
   if (!S.data || !S.data.employees) return null;
-  return S.data.employees.filter(function(e) { return e.id === id; })[0] || null;
+  for (var i = 0; i < S.data.employees.length; i++)
+    if (S.data.employees[i].id === id) return S.data.employees[i];
+  return null;
 }
 
 function refreshEmpDisplay() {
@@ -351,7 +373,9 @@ function loadMonth() {
   gas('getDashboard', [S.token, S.year, S.month], function(res) {
     if (!res || !res.ok) {
       if (res && res.errorType === 'UNAUTHORIZED') { doLogout(); return; }
-      showErr((res && res.msg) || 'Błąd ładowania danych.');
+      document.getElementById('emp-data').innerHTML =
+        '<div class="hint hint-err">' + esc((res && res.msg) || 'Błąd ładowania.') +
+        '<br><button class="retry-btn" onclick="loadMonth()">Ponów</button></div>';
       return;
     }
     S.data = res;
@@ -361,36 +385,89 @@ function loadMonth() {
       var emp = getEmp(S.selId);
       if (emp) { renderEmp(emp); return; }
     }
-    document.getElementById('emp-data').innerHTML =
-      '<div class="hint">Wybierz pracownika z listy powyżej</div>';
+    document.getElementById('emp-data').innerHTML = '';
   });
 }
 
 // ── Wyświetlanie pracownika ───────────────────────────────────
 
 function renderEmp(emp) {
-  var etat   = S.data && S.data.etat > 0 ? S.data.etat : 0;
+  var etat   = (S.data && S.data.etat > 0) ? S.data.etat : 0;
   var totalH = parseFloat(emp.totalHours) || 0;
-  var diff   = etat > 0 ? totalH - etat : null;
-  var dCls   = diff === null ? '' : (diff >= -1 ? 'clr-ok' : (diff >= -10 ? 'clr-warn' : 'clr-bad'));
-  var dTxt   = diff === null ? '—' : (diff >= 0 ? '+' : '') + nf(diff) + 'h';
+
+  var hoursHtml, hoursCls;
+  if (etat > 0) {
+    var label = nf(totalH) + 'h z ' + nf(etat) + 'h';
+    if (totalH >= etat) {
+      hoursHtml = label;
+      hoursCls  = 'hours-ok';
+    } else {
+      hoursHtml = label;
+      hoursCls  = 'hours-bad';
+    }
+  } else {
+    hoursHtml = nf(totalH) + 'h';
+    hoursCls  = 'hours-neutral';
+  }
+
+  var isBad = etat > 0 && totalH < etat;
+  var note  = esc(emp.note || '');
 
   var html = '<div class="emp-card">';
-  html += '<div class="emp-name">' + esc(emp.imie + ' ' + emp.nazwisko) + '</div>';
-  html += '<div class="emp-role">' + esc(emp.rola || '') + '</div>';
-  html += '<div class="stats-row">';
-  html += '<div class="stat"><div class="stat-lbl">Przepracowane</div><div class="stat-val">' + nf(totalH) + 'h</div></div>';
-  if (etat > 0) {
-    html += '<div class="stat"><div class="stat-lbl">Norma</div><div class="stat-val">' + nf(etat) + 'h</div></div>';
-    html += '<div class="stat"><div class="stat-lbl">Różnica</div><div class="stat-val ' + dCls + '">' + dTxt + '</div></div>';
+  html += '<div class="emp-info"><div class="emp-name">' + esc(emp.imie + ' ' + emp.nazwisko) + '</div>';
+  html += '<div class="emp-role">' + esc(emp.rola || '') + '</div></div>';
+  html += '<div class="emp-hours"><div class="hours-lbl">Przepracowane</div>';
+  html += '<div class="hours-val ' + hoursCls + '">' + hoursHtml + '</div></div>';
+  html += '</div>';
+
+  // Adnotacja
+  html += '<div class="note-wrap">';
+  html += '<div class="note-lbl">Adnotacja' + (isBad ? ' — niedobór godzin' : '') + '</div>';
+  html += '<textarea id="note-ta" class="note-ta' + (isBad ? ' warn' : '') + '"';
+  html += ' placeholder="Wpisz adnotację…">' + note + '</textarea>';
+  html += '<div class="note-save-row"><span id="note-tick" class="note-tick">✓ Zapisano</span></div>';
+  html += '</div>';
+
+  // View toggle
+  html += '<div class="view-toggle">';
+  html += '<button class="vbtn' + (S.view === 'list' ? ' on' : '') + '" onclick="switchView(\'list\')">Lista</button>';
+  html += '<button class="vbtn' + (S.view === 'cal'  ? ' on' : '') + '" onclick="switchView(\'cal\')">Kalendarz</button>';
+  html += '</div>';
+
+  // Data view
+  html += '<div id="data-view">';
+  html += S.view === 'cal' ? renderCalendar(emp) : renderList(emp);
+  html += '</div>';
+
+  document.getElementById('emp-data').innerHTML = html;
+
+  // Bind note textarea
+  var ta = document.getElementById('note-ta');
+  if (ta) {
+    ta.addEventListener('blur', function() { saveNote(emp.id, ta.value); });
+    ta.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) ta.blur();
+    });
   }
-  html += '</div></div>';
+}
 
-  html += '<div class="table-wrap"><table>';
-  html += '<thead><tr><th>Dzień</th><th>Data</th><th>Wejście</th><th>Wyjście</th><th>Godziny</th></tr></thead>';
-  html += '<tbody>';
+function switchView(v) {
+  S.view = v;
+  var emp = getEmp(S.selId);
+  if (!emp) return;
+  document.getElementById('data-view').innerHTML =
+    v === 'cal' ? renderCalendar(emp) : renderList(emp);
+  document.querySelectorAll('.vbtn').forEach(function(b) {
+    b.className = 'vbtn' + (b.textContent.trim() === (v === 'cal' ? 'Kalendarz' : 'Lista') ? ' on' : '');
+  });
+}
 
+// ── Lista ─────────────────────────────────────────────────────
+
+function renderList(emp) {
   var days = Array.isArray(emp.days) ? emp.days : [];
+  var html = '<div class="table-wrap"><table>';
+  html += '<thead><tr><th>Dzień</th><th>Data</th><th>Wejście</th><th>Wyjście</th><th>Godziny</th></tr></thead><tbody>';
   days.forEach(function(d) {
     if (!d) return;
     var dn   = String(d.date || '').split('-')[2] || '';
@@ -407,9 +484,63 @@ function renderEmp(emp) {
     html += '<td class="' + (hasH ? 't-hours' : 't-empty') + '">' + (hasH ? nf(d.hours) + 'h' : '—') + '</td>';
     html += '</tr>';
   });
-
   html += '</tbody></table></div>';
-  document.getElementById('emp-data').innerHTML = html;
+  return html;
+}
+
+// ── Kalendarz ─────────────────────────────────────────────────
+
+function renderCalendar(emp) {
+  var days = Array.isArray(emp.days) ? emp.days : [];
+  if (days.length === 0) return '<div class="hint">Brak danych</div>';
+
+  // Dzień tygodnia pierwszego dnia miesiąca (0=Pn..6=Nd, konwencja PL)
+  var firstJs  = new Date(days[0].date + 'T12:00:00').getDay(); // 0=Nd
+  var firstCol = firstJs === 0 ? 6 : firstJs - 1;
+
+  var html = '<div class="cal-grid">';
+  ['Pn','Wt','Śr','Cz','Pt','Sb','Nd'].forEach(function(h) {
+    html += '<div class="cal-head">' + h + '</div>';
+  });
+  for (var i = 0; i < firstCol; i++) {
+    html += '<div class="cal-cell cal-empty"></div>';
+  }
+  days.forEach(function(d) {
+    if (!d) return;
+    var dn   = parseInt(String(d.date || '').split('-')[2]) || 0;
+    var wknd = d.dow === 'Sb' || d.dow === 'Nd';
+    var hasH = d.hours !== null && d.hours !== undefined && !isNaN(parseFloat(d.hours));
+    html += '<div class="cal-cell' + (wknd ? ' cal-wknd' : '') + '">';
+    html += '<div class="cal-dn">' + dn + '</div>';
+    if (d.wejscie) {
+      html += '<div class="cal-in">' + esc(d.wejscie) + '</div>';
+      if (d.wyjscie) {
+        html += '<div class="cal-out">' + esc(d.wyjscie) + '</div>';
+        if (hasH) html += '<div class="cal-h">' + nf(d.hours) + 'h</div>';
+      } else {
+        html += '<div class="cal-miss">!</div>';
+      }
+    }
+    html += '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+// ── Adnotacja ─────────────────────────────────────────────────
+
+function saveNote(empId, text) {
+  gas('setNote', [S.token, empId, S.year, S.month, text], function(res) {
+    if (res && res.ok) {
+      // Update in local data so refresh doesn't lose it
+      var emp = getEmp(empId);
+      if (emp) emp.note = text;
+      var tk = document.getElementById('note-tick');
+      if (tk) { tk.className = 'note-tick on'; setTimeout(function(){ tk.className = 'note-tick'; }, 2000); }
+    } else if (res && res.errorType === 'UNAUTHORIZED') {
+      doLogout();
+    }
+  });
 }
 
 // ── CSV ───────────────────────────────────────────────────────
@@ -429,15 +560,14 @@ document.getElementById('btn-csv').addEventListener('click', function() {
   });
 });
 
-// ── Wyloguj ───────────────────────────────────────────────────
+// ── Logout ────────────────────────────────────────────────────
 
 function doLogout() {
   S.token = null; S.data = null; S.selId = null;
   lPin = ''; setDots('');
   document.getElementById('emp-input').value = '';
-  document.getElementById('etat-inp').value = '';
-  document.getElementById('emp-data').innerHTML =
-    '<div class="hint">Wybierz pracownika z listy powyżej</div>';
+  document.getElementById('etat-inp').value  = '';
+  document.getElementById('emp-data').innerHTML = '';
   document.getElementById('dash').style.display  = 'none';
   document.getElementById('login').style.display = 'flex';
 }

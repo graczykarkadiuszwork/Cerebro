@@ -49,6 +49,7 @@ function callRCP(action, argsJson) {
       case 'dashLogin':      return dashLogin(args[0]);
       case 'getDashboard':   return getDashboard(args[0], args[1], args[2]);
       case 'setEtat':        return setEtat(args[0], args[1], args[2], args[3]);
+      case 'setNote':        return setNote(args[0], args[1], args[2], args[3], args[4]);
       case 'dashExportCsv':  return dashExportCsv(args[0], args[1], args[2]);
       default:               return { ok: false, msg: 'Nieznana akcja.' };
     }

@@ -1,5 +1,5 @@
 // ============================================================
-// Dashboard.gs — We SMILE RCP v7.0
+// Dashboard.gs — We SMILE RCP v8.0
 // ============================================================
 
 const DASH_TTL = 3600;
@@ -12,6 +12,22 @@ function _dashOk(token) {
   if (_cache().get(k) !== '1') return false;
   _cache().put(k, '1', DASH_TTL);
   return true;
+}
+
+// ── Logi admina → arkusz Logi_Admin ──────────────────────────
+
+function _logAdmin(action, empId, details) {
+  try {
+    const ss = _ss();
+    let sh = ss.getSheetByName('Logi_Admin');
+    if (!sh) {
+      sh = ss.insertSheet('Logi_Admin');
+      sh.appendRow(['Timestamp', 'Akcja', 'EmpID', 'Szczegoly']);
+    }
+    sh.appendRow([new Date().toISOString(), String(action), String(empId || '—'), String(details || '')]);
+  } catch (e) {
+    Logger.log('_logAdmin error: ' + e);
+  }
 }
 
 // ── Login ─────────────────────────────────────────────────────
@@ -30,7 +46,9 @@ function dashLogin(pin) {
   _resetRate('dlog');
   const token = Utilities.getUuid();
   _cache().put('ds_' + token, '1', DASH_TTL);
-  return { ok: true, token, name: String(worker[1]) + ' ' + String(worker[2]) };
+  const name = String(worker[1]) + ' ' + String(worker[2]);
+  _logAdmin('Logowanie', String(worker[0]), 'Zalogowano: ' + name);
+  return { ok: true, token, name };
 }
 
 // ── Dane miesiąca ─────────────────────────────────────────────
@@ -49,12 +67,13 @@ function getDashboard(token, year, month) {
 
     const daysInMonth = new Date(y, m, 0).getDate();
     const pfx = y + '-' + String(m).padStart(2, '0');
+    const props = PropertiesService.getScriptProperties();
 
-    // Norma godzin dla miesiąca (globalna, z PropertiesService)
+    // Norma godzin (globalna dla wszystkich, dla danego miesiąca)
     const etatKey = 'etat_' + y + '_' + String(m).padStart(2, '0');
-    const etat = parseFloat(PropertiesService.getScriptProperties().getProperty(etatKey) || '') || 0;
+    const etat = parseFloat(props.getProperty(etatKey) || '') || 0;
 
-    // Czytaj Ewidencja — obsługuje daty jako Date lub string
+    // Czytaj Ewidencja — obsługuje Date i string
     const ewidSh = _ss().getSheetByName('Ewidencja');
     const ewidRows = (ewidSh && ewidSh.getLastRow() >= 2)
       ? ewidSh.getDataRange().getValues().slice(1) : [];
@@ -99,12 +118,17 @@ function getDashboard(token, year, month) {
           days.push({ date: ds, dow, wejscie, wyjscie, hours });
         }
 
+        // Adnotacja dla pracownika w tym miesiącu
+        const noteKey = 'note_' + id + '_' + y + '_' + String(m).padStart(2, '0');
+        const note = props.getProperty(noteKey) || '';
+
         return {
           id,
           imie:       String(w[1]),
           nazwisko:   String(w[2]),
           rola:       String(w[3]),
           totalHours: Math.round(totalH * 10) / 10,
+          note,
           days
         };
       });
@@ -117,7 +141,7 @@ function getDashboard(token, year, month) {
   }
 }
 
-// ── Zapis normy godzin dla miesiąca ──────────────────────────
+// ── Zapis normy godzin ────────────────────────────────────────
 
 function setEtat(token, year, month, hours) {
   if (!_dashOk(token)) {
@@ -131,6 +155,24 @@ function setEtat(token, year, month, hours) {
   }
   const key = 'etat_' + y + '_' + String(m).padStart(2, '0');
   PropertiesService.getScriptProperties().setProperty(key, String(h));
+  _logAdmin('SetNorma', '—', 'Norma ' + y + '-' + String(m).padStart(2, '0') + ': ' + h + 'h');
+  return { ok: true };
+}
+
+// ── Zapis adnotacji ───────────────────────────────────────────
+
+function setNote(token, empId, year, month, note) {
+  if (!_dashOk(token)) {
+    return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  }
+  if (!empId) return { ok: false, msg: 'Brak danych.' };
+  const y = parseInt(year, 10);
+  const m = parseInt(month, 10);
+  if (isNaN(y) || isNaN(m)) return { ok: false, msg: 'Nieprawidłowy miesiąc.' };
+  const key = 'note_' + String(empId) + '_' + y + '_' + String(m).padStart(2, '0');
+  const text = String(note || '').slice(0, 500);
+  PropertiesService.getScriptProperties().setProperty(key, text);
+  _logAdmin('SetAdnotacja', String(empId), text.slice(0, 100));
   return { ok: true };
 }
 
@@ -145,22 +187,23 @@ function dashExportCsv(token, year, month) {
   const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
 
   let csv = '﻿';
-  csv += 'EmpID;Imie;Nazwisko;Rola;Data;Dzien;Wejscie;Wyjscie;Godziny\r\n';
+  csv += 'EmpID;Imie;Nazwisko;Rola;Data;Dzien;Wejscie;Wyjscie;Godziny;Adnotacja\r\n';
 
   res.employees.forEach(emp => {
     csv += [emp.id, emp.imie, emp.nazwisko, emp.rola,
             'RAZEM ' + MN[res.month] + ' ' + res.year, '', '', '',
-            String(emp.totalHours).replace('.', ',')]
+            String(emp.totalHours).replace('.', ','), emp.note || '']
       .map(q).join(';') + '\r\n';
     emp.days.forEach(d => {
       const h = (d.hours !== null && d.hours !== undefined) ? String(d.hours).replace('.', ',') : '';
       csv += [emp.id, emp.imie, emp.nazwisko, emp.rola,
-              d.date, d.dow, d.wejscie || '', d.wyjscie || '', h]
+              d.date, d.dow, d.wejscie || '', d.wyjscie || '', h, '']
         .map(q).join(';') + '\r\n';
     });
     csv += '\r\n';
   });
 
+  _logAdmin('ExportCSV', '—', 'Eksport ' + year + '-' + String(month).padStart(2, '0'));
   return { ok: true, csv };
 }
 
@@ -171,17 +214,14 @@ function _t2m(t) {
   return parseInt(p[0], 10) * 60 + parseInt(p[1], 10);
 }
 
-// Sheets auto-konwertuje "2026-05-29" → Date; obsługujemy oba formaty
 function _sheetDate(v) {
   if (v instanceof Date) return Utilities.formatDate(v, 'Europe/Warsaw', 'yyyy-MM-dd');
   return String(v);
 }
 
-// Sheets auto-konwertuje "08:24" → Date (1899-12-30T08:24); obsługujemy oba formaty
 function _sheetTime(v) {
   if (v instanceof Date) return Utilities.formatDate(v, 'Europe/Warsaw', 'HH:mm');
   const s = String(v);
-  // ułamek doby (np. 0.35 = 08:24)
   if (s !== '' && !isNaN(s) && s.indexOf(':') === -1) {
     const mins = Math.round(parseFloat(s) * 1440);
     return String(Math.floor(mins / 60)).padStart(2, '0') + ':' + String(mins % 60).padStart(2, '0');
@@ -189,15 +229,11 @@ function _sheetTime(v) {
   return s;
 }
 
-// ── Diagnostyka ───────────────────────────────────────────────
-
 function diagEwidencja() {
   const sh = _ss().getSheetByName('Ewidencja');
   if (!sh || sh.getLastRow() < 2) { Logger.log('Brak danych'); return; }
   const rows = sh.getDataRange().getValues().slice(1);
   Logger.log('Liczba wierszy: ' + rows.length);
-  rows.forEach((r, i) => {
-    Logger.log('W' + (i + 2) + ': emp=' + r[1] + ' akcja=' + r[4] +
-      ' data_fmt=' + _sheetDate(r[5]) + ' godz_fmt=' + _sheetTime(r[6]));
-  });
+  rows.forEach((r, i) => Logger.log('W' + (i+2) + ': emp=' + r[1] + ' akcja=' + r[4] +
+    ' data=' + _sheetDate(r[5]) + ' godz=' + _sheetTime(r[6])));
 }
