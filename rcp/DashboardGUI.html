@@ -266,12 +266,13 @@ function render(data) {
   var html = '';
 
   data.employees.forEach(function(emp) {
-    var rate   = parseFloat(localStorage.getItem('r_rate_' + emp.id) || '') || 0;
-    var etat   = parseFloat(localStorage.getItem('r_etat_' + emp.id) || '') || 0;
-    var diff   = etat > 0 ? emp.totalHours - etat : null;
-    var dCls   = diff === null ? '' : (diff >= -1 ? 'ok' : (diff >= -10 ? 'warn' : 'bad'));
+    var rate      = parseFloat(localStorage.getItem('r_rate_' + emp.id) || '') || 0;
+    var etat      = parseFloat(localStorage.getItem('r_etat_' + emp.id) || '') || 0;
+    var totalH    = (emp.totalHours != null && !isNaN(emp.totalHours)) ? Number(emp.totalHours) : 0;
+    var diff      = etat > 0 ? totalH - etat : null;
+    var dCls      = diff === null ? '' : (diff >= -1 ? 'ok' : (diff >= -10 ? 'warn' : 'bad'));
     var dTxt   = diff === null ? '—' : (diff >= 0 ? '+' : '') + fmt(diff.toFixed(1)) + 'h';
-    var amount = rate > 0 ? fmt((emp.totalHours * rate).toFixed(2)) + ' PLN' : '—';
+    var amount = rate > 0 ? fmt((totalH * rate).toFixed(2)) + ' PLN' : '—';
 
     html += '<div class="emp-card">';
 
@@ -287,7 +288,7 @@ function render(data) {
 
     // Godziny razem
     html += '<div class="stat"><div class="stat-lbl">Godzin w miesiącu</div>';
-    html += '<div class="stat-val">' + fmt(emp.totalHours.toFixed(1)) + 'h</div></div>';
+    html += '<div class="stat-val">' + fmt(totalH.toFixed(1)) + 'h</div></div>';
 
     // Etat
     html += '<div class="stat"><div class="stat-lbl">Etat (h)</div>';
@@ -377,7 +378,7 @@ function recalc(id) {
   var rate = parseFloat(document.getElementById('rate-' + id).value) || 0;
   var etat = parseFloat(document.getElementById('etat-' + id).value) || 0;
   var emp  = S.data && S.data.employees.filter(function(e){ return e.id === id; })[0];
-  var tot  = emp ? emp.totalHours : 0;
+  var tot  = emp ? (Number(emp.totalHours) || 0) : 0;
 
   var diff = etat > 0 ? tot - etat : null;
   var dCls = diff === null ? '' : (diff >= -1 ? 'ok' : (diff >= -10 ? 'warn' : 'bad'));
