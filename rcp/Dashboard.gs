@@ -37,23 +37,24 @@ function dashLogin(pin) {
 // ── Dane miesiąca ────────────────────────────────────────────
 
 function getDashboard(token, year, month) {
-  if (!_dashOk(token)) {
-    return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła. Zaloguj się ponownie.' };
-  }
+  try {
+    if (!_dashOk(token)) {
+      return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła. Zaloguj się ponownie.' };
+    }
 
-  const y = parseInt(year, 10);
-  const m = parseInt(month, 10);
-  if (isNaN(y) || isNaN(m) || m < 1 || m > 12) {
-    return { ok: false, msg: 'Nieprawidłowy miesiąc/rok.' };
-  }
+    const y = parseInt(year, 10);
+    const m = parseInt(month, 10);
+    if (isNaN(y) || isNaN(m) || m < 1 || m > 12) {
+      return { ok: false, msg: 'Nieprawidłowy miesiąc/rok.' };
+    }
 
-  const daysInMonth = new Date(y, m, 0).getDate();
-  const pfx         = y + '-' + String(m).padStart(2, '0');
+    const daysInMonth = new Date(y, m, 0).getDate();
+    const pfx         = y + '-' + String(m).padStart(2, '0');
 
-  // Czytaj Ewidencja — grupuj wg empId_data
-  const ewidSh   = _ss().getSheetByName('Ewidencja');
-  const ewidRows = (ewidSh && ewidSh.getLastRow() >= 2)
-    ? ewidSh.getDataRange().getValues().slice(1) : [];
+    // Czytaj Ewidencja — grupuj wg empId_data
+    const ewidSh   = _ss().getSheetByName('Ewidencja');
+    const ewidRows = (ewidSh && ewidSh.getLastRow() >= 2)
+      ? ewidSh.getDataRange().getValues().slice(1) : [];
 
   const rcpMap = {};
   ewidRows.forEach(r => {
@@ -121,7 +122,11 @@ function getDashboard(token, year, month) {
       };
     });
 
-  return { ok: true, year: y, month: m, employees };
+    return { ok: true, year: y, month: m, employees };
+  } catch (e) {
+    Logger.log('getDashboard error: ' + e);
+    return { ok: false, msg: 'Błąd serwera: ' + e.toString() };
+  }
 }
 
 function _t2m(t) {
