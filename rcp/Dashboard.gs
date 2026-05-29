@@ -1,11 +1,10 @@
 // ============================================================
-// Dashboard.gs — We SMILE RCP v6.0
-// Panel raportowy dla pracodawcy i admina
+// Dashboard.gs — We SMILE RCP v7.0
 // ============================================================
 
 const DASH_TTL = 3600;
 
-// ── Sesja dashboardu ─────────────────────────────────────────
+// ── Sesja ────────────────────────────────────────────────────
 
 function _dashOk(token) {
   if (!token) return false;
@@ -15,7 +14,7 @@ function _dashOk(token) {
   return true;
 }
 
-// ── Logowanie do dashboardu (dowolny aktywny PIN) ────────────
+// ── Login ─────────────────────────────────────────────────────
 
 function dashLogin(pin) {
   if (!pin || !/^\d{4}$/.test(String(pin))) {
@@ -34,7 +33,7 @@ function dashLogin(pin) {
   return { ok: true, token, name: String(worker[1]) + ' ' + String(worker[2]) };
 }
 
-// ── Dane miesiąca ────────────────────────────────────────────
+// ── Dane miesiąca ─────────────────────────────────────────────
 
 function getDashboard(token, year, month) {
   try {
@@ -49,10 +48,14 @@ function getDashboard(token, year, month) {
     }
 
     const daysInMonth = new Date(y, m, 0).getDate();
-    const pfx         = y + '-' + String(m).padStart(2, '0');
+    const pfx = y + '-' + String(m).padStart(2, '0');
 
-    // Czytaj Ewidencja — grupuj wg empId_data
-    const ewidSh   = _ss().getSheetByName('Ewidencja');
+    // Norma godzin dla miesiąca (globalna, z PropertiesService)
+    const etatKey = 'etat_' + y + '_' + String(m).padStart(2, '0');
+    const etat = parseFloat(PropertiesService.getScriptProperties().getProperty(etatKey) || '') || 0;
+
+    // Czytaj Ewidencja — obsługuje daty jako Date lub string
+    const ewidSh = _ss().getSheetByName('Ewidencja');
     const ewidRows = (ewidSh && ewidSh.getLastRow() >= 2)
       ? ewidSh.getDataRange().getValues().slice(1) : [];
 
@@ -68,17 +71,6 @@ function getDashboard(token, year, month) {
       else if (akcja === 'WYJSCIE') rcpMap[k].x.push(godz);
     });
 
-    // Czytaj Statusy
-    const stSh   = _ss().getSheetByName('Statusy');
-    const stMap  = {};
-    if (stSh && stSh.getLastRow() >= 2) {
-      stSh.getDataRange().getValues().slice(1).forEach(r => {
-        const ds = _sheetDate(r[0]);
-        if (!ds.startsWith(pfx)) return;
-        stMap[String(r[1]) + '_' + ds] = { status: String(r[2]), notes: String(r[3] || '') };
-      });
-    }
-
     const DOW = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'];
 
     const employees = _getWorkers()
@@ -92,10 +84,8 @@ function getDashboard(token, year, month) {
           const ds  = pfx + '-' + String(d).padStart(2, '0');
           const key = id + '_' + ds;
           const rcp = rcpMap[key];
-          const st  = stMap[key];
 
           let wejscie = null, wyjscie = null, hours = null;
-
           if (rcp) {
             if (rcp.e.length) wejscie = rcp.e.slice().sort()[0];
             if (rcp.x.length) wyjscie = rcp.x.slice().sort().reverse()[0];
@@ -105,13 +95,8 @@ function getDashboard(token, year, month) {
             }
           }
 
-          // Unikamy problemów ze strefą czasową przez ustawienie południa
-          const dateObj = new Date(ds + 'T12:00:00');
-          const dow     = DOW[dateObj.getDay()];
-          const status  = st ? st.status : (wejscie ? 'Obecna' : '—');
-          const notes   = st ? st.notes  : '';
-
-          days.push({ date: ds, dow, wejscie, wyjscie, hours, status, notes });
+          const dow = DOW[new Date(ds + 'T12:00:00').getDay()];
+          days.push({ date: ds, dow, wejscie, wyjscie, hours });
         }
 
         return {
@@ -124,93 +109,95 @@ function getDashboard(token, year, month) {
         };
       });
 
-    return { ok: true, year: y, month: m, employees };
+    return { ok: true, year: y, month: m, etat, employees };
+
   } catch (e) {
     Logger.log('getDashboard error: ' + e);
     return { ok: false, msg: 'Błąd serwera: ' + e.toString() };
   }
 }
 
-function _t2m(t) {
-  const p = String(t).split(':');
-  return parseInt(p[0], 10) * 60 + parseInt(p[1], 10);
-}
+// ── Zapis normy godzin dla miesiąca ──────────────────────────
 
-// Sheets auto-konwertuje daty/godziny na obiekty Date — obsługujemy oba formaty
-function _sheetDate(v) {
-  if (v instanceof Date) return Utilities.formatDate(v, 'Europe/Warsaw', 'yyyy-MM-dd');
-  return String(v);
-}
-
-function _sheetTime(v) {
-  if (v instanceof Date) return Utilities.formatDate(v, 'Europe/Warsaw', 'HH:mm');
-  const s = String(v);
-  // Sheets może też zwrócić ułamek doby (np. 0.35 = 08:24)
-  if (!isNaN(s) && s.indexOf(':') === -1) {
-    const mins = Math.round(parseFloat(s) * 1440);
-    return String(Math.floor(mins / 60)).padStart(2, '0') + ':' + String(mins % 60).padStart(2, '0');
-  }
-  return s;
-}
-
-// ── Zapis statusu dnia ───────────────────────────────────────
-
-function saveStatus(token, empId, date, status, notes) {
+function setEtat(token, year, month, hours) {
   if (!_dashOk(token)) {
     return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
   }
-  if (!empId || !date || !status) return { ok: false, msg: 'Brak danych.' };
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date))) return { ok: false, msg: 'Nieprawidłowa data.' };
-
-  let sh = _ss().getSheetByName('Statusy');
-  if (!sh) {
-    sh = _ss().insertSheet('Statusy');
-    sh.appendRow(['Date', 'EmpID', 'Status', 'Notes', 'Modified']);
+  const y = parseInt(year, 10);
+  const m = parseInt(month, 10);
+  const h = parseFloat(hours);
+  if (isNaN(y) || isNaN(m) || isNaN(h) || h < 0 || h > 800) {
+    return { ok: false, msg: 'Nieprawidłowe dane.' };
   }
-
-  const rows = sh.getLastRow() >= 2 ? sh.getDataRange().getValues() : [[]];
-  for (let i = 1; i < rows.length; i++) {
-    if (String(rows[i][0]) === date && String(rows[i][1]) === empId) {
-      sh.getRange(i + 1, 1, 1, 5).setValues([[
-        date, empId, status, notes || '', new Date().toISOString()
-      ]]);
-      return { ok: true };
-    }
-  }
-  sh.appendRow([date, empId, status, notes || '', new Date().toISOString()]);
+  const key = 'etat_' + y + '_' + String(m).padStart(2, '0');
+  PropertiesService.getScriptProperties().setProperty(key, String(h));
   return { ok: true };
 }
 
-// ── Eksport CSV ──────────────────────────────────────────────
+// ── Eksport CSV ───────────────────────────────────────────────
 
 function dashExportCsv(token, year, month) {
   const res = getDashboard(token, year, month);
   if (!res.ok) return res;
 
-  const MN = ['', 'Styczen', 'Luty', 'Marzec', 'Kwiecien', 'Maj', 'Czerwiec',
-              'Lipiec', 'Sierpien', 'Wrzesien', 'Pazdziernik', 'Listopad', 'Grudzien'];
-
+  const MN = ['','Styczen','Luty','Marzec','Kwiecien','Maj','Czerwiec',
+              'Lipiec','Sierpien','Wrzesien','Pazdziernik','Listopad','Grudzien'];
   const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
 
   let csv = '﻿';
-  csv += 'EmpID;Imie;Nazwisko;Rola;Data;Dzien;Wejscie;Wyjscie;Godziny;Status;Uwagi\r\n';
+  csv += 'EmpID;Imie;Nazwisko;Rola;Data;Dzien;Wejscie;Wyjscie;Godziny\r\n';
 
   res.employees.forEach(emp => {
     csv += [emp.id, emp.imie, emp.nazwisko, emp.rola,
-            'RAZEM ' + MN[res.month] + ' ' + res.year,
-            '', '', '', String(emp.totalHours).replace('.', ','), '', '']
+            'RAZEM ' + MN[res.month] + ' ' + res.year, '', '', '',
+            String(emp.totalHours).replace('.', ',')]
       .map(q).join(';') + '\r\n';
-
     emp.days.forEach(d => {
+      const h = (d.hours !== null && d.hours !== undefined) ? String(d.hours).replace('.', ',') : '';
       csv += [emp.id, emp.imie, emp.nazwisko, emp.rola,
-              d.date, d.dow,
-              d.wejscie || '', d.wyjscie || '',
-              d.hours !== null ? String(d.hours).replace('.', ',') : '',
-              d.status, d.notes]
+              d.date, d.dow, d.wejscie || '', d.wyjscie || '', h]
         .map(q).join(';') + '\r\n';
     });
     csv += '\r\n';
   });
 
   return { ok: true, csv };
+}
+
+// ── Pomocnicze — konwersja wartości z Sheets ──────────────────
+
+function _t2m(t) {
+  const p = String(t).split(':');
+  return parseInt(p[0], 10) * 60 + parseInt(p[1], 10);
+}
+
+// Sheets auto-konwertuje "2026-05-29" → Date; obsługujemy oba formaty
+function _sheetDate(v) {
+  if (v instanceof Date) return Utilities.formatDate(v, 'Europe/Warsaw', 'yyyy-MM-dd');
+  return String(v);
+}
+
+// Sheets auto-konwertuje "08:24" → Date (1899-12-30T08:24); obsługujemy oba formaty
+function _sheetTime(v) {
+  if (v instanceof Date) return Utilities.formatDate(v, 'Europe/Warsaw', 'HH:mm');
+  const s = String(v);
+  // ułamek doby (np. 0.35 = 08:24)
+  if (s !== '' && !isNaN(s) && s.indexOf(':') === -1) {
+    const mins = Math.round(parseFloat(s) * 1440);
+    return String(Math.floor(mins / 60)).padStart(2, '0') + ':' + String(mins % 60).padStart(2, '0');
+  }
+  return s;
+}
+
+// ── Diagnostyka ───────────────────────────────────────────────
+
+function diagEwidencja() {
+  const sh = _ss().getSheetByName('Ewidencja');
+  if (!sh || sh.getLastRow() < 2) { Logger.log('Brak danych'); return; }
+  const rows = sh.getDataRange().getValues().slice(1);
+  Logger.log('Liczba wierszy: ' + rows.length);
+  rows.forEach((r, i) => {
+    Logger.log('W' + (i + 2) + ': emp=' + r[1] + ' akcja=' + r[4] +
+      ' data_fmt=' + _sheetDate(r[5]) + ' godz_fmt=' + _sheetTime(r[6]));
+  });
 }
