@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>We SMILE — Panel Raportowy</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
+body{background:#0f0f11;color:#f0f0f2;min-height:100vh}
+
+/* ── LOGIN ── */
+.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:16px}
+.login-card{background:#1c1c1e;border-radius:22px;padding:28px 22px;width:100%;max-width:340px;box-shadow:0 24px 64px rgba(0,0,0,.7)}
+.login-brand{font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#555;text-align:center;margin-bottom:20px}
+.login-title{font-size:20px;font-weight:700;text-align:center;margin-bottom:4px}
+.login-sub{font-size:13px;color:#888;text-align:center;margin-bottom:16px}
+.dots{display:flex;justify-content:center;gap:14px;margin:14px 0}
+.dot{width:16px;height:16px;border-radius:50%;background:#2c2c2e;border:2px solid #3a3a3c;transition:.12s}
+.dot.on{background:#e84560;border-color:#e84560}
+.kp{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.key{background:#2c2c2e;border:none;border-radius:12px;color:#f0f0f2;font-size:22px;font-weight:600;padding:18px 0;cursor:pointer;transition:.1s;user-select:none}
+.key:active{background:#e84560;transform:scale(.94)}
+.key.sym{color:#888;font-size:17px}
+.key.clr{color:#e84560;font-weight:800;font-size:16px}
+
+/* ── DASHBOARD ── */
+#dash{display:none}
+.app-bar{background:#1c1c1e;border-bottom:1px solid #2a2a2e;padding:12px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:sticky;top:0;z-index:10}
+.app-title{font-weight:800;font-size:15px;flex:1;min-width:140px}
+.month-nav{display:flex;align-items:center;gap:6px}
+.nav-btn{background:#2c2c2e;border:none;border-radius:8px;color:#f0f0f2;width:34px;height:34px;cursor:pointer;font-size:16px;transition:.1s}
+.nav-btn:hover{background:#3a3a3c}
+.month-label{font-size:13px;font-weight:700;min-width:120px;text-align:center}
+.bar-actions{display:flex;gap:8px;margin-left:auto}
+.btn-sm{background:#2c2c2e;border:none;border-radius:8px;color:#f0f0f2;padding:7px 14px;cursor:pointer;font-size:13px;font-weight:600;transition:.1s;white-space:nowrap}
+.btn-sm:hover{background:#3a3a3c}
+.btn-red{background:#e84560;color:#fff}
+.btn-red:hover{background:#c73451}
+
+.wrap{padding:16px 20px;max-width:1100px;margin:0 auto}
+
+/* ── Employee card ── */
+.emp-card{background:#1c1c1e;border:1px solid #2a2a2e;border-radius:16px;margin-bottom:12px;overflow:hidden}
+.emp-head{padding:16px 20px;cursor:pointer;user-select:none}
+.emp-head:hover{background:rgba(255,255,255,.02)}
+.emp-name-row{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.emp-name{font-size:16px;font-weight:700}
+.emp-role{font-size:11px;color:#888;background:#2a2a2e;padding:2px 8px;border-radius:20px}
+.emp-expand{background:none;border:none;color:#555;font-size:16px;cursor:pointer;margin-left:auto;padding:2px 6px}
+.emp-stats{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end}
+.stat{display:flex;flex-direction:column;gap:3px}
+.stat-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:#555}
+.stat-val{font-size:20px;font-weight:700;line-height:1}
+.stat-val.ok{color:#00a86b}
+.stat-val.warn{color:#ffb300}
+.stat-val.bad{color:#e84560}
+.stat-inp{background:#2a2a2e;border:1px solid #3a3a3c;border-radius:8px;color:#f0f0f2;font-size:17px;font-weight:700;padding:3px 8px;width:80px;text-align:right;line-height:1}
+.stat-inp:focus{outline:none;border-color:#e84560}
+
+/* ── Days table ── */
+.days-body{display:none;border-top:1px solid #222;overflow-x:auto}
+.days-body.open{display:block}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#111;color:#555;font-weight:600;padding:8px 12px;text-align:left;border-bottom:1px solid #222;white-space:nowrap}
+td{padding:7px 12px;border-bottom:1px solid #1a1a1c;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.012)}
+.wknd td{background:rgba(255,255,255,.008);color:#666}
+.t-time{font-family:monospace;font-weight:600}
+.t-empty{color:#383838}
+.t-hours{font-weight:700;color:#00a86b}
+.t-missing{color:#e84560;font-weight:700}
+.st-sel{background:#2a2a2e;border:1px solid #3a3a3c;border-radius:6px;color:#f0f0f2;font-size:12px;padding:4px 6px;cursor:pointer;max-width:175px;width:100%}
+.st-sel:focus{outline:none;border-color:#e84560}
+.notes-inp{background:#2a2a2e;border:1px solid #3a3a3c;border-radius:6px;color:#f0f0f2;font-size:12px;padding:4px 8px;width:150px}
+.notes-inp:focus{outline:none;border-color:#e84560}
+.tick{font-size:10px;color:#00a86b;opacity:0;transition:.3s;margin-left:4px}
+.tick.on{opacity:1}
+
+/* ── Toast ── */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);opacity:0;background:#e84560;color:#fff;padding:10px 22px;border-radius:40px;font-size:14px;font-weight:600;pointer-events:none;transition:.25s;z-index:99;max-width:90vw;text-align:center}
+#toast.on{transform:translateX(-50%) translateY(0);opacity:1}
+#toast.g{background:#00a86b}
+.loading{text-align:center;color:#444;padding:48px;font-size:15px}
+
+@media(max-width:640px){
+  .emp-stats{gap:10px}
+  .stat-inp{width:64px;font-size:15px}
+  .wrap{padding:10px 12px}
+  .app-bar{padding:10px 12px}
+}
+</style>
+</head>
+<body>
+
+<!-- ════════════════════ LOGIN ════════════════════ -->
+<div id="login" class="login-wrap">
+  <div class="login-card">
+    <div class="login-brand">We SMILE</div>
+    <div class="login-title">Panel Raportowy</div>
+    <div class="login-sub">Wpisz swój PIN</div>
+    <div class="dots">
+      <div class="dot" id="ld0"></div><div class="dot" id="ld1"></div>
+      <div class="dot" id="ld2"></div><div class="dot" id="ld3"></div>
+    </div>
+    <div class="kp" id="kp-login">
+      <button class="key" data-v="1">1</button><button class="key" data-v="2">2</button><button class="key" data-v="3">3</button>
+      <button class="key" data-v="4">4</button><button class="key" data-v="5">5</button><button class="key" data-v="6">6</button>
+      <button class="key" data-v="7">7</button><button class="key" data-v="8">8</button><button class="key" data-v="9">9</button>
+      <button class="key clr" data-v="C">C</button><button class="key" data-v="0">0</button><button class="key sym" data-v="X">⌫</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════ DASHBOARD ════════════════════ -->
+<div id="dash">
+  <header class="app-bar">
+    <div class="app-title">📊 Panel Raportowy</div>
+    <div class="month-nav">
+      <button class="nav-btn" id="btn-prev">◀</button>
+      <div class="month-label" id="month-lbl"></div>
+      <button class="nav-btn" id="btn-next">▶</button>
+    </div>
+    <div class="bar-actions">
+      <button class="btn-sm" id="btn-csv">📥 Pobierz CSV</button>
+      <button class="btn-sm btn-red" id="btn-logout">Wyloguj</button>
+    </div>
+  </header>
+  <div class="wrap" id="wrap">
+    <div class="loading">Ładowanie…</div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* global google */
+
+var S = {
+  token: null,
+  year:  new Date().getFullYear(),
+  month: new Date().getMonth() + 1,
+  data:  null
+};
+
+var MONTHS_PL = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec',
+                 'Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
+
+var STATUS_OPTS = [
+  '—', 'Obecna', 'Urlop zaplanowany', 'Urlop na żądanie',
+  'L4 / Zwolnienie', 'Nieobecność', 'Dzień wolny', 'Praca zdalna'
+];
+
+// ── Utilities ────────────────────────────────────────────────
+
+var _tt;
+function toast(msg, ok) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'on' + (ok ? ' g' : '');
+  clearTimeout(_tt);
+  _tt = setTimeout(function(){ el.className = ''; }, 2800);
+}
+
+function gas(action, args, cb) {
+  google.script.run
+    .withSuccessHandler(cb)
+    .withFailureHandler(function(e){ toast(e.message || 'Błąd połączenia', false); })
+    .callRCP(action, JSON.stringify(args || []));
+}
+
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function fmt(n) {
+  return String(n).replace('.', ',');
+}
+
+// ── Login ────────────────────────────────────────────────────
+
+var lPin = '';
+function setLDots(p) {
+  for (var i = 0; i < 4; i++) {
+    document.getElementById('ld' + i).className = 'dot' + (i < p.length ? ' on' : '');
+  }
+}
+
+document.getElementById('kp-login').addEventListener('click', function(e) {
+  var btn = e.target.closest('[data-v]');
+  if (!btn) return;
+  var v = btn.getAttribute('data-v');
+  if (v === 'C') lPin = '';
+  else if (v === 'X') lPin = lPin.slice(0, -1);
+  else if (lPin.length < 4) lPin += v;
+  setLDots(lPin);
+
+  if (lPin.length === 4) {
+    toast('Logowanie…', true);
+    gas('dashLogin', [lPin], function(res) {
+      if (res && res.ok) {
+        S.token = res.token;
+        document.getElementById('login').style.display = 'none';
+        document.getElementById('dash').style.display  = 'block';
+        updateMonthLabel();
+        loadMonth();
+      } else {
+        toast((res && res.msg) || 'Nieprawidłowy PIN.', false);
+        lPin = '';
+        setLDots(lPin);
+      }
+    });
+  }
+});
+
+// ── Month navigation ──────────────────────────────────────────
+
+function updateMonthLabel() {
+  document.getElementById('month-lbl').textContent = MONTHS_PL[S.month - 1] + ' ' + S.year;
+}
+
+document.getElementById('btn-prev').addEventListener('click', function() {
+  S.month--;
+  if (S.month < 1) { S.month = 12; S.year--; }
+  updateMonthLabel();
+  loadMonth();
+});
+
+document.getElementById('btn-next').addEventListener('click', function() {
+  S.month++;
+  if (S.month > 12) { S.month = 1; S.year++; }
+  updateMonthLabel();
+  loadMonth();
+});
+
+// ── Load & render ─────────────────────────────────────────────
+
+function loadMonth() {
+  document.getElementById('wrap').innerHTML = '<div class="loading">Ładowanie danych…</div>';
+  gas('getDashboard', [S.token, S.year, S.month], function(res) {
+    if (!res || !res.ok) {
+      if (res && res.errorType === 'UNAUTHORIZED') { doLogout(); return; }
+      toast((res && res.msg) || 'Błąd ładowania danych.', false);
+      return;
+    }
+    S.data = res;
+    render(res);
+  });
+}
+
+function render(data) {
+  var html = '';
+
+  data.employees.forEach(function(emp) {
+    var rate   = parseFloat(localStorage.getItem('r_rate_' + emp.id) || '') || 0;
+    var etat   = parseFloat(localStorage.getItem('r_etat_' + emp.id) || '') || 0;
+    var diff   = etat > 0 ? emp.totalHours - etat : null;
+    var dCls   = diff === null ? '' : (diff >= -1 ? 'ok' : (diff >= -10 ? 'warn' : 'bad'));
+    var dTxt   = diff === null ? '—' : (diff >= 0 ? '+' : '') + fmt(diff.toFixed(1)) + 'h';
+    var amount = rate > 0 ? fmt((emp.totalHours * rate).toFixed(2)) + ' PLN' : '—';
+
+    html += '<div class="emp-card">';
+
+    // Header
+    html += '<div class="emp-head" onclick="toggleDays(\'' + emp.id + '\')">';
+    html += '<div class="emp-name-row">';
+    html += '<span class="emp-name">' + esc(emp.imie + ' ' + emp.nazwisko) + '</span>';
+    html += '<span class="emp-role">' + esc(emp.rola) + '</span>';
+    html += '<button class="emp-expand" id="exp-' + emp.id + '">▼</button>';
+    html += '</div>';
+
+    html += '<div class="emp-stats">';
+
+    // Godziny razem
+    html += '<div class="stat"><div class="stat-lbl">Godzin w miesiącu</div>';
+    html += '<div class="stat-val">' + fmt(emp.totalHours.toFixed(1)) + 'h</div></div>';
+
+    // Etat
+    html += '<div class="stat"><div class="stat-lbl">Etat (h)</div>';
+    html += '<input class="stat-inp" id="etat-' + emp.id + '" type="number" min="0" step="0.5"';
+    html += ' value="' + (etat || '') + '" placeholder="—"';
+    html += ' onclick="event.stopPropagation()"';
+    html += ' oninput="recalc(\'' + emp.id + '\')" onblur="saveLoc(\'' + emp.id + '\',\'etat\')">';
+    html += '</div>';
+
+    // Różnica
+    html += '<div class="stat"><div class="stat-lbl">Różnica</div>';
+    html += '<div class="stat-val ' + dCls + '" id="diff-' + emp.id + '">' + dTxt + '</div></div>';
+
+    // Stawka
+    html += '<div class="stat"><div class="stat-lbl">PLN / h</div>';
+    html += '<input class="stat-inp" id="rate-' + emp.id + '" type="number" min="0" step="1"';
+    html += ' value="' + (rate || '') + '" placeholder="—"';
+    html += ' onclick="event.stopPropagation()"';
+    html += ' oninput="recalc(\'' + emp.id + '\')" onblur="saveLoc(\'' + emp.id + '\',\'rate\')">';
+    html += '</div>';
+
+    // Kwota
+    html += '<div class="stat"><div class="stat-lbl">Do wypłaty</div>';
+    html += '<div class="stat-val" id="amt-' + emp.id + '" style="font-size:14px">' + amount + '</div></div>';
+
+    html += '</div>'; // emp-stats
+    html += '</div>'; // emp-head
+
+    // Days table
+    html += '<div class="days-body" id="days-' + emp.id + '">';
+    html += '<table><thead><tr>';
+    html += '<th>Data</th><th>Wejście</th><th>Wyjście</th><th>Godziny</th><th>Status</th><th>Uwagi</th>';
+    html += '</tr></thead><tbody>';
+
+    emp.days.forEach(function(d) {
+      var dn  = d.date.split('-')[2];
+      var wknd = (d.dow === 'Sb' || d.dow === 'Nd') ? ' class="wknd"' : '';
+      html += '<tr' + wknd + '>';
+      html += '<td><strong>' + d.dow + '</strong> ' + dn + '.' + String(S.month).padStart(2,'0') + '</td>';
+      html += '<td class="' + (d.wejscie ? 't-time' : 't-empty') + '">' + (d.wejscie || '—') + '</td>';
+
+      var xTd = d.wyjscie
+        ? '<span class="t-time">' + d.wyjscie + '</span>'
+        : (d.wejscie ? '<span class="t-missing">brak !</span>' : '<span class="t-empty">—</span>');
+      html += '<td>' + xTd + '</td>';
+
+      html += '<td class="' + (d.hours !== null ? 't-hours' : 't-empty') + '">';
+      html += d.hours !== null ? fmt(d.hours.toFixed(1)) + 'h' : '—';
+      html += '</td>';
+
+      // Status select
+      var selId = 'sel-' + emp.id + '-' + d.date;
+      html += '<td><select class="st-sel" id="' + selId + '"';
+      html += ' onchange="onSt(\'' + emp.id + '\',\'' + d.date + '\',this.value)">';
+      STATUS_OPTS.forEach(function(s) {
+        html += '<option' + (d.status === s ? ' selected' : '') + '>' + esc(s) + '</option>';
+      });
+      html += '</select>';
+      html += '<span class="tick" id="tk-' + emp.id + '-' + d.date + '">✓</span></td>';
+
+      // Notes
+      html += '<td><input class="notes-inp" type="text" value="' + esc(d.notes || '') + '"';
+      html += ' placeholder="uwagi…"';
+      html += ' onblur="onNotes(\'' + emp.id + '\',\'' + d.date + '\',this.value)"></td>';
+
+      html += '</tr>';
+    });
+
+    html += '</tbody></table></div>'; // tbody + table + days-body
+    html += '</div>'; // emp-card
+  });
+
+  document.getElementById('wrap').innerHTML = html ||
+    '<div class="loading">Brak danych dla wybranego miesiąca.</div>';
+}
+
+// ── Interactions ──────────────────────────────────────────────
+
+function toggleDays(id) {
+  var body = document.getElementById('days-' + id);
+  var exp  = document.getElementById('exp-' + id);
+  var open = body.classList.toggle('open');
+  exp.textContent = open ? '▲' : '▼';
+}
+
+function recalc(id) {
+  var rate = parseFloat(document.getElementById('rate-' + id).value) || 0;
+  var etat = parseFloat(document.getElementById('etat-' + id).value) || 0;
+  var emp  = S.data && S.data.employees.filter(function(e){ return e.id === id; })[0];
+  var tot  = emp ? emp.totalHours : 0;
+
+  var diff = etat > 0 ? tot - etat : null;
+  var dCls = diff === null ? '' : (diff >= -1 ? 'ok' : (diff >= -10 ? 'warn' : 'bad'));
+  var dTxt = diff === null ? '—' : (diff >= 0 ? '+' : '') + fmt(diff.toFixed(1)) + 'h';
+  document.getElementById('diff-' + id).textContent = dTxt;
+  document.getElementById('diff-' + id).className = 'stat-val ' + dCls;
+  document.getElementById('amt-' + id).textContent = rate > 0
+    ? fmt((tot * rate).toFixed(2)) + ' PLN' : '—';
+}
+
+function saveLoc(id, type) {
+  var el = document.getElementById((type === 'rate' ? 'rate-' : 'etat-') + id);
+  localStorage.setItem('r_' + type + '_' + id, el.value);
+}
+
+function onSt(empId, date, status) {
+  var notesEl = document.querySelector('#wrap [onblur*="' + empId + '-' + date + '"]');
+  var notes   = notesEl ? notesEl.value : '';
+  gas('saveStatus', [S.token, empId, date, status, notes], function(res) {
+    if (res && res.ok) {
+      var tk = document.getElementById('tk-' + empId + '-' + date);
+      if (tk) { tk.classList.add('on'); setTimeout(function(){ tk.classList.remove('on'); }, 2000); }
+    } else if (res && res.errorType === 'UNAUTHORIZED') {
+      doLogout();
+    } else {
+      toast('Błąd zapisu statusu.', false);
+    }
+  });
+}
+
+function onNotes(empId, date, notes) {
+  var sel    = document.getElementById('sel-' + empId + '-' + date);
+  var status = sel ? sel.value : '—';
+  gas('saveStatus', [S.token, empId, date, status, notes], function(res) {
+    if (res && res.errorType === 'UNAUTHORIZED') doLogout();
+  });
+}
+
+// ── CSV export ────────────────────────────────────────────────
+
+document.getElementById('btn-csv').addEventListener('click', function() {
+  if (!S.token) return;
+  toast('Generowanie CSV…', true);
+  gas('dashExportCsv', [S.token, S.year, S.month], function(res) {
+    if (!res || !res.ok) { toast('Błąd eksportu.', false); return; }
+    var blob = new Blob([res.csv], { type: 'text/csv;charset=utf-8;' });
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a');
+    a.href   = url;
+    a.download = 'We_SMILE_' + MONTHS_PL[S.month-1] + '_' + S.year + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('CSV pobrany!', true);
+  });
+});
+
+// ── Logout ────────────────────────────────────────────────────
+
+function doLogout() {
+  S.token = null;
+  S.data  = null;
+  lPin    = '';
+  setLDots('');
+  document.getElementById('dash').style.display  = 'none';
+  document.getElementById('login').style.display = 'flex';
+}
+
+document.getElementById('btn-logout').addEventListener('click', doLogout);
+</script>
+</body>
+</html>

@@ -20,7 +20,13 @@ const RATE_WIN_SEC   = 300;
 // ── Entry point ──────────────────────────────────────────────
 
 function doGet(e) {
-  const p    = e && e.parameter && e.parameter.page;
+  const p = e && e.parameter && e.parameter.page;
+  if (p === 'dashboard') {
+    return HtmlService.createTemplateFromFile('Dashboard')
+      .evaluate()
+      .setTitle('We SMILE — Panel Raportowy')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
   const page = (p === 'admin') ? 'admin' : 'worker';
   const tmpl = HtmlService.createTemplateFromFile('Index');
   tmpl.PAGE  = page;
@@ -35,11 +41,16 @@ function callRCP(action, argsJson) {
   try {
     const args = JSON.parse(argsJson || '[]');
     switch (action) {
-      case 'getToken':  return { ok: true, token: _currentToken() };
-      case 'checkPin':  return checkPin(args[0]);
-      case 'clockIn':   return clock(args[0], args[1], 'WEJSCIE');
-      case 'clockOut':  return clock(args[0], args[1], 'WYJSCIE');
-      default:          return { ok: false, msg: 'Nieznana akcja.' };
+      case 'getToken':       return { ok: true, token: _currentToken() };
+      case 'checkPin':       return checkPin(args[0]);
+      case 'clockIn':        return clock(args[0], args[1], 'WEJSCIE');
+      case 'clockOut':       return clock(args[0], args[1], 'WYJSCIE');
+      // Dashboard
+      case 'dashLogin':      return dashLogin(args[0]);
+      case 'getDashboard':   return getDashboard(args[0], args[1], args[2]);
+      case 'saveStatus':     return saveStatus(args[0], args[1], args[2], args[3], args[4]);
+      case 'dashExportCsv':  return dashExportCsv(args[0], args[1], args[2]);
+      default:               return { ok: false, msg: 'Nieznana akcja.' };
     }
   } catch (err) {
     Logger.log('RCP error [' + action + ']: ' + err);
@@ -205,7 +216,8 @@ function setupRCP() {
   [
     { name: 'Pracownicy', h: ['ID', 'Imię', 'Nazwisko', 'Rola', 'Status', 'PIN'] },
     { name: 'Ewidencja',  h: ['Timestamp', 'EmpID', 'Imię', 'Nazwisko', 'Akcja', 'Data', 'Godzina', 'Źródło'] },
-    { name: 'Anomalie',   h: ['Timestamp', 'EmpID', 'Opis'] }
+    { name: 'Anomalie',   h: ['Timestamp', 'EmpID', 'Opis'] },
+    { name: 'Statusy',    h: ['Date', 'EmpID', 'Status', 'Notes', 'Modified'] }
   ].forEach(def => {
     let sh = spreadsheet.getSheetByName(def.name);
     if (!sh) sh = spreadsheet.insertSheet(def.name);
