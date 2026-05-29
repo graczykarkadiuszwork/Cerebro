@@ -165,7 +165,16 @@ function toast(msg, ok) {
 function gas(action, args, cb) {
   google.script.run
     .withSuccessHandler(cb)
-    .withFailureHandler(function(e){ toast(e.message || 'Błąd połączenia', false); })
+    .withFailureHandler(function(e){
+      var msg = e.message || 'Błąd połączenia';
+      var wrap = document.getElementById('wrap');
+      if (wrap && wrap.innerHTML.indexOf('Ładowanie') !== -1) {
+        wrap.innerHTML = '<div class="loading" style="color:#e84560">' + esc(msg) +
+          '<br><br><button onclick="loadMonth()" style="margin-top:8px;padding:8px 18px;' +
+          'background:#2a2a2e;border:1px solid #3a3a3c;border-radius:8px;color:#f0f0f2;cursor:pointer;">Spróbuj ponownie</button></div>';
+      }
+      toast(msg, false);
+    })
     .callRCP(action, JSON.stringify(args || []));
 }
 
@@ -242,7 +251,10 @@ function loadMonth() {
   gas('getDashboard', [S.token, S.year, S.month], function(res) {
     if (!res || !res.ok) {
       if (res && res.errorType === 'UNAUTHORIZED') { doLogout(); return; }
-      toast((res && res.msg) || 'Błąd ładowania danych.', false);
+      var msg = (res && res.msg) || 'Błąd ładowania danych.';
+      document.getElementById('wrap').innerHTML = '<div class="loading" style="color:#e84560">' + esc(msg) +
+        '<br><br><button onclick="loadMonth()" style="margin-top:8px;padding:8px 18px;' +
+        'background:#2a2a2e;border:1px solid #3a3a3c;border-radius:8px;color:#f0f0f2;cursor:pointer;">Spróbuj ponownie</button></div>';
       return;
     }
     S.data = res;
