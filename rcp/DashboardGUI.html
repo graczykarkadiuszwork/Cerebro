@@ -82,6 +82,7 @@ tr:hover td{background:rgba(255,255,255,.012)}
 #toast.on{transform:translateX(-50%) translateY(0);opacity:1}
 #toast.g{background:#00a86b}
 .loading{text-align:center;color:#444;padding:48px;font-size:15px}
+.ver{text-align:center;color:#333;font-size:10px;padding:8px;user-select:none}
 
 @media(max-width:640px){
   .emp-stats{gap:10px}
@@ -129,6 +130,7 @@ tr:hover td{background:rgba(255,255,255,.012)}
   <div class="wrap" id="wrap">
     <div class="loading">Ładowanie…</div>
   </div>
+  <div class="ver">v3.0</div>
 </div>
 
 <div id="toast"></div>
@@ -164,18 +166,25 @@ function toast(msg, ok) {
 
 function gas(action, args, cb) {
   google.script.run
-    .withSuccessHandler(cb)
-    .withFailureHandler(function(e){
-      var msg = e.message || 'Błąd połączenia';
-      var wrap = document.getElementById('wrap');
-      if (wrap && wrap.innerHTML.indexOf('Ładowanie') !== -1) {
-        wrap.innerHTML = '<div class="loading" style="color:#e84560">' + esc(msg) +
-          '<br><br><button onclick="loadMonth()" style="margin-top:8px;padding:8px 18px;' +
-          'background:#2a2a2e;border:1px solid #3a3a3c;border-radius:8px;color:#f0f0f2;cursor:pointer;">Spróbuj ponownie</button></div>';
+    .withSuccessHandler(function(res) {
+      try { cb(res); } catch(ex) {
+        showWrapError('Błąd renderowania: ' + ex.message);
       }
-      toast(msg, false);
+    })
+    .withFailureHandler(function(e) {
+      showWrapError((e && e.message) || 'Błąd połączenia');
     })
     .callRCP(action, JSON.stringify(args || []));
+}
+
+function showWrapError(msg) {
+  var wrap = document.getElementById('wrap');
+  if (wrap) {
+    wrap.innerHTML = '<div class="loading" style="color:#e84560">' + esc(msg) +
+      '<br><br><button onclick="loadMonth()" style="margin-top:8px;padding:8px 18px;' +
+      'background:#2a2a2e;border:1px solid #3a3a3c;border-radius:8px;color:#f0f0f2;cursor:pointer;">Spróbuj ponownie</button></div>';
+  }
+  toast(msg, false);
 }
 
 function esc(s) {
@@ -184,8 +193,11 @@ function esc(s) {
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
-function fmt(n) {
-  return String(n).replace('.', ',');
+// Bezpieczne formatowanie liczby — nigdy nie rzuca wyjątku
+function nf(v, dec) {
+  var n = parseFloat(v);
+  if (isNaN(n) || v == null) return '—';
+  return n.toFixed(dec == null ? 1 : dec).replace('.', ',');
 }
 
 // ── Login ────────────────────────────────────────────────────
@@ -251,10 +263,7 @@ function loadMonth() {
   gas('getDashboard', [S.token, S.year, S.month], function(res) {
     if (!res || !res.ok) {
       if (res && res.errorType === 'UNAUTHORIZED') { doLogout(); return; }
-      var msg = (res && res.msg) || 'Błąd ładowania danych.';
-      document.getElementById('wrap').innerHTML = '<div class="loading" style="color:#e84560">' + esc(msg) +
-        '<br><br><button onclick="loadMonth()" style="margin-top:8px;padding:8px 18px;' +
-        'background:#2a2a2e;border:1px solid #3a3a3c;border-radius:8px;color:#f0f0f2;cursor:pointer;">Spróbuj ponownie</button></div>';
+      showWrapError((res && res.msg) || 'Błąd ładowania danych.');
       return;
     }
     S.data = res;
@@ -263,71 +272,69 @@ function loadMonth() {
 }
 
 function render(data) {
+  var emps = (data && Array.isArray(data.employees)) ? data.employees : [];
   var html = '';
 
-  data.employees.forEach(function(emp) {
-    var rate      = parseFloat(localStorage.getItem('r_rate_' + emp.id) || '') || 0;
-    var etat      = parseFloat(localStorage.getItem('r_etat_' + emp.id) || '') || 0;
-    var totalH    = (emp.totalHours != null && !isNaN(emp.totalHours)) ? Number(emp.totalHours) : 0;
-    var diff      = etat > 0 ? totalH - etat : null;
-    var dCls      = diff === null ? '' : (diff >= -1 ? 'ok' : (diff >= -10 ? 'warn' : 'bad'));
-    var dTxt   = diff === null ? '—' : (diff >= 0 ? '+' : '') + fmt(diff.toFixed(1)) + 'h';
-    var amount = rate > 0 ? fmt((totalH * rate).toFixed(2)) + ' PLN' : '—';
+  emps.forEach(function(emp) {
+    if (!emp) return;
+    var id    = String(emp.id || '');
+    var rate  = parseFloat(localStorage.getItem('r_rate_' + id) || '') || 0;
+    var etat  = parseFloat(localStorage.getItem('r_etat_' + id) || '') || 0;
+    var totalH = parseFloat(emp.totalHours) || 0;
+    var diff  = etat > 0 ? totalH - etat : null;
+    var dCls  = diff === null ? '' : (diff >= -1 ? 'ok' : (diff >= -10 ? 'warn' : 'bad'));
+    var dTxt  = diff === null ? '—' : (diff >= 0 ? '+' : '') + nf(diff) + 'h';
+    var amount = rate > 0 ? nf(totalH * rate, 2) + ' PLN' : '—';
 
     html += '<div class="emp-card">';
-
-    // Header
-    html += '<div class="emp-head" onclick="toggleDays(\'' + emp.id + '\')">';
+    html += '<div class="emp-head" onclick="toggleDays(\'' + id + '\')">';
     html += '<div class="emp-name-row">';
     html += '<span class="emp-name">' + esc(emp.imie + ' ' + emp.nazwisko) + '</span>';
     html += '<span class="emp-role">' + esc(emp.rola) + '</span>';
-    html += '<button class="emp-expand" id="exp-' + emp.id + '">▼</button>';
+    html += '<button class="emp-expand" id="exp-' + id + '">▼</button>';
     html += '</div>';
 
     html += '<div class="emp-stats">';
 
-    // Godziny razem
     html += '<div class="stat"><div class="stat-lbl">Godzin w miesiącu</div>';
-    html += '<div class="stat-val">' + fmt(totalH.toFixed(1)) + 'h</div></div>';
+    html += '<div class="stat-val">' + nf(totalH) + 'h</div></div>';
 
-    // Etat
     html += '<div class="stat"><div class="stat-lbl">Etat (h)</div>';
-    html += '<input class="stat-inp" id="etat-' + emp.id + '" type="number" min="0" step="0.5"';
+    html += '<input class="stat-inp" id="etat-' + id + '" type="number" min="0" step="0.5"';
     html += ' value="' + (etat || '') + '" placeholder="—"';
     html += ' onclick="event.stopPropagation()"';
-    html += ' oninput="recalc(\'' + emp.id + '\')" onblur="saveLoc(\'' + emp.id + '\',\'etat\')">';
+    html += ' oninput="recalc(\'' + id + '\')" onblur="saveLoc(\'' + id + '\',\'etat\')">';
     html += '</div>';
 
-    // Różnica
     html += '<div class="stat"><div class="stat-lbl">Różnica</div>';
-    html += '<div class="stat-val ' + dCls + '" id="diff-' + emp.id + '">' + dTxt + '</div></div>';
+    html += '<div class="stat-val ' + dCls + '" id="diff-' + id + '">' + dTxt + '</div></div>';
 
-    // Stawka
     html += '<div class="stat"><div class="stat-lbl">PLN / h</div>';
-    html += '<input class="stat-inp" id="rate-' + emp.id + '" type="number" min="0" step="1"';
+    html += '<input class="stat-inp" id="rate-' + id + '" type="number" min="0" step="1"';
     html += ' value="' + (rate || '') + '" placeholder="—"';
     html += ' onclick="event.stopPropagation()"';
-    html += ' oninput="recalc(\'' + emp.id + '\')" onblur="saveLoc(\'' + emp.id + '\',\'rate\')">';
+    html += ' oninput="recalc(\'' + id + '\')" onblur="saveLoc(\'' + id + '\',\'rate\')">';
     html += '</div>';
 
-    // Kwota
     html += '<div class="stat"><div class="stat-lbl">Do wypłaty</div>';
-    html += '<div class="stat-val" id="amt-' + emp.id + '" style="font-size:14px">' + amount + '</div></div>';
+    html += '<div class="stat-val" id="amt-' + id + '" style="font-size:14px">' + amount + '</div></div>';
 
     html += '</div>'; // emp-stats
     html += '</div>'; // emp-head
 
-    // Days table
-    html += '<div class="days-body" id="days-' + emp.id + '">';
+    html += '<div class="days-body" id="days-' + id + '">';
     html += '<table><thead><tr>';
     html += '<th>Data</th><th>Wejście</th><th>Wyjście</th><th>Godziny</th><th>Status</th><th>Uwagi</th>';
     html += '</tr></thead><tbody>';
 
-    emp.days.forEach(function(d) {
-      var dn  = d.date.split('-')[2];
+    var days = Array.isArray(emp.days) ? emp.days : [];
+    days.forEach(function(d) {
+      if (!d) return;
+      var dn   = String(d.date || '').split('-')[2] || '';
       var wknd = (d.dow === 'Sb' || d.dow === 'Nd') ? ' class="wknd"' : '';
+      var mm   = String(S.month).padStart(2, '0');
       html += '<tr' + wknd + '>';
-      html += '<td><strong>' + d.dow + '</strong> ' + dn + '.' + String(S.month).padStart(2,'0') + '</td>';
+      html += '<td><strong>' + esc(d.dow || '') + '</strong> ' + dn + '.' + mm + '</td>';
       html += '<td class="' + (d.wejscie ? 't-time' : 't-empty') + '">' + (d.wejscie || '—') + '</td>';
 
       var xTd = d.wyjscie
@@ -335,29 +342,27 @@ function render(data) {
         : (d.wejscie ? '<span class="t-missing">brak !</span>' : '<span class="t-empty">—</span>');
       html += '<td>' + xTd + '</td>';
 
-      html += '<td class="' + (d.hours !== null ? 't-hours' : 't-empty') + '">';
-      html += d.hours !== null ? fmt(d.hours.toFixed(1)) + 'h' : '—';
+      var hoursVal = (d.hours != null && d.hours !== undefined && !isNaN(parseFloat(d.hours)));
+      html += '<td class="' + (hoursVal ? 't-hours' : 't-empty') + '">';
+      html += hoursVal ? nf(d.hours) + 'h' : '—';
       html += '</td>';
 
-      // Status select
-      var selId = 'sel-' + emp.id + '-' + d.date;
+      var selId = 'sel-' + id + '-' + d.date;
       html += '<td><select class="st-sel" id="' + selId + '"';
-      html += ' onchange="onSt(\'' + emp.id + '\',\'' + d.date + '\',this.value)">';
+      html += ' onchange="onSt(\'' + id + '\',\'' + d.date + '\',this.value)">';
       STATUS_OPTS.forEach(function(s) {
         html += '<option' + (d.status === s ? ' selected' : '') + '>' + esc(s) + '</option>';
       });
       html += '</select>';
-      html += '<span class="tick" id="tk-' + emp.id + '-' + d.date + '">✓</span></td>';
+      html += '<span class="tick" id="tk-' + id + '-' + d.date + '">✓</span></td>';
 
-      // Notes
       html += '<td><input class="notes-inp" type="text" value="' + esc(d.notes || '') + '"';
       html += ' placeholder="uwagi…"';
-      html += ' onblur="onNotes(\'' + emp.id + '\',\'' + d.date + '\',this.value)"></td>';
-
+      html += ' onblur="onNotes(\'' + id + '\',\'' + d.date + '\',this.value)"></td>';
       html += '</tr>';
     });
 
-    html += '</tbody></table></div>'; // tbody + table + days-body
+    html += '</tbody></table></div>';
     html += '</div>'; // emp-card
   });
 
@@ -370,32 +375,37 @@ function render(data) {
 function toggleDays(id) {
   var body = document.getElementById('days-' + id);
   var exp  = document.getElementById('exp-' + id);
+  if (!body || !exp) return;
   var open = body.classList.toggle('open');
   exp.textContent = open ? '▲' : '▼';
 }
 
 function recalc(id) {
-  var rate = parseFloat(document.getElementById('rate-' + id).value) || 0;
-  var etat = parseFloat(document.getElementById('etat-' + id).value) || 0;
-  var emp  = S.data && S.data.employees.filter(function(e){ return e.id === id; })[0];
-  var tot  = emp ? (Number(emp.totalHours) || 0) : 0;
+  var rateEl = document.getElementById('rate-' + id);
+  var etatEl = document.getElementById('etat-' + id);
+  var rate = rateEl ? (parseFloat(rateEl.value) || 0) : 0;
+  var etat = etatEl ? (parseFloat(etatEl.value) || 0) : 0;
+  var emp  = S.data && Array.isArray(S.data.employees)
+    ? S.data.employees.filter(function(e){ return e && e.id === id; })[0] : null;
+  var tot  = emp ? (parseFloat(emp.totalHours) || 0) : 0;
 
   var diff = etat > 0 ? tot - etat : null;
   var dCls = diff === null ? '' : (diff >= -1 ? 'ok' : (diff >= -10 ? 'warn' : 'bad'));
-  var dTxt = diff === null ? '—' : (diff >= 0 ? '+' : '') + fmt(diff.toFixed(1)) + 'h';
-  document.getElementById('diff-' + id).textContent = dTxt;
-  document.getElementById('diff-' + id).className = 'stat-val ' + dCls;
-  document.getElementById('amt-' + id).textContent = rate > 0
-    ? fmt((tot * rate).toFixed(2)) + ' PLN' : '—';
+  var dTxt = diff === null ? '—' : (diff >= 0 ? '+' : '') + nf(diff) + 'h';
+
+  var diffEl = document.getElementById('diff-' + id);
+  var amtEl  = document.getElementById('amt-' + id);
+  if (diffEl) { diffEl.textContent = dTxt; diffEl.className = 'stat-val ' + dCls; }
+  if (amtEl)  { amtEl.textContent  = rate > 0 ? nf(tot * rate, 2) + ' PLN' : '—'; }
 }
 
 function saveLoc(id, type) {
   var el = document.getElementById((type === 'rate' ? 'rate-' : 'etat-') + id);
-  localStorage.setItem('r_' + type + '_' + id, el.value);
+  if (el) localStorage.setItem('r_' + type + '_' + id, el.value);
 }
 
 function onSt(empId, date, status) {
-  var notesEl = document.querySelector('#wrap [onblur*="' + empId + '-' + date + '"]');
+  var notesEl = document.getElementById('notes-' + empId + '-' + date);
   var notes   = notesEl ? notesEl.value : '';
   gas('saveStatus', [S.token, empId, date, status, notes], function(res) {
     if (res && res.ok) {
@@ -403,8 +413,6 @@ function onSt(empId, date, status) {
       if (tk) { tk.classList.add('on'); setTimeout(function(){ tk.classList.remove('on'); }, 2000); }
     } else if (res && res.errorType === 'UNAUTHORIZED') {
       doLogout();
-    } else {
-      toast('Błąd zapisu statusu.', false);
     }
   });
 }
