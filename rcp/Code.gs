@@ -22,7 +22,7 @@ const RATE_WIN_SEC   = 300;
 function doGet(e) {
   const p = e && e.parameter && e.parameter.page;
   if (p === 'dashboard') {
-    return HtmlService.createTemplateFromFile('Dashboard')
+    return HtmlService.createTemplateFromFile('DashboardGUI')
       .evaluate()
       .setTitle('We SMILE — Panel Raportowy')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
