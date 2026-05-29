@@ -56,71 +56,71 @@ function getDashboard(token, year, month) {
     const ewidRows = (ewidSh && ewidSh.getLastRow() >= 2)
       ? ewidSh.getDataRange().getValues().slice(1) : [];
 
-  const rcpMap = {};
-  ewidRows.forEach(r => {
-    const ds = String(r[5]);
-    if (!ds.startsWith(pfx)) return;
-    const k = String(r[1]) + '_' + ds;
-    if (!rcpMap[k]) rcpMap[k] = { e: [], x: [] };
-    if (String(r[4]) === 'WEJSCIE') rcpMap[k].e.push(String(r[6]));
-    else if (String(r[4]) === 'WYJSCIE') rcpMap[k].x.push(String(r[6]));
-  });
-
-  // Czytaj Statusy
-  const stSh   = _ss().getSheetByName('Statusy');
-  const stMap  = {};
-  if (stSh && stSh.getLastRow() >= 2) {
-    stSh.getDataRange().getValues().slice(1).forEach(r => {
-      const ds = String(r[0]);
+    const rcpMap = {};
+    ewidRows.forEach(r => {
+      const ds = String(r[5]);
       if (!ds.startsWith(pfx)) return;
-      stMap[String(r[1]) + '_' + ds] = { status: String(r[2]), notes: String(r[3] || '') };
+      const k = String(r[1]) + '_' + ds;
+      if (!rcpMap[k]) rcpMap[k] = { e: [], x: [] };
+      if (String(r[4]) === 'WEJSCIE') rcpMap[k].e.push(String(r[6]));
+      else if (String(r[4]) === 'WYJSCIE') rcpMap[k].x.push(String(r[6]));
     });
-  }
 
-  const DOW = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'];
+    // Czytaj Statusy
+    const stSh   = _ss().getSheetByName('Statusy');
+    const stMap  = {};
+    if (stSh && stSh.getLastRow() >= 2) {
+      stSh.getDataRange().getValues().slice(1).forEach(r => {
+        const ds = String(r[0]);
+        if (!ds.startsWith(pfx)) return;
+        stMap[String(r[1]) + '_' + ds] = { status: String(r[2]), notes: String(r[3] || '') };
+      });
+    }
 
-  const employees = _getWorkers()
-    .filter(w => String(w[4]).toLowerCase() === 'aktywny')
-    .map(w => {
-      const id = String(w[0]);
-      let totalH = 0;
+    const DOW = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'];
 
-      const days = [];
-      for (let d = 1; d <= daysInMonth; d++) {
-        const ds  = pfx + '-' + String(d).padStart(2, '0');
-        const key = id + '_' + ds;
-        const rcp = rcpMap[key];
-        const st  = stMap[key];
+    const employees = _getWorkers()
+      .filter(w => String(w[4]).toLowerCase() === 'aktywny')
+      .map(w => {
+        const id = String(w[0]);
+        let totalH = 0;
 
-        let wejscie = null, wyjscie = null, hours = null;
+        const days = [];
+        for (let d = 1; d <= daysInMonth; d++) {
+          const ds  = pfx + '-' + String(d).padStart(2, '0');
+          const key = id + '_' + ds;
+          const rcp = rcpMap[key];
+          const st  = stMap[key];
 
-        if (rcp) {
-          if (rcp.e.length) wejscie = rcp.e.slice().sort()[0];
-          if (rcp.x.length) wyjscie = rcp.x.slice().sort().reverse()[0];
-          if (wejscie && wyjscie) {
-            const mins = _t2m(wyjscie) - _t2m(wejscie);
-            if (mins > 0) { hours = Math.round(mins / 6) / 10; totalH += hours; }
+          let wejscie = null, wyjscie = null, hours = null;
+
+          if (rcp) {
+            if (rcp.e.length) wejscie = rcp.e.slice().sort()[0];
+            if (rcp.x.length) wyjscie = rcp.x.slice().sort().reverse()[0];
+            if (wejscie && wyjscie) {
+              const mins = _t2m(wyjscie) - _t2m(wejscie);
+              if (mins > 0) { hours = Math.round(mins / 6) / 10; totalH += hours; }
+            }
           }
+
+          // Unikamy problemów ze strefą czasową przez ustawienie południa
+          const dateObj = new Date(ds + 'T12:00:00');
+          const dow     = DOW[dateObj.getDay()];
+          const status  = st ? st.status : (wejscie ? 'Obecna' : '—');
+          const notes   = st ? st.notes  : '';
+
+          days.push({ date: ds, dow, wejscie, wyjscie, hours, status, notes });
         }
 
-        // Unikamy problemów ze strefą czasową przez ustawienie południa
-        const dateObj = new Date(ds + 'T12:00:00');
-        const dow     = DOW[dateObj.getDay()];
-        const status  = st ? st.status : (wejscie ? 'Obecna' : '—');
-        const notes   = st ? st.notes  : '';
-
-        days.push({ date: ds, dow, wejscie, wyjscie, hours, status, notes });
-      }
-
-      return {
-        id,
-        imie:       String(w[1]),
-        nazwisko:   String(w[2]),
-        rola:       String(w[3]),
-        totalHours: Math.round(totalH * 10) / 10,
-        days
-      };
-    });
+        return {
+          id,
+          imie:       String(w[1]),
+          nazwisko:   String(w[2]),
+          rola:       String(w[3]),
+          totalHours: Math.round(totalH * 10) / 10,
+          days
+        };
+      });
 
     return { ok: true, year: y, month: m, employees };
   } catch (e) {
