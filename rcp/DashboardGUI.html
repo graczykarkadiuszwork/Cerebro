@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>We SMILE — Panel Raportowy</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
+body{background:#0f0f11;color:#f0f0f2;min-height:100vh}
+
+/* ── LOGIN ── */
+.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:16px}
+.login-card{background:#1c1c1e;border-radius:22px;padding:28px 22px;width:100%;max-width:340px;box-shadow:0 24px 64px rgba(0,0,0,.7)}
+.login-brand{font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#555;text-align:center;margin-bottom:20px}
+.login-title{font-size:20px;font-weight:700;text-align:center;margin-bottom:4px}
+.login-sub{font-size:13px;color:#888;text-align:center;margin-bottom:16px}
+.dots{display:flex;justify-content:center;gap:14px;margin:14px 0}
+.dot{width:16px;height:16px;border-radius:50%;background:#2c2c2e;border:2px solid #3a3a3c;transition:.12s}
+.dot.on{background:#e84560;border-color:#e84560}
+.kp{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.key{background:#2c2c2e;border:none;border-radius:12px;color:#f0f0f2;font-size:22px;font-weight:600;padding:18px 0;cursor:pointer;transition:.1s;user-select:none}
+.key:active{background:#e84560;transform:scale(.94)}
+.key.sym{color:#888;font-size:17px}
+.key.clr{color:#e84560;font-weight:800;font-size:16px}
+
+/* ── APP BAR ── */
+.app-bar{background:#1c1c1e;border-bottom:1px solid #2a2a2e;padding:10px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:sticky;top:0;z-index:10}
+.app-title{font-weight:800;font-size:15px;white-space:nowrap}
+.month-nav{display:flex;align-items:center;gap:6px}
+.nav-btn{background:#2c2c2e;border:none;border-radius:8px;color:#f0f0f2;width:34px;height:34px;cursor:pointer;font-size:14px}
+.nav-btn:hover{background:#3a3a3c}
+.month-label{font-size:13px;font-weight:700;min-width:110px;text-align:center}
+.norma-group{display:flex;align-items:center;gap:6px;background:#2a2a2e;border-radius:10px;padding:5px 10px}
+.norma-lbl{font-size:12px;color:#888;white-space:nowrap}
+.norma-inp{background:transparent;border:none;color:#f0f0f2;font-size:15px;font-weight:700;width:64px;text-align:right}
+.norma-inp:focus{outline:none}
+.norma-tick{font-size:13px;color:#00a86b;opacity:0;transition:.4s;min-width:14px}
+.norma-tick.on{opacity:1}
+.bar-right{display:flex;gap:8px;margin-left:auto}
+.btn-sm{background:#2c2c2e;border:none;border-radius:8px;color:#f0f0f2;padding:7px 14px;cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap}
+.btn-sm:hover{background:#3a3a3c}
+.btn-red{background:#e84560;color:#fff}
+.btn-red:hover{background:#c73451}
+
+/* ── PAGE ── */
+.page-wrap{max-width:960px;margin:0 auto;padding:16px 20px 40px}
+
+/* ── EMPLOYEE SELECTOR ── */
+.sel-lbl{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:#555;margin-bottom:6px}
+.emp-sel-wrap{position:relative;margin-bottom:16px}
+.emp-input{width:100%;background:#1c1c1e;border:1px solid #3a3a3c;border-radius:12px;color:#f0f0f2;font-size:15px;font-weight:600;padding:12px 16px}
+.emp-input:focus{outline:none;border-color:#e84560}
+.emp-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#1c1c1e;border:1px solid #3a3a3c;border-radius:12px;z-index:20;max-height:220px;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.6);display:none}
+.emp-opt{padding:11px 16px;cursor:pointer;font-size:14px;font-weight:500}
+.emp-opt:hover{background:#2a2a2e}
+.emp-opt-none{padding:11px 16px;color:#555;font-size:13px}
+
+/* ── EMPLOYEE CARD ── */
+.emp-card{background:#1c1c1e;border:1px solid #2a2a2e;border-radius:16px;padding:18px 20px;margin-bottom:12px;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.emp-info{}
+.emp-name{font-size:18px;font-weight:800;margin-bottom:4px}
+.emp-role{font-size:12px;color:#888;background:#2a2a2e;padding:2px 10px;border-radius:20px;display:inline-block}
+.emp-hours{text-align:right}
+.hours-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:#555;margin-bottom:4px}
+.hours-val{font-size:26px;font-weight:800;line-height:1}
+.hours-ok{color:#00a86b}
+.hours-bad{color:#e84560}
+.hours-neutral{color:#f0f0f2}
+
+/* ── VIEW TOGGLE ── */
+.view-toggle{display:flex;gap:6px;margin-bottom:12px}
+.vbtn{background:#2a2a2e;border:1px solid #3a3a3c;border-radius:8px;color:#888;padding:6px 16px;cursor:pointer;font-size:13px;font-weight:600}
+.vbtn.on{background:#e84560;border-color:#e84560;color:#fff}
+
+/* ── ANNOTATION ── */
+.note-wrap{margin-bottom:14px}
+.note-lbl{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:#555;margin-bottom:6px}
+.note-ta{width:100%;background:#1c1c1e;border:1px solid #3a3a3c;border-radius:10px;color:#f0f0f2;font-size:13px;padding:10px 14px;resize:vertical;min-height:58px;line-height:1.5}
+.note-ta.warn{border-color:#e84560}
+.note-ta:focus{outline:none;border-color:#888}
+.note-save-row{display:flex;align-items:center;gap:8px;margin-top:4px}
+.note-tick{font-size:12px;color:#00a86b;opacity:0;transition:.4s}
+.note-tick.on{opacity:1}
+
+/* ── LIST TABLE ── */
+.table-wrap{overflow-x:auto;border-radius:12px;border:1px solid #2a2a2e}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#111;color:#555;font-weight:600;padding:9px 14px;text-align:left;border-bottom:1px solid #222;white-space:nowrap}
+td{padding:8px 14px;border-bottom:1px solid #1a1a1c;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr.wknd td{color:#555}
+.t-time{font-family:monospace;font-weight:600;color:#f0f0f2}
+.t-empty{color:#333}
+.t-hours{font-weight:700;color:#00a86b}
+.t-miss{color:#e84560;font-weight:700}
+
+/* ── CALENDAR ── */
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal-head{text-align:center;font-size:11px;font-weight:700;color:#555;padding:6px 0}
+.cal-cell{background:#1c1c1e;border:1px solid #252528;border-radius:7px;padding:6px 5px;min-height:70px;font-size:11px}
+.cal-wknd{background:#161618;border-color:#1f1f22}
+.cal-empty{background:transparent;border-color:transparent}
+.cal-dn{font-size:12px;font-weight:700;color:#555;margin-bottom:3px}
+.cal-in,.cal-out{font-family:monospace;font-size:10px;color:#ccc;font-weight:600;white-space:nowrap}
+.cal-h{font-size:10px;color:#00a86b;font-weight:700;margin-top:2px}
+.cal-miss{color:#e84560;font-weight:700;font-size:12px}
+
+/* ── HINT / ERROR ── */
+.hint{text-align:center;color:#444;padding:40px;font-size:15px}
+.hint-err{color:#e84560}
+.retry-btn{background:#2a2a2e;border:1px solid #3a3a3c;border-radius:8px;color:#f0f0f2;padding:7px 16px;cursor:pointer;font-size:13px;margin-top:10px;display:inline-block}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);opacity:0;background:#e84560;color:#fff;padding:10px 22px;border-radius:40px;font-size:14px;font-weight:600;pointer-events:none;transition:.25s;z-index:99;max-width:90vw;text-align:center}
+#toast.on{transform:translateX(-50%) translateY(0);opacity:1}
+#toast.g{background:#00a86b}
+
+@media(max-width:600px){
+  .app-bar{gap:8px;padding:8px 12px}
+  .page-wrap{padding:10px 10px 32px}
+  .emp-card{flex-direction:column}
+  .emp-hours{text-align:left}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════ LOGIN ═══════ -->
+<div id="login" class="login-wrap">
+  <div class="login-card">
+    <div class="login-brand">We SMILE</div>
+    <div class="login-title">Panel Raportowy</div>
+    <div class="login-sub">Wpisz swój PIN</div>
+    <div class="dots">
+      <div class="dot" id="ld0"></div><div class="dot" id="ld1"></div>
+      <div class="dot" id="ld2"></div><div class="dot" id="ld3"></div>
+    </div>
+    <div class="kp" id="kp-login">
+      <button class="key" data-v="1">1</button><button class="key" data-v="2">2</button><button class="key" data-v="3">3</button>
+      <button class="key" data-v="4">4</button><button class="key" data-v="5">5</button><button class="key" data-v="6">6</button>
+      <button class="key" data-v="7">7</button><button class="key" data-v="8">8</button><button class="key" data-v="9">9</button>
+      <button class="key clr" data-v="C">C</button><button class="key" data-v="0">0</button><button class="key sym" data-v="X">⌫</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ DASHBOARD ═══════ -->
+<div id="dash" style="display:none">
+  <header class="app-bar">
+    <span class="app-title">📊 Panel Raportowy</span>
+    <div class="month-nav">
+      <button id="btn-prev" class="nav-btn">◀</button>
+      <span id="month-lbl" class="month-label"></span>
+      <button id="btn-next" class="nav-btn">▶</button>
+    </div>
+    <div class="norma-group">
+      <span class="norma-lbl">Norma:</span>
+      <input id="etat-inp" type="number" class="norma-inp" min="0" step="0.5" placeholder="0">
+      <span class="norma-lbl">h</span>
+      <span id="norma-tick" class="norma-tick">✓</span>
+    </div>
+    <div class="bar-right">
+      <button id="btn-csv" class="btn-sm">📥 CSV</button>
+      <button id="btn-logout" class="btn-sm btn-red">Wyloguj</button>
+    </div>
+  </header>
+
+  <div class="page-wrap">
+    <div class="sel-lbl">Pracownik</div>
+    <div class="emp-sel-wrap">
+      <input type="text" id="emp-input" class="emp-input"
+             placeholder="Wpisz imię lub nazwisko…" autocomplete="off">
+      <div id="emp-dropdown" class="emp-dropdown"></div>
+    </div>
+    <div id="emp-data"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* global google */
+
+var S = {
+  token:  null,
+  year:   new Date().getFullYear(),
+  month:  new Date().getMonth() + 1,
+  data:   null,
+  selId:  null,
+  view:   'list'   // 'list' | 'cal'
+};
+
+var MONTHS = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec',
+              'Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
+
+// ── Utilities ─────────────────────────────────────────────────
+
+var _tt;
+function toast(msg, ok) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'on' + (ok ? ' g' : '');
+  clearTimeout(_tt);
+  _tt = setTimeout(function(){ el.className = ''; }, 2800);
+}
+
+function gas(action, args, cb) {
+  google.script.run
+    .withSuccessHandler(function(res) {
+      try { cb(res); } catch(ex) {
+        toast('Błąd: ' + ex.message, false);
+        console.error(ex);
+      }
+    })
+    .withFailureHandler(function(e) {
+      toast((e && e.message) || 'Błąd połączenia', false);
+    })
+    .callRCP(action, JSON.stringify(args || []));
+}
+
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function nf(v, dec) {
+  var n = parseFloat(v);
+  if (isNaN(n)) return '—';
+  return n.toFixed(dec == null ? 1 : dec).replace('.', ',');
+}
+
+// ── Login ─────────────────────────────────────────────────────
+
+var lPin = '';
+function setDots(p) {
+  for (var i = 0; i < 4; i++)
+    document.getElementById('ld' + i).className = 'dot' + (i < p.length ? ' on' : '');
+}
+
+document.getElementById('kp-login').addEventListener('click', function(e) {
+  var btn = e.target.closest('[data-v]');
+  if (!btn) return;
+  var v = btn.getAttribute('data-v');
+  if (v === 'C') lPin = '';
+  else if (v === 'X') lPin = lPin.slice(0, -1);
+  else if (lPin.length < 4) lPin += v;
+  setDots(lPin);
+  if (lPin.length === 4) {
+    toast('Logowanie…', true);
+    gas('dashLogin', [lPin], function(res) {
+      if (res && res.ok) {
+        S.token = res.token;
+        document.getElementById('login').style.display = 'none';
+        document.getElementById('dash').style.display  = 'block';
+        updateMonthLabel();
+        loadMonth();
+      } else {
+        toast((res && res.msg) || 'Nieprawidłowy PIN.', false);
+        lPin = ''; setDots('');
+      }
+    });
+  }
+});
+
+// ── Miesiąc ───────────────────────────────────────────────────
+
+function updateMonthLabel() {
+  document.getElementById('month-lbl').textContent = MONTHS[S.month - 1] + ' ' + S.year;
+}
+
+document.getElementById('btn-prev').addEventListener('click', function() {
+  S.month--; if (S.month < 1) { S.month = 12; S.year--; }
+  updateMonthLabel(); loadMonth();
+});
+document.getElementById('btn-next').addEventListener('click', function() {
+  S.month++; if (S.month > 12) { S.month = 1; S.year++; }
+  updateMonthLabel(); loadMonth();
+});
+
+// ── Norma ─────────────────────────────────────────────────────
+
+function saveEtat() {
+  var val = parseFloat(document.getElementById('etat-inp').value);
+  if (isNaN(val) || val < 0) return;
+  gas('setEtat', [S.token, S.year, S.month, val], function(res) {
+    if (res && res.ok) {
+      if (S.data) S.data.etat = val;
+      var tk = document.getElementById('norma-tick');
+      tk.className = 'norma-tick on';
+      setTimeout(function(){ tk.className = 'norma-tick'; }, 2000);
+      if (S.selId) refreshEmpDisplay();
+    } else if (res && res.errorType === 'UNAUTHORIZED') {
+      doLogout();
+    } else {
+      toast('Błąd zapisu normy: ' + ((res && res.msg) || ''), false);
+    }
+  });
+}
+
+document.getElementById('etat-inp').addEventListener('blur', saveEtat);
+document.getElementById('etat-inp').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') this.blur();
+});
+
+// ── Selector pracownika ───────────────────────────────────────
+
+var _emps = [];
+
+function fillSelector(employees) {
+  _emps = employees || [];
+  renderOpts(_emps);
+}
+
+function renderOpts(list) {
+  var dl = document.getElementById('emp-dropdown');
+  if (list.length === 0) {
+    dl.innerHTML = '<div class="emp-opt-none">Brak wyników</div>';
+    return;
+  }
+  dl.innerHTML = '';
+  list.forEach(function(emp) {
+    var d = document.createElement('div');
+    d.className = 'emp-opt';
+    d.textContent = emp.imie + ' ' + emp.nazwisko;
+    d.addEventListener('mousedown', function(e) {
+      e.preventDefault();
+      pickEmp(emp);
+    });
+    dl.appendChild(d);
+  });
+}
+
+document.getElementById('emp-input').addEventListener('focus', function() {
+  renderOpts(_emps);
+  document.getElementById('emp-dropdown').style.display = 'block';
+});
+document.getElementById('emp-input').addEventListener('input', function() {
+  var q = this.value.toLowerCase();
+  renderOpts(_emps.filter(function(e) {
+    return (e.imie + ' ' + e.nazwisko).toLowerCase().indexOf(q) !== -1;
+  }));
+  document.getElementById('emp-dropdown').style.display = 'block';
+});
+document.getElementById('emp-input').addEventListener('blur', function() {
+  setTimeout(function(){ document.getElementById('emp-dropdown').style.display = 'none'; }, 160);
+});
+
+function pickEmp(emp) {
+  S.selId = emp.id;
+  document.getElementById('emp-input').value = emp.imie + ' ' + emp.nazwisko;
+  document.getElementById('emp-dropdown').style.display = 'none';
+  renderEmp(emp);
+}
+
+function getEmp(id) {
+  if (!S.data || !S.data.employees) return null;
+  for (var i = 0; i < S.data.employees.length; i++)
+    if (S.data.employees[i].id === id) return S.data.employees[i];
+  return null;
+}
+
+function refreshEmpDisplay() {
+  if (!S.selId) return;
+  var emp = getEmp(S.selId);
+  if (emp) renderEmp(emp);
+}
+
+// ── Ładowanie danych ──────────────────────────────────────────
+
+function loadMonth() {
+  document.getElementById('emp-data').innerHTML = '<div class="hint">Ładowanie danych…</div>';
+  gas('getDashboard', [S.token, S.year, S.month], function(res) {
+    if (!res || !res.ok) {
+      if (res && res.errorType === 'UNAUTHORIZED') { doLogout(); return; }
+      document.getElementById('emp-data').innerHTML =
+        '<div class="hint hint-err">' + esc((res && res.msg) || 'Błąd ładowania.') +
+        '<br><button class="retry-btn" onclick="loadMonth()">Ponów</button></div>';
+      return;
+    }
+    S.data = res;
+    document.getElementById('etat-inp').value = res.etat > 0 ? res.etat : '';
+    fillSelector(res.employees);
+    if (S.selId) {
+      var emp = getEmp(S.selId);
+      if (emp) { renderEmp(emp); return; }
+    }
+    document.getElementById('emp-data').innerHTML = '';
+  });
+}
+
+// ── Wyświetlanie pracownika ───────────────────────────────────
+
+function renderEmp(emp) {
+  var etat   = (S.data && S.data.etat > 0) ? S.data.etat : 0;
+  var totalH = parseFloat(emp.totalHours) || 0;
+
+  var hoursHtml, hoursCls;
+  if (etat > 0) {
+    var label = nf(totalH) + 'h z ' + nf(etat) + 'h';
+    if (totalH >= etat) {
+      hoursHtml = label;
+      hoursCls  = 'hours-ok';
+    } else {
+      hoursHtml = label;
+      hoursCls  = 'hours-bad';
+    }
+  } else {
+    hoursHtml = nf(totalH) + 'h';
+    hoursCls  = 'hours-neutral';
+  }
+
+  var isBad = etat > 0 && totalH < etat;
+  var note  = esc(emp.note || '');
+
+  var html = '<div class="emp-card">';
+  html += '<div class="emp-info"><div class="emp-name">' + esc(emp.imie + ' ' + emp.nazwisko) + '</div>';
+  html += '<div class="emp-role">' + esc(emp.rola || '') + '</div></div>';
+  html += '<div class="emp-hours"><div class="hours-lbl">Przepracowane</div>';
+  html += '<div class="hours-val ' + hoursCls + '">' + hoursHtml + '</div></div>';
+  html += '</div>';
+
+  // Adnotacja
+  html += '<div class="note-wrap">';
+  html += '<div class="note-lbl">Adnotacja' + (isBad ? ' — niedobór godzin' : '') + '</div>';
+  html += '<textarea id="note-ta" class="note-ta' + (isBad ? ' warn' : '') + '"';
+  html += ' placeholder="Wpisz adnotację…">' + note + '</textarea>';
+  html += '<div class="note-save-row"><span id="note-tick" class="note-tick">✓ Zapisano</span></div>';
+  html += '</div>';
+
+  // View toggle
+  html += '<div class="view-toggle">';
+  html += '<button class="vbtn' + (S.view === 'list' ? ' on' : '') + '" onclick="switchView(\'list\')">Lista</button>';
+  html += '<button class="vbtn' + (S.view === 'cal'  ? ' on' : '') + '" onclick="switchView(\'cal\')">Kalendarz</button>';
+  html += '</div>';
+
+  // Data view
+  html += '<div id="data-view">';
+  html += S.view === 'cal' ? renderCalendar(emp) : renderList(emp);
+  html += '</div>';
+
+  document.getElementById('emp-data').innerHTML = html;
+
+  // Bind note textarea
+  var ta = document.getElementById('note-ta');
+  if (ta) {
+    ta.addEventListener('blur', function() { saveNote(emp.id, ta.value); });
+    ta.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) ta.blur();
+    });
+  }
+}
+
+function switchView(v) {
+  S.view = v;
+  var emp = getEmp(S.selId);
+  if (!emp) return;
+  document.getElementById('data-view').innerHTML =
+    v === 'cal' ? renderCalendar(emp) : renderList(emp);
+  document.querySelectorAll('.vbtn').forEach(function(b) {
+    b.className = 'vbtn' + (b.textContent.trim() === (v === 'cal' ? 'Kalendarz' : 'Lista') ? ' on' : '');
+  });
+}
+
+// ── Lista ─────────────────────────────────────────────────────
+
+function renderList(emp) {
+  var days = Array.isArray(emp.days) ? emp.days : [];
+  var html = '<div class="table-wrap"><table>';
+  html += '<thead><tr><th>Dzień</th><th>Data</th><th>Wejście</th><th>Wyjście</th><th>Godziny</th></tr></thead><tbody>';
+  days.forEach(function(d) {
+    if (!d) return;
+    var dn   = String(d.date || '').split('-')[2] || '';
+    var mm   = String(S.month).padStart(2, '0');
+    var wknd = d.dow === 'Sb' || d.dow === 'Nd';
+    var hasH = d.hours !== null && d.hours !== undefined && !isNaN(parseFloat(d.hours));
+    html += '<tr' + (wknd ? ' class="wknd"' : '') + '>';
+    html += '<td><strong>' + esc(d.dow || '') + '</strong></td>';
+    html += '<td>' + dn + '.' + mm + '</td>';
+    html += '<td class="' + (d.wejscie ? 't-time' : 't-empty') + '">' + esc(d.wejscie || '—') + '</td>';
+    html += '<td class="' + (d.wyjscie ? 't-time' : (d.wejscie ? 't-miss' : 't-empty')) + '">';
+    html += d.wyjscie ? esc(d.wyjscie) : (d.wejscie ? 'brak !' : '—');
+    html += '</td>';
+    html += '<td class="' + (hasH ? 't-hours' : 't-empty') + '">' + (hasH ? nf(d.hours) + 'h' : '—') + '</td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+  return html;
+}
+
+// ── Kalendarz ─────────────────────────────────────────────────
+
+function renderCalendar(emp) {
+  var days = Array.isArray(emp.days) ? emp.days : [];
+  if (days.length === 0) return '<div class="hint">Brak danych</div>';
+
+  // Dzień tygodnia pierwszego dnia miesiąca (0=Pn..6=Nd, konwencja PL)
+  var firstJs  = new Date(days[0].date + 'T12:00:00').getDay(); // 0=Nd
+  var firstCol = firstJs === 0 ? 6 : firstJs - 1;
+
+  var html = '<div class="cal-grid">';
+  ['Pn','Wt','Śr','Cz','Pt','Sb','Nd'].forEach(function(h) {
+    html += '<div class="cal-head">' + h + '</div>';
+  });
+  for (var i = 0; i < firstCol; i++) {
+    html += '<div class="cal-cell cal-empty"></div>';
+  }
+  days.forEach(function(d) {
+    if (!d) return;
+    var dn   = parseInt(String(d.date || '').split('-')[2]) || 0;
+    var wknd = d.dow === 'Sb' || d.dow === 'Nd';
+    var hasH = d.hours !== null && d.hours !== undefined && !isNaN(parseFloat(d.hours));
+    html += '<div class="cal-cell' + (wknd ? ' cal-wknd' : '') + '">';
+    html += '<div class="cal-dn">' + dn + '</div>';
+    if (d.wejscie) {
+      html += '<div class="cal-in">' + esc(d.wejscie) + '</div>';
+      if (d.wyjscie) {
+        html += '<div class="cal-out">' + esc(d.wyjscie) + '</div>';
+        if (hasH) html += '<div class="cal-h">' + nf(d.hours) + 'h</div>';
+      } else {
+        html += '<div class="cal-miss">!</div>';
+      }
+    }
+    html += '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+// ── Adnotacja ─────────────────────────────────────────────────
+
+function saveNote(empId, text) {
+  gas('setNote', [S.token, empId, S.year, S.month, text], function(res) {
+    if (res && res.ok) {
+      // Update in local data so refresh doesn't lose it
+      var emp = getEmp(empId);
+      if (emp) emp.note = text;
+      var tk = document.getElementById('note-tick');
+      if (tk) { tk.className = 'note-tick on'; setTimeout(function(){ tk.className = 'note-tick'; }, 2000); }
+    } else if (res && res.errorType === 'UNAUTHORIZED') {
+      doLogout();
+    }
+  });
+}
+
+// ── CSV ───────────────────────────────────────────────────────
+
+document.getElementById('btn-csv').addEventListener('click', function() {
+  if (!S.token) return;
+  toast('Generowanie CSV…', true);
+  gas('dashExportCsv', [S.token, S.year, S.month], function(res) {
+    if (!res || !res.ok) { toast('Błąd eksportu.', false); return; }
+    var blob = new Blob([res.csv], { type: 'text/csv;charset=utf-8;' });
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a');
+    a.href = url; a.download = 'WeSMILE_' + MONTHS[S.month-1] + '_' + S.year + '.csv';
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+    toast('CSV pobrany!', true);
+  });
+});
+
+// ── Logout ────────────────────────────────────────────────────
+
+function doLogout() {
+  S.token = null; S.data = null; S.selId = null;
+  lPin = ''; setDots('');
+  document.getElementById('emp-input').value = '';
+  document.getElementById('etat-inp').value  = '';
+  document.getElementById('emp-data').innerHTML = '';
+  document.getElementById('dash').style.display  = 'none';
+  document.getElementById('login').style.display = 'flex';
+}
+
+document.getElementById('btn-logout').addEventListener('click', doLogout);
+</script>
+</body>
+</html>
