@@ -77,10 +77,10 @@ function setupCerebro() {
     const defaultSheet = ss.getSheetByName('Sheet1') || ss.getSheetByName('Arkusz1');
     if (defaultSheet) ss.deleteSheet(defaultSheet);
 
-    // Utwórz strukturę folderów na Drive
+    // Podłącz folder Drive i ustaw podfoldery
     setupDriveFolders();
 
-    // Ustaw trigger auto-importu
+    // Ustaw trigger auto-importu co godzinę
     setupDriveTrigger();
 
     return {
@@ -249,6 +249,34 @@ function deleteKnowledge(id) {
       }
     }
     return { success: false, error: 'Nie znaleziono wpisu' };
+  } catch(e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+// Zwraca bazę wiedzy jako czysty tekst gotowy do użycia jako kontekst LLM
+function getKnowledgeForAI(filterVisibility) {
+  try {
+    const sheet = getSpreadsheet().getSheetByName('wiedza');
+    let entries = sheetToObjects(sheet);
+    if (filterVisibility === 'shared') {
+      entries = entries.filter(e => e.widocznosc === 'udostepniony');
+    }
+    if (entries.length === 0) return { success: true, text: '' };
+
+    const blocks = entries.map(e => {
+      const lines = [
+        '# ' + e.tytul,
+        'Kategoria: ' + (e.kategoria || '—'),
+      ];
+      if (e.tagi) lines.push('Tagi: ' + e.tagi);
+      if (e.zrodlo) lines.push('Źródło: ' + e.zrodlo);
+      lines.push('');
+      lines.push(e.tresc || '');
+      return lines.join('\n');
+    });
+
+    return { success: true, text: blocks.join('\n\n---\n\n') };
   } catch(e) {
     return { success: false, error: e.toString() };
   }
