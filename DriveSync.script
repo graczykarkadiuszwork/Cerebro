@@ -122,19 +122,15 @@ function _processFolder(folder, mapping, folderLabel, trackingMap) {
     };
 
     if (tracked && tracked.knowledgeId) {
-      // Nadpisz istniejący wpis
       entry.id = tracked.knowledgeId;
       updateKnowledge(entry);
+      trackingMap[fileId] = { modifiedDate, knowledgeId: tracked.knowledgeId };
       updated++;
     } else {
-      // Nowy wpis
       const result = createKnowledge(entry);
       trackingMap[fileId] = { modifiedDate, knowledgeId: result.id };
       imported++;
-      return { imported, updated }; // wróć żeby zapisać mapę po każdym nowym
     }
-
-    trackingMap[fileId] = { modifiedDate, knowledgeId: tracked ? tracked.knowledgeId : null };
   }
 
   return { imported, updated };
