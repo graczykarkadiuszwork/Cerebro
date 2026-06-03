@@ -11,7 +11,7 @@
   <div class="mb-4 flex items-center gap-3">
     <input type="text" id="search-input" class="ios-input" placeholder="🔍 Szukaj..." onkeyup="filterArticles()" style="max-width: 300px;">
   </div>
-  <div id="articles-list" class="ios-card">${skeleton(5)}</div>
+  <div id="articles-list" class="ios-card"><!-- loading --></div>
 </div>
 <script>
 let allSharedArticles = [];
