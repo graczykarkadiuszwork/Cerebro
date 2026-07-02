@@ -61,6 +61,14 @@ function setupCerebro() {
         name: 'ustawienia',
         headers: ['klucz','wartosc']
       },
+      {
+        name: 'watki',
+        headers: ['id','tytul','kontekst','status','priorytet','data_utworzenia','data_aktualizacji']
+      },
+      {
+        name: 'reguly',
+        headers: ['id','tresc','zrodlo','data_utworzenia']
+      },
     ];
 
     sheets.forEach(cfg => {
@@ -320,6 +328,132 @@ function deleteEvent(id) {
 }
 
 // ============================================================
+// ASYSTENT — profil, wątki (multitasking), reguły
+// ============================================================
+
+function getAssistantProfile() {
+  try {
+    const props = PropertiesService.getUserProperties().getProperties();
+    const keys = ['asystent_cele', 'asystent_preferencje', 'asystent_o_mnie'];
+    const data = {};
+    keys.forEach(k => data[k] = props[k] || '');
+    return { success: true, data };
+  } catch(e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+function saveAssistantProfile(data) {
+  try {
+    PropertiesService.getUserProperties().setProperties({
+      asystent_cele: data.asystent_cele || '',
+      asystent_preferencje: data.asystent_preferencje || '',
+      asystent_o_mnie: data.asystent_o_mnie || ''
+    });
+    return { success: true };
+  } catch(e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+function getThreads() {
+  try {
+    const sheet = getSpreadsheet().getSheetByName('watki');
+    return { success: true, data: sheetToObjects(sheet) };
+  } catch(e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+function createThread(data) {
+  try {
+    const sheet = getSpreadsheet().getSheetByName('watki');
+    const id = generateId();
+    const now = new Date().toISOString();
+    sheet.appendRow([
+      id, data.tytul, data.kontekst||'',
+      data.status||'aktywny', data.priorytet||'normalny', now, now
+    ]);
+    return { success: true, id };
+  } catch(e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+function updateThread(data) {
+  try {
+    const sheet = getSpreadsheet().getSheetByName('watki');
+    const rows = sheet.getDataRange().getValues();
+    for (let i = 1; i < rows.length; i++) {
+      if (rows[i][0] === data.id) {
+        sheet.getRange(i+1, 1, 1, 7).setValues([[
+          data.id, data.tytul, data.kontekst||'',
+          data.status||'aktywny', data.priorytet||'normalny',
+          rows[i][5], new Date().toISOString()
+        ]]);
+        return { success: true };
+      }
+    }
+    return { success: false, error: 'Nie znaleziono wątku' };
+  } catch(e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+function deleteThread(id) {
+  try {
+    const sheet = getSpreadsheet().getSheetByName('watki');
+    const rows = sheet.getDataRange().getValues();
+    for (let i = 1; i < rows.length; i++) {
+      if (rows[i][0] === id) {
+        sheet.deleteRow(i+1);
+        return { success: true };
+      }
+    }
+    return { success: false, error: 'Nie znaleziono wątku' };
+  } catch(e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+function getRules() {
+  try {
+    const sheet = getSpreadsheet().getSheetByName('reguly');
+    return { success: true, data: sheetToObjects(sheet) };
+  } catch(e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+function addRule(data) {
+  try {
+    const sheet = getSpreadsheet().getSheetByName('reguly');
+    const id = generateId();
+    const now = new Date().toISOString();
+    sheet.appendRow([id, data.tresc, data.zrodlo||'manualna', now]);
+    return { success: true, id };
+  } catch(e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+function deleteRule(id) {
+  try {
+    const sheet = getSpreadsheet().getSheetByName('reguly');
+    const rows = sheet.getDataRange().getValues();
+    for (let i = 1; i < rows.length; i++) {
+      if (rows[i][0] === id) {
+        sheet.deleteRow(i+1);
+        return { success: true };
+      }
+    }
+    return { success: false, error: 'Nie znaleziono reguły' };
+  } catch(e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+// ============================================================
 // SETTINGS
 // ============================================================
 
@@ -349,7 +483,7 @@ function exportAllData() {
   try {
     const ss = getSpreadsheet();
     const result = {};
-    ['zadania','wiedza','wydarzenia'].forEach(name => {
+    ['zadania','wiedza','wydarzenia','watki','reguly'].forEach(name => {
       result[name] = sheetToObjects(ss.getSheetByName(name));
     });
     return { success: true, data: JSON.stringify(result, null, 2) };

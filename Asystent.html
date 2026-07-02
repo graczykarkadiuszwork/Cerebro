@@ -1,0 +1,193 @@
+<div class="max-w-6xl mx-auto">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-[#000]">Asystent</h1>
+  </div>
+  <div class="mb-4 flex items-center gap-3">
+    <div class="segmented">
+      <button class="segmented-btn active" onclick="switchAsystentView('watki')"><i data-lucide="layout-grid" class="w-4 h-4 inline-block mr-1"></i>Wątki</button>
+      <button class="segmented-btn" onclick="switchAsystentView('profil')"><i data-lucide="user" class="w-4 h-4 inline-block mr-1"></i>Profil</button>
+      <button class="segmented-btn" onclick="switchAsystentView('reguly')"><i data-lucide="book-marked" class="w-4 h-4 inline-block mr-1"></i>Reguły</button>
+    </div>
+  </div>
+
+  <!-- WĄTKI (multitasking) -->
+  <div id="asystent-watki-view">
+    <div class="flex justify-end mb-3">
+      <button onclick="showAddThreadModal()" class="btn-primary w-auto flex items-center gap-2" style="width: auto;"><i data-lucide="plus" class="w-5 h-5"></i>Nowy wątek</button>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div id="watki-aktywny" class="bg-[#f2f2f7] rounded-[12px] p-4 min-h-[400px]"><h3 class="font-semibold text-[#000] mb-3">Aktywne</h3><div class="space-y-2">${skeleton(3)}</div></div>
+      <div id="watki-wstrzymany" class="bg-[#f2f2f7] rounded-[12px] p-4 min-h-[400px]"><h3 class="font-semibold text-[#000] mb-3">Wstrzymane</h3><div class="space-y-2">${skeleton(2)}</div></div>
+      <div id="watki-zakonczony" class="bg-[#f2f2f7] rounded-[12px] p-4 min-h-[400px]"><h3 class="font-semibold text-[#000] mb-3">Zakończone</h3><div class="space-y-2">${skeleton(2)}</div></div>
+    </div>
+  </div>
+
+  <!-- PROFIL -->
+  <div id="asystent-profil-view" class="hidden">
+    <div class="ios-card p-5 space-y-4">
+      <div>
+        <label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Cele</label>
+        <textarea id="profil-cele" class="ios-textarea" placeholder="Nad czym obecnie pracujesz, co chcesz osiągnąć..."></textarea>
+      </div>
+      <div>
+        <label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Preferencje</label>
+        <textarea id="profil-preferencje" class="ios-textarea" placeholder="Jak wolisz, żeby asystent Ci pomagał..."></textarea>
+      </div>
+      <div>
+        <label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">O mnie</label>
+        <textarea id="profil-o-mnie" class="ios-textarea" placeholder="Kontekst o Tobie, roli, organizacji..."></textarea>
+      </div>
+      <button onclick="saveAssistantProfile()" class="btn-primary w-auto" style="width: auto;">Zapisz profil</button>
+    </div>
+  </div>
+
+  <!-- REGUŁY -->
+  <div id="asystent-reguly-view" class="hidden">
+    <div class="ios-card p-5 mb-4">
+      <label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Dodaj regułę / wniosek</label>
+      <div class="flex gap-2">
+        <input type="text" id="new-rule-input" class="ios-input" placeholder="np. Zawsze pytaj o kontekst przed edycją kodu...">
+        <button onclick="addRuleFromInput()" class="btn-primary w-auto" style="width: auto;">Dodaj</button>
+      </div>
+    </div>
+    <div class="ios-card">
+      <div id="rules-list" class="divide-y divide-[#e5e5ea]">${skeleton(4)}</div>
+    </div>
+  </div>
+</div>
+
+<script id="thread-modal-template" type="text/template">
+<div class="modal-sheet"><div class="modal-handle"></div><div class="px-6 py-4"><h2 class="text-[20px] font-bold mb-4">{{ title }}</h2><div class="space-y-4"><div><label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Tytuł *</label><input type="text" id="modal-thread-title" class="ios-input" placeholder="Wpisz tytuł wątku..."></div><div><label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Kontekst</label><textarea id="modal-thread-kontekst" class="ios-textarea" placeholder="Notatki, stan, następne kroki..."></textarea></div><div class="grid grid-cols-2 gap-3"><div><label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Priorytet</label><select id="modal-thread-priority" class="ios-select"><option value="niski">Niski</option><option value="normalny" selected>Normalny</option><option value="wysoki">Wysoki</option><option value="pilne">Pilne</option></select></div><div><label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Status</label><select id="modal-thread-status" class="ios-select"><option value="aktywny" selected>Aktywny</option><option value="wstrzymany">Wstrzymany</option><option value="zakonczony">Zakończony</option></select></div></div><div class="flex gap-3 pt-4"><button onclick="closeModal(); saveThread();" class="btn-primary">Zapisz</button><button onclick="closeModal(); if(window.editingThreadId) deleteThreadConfirm(window.editingThreadId);" id="delete-thread-btn" class="btn-destructive hidden">Usuń</button><button onclick="closeModal()" class="btn-secondary">Anuluj</button></div></div></div></div>
+</script>
+
+<script>
+let allThreads = [];
+let allRules = [];
+
+function initModule() {
+  loadThreads();
+  loadAssistantProfile();
+  loadRules();
+}
+
+function switchAsystentView(view) {
+  document.querySelectorAll('#asystent-watki-view, #asystent-profil-view, #asystent-reguly-view').forEach(el => el.classList.add('hidden'));
+  document.getElementById('asystent-' + view + '-view').classList.remove('hidden');
+  document.querySelectorAll('.segmented-btn').forEach(el => el.classList.remove('active'));
+  event.target.closest('.segmented-btn').classList.add('active');
+}
+
+// --- Wątki ---
+function loadThreads() {
+  google.script.run.withSuccessHandler(function(result) {
+    if (result.success) { allThreads = result.data; renderThreads(); }
+  }).getThreads();
+}
+function renderThreads() {
+  const columns = { 'aktywny': [], 'wstrzymany': [], 'zakonczony': [] };
+  allThreads.forEach(t => { const status = t.status || 'aktywny'; (columns[status] || columns.aktywny).push(t); });
+  ['aktywny', 'wstrzymany', 'zakonczony'].forEach(status => {
+    const html = columns[status].map(t => `<div class="ios-card p-3 cursor-pointer" onclick="showEditThreadModal('${escapeHtml(t.id)}')"><div class="text-[15px] font-medium text-[#000] mb-1 line-clamp-2">${escapeHtml(t.tytul)}</div>${t.kontekst ? `<div class="text-[13px] text-[#8e8e93] line-clamp-2 mb-2">${escapeHtml(t.kontekst)}</div>` : ''}<div>${getPriorityBadge(t.priorytet)}</div></div>`).join('');
+    const emptyMessage = `<div class="text-center text-[13px] text-[#8e8e93] py-6">Brak wątków</div>`;
+    document.getElementById(`watki-${status}`).innerHTML = `<div class="space-y-2">${html || emptyMessage}</div>`;
+  });
+}
+function showAddThreadModal() {
+  window.editingThreadId = null;
+  const modal = document.getElementById('thread-modal-template').innerHTML.replace('{{ title }}', 'Nowy wątek');
+  const tempDiv = document.createElement('div'); tempDiv.innerHTML = modal;
+  showModal(tempDiv.innerHTML);
+  document.getElementById('delete-thread-btn').classList.add('hidden');
+}
+function showEditThreadModal(threadId) {
+  window.editingThreadId = threadId;
+  const thread = allThreads.find(t => t.id === threadId);
+  if (!thread) return;
+  const modal = document.getElementById('thread-modal-template').innerHTML.replace('{{ title }}', 'Edytuj wątek');
+  const tempDiv = document.createElement('div'); tempDiv.innerHTML = modal;
+  showModal(tempDiv.innerHTML);
+  document.getElementById('modal-thread-title').value = thread.tytul;
+  document.getElementById('modal-thread-kontekst').value = thread.kontekst || '';
+  document.getElementById('modal-thread-priority').value = thread.priorytet || 'normalny';
+  document.getElementById('modal-thread-status').value = thread.status || 'aktywny';
+  document.getElementById('delete-thread-btn').classList.remove('hidden');
+}
+function saveThread() {
+  const title = document.getElementById('modal-thread-title').value.trim();
+  if (!title) { showError('Tytuł jest wymagany'); return; }
+  const data = {
+    tytul: title,
+    kontekst: document.getElementById('modal-thread-kontekst').value,
+    priorytet: document.getElementById('modal-thread-priority').value,
+    status: document.getElementById('modal-thread-status').value
+  };
+  if (window.editingThreadId) {
+    data.id = window.editingThreadId;
+    google.script.run.withSuccessHandler(function(result) {
+      if (result.success) { showSuccess('Wątek zaktualizowany'); loadThreads(); } else showError('Błąd: ' + result.error);
+    }).updateThread(data);
+  } else {
+    google.script.run.withSuccessHandler(function(result) {
+      if (result.success) { showSuccess('Wątek dodany'); loadThreads(); } else showError('Błąd: ' + result.error);
+    }).createThread(data);
+  }
+}
+function deleteThreadConfirm(threadId) {
+  if (!confirm('Czy na pewno chcesz usunąć ten wątek?')) return;
+  google.script.run.withSuccessHandler(function(result) {
+    if (result.success) { showSuccess('Wątek usunięty'); loadThreads(); } else showError('Błąd: ' + result.error);
+  }).deleteThread(threadId);
+}
+
+// --- Profil ---
+function loadAssistantProfile() {
+  google.script.run.withSuccessHandler(function(result) {
+    if (result.success) {
+      document.getElementById('profil-cele').value = result.data.asystent_cele || '';
+      document.getElementById('profil-preferencje').value = result.data.asystent_preferencje || '';
+      document.getElementById('profil-o-mnie').value = result.data.asystent_o_mnie || '';
+    }
+  }).getAssistantProfile();
+}
+function saveAssistantProfile() {
+  const data = {
+    asystent_cele: document.getElementById('profil-cele').value,
+    asystent_preferencje: document.getElementById('profil-preferencje').value,
+    asystent_o_mnie: document.getElementById('profil-o-mnie').value
+  };
+  google.script.run.withSuccessHandler(function(result) {
+    if (result.success) showSuccess('Profil zapisany'); else showError('Błąd: ' + result.error);
+  }).saveAssistantProfile(data);
+}
+
+// --- Reguły ---
+function loadRules() {
+  google.script.run.withSuccessHandler(function(result) {
+    if (result.success) { allRules = result.data; renderRules(); }
+  }).getRules();
+}
+function renderRules() {
+  if (allRules.length === 0) {
+    document.getElementById('rules-list').innerHTML = `<div class="empty-state py-8"><div class="empty-state-icon">📐</div><div class="empty-state-title">Brak reguł</div><div class="empty-state-text">Dodaj wnioski i preferencje, które asystent ma zapamiętać</div></div>`;
+    return;
+  }
+  const sorted = allRules.slice().reverse();
+  const html = sorted.map(r => `<div class="ios-row"><div class="flex-1 min-w-0"><div class="text-[15px] text-[#000]">${escapeHtml(r.tresc)}</div><div class="text-[13px] text-[#8e8e93] mt-1">${escapeHtml(r.zrodlo || 'manualna')} · ${formatDate(r.data_utworzenia)}</div></div><button onclick="deleteRuleConfirm('${escapeHtml(r.id)}')" class="p-2 text-[#ff3b30]"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div>`).join('');
+  document.getElementById('rules-list').innerHTML = html;
+  lucide.createIcons();
+}
+function addRuleFromInput() {
+  const input = document.getElementById('new-rule-input');
+  const tresc = input.value.trim();
+  if (!tresc) { showError('Wpisz treść reguły'); return; }
+  google.script.run.withSuccessHandler(function(result) {
+    if (result.success) { input.value = ''; showSuccess('Reguła dodana'); loadRules(); } else showError('Błąd: ' + result.error);
+  }).addRule({ tresc: tresc, zrodlo: 'manualna' });
+}
+function deleteRuleConfirm(id) {
+  if (!confirm('Usunąć tę regułę?')) return;
+  google.script.run.withSuccessHandler(function(result) {
+    if (result.success) { showSuccess('Reguła usunięta'); loadRules(); } else showError('Błąd: ' + result.error);
+  }).deleteRule(id);
+}
+</script>
