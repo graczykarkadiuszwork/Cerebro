@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<title>We SMILE — RCP</title>
+</head>
+<body>
+<?!= include('Styl'); ?>
+<div class="app">
+  <div class="brand">We SMILE — RCP</div>
+
+  <!-- KROK 1: PIN -->
+  <div class="karta" id="e-pin">
+    <h1 style="text-align:center">Wpisz swój PIN</h1>
+    <div class="sub" style="text-align:center">4-cyfrowy kod osobisty</div>
+    <div class="dots" id="dots">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+    </div>
+    <div class="kp" id="pinpad">
+      <button class="key" data-v="1">1</button><button class="key" data-v="2">2</button><button class="key" data-v="3">3</button>
+      <button class="key" data-v="4">4</button><button class="key" data-v="5">5</button><button class="key" data-v="6">6</button>
+      <button class="key" data-v="7">7</button><button class="key" data-v="8">8</button><button class="key" data-v="9">9</button>
+      <button class="key sym" data-v="C">C</button><button class="key" data-v="0">0</button><button class="key sym" data-v="X">⌫</button>
+    </div>
+  </div>
+
+  <!-- KROK 2: EKRAN GŁÓWNY (dotknięcie akcji) -->
+  <div class="karta ukryty" id="e-glowny">
+    <h1 id="g-imie">—</h1>
+    <div class="sub" id="g-info">—</div>
+    <div id="g-odcinki" style="margin:14px 0"></div>
+    <button class="btn btn-duzy" id="g-akcja">…</button>
+    <div class="wiersz-btn">
+      <button class="btn btn-szary btn-maly" id="g-uzupelnij">Uzupełnij dzień</button>
+      <button class="btn btn-szary btn-maly" id="g-wyloguj">Wyloguj</button>
+    </div>
+  </div>
+
+  <!-- Karty „do wyjaśnienia” -->
+  <div class="karta ukryty" id="e-karty">
+    <h2>Do uzupełnienia</h2>
+    <div id="k-lista"></div>
+  </div>
+
+  <!-- KROK 4: SUKCES -->
+  <div class="karta ukryty" id="e-ok">
+    <div class="ok-ekran">
+      <div class="ok-ikona">✓</div>
+      <div class="ok-tytul" id="ok-tytul">Zarejestrowano</div>
+      <div class="sub" id="ok-sub"></div>
+    </div>
+  </div>
+</div>
+
+<!-- KROK 3: POTWIERDZENIE odbicia -->
+<div class="tlo-modal ukryty" id="m-potwierdz">
+  <div class="modal">
+    <h2 id="p-tytul">Potwierdź</h2>
+    <div class="sub" id="p-opis"></div>
+    <div class="wiersz-btn">
+      <button class="btn btn-szary" id="p-anuluj">Anuluj</button>
+      <button class="btn btn-akcent" id="p-tak">Potwierdzam</button>
+    </div>
+  </div>
+</div>
+
+<!-- Uzupełnianie dnia: godziny ręcznie LUB nieobecność -->
+<div class="tlo-modal ukryty" id="m-dzien">
+  <div class="modal">
+    <h2>Uzupełnij dzień</h2>
+    <label>Data</label>
+    <input type="date" id="u-data">
+    <div class="taby" style="margin-top:14px">
+      <button class="tab on" id="u-tab-godz">Byłem/am w pracy</button>
+      <button class="tab" id="u-tab-nieob">Nieobecność</button>
+    </div>
+    <div id="u-godziny">
+      <div class="pola-2">
+        <div><label>Wejście</label><input type="time" id="u-od"></div>
+        <div><label>Wyjście</label><input type="time" id="u-do"></div>
+      </div>
+      <label>Uzasadnienie (obowiązkowe) — dlaczego wpisujesz ręcznie?</label>
+      <textarea id="u-uzas" maxlength="300" placeholder="np. zapomniałam się odbić / rejestracja była zamknięta / nie było internetu"></textarea>
+    </div>
+    <div id="u-nieob" class="ukryty">
+      <label>Rodzaj nieobecności</label>
+      <select id="u-typ"></select>
+      <label>Krótki opis (opcjonalnie)</label>
+      <input type="text" id="u-opis" maxlength="300" placeholder="np. wizyta lekarska">
+    </div>
+    <div class="wiersz-btn">
+      <button class="btn btn-szary" id="u-anuluj">Anuluj</button>
+      <button class="btn btn-akcent" id="u-zapisz">Zapisz</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var sesja = null, stan = null, pin = '', wybranaAkcja = null, timerWylog = null;
+
+function ekran(id) {
+  ['e-pin', 'e-glowny', 'e-ok'].forEach(function (e) {
+    $(e).classList.toggle('ukryty', e !== id);
+  });
+  $('e-karty').classList.toggle('ukryty', id !== 'e-glowny' || !stan || !stan.karty.length);
+}
+function modal(id, pokaz) { $(id).classList.toggle('ukryty', !pokaz); }
+function kropki() {
+  var d = $('dots').children;
+  for (var i = 0; i < 4; i++) d[i].className = 'dot' + (i < pin.length ? ' on' : '');
+}
+function planujWylogowanie() {
+  clearTimeout(timerWylog);
+  timerWylog = setTimeout(wyloguj, 120000); // 2 min bezczynności → powrót do PIN
+}
+function wyloguj() {
+  sesja = null; stan = null; pin = '';
+  kropki();
+  modal('m-potwierdz', false); modal('m-dzien', false);
+  ekran('e-pin');
+}
+
+// ── KROK 1: PIN (walidacja lokalna, RPC dopiero po 4. cyfrze) ──
+$('pinpad').addEventListener('click', function (e) {
+  var b = e.target.closest('[data-v]');
+  if (!b) return;
+  var v = b.getAttribute('data-v');
+  if (v === 'C') pin = '';
+  else if (v === 'X') pin = pin.slice(0, -1);
+  else if (pin.length < 4) pin += v;
+  kropki();
+  if (pin.length === 4) {
+    var wpisany = pin;
+    gas('pinLogin', [wpisany], function (res) {
+      if (res.ok) {
+        sesja = res.token; stan = res; pin = '';
+        kropki(); rysujGlowny(); ekran('e-glowny'); planujWylogowanie();
+      } else {
+        toast(res.msg || 'Nieprawidłowy PIN.', false);
+        $('e-pin').classList.add('shake');
+        setTimeout(function () { $('e-pin').classList.remove('shake'); }, 400);
+        pin = ''; kropki();
+      }
+    }, function () { pin = ''; kropki(); });
+  }
+});
+
+// ── KROK 2: ekran główny ──
+function rysujGlowny() {
+  $('g-imie').textContent = 'Cześć, ' + stan.imie + '!';
+  $('g-info').textContent = stan.dzis + ' · ' + (stan.otwarteOd
+    ? 'w pracy od ' + stan.otwarteOd
+    : (stan.minuty ? 'dziś przepracowano ' + stan.minutyTekst + ' h' : 'brak odbić dzisiaj'));
+
+  var html = '';
+  stan.odcinki.forEach(function (o) {
+    html += '<div class="poz"><div class="l"><b>' + esc(o.od) + ' – ' + esc(o.do) + '</b></div>' +
+            '<div class="r">' + esc(fmtMin(o.minuty)) + ' h</div></div>';
+  });
+  if (stan.otwarteOd) {
+    html += '<div class="poz"><div class="l"><b>' + esc(stan.otwarteOd) + ' – …</b>' +
+            '<div class="sub">odcinek w toku</div></div><div class="r"><span class="kropka k-ziel"></span></div></div>';
+  }
+  $('g-odcinki').innerHTML = html;
+
+  var we = stan.nastepna === 'WEJSCIE';
+  $('g-akcja').textContent = we ? 'WEJŚCIE' : 'WYJŚCIE';
+  $('g-akcja').className = 'btn btn-duzy ' + (we ? 'btn-in' : 'btn-out');
+
+  var kl = '';
+  (stan.karty || []).forEach(function (k) {
+    kl += '<div class="poz"><div class="l"><b>' + esc(k.data) + '</b><div class="sub">' + esc(k.problem) + '</div></div>' +
+          '<div class="r"><button class="btn btn-szary btn-maly" data-data="' + esc(k.data) + '">Uzupełnij</button></div></div>';
+  });
+  $('k-lista').innerHTML = kl;
+}
+function fmtMin(m) { m = m || 0; return Math.floor(m / 60) + ':' + ('0' + (m % 60)).slice(-2); }
+
+function odswiez(cb) {
+  gas('getStart', [sesja], function (res) {
+    if (res.ok) { stan = res; rysujGlowny(); ekran('e-glowny'); if (cb) cb(); }
+    else if (res.errorType === 'UNAUTHORIZED') { toast(res.msg, false); wyloguj(); }
+    else toast(res.msg || 'Błąd.', false);
+  });
+}
+
+// ── KROK 3: dotknięcie → potwierdzenie → zapis ──
+$('g-akcja').addEventListener('click', function () {
+  planujWylogowanie();
+  wybranaAkcja = stan.nastepna;
+  var we = wybranaAkcja === 'WEJSCIE';
+  $('p-tytul').textContent = we ? 'Rejestruję WEJŚCIE' : 'Rejestruję WYJŚCIE';
+  $('p-opis').textContent = stan.imie + ' ' + stan.nazwisko + ' · dziś, około ' + stan.teraz;
+  modal('m-potwierdz', true);
+});
+$('p-anuluj').addEventListener('click', function () { modal('m-potwierdz', false); });
+$('p-tak').addEventListener('click', function () {
+  modal('m-potwierdz', false);
+  $('p-tak').disabled = true;
+  gas('odbij', [sesja, wybranaAkcja], function (res) {
+    $('p-tak').disabled = false;
+    if (res.ok) {
+      $('ok-tytul').textContent = (res.akcja === 'WEJSCIE' ? 'WEJŚCIE' : 'WYJŚCIE') + ' o ' + res.godzina;
+      $('ok-sub').textContent = res.minuty ? 'Dziś łącznie: ' + res.minutyTekst + ' h' : '';
+      ekran('e-ok');
+      setTimeout(function () { odswiez(); }, 2200);
+    } else if (res.errorType === 'UNAUTHORIZED') { toast(res.msg, false); wyloguj(); }
+    else { toast(res.msg || 'Błąd rejestracji.', false); odswiez(); }
+  }, function () { $('p-tak').disabled = false; });
+});
+
+// ── Uzupełnianie dnia ──
+function otworzUzupelnianie(data) {
+  planujWylogowanie();
+  $('u-data').value = data || stan.dzis;
+  $('u-data').max = stan.dzis;
+  $('u-od').value = ''; $('u-do').value = ''; $('u-uzas').value = '';
+  $('u-opis').value = '';
+  var sel = $('u-typ'); sel.innerHTML = '';
+  (stan.typyNieobecnosci || []).forEach(function (t) {
+    var o = document.createElement('option'); o.value = t; o.textContent = t; sel.appendChild(o);
+  });
+  przelaczTab(true);
+  modal('m-dzien', true);
+}
+function przelaczTab(godziny) {
+  $('u-tab-godz').classList.toggle('on', godziny);
+  $('u-tab-nieob').classList.toggle('on', !godziny);
+  $('u-godziny').classList.toggle('ukryty', !godziny);
+  $('u-nieob').classList.toggle('ukryty', godziny);
+}
+$('u-tab-godz').addEventListener('click', function () { przelaczTab(true); });
+$('u-tab-nieob').addEventListener('click', function () { przelaczTab(false); });
+$('g-uzupelnij').addEventListener('click', function () { otworzUzupelnianie(null); });
+$('k-lista').addEventListener('click', function (e) {
+  var b = e.target.closest('[data-data]');
+  if (b) otworzUzupelnianie(b.getAttribute('data-data'));
+});
+$('u-anuluj').addEventListener('click', function () { modal('m-dzien', false); });
+$('u-zapisz').addEventListener('click', function () {
+  planujWylogowanie();
+  var data = $('u-data').value;
+  if (!data) { toast('Wybierz datę.', false); return; }
+  var trybGodzin = $('u-tab-godz').classList.contains('on');
+  $('u-zapisz').disabled = true;
+  var gotowe = function (res) {
+    $('u-zapisz').disabled = false;
+    if (res.ok) {
+      modal('m-dzien', false);
+      toast('Zapisano — wpis trafi do potwierdzenia przez właściciela.', true);
+      odswiez();
+    } else if (res.errorType === 'UNAUTHORIZED') { toast(res.msg, false); wyloguj(); }
+    else toast(res.msg || 'Błąd zapisu.', false);
+  };
+  if (trybGodzin) {
+    gas('reczneOdbicie', [sesja, data, $('u-od').value, $('u-do').value, $('u-uzas').value], gotowe,
+        function () { $('u-zapisz').disabled = false; });
+  } else {
+    gas('oznaczNieobecnosc', [sesja, data, $('u-typ').value, $('u-opis').value], gotowe,
+        function () { $('u-zapisz').disabled = false; });
+  }
+});
+
+$('g-wyloguj').addEventListener('click', wyloguj);
+document.addEventListener('click', function () { if (sesja) planujWylogowanie(); });
+kropki();
+</script>
+</body>
+</html>

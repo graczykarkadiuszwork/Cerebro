@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<title>We SMILE — Kadry</title>
+</head>
+<body>
+<?!= include('Styl'); ?>
+<div class="app">
+  <div class="brand">We SMILE — Panel Kadr</div>
+
+  <!-- Logowanie -->
+  <div class="karta" id="e-login">
+    <h1 style="text-align:center">PIN właściciela</h1>
+    <div class="dots" id="dots">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+    </div>
+    <div class="kp" id="pinpad">
+      <button class="key" data-v="1">1</button><button class="key" data-v="2">2</button><button class="key" data-v="3">3</button>
+      <button class="key" data-v="4">4</button><button class="key" data-v="5">5</button><button class="key" data-v="6">6</button>
+      <button class="key" data-v="7">7</button><button class="key" data-v="8">8</button><button class="key" data-v="9">9</button>
+      <button class="key sym" data-v="C">C</button><button class="key" data-v="0">0</button><button class="key sym" data-v="X">⌫</button>
+    </div>
+  </div>
+
+  <!-- Panel -->
+  <div id="e-panel" class="ukryty">
+    <div class="taby" style="margin-bottom:12px">
+      <button class="tab on" data-tab="dzis">Dziś</button>
+      <button class="tab" data-tab="skrzynka">Skrzynka<span class="licznik ukryty" id="licznik">0</span></button>
+      <button class="tab" data-tab="miesiac">Miesiąc</button>
+    </div>
+
+    <div class="karta" id="t-dzis">
+      <h2 id="d-naglowek">Dziś</h2>
+      <div id="d-lista"><div class="szkielet"></div><div class="szkielet"></div></div>
+    </div>
+
+    <div class="karta ukryty" id="t-skrzynka">
+      <h2>Do decyzji</h2>
+      <div id="s-lista"></div>
+    </div>
+
+    <div class="karta ukryty" id="t-miesiac">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <button class="btn btn-szary btn-maly" id="m-wstecz">←</button>
+        <h2 id="m-naglowek" style="margin:0">—</h2>
+        <button class="btn btn-szary btn-maly" id="m-naprzod">→</button>
+      </div>
+      <label>Pracownik</label>
+      <select id="m-osoba"></select>
+      <div id="m-suma" class="sub" style="margin:10px 0"></div>
+      <div class="przewijalna"><table id="m-tabela"></table></div>
+      <div class="wiersz-btn">
+        <button class="btn btn-akcent" id="m-eksport">Pobierz XLSX (wszyscy)</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edytor dnia -->
+<div class="tlo-modal ukryty" id="m-edytor">
+  <div class="modal">
+    <h2 id="ed-tytul">Edycja dnia</h2>
+    <div class="sub" id="ed-info"></div>
+    <div id="ed-zdarzenia" style="margin-top:10px"></div>
+    <h2 style="margin-top:14px">Odcinki pracy</h2>
+    <div id="ed-odcinki"></div>
+    <button class="btn btn-szary btn-maly" id="ed-dodaj" style="margin-top:8px">+ dodaj odcinek</button>
+    <label>Nieobecność (zamiast godzin)</label>
+    <select id="ed-nieob"><option value="">— brak —</option></select>
+    <input type="text" id="ed-nieob-opis" maxlength="300" placeholder="opis nieobecności (opcjonalnie)" style="margin-top:8px">
+    <label>Powód korekty (obowiązkowy)</label>
+    <textarea id="ed-powod" maxlength="300" placeholder="np. potwierdzone telefonicznie, korekta błędnego odbicia"></textarea>
+    <div class="wiersz-btn">
+      <button class="btn btn-szary" id="ed-anuluj">Anuluj</button>
+      <button class="btn btn-akcent" id="ed-zapisz">Zapisz dzień</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var sesja = null, pin = '', mRok, mMies, mDane = null, edytowany = null;
+
+function kropki() {
+  var d = $('dots').children;
+  for (var i = 0; i < 4; i++) d[i].className = 'dot' + (i < pin.length ? ' on' : '');
+}
+$('pinpad').addEventListener('click', function (e) {
+  var b = e.target.closest('[data-v]');
+  if (!b) return;
+  var v = b.getAttribute('data-v');
+  if (v === 'C') pin = '';
+  else if (v === 'X') pin = pin.slice(0, -1);
+  else if (pin.length < 4) pin += v;
+  kropki();
+  if (pin.length === 4) {
+    gas('wlLogin', [pin], function (res) {
+      pin = ''; kropki();
+      if (res.ok) {
+        sesja = res.token;
+        var d = new Date(res.dzis + 'T12:00:00');
+        mRok = d.getFullYear(); mMies = d.getMonth() + 1;
+        $('e-login').classList.add('ukryty');
+        $('e-panel').classList.remove('ukryty');
+        pokazTab('dzis'); zaladujSkrzynke();
+      } else toast(res.msg || 'Brak dostępu.', false);
+    }, function () { pin = ''; kropki(); });
+  }
+});
+
+function wylogowano(res) {
+  if (res && res.errorType === 'UNAUTHORIZED') {
+    toast(res.msg || 'Sesja wygasła.', false);
+    sesja = null;
+    $('e-panel').classList.add('ukryty');
+    $('e-login').classList.remove('ukryty');
+    return true;
+  }
+  return false;
+}
+
+// ── Zakładki ──
+document.querySelectorAll('.tab[data-tab]').forEach(function (t) {
+  t.addEventListener('click', function () { pokazTab(t.getAttribute('data-tab')); });
+});
+function pokazTab(nazwa) {
+  document.querySelectorAll('.tab[data-tab]').forEach(function (t) {
+    t.classList.toggle('on', t.getAttribute('data-tab') === nazwa);
+  });
+  ['dzis', 'skrzynka', 'miesiac'].forEach(function (n) {
+    $('t-' + n).classList.toggle('ukryty', n !== nazwa);
+  });
+  if (nazwa === 'dzis') zaladujDzis();
+  if (nazwa === 'skrzynka') zaladujSkrzynke();
+  if (nazwa === 'miesiac') zaladujMiesiac();
+}
+
+// ── Dziś ──
+function zaladujDzis() {
+  gas('wlDzis', [sesja], function (res) {
+    if (wylogowano(res)) return;
+    if (!res.ok) { toast(res.msg, false); return; }
+    $('d-naglowek').textContent = 'Dziś, ' + res.dzis + ' · ' + res.teraz;
+    var html = '';
+    res.lista.forEach(function (p) {
+      var kropka = { OBECNY: 'k-ziel', SKONCZYL: 'k-nieb', NIEOBECNY: 'k-zolt', BRAK: 'k-szar' }[p.stan];
+      html += '<div class="poz"><div class="l"><b><span class="kropka ' + kropka + '"></span>' +
+        esc(p.imie + ' ' + p.nazwisko) + '</b>' +
+        (p.bledy.length ? '<span class="chip zle">!</span>' : '') +
+        '<div class="sub">' + esc(p.opis) + '</div></div>' +
+        '<div class="r">' + esc(p.odcinkiTekst) + '</div></div>';
+    });
+    $('d-lista').innerHTML = html || '<div class="sub">Brak aktywnych pracowników.</div>';
+  });
+}
+
+// ── Skrzynka ──
+function zaladujSkrzynke() {
+  gas('wlSkrzynka', [sesja], function (res) {
+    if (wylogowano(res)) return;
+    if (!res.ok) { toast(res.msg, false); return; }
+    var l = $('licznik');
+    l.textContent = res.karty.length;
+    l.classList.toggle('ukryty', !res.karty.length);
+    var html = '';
+    res.karty.forEach(function (k, i) {
+      var etyk = { RECZNE: 'wpis ręczny', NIEDOKONCZONY: 'do uzupełnienia', NIEOBECNOSC: 'nieobecność' }[k.typ];
+      html += '<div class="poz" style="display:block">' +
+        '<b>' + esc(k.naglowek) + '</b><span class="chip uwaga">' + etyk + '</span>' +
+        (k.szczegoly ? '<div class="sub">' + esc(k.szczegoly) + '</div>' : '') +
+        (k.uzasadnienie ? '<div class="sub">„' + esc(k.uzasadnienie) + '”</div>' : '') +
+        '<div class="wiersz-btn" style="margin-top:8px">' +
+        (k.typ !== 'NIEDOKONCZONY'
+          ? '<button class="btn btn-akcent btn-maly" data-akcja="potwierdz" data-i="' + i + '">Potwierdź</button>' : '') +
+        '<button class="btn btn-szary btn-maly" data-akcja="edytuj" data-i="' + i + '">' +
+        (k.typ === 'NIEDOKONCZONY' ? 'Uzupełnij' : 'Edytuj') + '</button>' +
+        '</div></div>';
+    });
+    $('s-lista').innerHTML = html || '<div class="sub">Skrzynka pusta — wszystko rozliczone. ✓</div>';
+    $('s-lista').dataset.karty = JSON.stringify(res.karty);
+  });
+}
+$('s-lista').addEventListener('click', function (e) {
+  var b = e.target.closest('[data-akcja]');
+  if (!b) return;
+  var karty = JSON.parse($('s-lista').dataset.karty || '[]');
+  var k = karty[parseInt(b.getAttribute('data-i'), 10)];
+  if (!k) return;
+  if (b.getAttribute('data-akcja') === 'edytuj') { otworzEdytor(k.empId, k.data); return; }
+  // Potwierdź: godziny/nieobecność zostają, jakby wszystko odbyło się normalnie.
+  b.disabled = true;
+  var cb = function (res) {
+    b.disabled = false;
+    if (wylogowano(res)) return;
+    if (res.ok) { toast('Potwierdzono.', true); zaladujSkrzynke(); }
+    else toast(res.msg, false);
+  };
+  if (k.typ === 'RECZNE') gas('wlZatwierdzReczne', [sesja, k.empId, k.data], cb, function(){ b.disabled=false; });
+  else gas('wlZatwierdzNieobecnosc', [sesja, k.wpisId], cb, function(){ b.disabled=false; });
+});
+
+// ── Edytor dnia ──
+function otworzEdytor(empId, data) {
+  gas('wlDzien', [sesja, empId, data], function (res) {
+    if (wylogowano(res)) return;
+    if (!res.ok) { toast(res.msg, false); return; }
+    edytowany = { empId: res.empId, data: res.data };
+    $('ed-tytul').textContent = res.kto + ' — ' + res.data;
+    $('ed-info').textContent = res.bledy.length ? res.bledy.join(' • ') : '';
+    var zh = '';
+    res.zdarzenia.forEach(function (z) {
+      var zrodlo = { worker: 'odbicie', reczne: 'ręczne', wlasciciel: 'korekta', admin_override: 'korekta (stary system)' }[z.zrodlo] || z.zrodlo;
+      zh += '<div class="sub">' + esc(z.akcja === 'WEJSCIE' ? 'We ' : 'Wy ') + esc(z.godzina) + ' · ' + esc(zrodlo) +
+            (z.uzas ? ' · „' + esc(z.uzas) + '”' : '') + '</div>';
+    });
+    $('ed-zdarzenia').innerHTML = zh || '<div class="sub">Brak zdarzeń tego dnia.</div>';
+    $('ed-odcinki').innerHTML = '';
+    (res.odcinki.length ? res.odcinki : [{ od: '', do: '' }]).forEach(function (o) { dodajWierszOdcinka(o.od, o.do); });
+    var sel = $('ed-nieob');
+    sel.innerHTML = '<option value="">— brak —</option>';
+    res.typyNieobecnosci.forEach(function (t) {
+      var o = document.createElement('option'); o.value = t; o.textContent = t; sel.appendChild(o);
+    });
+    if (res.nieobecnosc) { sel.value = res.nieobecnosc.typ; $('ed-nieob-opis').value = res.nieobecnosc.opis || ''; }
+    else $('ed-nieob-opis').value = '';
+    $('ed-powod').value = '';
+    $('m-edytor').classList.remove('ukryty');
+  });
+}
+function dodajWierszOdcinka(od, do_) {
+  var d = document.createElement('div');
+  d.className = 'pola-2';
+  d.style.marginTop = '8px';
+  d.innerHTML = '<div><input type="time" class="ed-od" value="' + esc(od || '') + '"></div>' +
+                '<div><input type="time" class="ed-do" value="' + esc(do_ || '') + '"></div>' +
+                '<button class="btn btn-szary btn-maly ed-usun" style="flex:0 0 auto">✕</button>';
+  d.querySelector('.ed-usun').addEventListener('click', function () { d.remove(); });
+  $('ed-odcinki').appendChild(d);
+}
+$('ed-dodaj').addEventListener('click', function () { dodajWierszOdcinka('', ''); });
+$('ed-anuluj').addEventListener('click', function () { $('m-edytor').classList.add('ukryty'); });
+$('ed-zapisz').addEventListener('click', function () {
+  var odcinki = [];
+  document.querySelectorAll('#ed-odcinki .pola-2').forEach(function (w) {
+    odcinki.push({ od: w.querySelector('.ed-od').value, do: w.querySelector('.ed-do').value });
+  });
+  var typ = $('ed-nieob').value;
+  var nieob = typ ? { typ: typ, opis: $('ed-nieob-opis').value } : null;
+  $('ed-zapisz').disabled = true;
+  gas('wlZapiszDzien',
+      [sesja, edytowany.empId, edytowany.data, JSON.stringify(odcinki), nieob ? JSON.stringify(nieob) : '', $('ed-powod').value],
+      function (res) {
+        $('ed-zapisz').disabled = false;
+        if (wylogowano(res)) return;
+        if (res.ok) {
+          $('m-edytor').classList.add('ukryty');
+          toast('Dzień zapisany.', true);
+          zaladujSkrzynke(); zaladujDzis();
+          if (!$('t-miesiac').classList.contains('ukryty')) zaladujMiesiac();
+        } else toast(res.msg, false);
+      }, function () { $('ed-zapisz').disabled = false; });
+});
+
+// ── Miesiąc ──
+var MIESIACE = ['styczeń','luty','marzec','kwiecień','maj','czerwiec','lipiec','sierpień','wrzesień','październik','listopad','grudzień'];
+function zaladujMiesiac() {
+  $('m-naglowek').textContent = MIESIACE[mMies - 1] + ' ' + mRok;
+  $('m-tabela').innerHTML = '';
+  $('m-suma').textContent = 'Ładowanie…';
+  gas('wlMiesiac', [sesja, mRok, mMies], function (res) {
+    if (wylogowano(res)) return;
+    if (!res.ok) { toast(res.msg, false); return; }
+    mDane = res;
+    var sel = $('m-osoba'), poprzedni = sel.value;
+    sel.innerHTML = '';
+    res.pracownicy.forEach(function (p, i) {
+      var o = document.createElement('option');
+      o.value = i; o.textContent = p.imie + ' ' + p.nazwisko + ' — ' + p.sumaTekst + ' h';
+      sel.appendChild(o);
+    });
+    if (poprzedni && sel.querySelector('[value="' + poprzedni + '"]')) sel.value = poprzedni;
+    rysujOsobe();
+  });
+}
+function rysujOsobe() {
+  if (!mDane || !mDane.pracownicy.length) { $('m-suma').textContent = 'Brak danych.'; return; }
+  var p = mDane.pracownicy[parseInt($('m-osoba').value || '0', 10)] || mDane.pracownicy[0];
+  $('m-suma').textContent = 'Suma miesiąca: ' + p.sumaTekst + ' h';
+  var html = '<tr><th>Dzień</th><th>Odcinki</th><th>Suma</th><th></th></tr>';
+  p.dni.forEach(function (d) {
+    var chipy = '';
+    if (d.flagi.indexOf('RECZNE') !== -1) chipy += '<span class="chip uwaga">ręczne</span>';
+    if (d.flagi.indexOf('RECZNE_OK') !== -1) chipy += '<span class="chip ok">ręczne ✓</span>';
+    if (d.flagi.indexOf('EDYCJA') !== -1) chipy += '<span class="chip">korekta</span>';
+    if (d.flagi.indexOf('PROBLEM') !== -1) chipy += '<span class="chip zle">!</span>';
+    html += '<tr><td>' + esc(d.data.slice(8)) + ' ' + esc(d.dow) + '</td>' +
+      '<td>' + esc(d.odcinkiTekst === '—' ? (d.nieobecnosc || '—') : d.odcinkiTekst) + chipy + '</td>' +
+      '<td>' + esc(d.minutyTekst) + '</td>' +
+      '<td><button class="btn btn-szary btn-maly" data-data="' + esc(d.data) + '" data-emp="' + esc(p.id) + '">Edytuj</button></td></tr>';
+  });
+  $('m-tabela').innerHTML = html;
+}
+$('m-osoba').addEventListener('change', rysujOsobe);
+$('m-tabela').addEventListener('click', function (e) {
+  var b = e.target.closest('[data-data]');
+  if (b) otworzEdytor(b.getAttribute('data-emp'), b.getAttribute('data-data'));
+});
+$('m-wstecz').addEventListener('click', function () { mMies--; if (mMies < 1) { mMies = 12; mRok--; } zaladujMiesiac(); });
+$('m-naprzod').addEventListener('click', function () { mMies++; if (mMies > 12) { mMies = 1; mRok++; } zaladujMiesiac(); });
+$('m-eksport').addEventListener('click', function () {
+  $('m-eksport').disabled = true;
+  toast('Generuję plik…', true);
+  gas('wlEksport', [sesja, mRok, mMies], function (res) {
+    $('m-eksport').disabled = false;
+    if (wylogowano(res)) return;
+    if (!res.ok) { toast(res.msg, false); return; }
+    var a = document.createElement('a');
+    a.href = 'data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,' + res.base64;
+    a.download = res.filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    toast('Pobrano ' + res.filename, true);
+  }, function () { $('m-eksport').disabled = false; });
+});
+kropki();
+</script>
+</body>
+</html>

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<title>We SMILE — Admin</title>
+</head>
+<body>
+<?!= include('Styl'); ?>
+<div class="app">
+  <div class="brand">We SMILE — Admin-Edytor</div>
+
+  <div class="karta" id="e-login">
+    <h1 style="text-align:center">PIN administratora</h1>
+    <div class="dots" id="dots">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+    </div>
+    <div class="kp" id="pinpad">
+      <button class="key" data-v="1">1</button><button class="key" data-v="2">2</button><button class="key" data-v="3">3</button>
+      <button class="key" data-v="4">4</button><button class="key" data-v="5">5</button><button class="key" data-v="6">6</button>
+      <button class="key" data-v="7">7</button><button class="key" data-v="8">8</button><button class="key" data-v="9">9</button>
+      <button class="key sym" data-v="C">C</button><button class="key" data-v="0">0</button><button class="key sym" data-v="X">⌫</button>
+    </div>
+  </div>
+
+  <div id="e-panel" class="ukryty">
+    <div class="karta">
+      <h2>Zespół</h2>
+      <div id="p-lista"><div class="szkielet"></div><div class="szkielet"></div></div>
+      <button class="btn btn-akcent" id="p-dodaj" style="margin-top:12px">+ Dodaj osobę</button>
+    </div>
+    <div class="karta" style="margin-top:12px">
+      <h2>Ostatnie zdarzenia (log)</h2>
+      <div id="l-lista" class="sub">—</div>
+    </div>
+  </div>
+</div>
+
+<!-- Dodawanie osoby -->
+<div class="tlo-modal ukryty" id="m-dodaj">
+  <div class="modal">
+    <h2>Nowa osoba</h2>
+    <label>Imię</label><input id="n-imie" maxlength="60">
+    <label>Nazwisko</label><input id="n-nazwisko" maxlength="60">
+    <label>Stanowisko</label><input id="n-stanowisko" maxlength="60" placeholder="np. higienistka stomatologiczna">
+    <label>Forma zatrudnienia</label><select id="n-forma"></select>
+    <label style="display:flex;align-items:center;gap:8px;margin-top:14px">
+      <input type="checkbox" id="n-wl" style="width:auto"> dostęp do panelu Kadr (właściciel)
+    </label>
+    <label style="display:flex;align-items:center;gap:8px">
+      <input type="checkbox" id="n-ad" style="width:auto"> dostęp do panelu Admina
+    </label>
+    <div class="wiersz-btn">
+      <button class="btn btn-szary" id="n-anuluj">Anuluj</button>
+      <button class="btn btn-akcent" id="n-zapisz">Utwórz</button>
+    </div>
+  </div>
+</div>
+
+<!-- Jednorazowe pokazanie PIN-u -->
+<div class="tlo-modal ukryty" id="m-pin">
+  <div class="modal">
+    <div class="ok-ekran">
+      <div class="ok-tytul" id="pin-kto">—</div>
+      <div class="sub" style="margin:8px 0">Nowy PIN (pokazywany tylko teraz — przekaż osobiście):</div>
+      <div style="font-size:44px;font-weight:900;letter-spacing:10px" id="pin-wartosc">····</div>
+    </div>
+    <button class="btn btn-akcent" id="pin-ok">Zapisałem — zamknij</button>
+  </div>
+</div>
+
+<script>
+var sesja = null, pin = '';
+
+function kropki() {
+  var d = $('dots').children;
+  for (var i = 0; i < 4; i++) d[i].className = 'dot' + (i < pin.length ? ' on' : '');
+}
+$('pinpad').addEventListener('click', function (e) {
+  var b = e.target.closest('[data-v]');
+  if (!b) return;
+  var v = b.getAttribute('data-v');
+  if (v === 'C') pin = '';
+  else if (v === 'X') pin = pin.slice(0, -1);
+  else if (pin.length < 4) pin += v;
+  kropki();
+  if (pin.length === 4) {
+    gas('adLogin', [pin], function (res) {
+      pin = ''; kropki();
+      if (res.ok) {
+        sesja = res.token;
+        $('e-login').classList.add('ukryty');
+        $('e-panel').classList.remove('ukryty');
+        zaladuj();
+      } else toast(res.msg || 'Brak dostępu.', false);
+    }, function () { pin = ''; kropki(); });
+  }
+});
+
+function wylogowano(res) {
+  if (res && res.errorType === 'UNAUTHORIZED') {
+    toast(res.msg || 'Sesja wygasła.', false);
+    sesja = null;
+    $('e-panel').classList.add('ukryty');
+    $('e-login').classList.remove('ukryty');
+    return true;
+  }
+  return false;
+}
+
+function zaladuj() {
+  gas('adPracownicy', [sesja], function (res) {
+    if (wylogowano(res)) return;
+    if (!res.ok) { toast(res.msg, false); return; }
+    var sel = $('n-forma');
+    sel.innerHTML = '';
+    res.formy.forEach(function (f) {
+      var o = document.createElement('option'); o.value = f; o.textContent = f; sel.appendChild(o);
+    });
+    var html = '';
+    res.lista.forEach(function (p) {
+      var role = [];
+      if (p.wlasciciel) role.push('Kadry');
+      if (p.admin) role.push('Admin');
+      html += '<div class="poz"><div class="l"><b><span class="kropka ' + (p.aktywny ? 'k-ziel' : 'k-szar') + '"></span>' +
+        esc(p.imie + ' ' + p.nazwisko) + '</b>' +
+        (role.length ? '<span class="chip">' + esc(role.join(' + ')) + '</span>' : '') +
+        (!p.maPin ? '<span class="chip zle">brak PIN</span>' : '') +
+        '<div class="sub">' + esc(p.id + ' · ' + p.stanowisko + ' · ' + p.forma) + '</div></div>' +
+        '<div class="r"><button class="btn btn-szary btn-maly" data-akcja="pin" data-id="' + esc(p.id) + '">PIN</button> ' +
+        '<button class="btn btn-szary btn-maly" data-akcja="status" data-id="' + esc(p.id) + '" data-aktywny="' + (p.aktywny ? '1' : '0') + '">' +
+        (p.aktywny ? 'Dezaktywuj' : 'Aktywuj') + '</button></div></div>';
+    });
+    $('p-lista').innerHTML = html || '<div class="sub">Brak osób.</div>';
+  });
+  gas('adLogi', [sesja], function (res) {
+    if (wylogowano(res)) return;
+    if (!res.ok) return;
+    $('l-lista').innerHTML = res.logi.slice(0, 25).map(function (l) {
+      return '<div style="margin-bottom:6px">' + esc(l.ts.slice(0, 16).replace('T', ' ')) + ' · <b>' + esc(l.akcja) + '</b> · ' +
+             esc(l.empId) + '<br>' + esc(l.szczegoly.slice(0, 120)) + '</div>';
+    }).join('') || '—';
+  });
+}
+
+$('p-lista').addEventListener('click', function (e) {
+  var b = e.target.closest('[data-akcja]');
+  if (!b) return;
+  var id = b.getAttribute('data-id');
+  if (b.getAttribute('data-akcja') === 'pin') {
+    if (!confirm('Wygenerować nowy PIN dla ' + id + '? Stary przestanie działać.')) return;
+    b.disabled = true;
+    gas('adResetPin', [sesja, id], function (res) {
+      b.disabled = false;
+      if (wylogowano(res)) return;
+      if (!res.ok) { toast(res.msg, false); return; }
+      $('pin-kto').textContent = res.kto;
+      $('pin-wartosc').textContent = res.pin;
+      $('m-pin').classList.remove('ukryty');
+    }, function () { b.disabled = false; });
+  } else {
+    var aktywny = b.getAttribute('data-aktywny') === '1';
+    if (aktywny && !confirm('Dezaktywować konto ' + id + '? Osoba straci możliwość odbijania.')) return;
+    b.disabled = true;
+    gas('adStatus', [sesja, id, !aktywny], function (res) {
+      b.disabled = false;
+      if (wylogowano(res)) return;
+      if (res.ok) { toast('Zapisano.', true); zaladuj(); }
+      else toast(res.msg, false);
+    }, function () { b.disabled = false; });
+  }
+});
+
+$('p-dodaj').addEventListener('click', function () {
+  $('n-imie').value = ''; $('n-nazwisko').value = ''; $('n-stanowisko').value = '';
+  $('n-wl').checked = false; $('n-ad').checked = false;
+  $('m-dodaj').classList.remove('ukryty');
+});
+$('n-anuluj').addEventListener('click', function () { $('m-dodaj').classList.add('ukryty'); });
+$('n-zapisz').addEventListener('click', function () {
+  $('n-zapisz').disabled = true;
+  gas('adDodaj', [sesja, $('n-imie').value, $('n-nazwisko').value, $('n-stanowisko').value,
+                  $('n-forma').value, $('n-wl').checked, $('n-ad').checked],
+    function (res) {
+      $('n-zapisz').disabled = false;
+      if (wylogowano(res)) return;
+      if (!res.ok) { toast(res.msg, false); return; }
+      $('m-dodaj').classList.add('ukryty');
+      $('pin-kto').textContent = 'Nowe konto: ' + res.id;
+      $('pin-wartosc').textContent = res.pin;
+      $('m-pin').classList.remove('ukryty');
+      zaladuj();
+    }, function () { $('n-zapisz').disabled = false; });
+});
+$('pin-ok').addEventListener('click', function () { $('m-pin').classList.add('ukryty'); });
+kropki();
+</script>
+</body>
+</html>
