@@ -53,6 +53,8 @@ body{background:#0f0f11;color:#f0f0f2;min-height:100vh;min-height:100dvh}
 .marquee-item{display:inline-flex;align-items:center;gap:7px;margin-right:40px;font-size:14px;color:#ccc;font-weight:500}
 .marquee-dot{width:9px;height:9px;border-radius:50%;background:#00a86b;flex-shrink:0;animation:pulse-dot 1.6s ease-out infinite}
 @keyframes pulse-dot{0%{box-shadow:0 0 0 0 rgba(0,168,107,.6)}70%{box-shadow:0 0 0 7px rgba(0,168,107,0)}100%{box-shadow:0 0 0 0 rgba(0,168,107,0)}}
+.marquee-dot.done{background:#555;animation:none}
+.marquee-item.done{color:#666}
 .marquee-empty{font-size:14px;color:#444;padding-left:16px}
 
 /* ── MODAL ── */
@@ -64,6 +66,9 @@ body{background:#0f0f11;color:#f0f0f2;min-height:100vh;min-height:100dvh}
 .modal-list{display:flex;flex-direction:column;gap:8px}
 .modal-row{display:flex;align-items:center;justify-content:space-between;background:#232326;border-radius:12px;padding:12px 14px;font-size:15px}
 .modal-row-name{display:flex;align-items:center;gap:8px}
+.modal-row.done{opacity:.65}
+.modal-sec{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:#555;font-weight:700;margin:10px 0 2px}
+.modal-sec:first-child{margin-top:0}
 .modal-empty{color:#555;font-size:14px;padding:14px 0;text-align:center}
 
 /* ── DAY DETAILS ── */
@@ -256,7 +261,7 @@ tr.note-tr .nt-ovr{color:#e8b545}
 <div id="active-modal" class="modal-overlay" style="display:none">
   <div class="modal-card">
     <div class="modal-head">
-      <span>👥 Obecnie w pracy</span>
+      <span>👥 Obecność dzisiaj</span>
       <button id="modal-close" class="modal-x">✕</button>
     </div>
     <div id="modal-list" class="modal-list"></div>
@@ -422,26 +427,32 @@ function pollActive() {
   if (!S.token) return;
   gas('getActive', [S.token], function(res) {
     if (!res || !res.ok) return;
-    renderMarquee(res.active);
-    renderModalList(res.active);
+    renderMarquee(res.active, res.finished);
+    renderModalList(res.active, res.finished);
   });
 }
 
-function renderMarquee(list) {
+function renderMarquee(active, finished) {
   var bar   = document.getElementById('marquee-bar');
   var track = document.getElementById('marquee-track');
   bar.style.display = 'block';
+  active   = active || [];
+  finished = finished || [];
 
-  if (!list || list.length === 0) {
+  if (active.length === 0 && finished.length === 0) {
     track.className = 'marquee-track';
     track.style.paddingLeft = '16px';
-    track.innerHTML = '<span class="marquee-empty">Nikt obecnie nie jest w pracy</span>';
+    track.innerHTML = '<span class="marquee-empty">Nikt dziś nie rozpoczął pracy</span>';
     return;
   }
 
-  var itemsHtml = list.map(function(p) {
+  var itemsHtml = active.map(function(p) {
     return '<span class="marquee-item"><span class="marquee-dot"></span>' +
       esc(p.imie + ' ' + p.nazwisko) + ' — od ' + esc(p.wejscie) + '</span>';
+  }).join('') + finished.map(function(p) {
+    return '<span class="marquee-item done"><span class="marquee-dot done"></span>' +
+      esc(p.imie + ' ' + p.nazwisko) + ' — zakończono ' +
+      esc((p.wejscie || '?') + '–' + (p.wyjscie || '?')) + '</span>';
   }).join('');
 
   track.className = 'marquee-track';
@@ -456,17 +467,35 @@ function renderMarquee(list) {
   }
 }
 
-function renderModalList(list) {
+function renderModalList(active, finished) {
   var el = document.getElementById('modal-list');
-  if (!list || list.length === 0) {
-    el.innerHTML = '<div class="modal-empty">Nikt obecnie nie jest w pracy</div>';
+  active   = active || [];
+  finished = finished || [];
+
+  if (active.length === 0 && finished.length === 0) {
+    el.innerHTML = '<div class="modal-empty">Nikt dziś nie rozpoczął pracy</div>';
     return;
   }
-  el.innerHTML = list.map(function(p) {
-    return '<div class="modal-row"><span class="modal-row-name"><span class="marquee-dot"></span>' +
-      esc(p.imie + ' ' + p.nazwisko) + '</span>' +
-      '<span style="color:#00a86b;font-weight:700;font-family:monospace">' + esc(p.wejscie) + '</span></div>';
-  }).join('');
+
+  var html = '';
+  if (active.length > 0) {
+    html += '<div class="modal-sec">W pracy</div>';
+    html += active.map(function(p) {
+      return '<div class="modal-row"><span class="modal-row-name"><span class="marquee-dot"></span>' +
+        esc(p.imie + ' ' + p.nazwisko) + '</span>' +
+        '<span style="color:#00a86b;font-weight:700;font-family:monospace">od ' + esc(p.wejscie) + '</span></div>';
+    }).join('');
+  }
+  if (finished.length > 0) {
+    html += '<div class="modal-sec">Zakończyli dziś</div>';
+    html += finished.map(function(p) {
+      return '<div class="modal-row done"><span class="modal-row-name"><span class="marquee-dot done"></span>' +
+        esc(p.imie + ' ' + p.nazwisko) + '</span>' +
+        '<span style="color:#888;font-weight:700;font-family:monospace">' +
+        esc((p.wejscie || '?') + '–' + (p.wyjscie || '?')) + '</span></div>';
+    }).join('');
+  }
+  el.innerHTML = html;
 }
 
 document.getElementById('marquee-bar').addEventListener('click', function() {
