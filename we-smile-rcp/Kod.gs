@@ -1,0 +1,444 @@
+// ============================================================
+// We SMILE — RCP v7.0
+// ============================================================
+//
+// Schemat arkusza (ID poniżej):
+//   Pracownicy    : [ID, Imię, Nazwisko, Rola, Status, PIN]
+//   Ewidencja     : [Timestamp, EmpID, Imię, Nazwisko, Akcja, Data, Godzina, Źródło]
+//   Anomalie      : [Timestamp, EmpID, Opis]
+//   Nieobecnosci  : [Timestamp, EmpID, Imię, Nazwisko, Data, Kod, Typ, Adnotacja, Źródło]
+//   Przekroczenia : [Timestamp, EmpID, Data, Uzasadnienie, Źródło]
+//
+// Po wgraniu do GAS uruchom raz ręcznie: setupRCP()
+// ============================================================
+
+const SS_ID          = '1wI3ysrolzGea5nNi7GYBo09t38y8oUgPoqGG3wn-ZsA';
+const TOKEN_WIN_SEC  = 30;
+const TOKEN_GRACE    = 1;    // ±1 okno tolerancji
+const DEDUP_SEC      = 90;
+const RATE_MAX       = 5;
+const RATE_WIN_SEC   = 300;
+
+// ── Godziny pracy Kliniki ────────────────────────────────────
+// Pn–Pt 8:00–21:00, Sb 9:00–16:00, Nd — nieczynne.
+
+function _clinicHoursFor(ds) {
+  const dow = new Date(ds + 'T12:00:00').getDay(); // 0=Nd
+  if (dow === 0) return null;
+  if (dow === 6) return { open: 9 * 60, close: 16 * 60 };
+  return { open: 8 * 60, close: 21 * 60 };
+}
+
+// Czy dzień (na podstawie pierwszego wejścia / ostatniego wyjścia)
+// wykracza poza regularne godziny Kliniki.
+function _dayOutsideClinic(ds, wejscie, wyjscie) {
+  if (!wejscie && !wyjscie) return false;
+  const h = _clinicHoursFor(ds);
+  if (!h) return true; // niedziela
+  if (wejscie && _t2m(wejscie) < h.open)  return true;
+  if (wyjscie && _t2m(wyjscie) > h.close) return true;
+  return false;
+}
+
+// ── Typy nieobecności ────────────────────────────────────────
+// Pokrywają UoP, umowę zlecenie i B2B. Sheet przechowuje kod + etykietę.
+
+const ABSENCE_TYPES = [
+  { code: 'L4',   label: 'L4 — zwolnienie lekarskie' },
+  { code: 'UW',   label: 'Urlop wypoczynkowy' },
+  { code: 'UZ',   label: 'Urlop na żądanie' },
+  { code: 'UB',   label: 'Urlop bezpłatny' },
+  { code: 'UOK',  label: 'Urlop okolicznościowy' },
+  { code: 'UMR',  label: 'Urlop macierzyński / rodzicielski' },
+  { code: 'UOJ',  label: 'Urlop ojcowski' },
+  { code: 'UWY',  label: 'Urlop wychowawczy' },
+  { code: 'OPD',  label: 'Opieka nad dzieckiem (art. 188 KP)' },
+  { code: 'ZOP',  label: 'Zasiłek opiekuńczy — opieka nad chorym' },
+  { code: 'SW',   label: 'Zwolnienie — siła wyższa (art. 148¹ KP)' },
+  { code: 'HK',   label: 'Honorowe krwiodawstwo' },
+  { code: 'ODB',  label: 'Odbiór nadgodzin / dzień wolny' },
+  { code: 'NUN',  label: 'Nieobecność usprawiedliwiona niepłatna' },
+  { code: 'NN',   label: 'Nieobecność nieusprawiedliwiona' },
+  { code: 'PZL',  label: 'Przerwa w realizacji zlecenia (umowa zlecenie)' },
+  { code: 'B2B',  label: 'Przerwa w świadczeniu usług (B2B)' },
+  { code: 'DEL',  label: 'Delegacja / szkolenie' },
+  { code: 'INNE', label: 'Inne (wymagana adnotacja)' }
+];
+const ABSENCE_MAX_DAYS = 62;
+
+function _absType(code) {
+  for (let i = 0; i < ABSENCE_TYPES.length; i++) {
+    if (ABSENCE_TYPES[i].code === String(code)) return ABSENCE_TYPES[i];
+  }
+  return null;
+}
+
+// ── Entry point ──────────────────────────────────────────────
+
+function doGet(e) {
+  const p = e && e.parameter && e.parameter.page;
+  if (p === 'dashboard') {
+    return HtmlService.createTemplateFromFile('DashboardGUI')
+      .evaluate()
+      .setTitle('We SMILE — Panel Raportowy')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+  if (p === 'owner') {
+    return HtmlService.createTemplateFromFile('MasterGUI')
+      .evaluate()
+      .setTitle('We SMILE')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+  const page = (p === 'admin') ? 'admin' : 'worker';
+  const tmpl = HtmlService.createTemplateFromFile('Index');
+  tmpl.PAGE  = page;
+  return tmpl.evaluate()
+    .setTitle('We SMILE — RCP')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+// ── Dispatcher ───────────────────────────────────────────────
+
+function callRCP(action, argsJson) {
+  try {
+    const args = JSON.parse(argsJson || '[]');
+    switch (action) {
+      case 'getToken':        return { ok: true, token: _currentToken(), secLeft: _tokenSecLeft(), winSec: TOKEN_WIN_SEC };
+      case 'checkPin':        return checkPin(args[0]);
+      case 'clockIn':         return clock(args[0], args[1], 'WEJSCIE');
+      case 'clockOut':        return clock(args[0], args[1], 'WYJSCIE');
+      case 'getAbsenceTypes': return { ok: true, types: ABSENCE_TYPES };
+      case 'reportAbsence':   return reportAbsence(args[0], args[1], args[2], args[3], args[4]);
+      case 'setOvertimeNote': return setOvertimeNote(args[0], args[1]);
+      // Dashboard
+      case 'dashLogin':      return dashLogin(args[0]);
+      case 'getDashboard':   return getDashboard(args[0], args[1], args[2]);
+      case 'setEtat':        return setEtat(args[0], args[1], args[2], args[3]);
+      case 'setNote':        return setNote(args[0], args[1], args[2], args[3], args[4]);
+      case 'getExportMeta':  return getExportMeta(args[0]);
+      case 'dashExportXlsx': return dashExportXlsx(args[0], args[1]);
+      case 'getActive':      return getActiveNow(args[0]);
+      // Owner (edycja czasu / nieobecności / uzasadnień)
+      case 'masterLogin':           return masterLogin(args[0]);
+      case 'masterGetEmployees':    return masterGetEmployees(args[0]);
+      case 'masterGetDay':          return masterGetDay(args[0], args[1], args[2]);
+      case 'masterSetDay':          return masterSetDay(args[0], args[1], args[2], args[3], args[4]);
+      case 'masterGetMonth':        return masterGetMonth(args[0], args[1], args[2], args[3]);
+      case 'masterSetAbsence':      return masterSetAbsence(args[0], args[1], args[2], args[3], args[4]);
+      case 'masterSetOvertimeNote': return masterSetOvertimeNote(args[0], args[1], args[2], args[3]);
+      default:               return { ok: false, msg: 'Nieznana akcja.' };
+    }
+  } catch (err) {
+    Logger.log('RCP error [' + action + ']: ' + err);
+    return { ok: false, msg: 'Błąd serwera.' };
+  }
+}
+
+// ── Token HMAC-SHA256 ────────────────────────────────────────
+
+function _tokenForWindow(w) {
+  const secret = PropertiesService.getScriptProperties().getProperty('RCP_SECRET') || 'wesmile_rcp_default_v1';
+  const bytes  = Utilities.computeHmacSha256Signature('RCP:' + w, secret);
+  const n      = Math.abs(bytes.reduce((a, b) => (a * 256 + (b < 0 ? b + 256 : b)) % 10000, 0));
+  return String(n).padStart(4, '0');
+}
+
+function _currentToken() {
+  return _tokenForWindow(Math.floor(Date.now() / 1000 / TOKEN_WIN_SEC));
+}
+
+// Ile sekund pozostało do zmiany bieżącego kodu.
+function _tokenSecLeft() {
+  const s = Math.floor(Date.now() / 1000);
+  return TOKEN_WIN_SEC - (s % TOKEN_WIN_SEC);
+}
+
+function _verifyToken(code) {
+  if (!code || String(code).length !== 4) return false;
+  const base = Math.floor(Date.now() / 1000 / TOKEN_WIN_SEC);
+  for (let d = -TOKEN_GRACE; d <= TOKEN_GRACE; d++) {
+    if (_tokenForWindow(base + d) === String(code)) return true;
+  }
+  return false;
+}
+
+// ── Helpers ──────────────────────────────────────────────────
+
+function _ss()     { return SpreadsheetApp.openById(SS_ID); }
+function _cache()  { return CacheService.getScriptCache(); }
+function _nowPL()  { return Utilities.formatDate(new Date(), 'Europe/Warsaw', 'HH:mm'); }
+function _todayPL(){ return Utilities.formatDate(new Date(), 'Europe/Warsaw', 'yyyy-MM-dd'); }
+
+function _getWorkers() {
+  const sh = _ss().getSheetByName('Pracownicy');
+  if (!sh || sh.getLastRow() < 2) return [];
+  return sh.getDataRange().getValues().slice(1);
+  // cols: 0=ID, 1=Imię, 2=Nazwisko, 3=Rola, 4=Status, 5=PIN
+}
+
+function _findActiveByPin(pin) {
+  return _getWorkers().find(r =>
+    _pinMatch(r[5], pin) && String(r[4]).toLowerCase() === 'aktywny'
+  ) || null;
+}
+
+// Porównuje PINy z uwzględnieniem wiodących zer
+// (Sheets może zapisać "0371" jako liczbę 371)
+function _pinMatch(stored, entered) {
+  const a = String(stored).padStart(4, '0');
+  const b = String(entered).padStart(4, '0');
+  return a === b;
+}
+
+// ── Rate limiter ─────────────────────────────────────────────
+
+function _checkRate(key) {
+  const k = 'rl_' + key;
+  const v = parseInt(_cache().get(k) || '0', 10);
+  if (v >= RATE_MAX) return false;
+  _cache().put(k, String(v + 1), RATE_WIN_SEC);
+  return true;
+}
+
+function _resetRate(key) {
+  _cache().remove('rl_' + key);
+}
+
+// ── checkPin — weryfikacja PIN (krok 1) ──────────────────────
+
+function checkPin(pin) {
+  if (!pin || String(pin).length !== 4 || !/^\d{4}$/.test(String(pin))) {
+    return { ok: false, msg: 'PIN musi mieć dokładnie 4 cyfry.' };
+  }
+  if (!_checkRate('pin')) {
+    return { ok: false, msg: 'Zbyt wiele prób. Odczekaj 5 minut.' };
+  }
+
+  const worker = _findActiveByPin(pin);
+  if (!worker) {
+    return { ok: false, msg: 'Nieprawidłowy PIN lub konto nieaktywne.' };
+  }
+
+  _resetRate('pin');
+  return {
+    ok:       true,
+    id:       String(worker[0]),
+    imie:     String(worker[1]),
+    nazwisko: String(worker[2]),
+    rola:     String(worker[3])
+  };
+}
+
+// ── clock — rejestracja zdarzenia (krok 2) ───────────────────
+
+function clock(pin, tokenCode, action) {
+  if (!pin || !tokenCode) {
+    return { ok: false, msg: 'Brak wymaganych danych.' };
+  }
+
+  const worker = _findActiveByPin(pin);
+  if (!worker) return { ok: false, msg: 'Pracownik nie istnieje.' };
+
+  const empId = String(worker[0]);
+
+  if (!_checkRate('clk_' + empId)) {
+    return { ok: false, msg: 'Zbyt wiele prób. Odczekaj 5 minut.' };
+  }
+
+  if (!_verifyToken(String(tokenCode))) {
+    return { ok: false, msg: 'Nieprawidłowy kod autoryzacyjny lub wygasł.' };
+  }
+
+  const dedupKey = 'dup_' + empId;
+  if (_cache().get(dedupKey)) {
+    return { ok: false, msg: 'Zdarzenie już zarejestrowane. Chwilę odczekaj.' };
+  }
+  _cache().put(dedupKey, '1', DEDUP_SEC);
+
+  const today   = _todayPL();
+  const ewidSh  = _ss().getSheetByName('Ewidencja');
+  const allRows = (ewidSh && ewidSh.getLastRow() >= 2)
+    ? ewidSh.getDataRange().getValues().slice(1) : [];
+  const todayEmp = allRows.filter(r => String(r[1]) === empId && String(r[5]) === today);
+
+  if (todayEmp.length > 0) {
+    const lastAction = String(todayEmp[todayEmp.length - 1][4]);
+    if (lastAction === action) {
+      _ss().getSheetByName('Anomalie').appendRow([
+        new Date().toISOString(), empId,
+        'Duplikacja ' + action + ': ' + worker[1] + ' ' + worker[2]
+      ]);
+      const label = action === 'WEJSCIE' ? 'WEJŚCIE' : 'WYJŚCIE';
+      return { ok: false, msg: 'Błąd sekwencji: ostatnie zdarzenie to już ' + label + '.' };
+    }
+  }
+
+  const godzina = _nowPL();
+  ewidSh.appendRow([
+    new Date().toISOString(), empId,
+    String(worker[1]), String(worker[2]),
+    action, today, godzina, 'worker'
+  ]);
+
+  _resetRate('clk_' + empId);
+
+  // Wykrycie pracy poza regularnymi godzinami Kliniki:
+  // wejście przed otwarciem lub wyjście po zamknięciu (Nd — zawsze).
+  const h = _clinicHoursFor(today);
+  let overtime = false;
+  if (!h) overtime = true;
+  else if (action === 'WEJSCIE' && _t2m(godzina) < h.open)  overtime = true;
+  else if (action === 'WYJSCIE' && _t2m(godzina) > h.close) overtime = true;
+
+  return { ok: true, imie: String(worker[1]), godzina, overtime };
+}
+
+// ── reportAbsence — zgłoszenie nieobecności przez pracownika ─
+// Nie wymaga kodu z tabletu (pracownik zgłasza zdalnie, np. L4).
+
+function reportAbsence(pin, dateFrom, dateTo, typeCode, note) {
+  if (!pin) return { ok: false, msg: 'Brak danych.' };
+  if (!_checkRate('pin')) {
+    return { ok: false, msg: 'Zbyt wiele prób. Odczekaj 5 minut.' };
+  }
+
+  const worker = _findActiveByPin(pin);
+  if (!worker) return { ok: false, msg: 'Nieprawidłowy PIN lub konto nieaktywne.' };
+  _resetRate('pin');
+
+  const re = /^\d{4}-\d{2}-\d{2}$/;
+  dateFrom = String(dateFrom || '');
+  dateTo   = String(dateTo || dateFrom);
+  if (!re.test(dateFrom) || !re.test(dateTo) || dateFrom > dateTo) {
+    return { ok: false, msg: 'Nieprawidłowy zakres dat.' };
+  }
+
+  const type = _absType(typeCode);
+  if (!type) return { ok: false, msg: 'Wybierz typ nieobecności.' };
+
+  note = String(note || '').trim().slice(0, 500);
+  if (type.code === 'INNE' && !note) {
+    return { ok: false, msg: 'Dla typu „Inne” adnotacja jest wymagana.' };
+  }
+
+  const from = new Date(dateFrom + 'T12:00:00');
+  const to   = new Date(dateTo + 'T12:00:00');
+  const days = Math.round((to - from) / 86400000) + 1;
+  if (days > ABSENCE_MAX_DAYS) {
+    return { ok: false, msg: 'Maksymalny zakres to ' + ABSENCE_MAX_DAYS + ' dni.' };
+  }
+
+  _upsertAbsence(String(worker[0]), String(worker[1]), String(worker[2]),
+                 dateFrom, dateTo, type, note, 'worker');
+
+  return { ok: true, imie: String(worker[1]), typ: type.label, dni: days };
+}
+
+// Nadpisuje nieobecności pracownika w zakresie dat (jeden wiersz na dzień).
+function _upsertAbsence(empId, imie, nazwisko, dateFrom, dateTo, type, note, source) {
+  const ss = _ss();
+  let sh = ss.getSheetByName('Nieobecnosci');
+  if (!sh) {
+    sh = ss.insertSheet('Nieobecnosci');
+    sh.appendRow(['Timestamp', 'EmpID', 'Imię', 'Nazwisko', 'Data', 'Kod', 'Typ', 'Adnotacja', 'Źródło']);
+  }
+  const rows = (sh.getLastRow() >= 2) ? sh.getDataRange().getValues().slice(1) : [];
+  for (let i = rows.length - 1; i >= 0; i--) {
+    const ds = _sheetDate(rows[i][4]);
+    if (String(rows[i][1]) === empId && ds >= dateFrom && ds <= dateTo) {
+      sh.deleteRow(i + 2);
+    }
+  }
+  if (!type) return; // samo usunięcie
+  const ts = new Date().toISOString();
+  const cursor = new Date(dateFrom + 'T12:00:00');
+  const end    = new Date(dateTo + 'T12:00:00');
+  while (cursor <= end) {
+    const ds = Utilities.formatDate(cursor, 'Europe/Warsaw', 'yyyy-MM-dd');
+    sh.appendRow([ts, empId, imie, nazwisko, ds, type.code, type.label, note, source]);
+    cursor.setDate(cursor.getDate() + 1);
+  }
+}
+
+// ── setOvertimeNote — uzasadnienie pracy poza godzinami ──────
+// Wpisywane przez pracownika zaraz po odbiciu poza godzinami Kliniki.
+// Adnotacja przypisana do dnia (dzisiejszego).
+
+function setOvertimeNote(pin, note) {
+  if (!pin) return { ok: false, msg: 'Brak danych.' };
+  if (!_checkRate('pin')) {
+    return { ok: false, msg: 'Zbyt wiele prób. Odczekaj 5 minut.' };
+  }
+  const worker = _findActiveByPin(pin);
+  if (!worker) return { ok: false, msg: 'Nieprawidłowy PIN.' };
+  _resetRate('pin');
+
+  note = String(note || '').trim().slice(0, 500);
+  if (!note) return { ok: false, msg: 'Wpisz uzasadnienie.' };
+
+  _saveOvertimeNote(String(worker[0]), _todayPL(), note, 'worker');
+  return { ok: true };
+}
+
+// Zapis uzasadnienia dnia (puste note = usunięcie).
+function _saveOvertimeNote(empId, ds, note, source) {
+  const ss = _ss();
+  let sh = ss.getSheetByName('Przekroczenia');
+  if (!sh) {
+    sh = ss.insertSheet('Przekroczenia');
+    sh.appendRow(['Timestamp', 'EmpID', 'Data', 'Uzasadnienie', 'Źródło']);
+  }
+  const rows = (sh.getLastRow() >= 2) ? sh.getDataRange().getValues().slice(1) : [];
+  for (let i = rows.length - 1; i >= 0; i--) {
+    if (String(rows[i][1]) === empId && _sheetDate(rows[i][2]) === ds) {
+      sh.deleteRow(i + 2);
+    }
+  }
+  if (note) {
+    sh.appendRow([new Date().toISOString(), empId, ds, note, source]);
+  }
+}
+
+// ── setupRCP — uruchom raz po wgraniu ────────────────────────
+
+function setupRCP() {
+  const spreadsheet = _ss();
+
+  [
+    { name: 'Pracownicy',    h: ['ID', 'Imię', 'Nazwisko', 'Rola', 'Status', 'PIN'] },
+    { name: 'Ewidencja',     h: ['Timestamp', 'EmpID', 'Imię', 'Nazwisko', 'Akcja', 'Data', 'Godzina', 'Źródło'] },
+    { name: 'Anomalie',      h: ['Timestamp', 'EmpID', 'Opis'] },
+    { name: 'Statusy',       h: ['Date', 'EmpID', 'Status', 'Notes', 'Modified'] },
+    { name: 'Nieobecnosci',  h: ['Timestamp', 'EmpID', 'Imię', 'Nazwisko', 'Data', 'Kod', 'Typ', 'Adnotacja', 'Źródło'] },
+    { name: 'Przekroczenia', h: ['Timestamp', 'EmpID', 'Data', 'Uzasadnienie', 'Źródło'] }
+  ].forEach(def => {
+    let sh = spreadsheet.getSheetByName(def.name);
+    if (!sh) sh = spreadsheet.insertSheet(def.name);
+    if (sh.getLastRow() === 0) sh.appendRow(def.h);
+  });
+
+  const pSh = spreadsheet.getSheetByName('Pracownicy');
+
+  if (pSh.getLastRow() <= 1) {
+    const employees = [
+      ['WS01', 'Arkadiusz',  'Graczyk',      'Admin',                           'Aktywny', '0371'],
+      ['WS02', 'Kaja',       'Węglarek',     'rejestratorka medyczna',          'Aktywny', '1826'],
+      ['WS03', 'Julia',      'Polishchuk',    'higienistka stomatologiczna',     'Aktywny', '0316'],
+      ['WS04', 'Oksana',     'Revutska',      'asystentka stomatologiczna',      'Aktywny', '0484'],
+      ['WS05', 'Kamila',     'Pruszczyńska', 'higienistka stomatologiczna',     'Aktywny', '4731'],
+      ['WS06', 'Katarzyna',  'Graczyk',       'higienistka stomatologiczna',     'Aktywny', '9010']
+    ];
+    employees.forEach(row => pSh.appendRow(row));
+    Logger.log('Dodano ' + employees.length + ' pracowników.');
+  } else {
+    Logger.log('Pracownicy już istnieją — pominięto import.');
+  }
+
+  const props = PropertiesService.getScriptProperties();
+  if (!props.getProperty('RCP_SECRET')) {
+    props.setProperty('RCP_SECRET', Utilities.getUuid() + '-' + Utilities.getUuid());
+    Logger.log('Wygenerowano nowy RCP_SECRET.');
+  }
+
+  Logger.log('setupRCP zakończony pomyślnie.');
+}

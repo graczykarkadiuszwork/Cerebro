@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
+<title>We SMILE — RCP</title>
+<style>
+/* ── Mobile-first: duże dotykowe elementy, pełna szerokość ── */
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{font-size:16px}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#0f0f11;color:#f0f0f2;min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:12px}
+.card{width:100%;max-width:440px;background:#1c1c1e;border-radius:24px;padding:24px 18px 20px;box-shadow:0 24px 64px rgba(0,0,0,.7)}
+
+/* ── Admin: token display ── */
+.admin-label{font-size:13px;text-transform:uppercase;letter-spacing:3px;color:#555;text-align:center;margin-bottom:8px}
+.admin-sublabel{font-size:16px;color:#888;text-align:center;margin-bottom:6px}
+#token{font-size:clamp(72px,24vw,110px);font-weight:900;letter-spacing:.14em;text-align:center;line-height:1.1;margin:6px 0 14px;transition:color .3s}
+#token.green{color:#00d68a}
+#token.red{color:#e84560}
+.prog-wrap{height:8px;background:#2c2c2e;border-radius:4px;overflow:hidden;margin-bottom:14px}
+.prog-fill{height:100%;background:#00d68a;width:100%;transition:width 1s linear,background .3s}
+.prog-fill.red{background:#e84560}
+.tok-status{display:flex;align-items:center;justify-content:center;gap:8px;min-height:52px;border-radius:14px;padding:12px 14px;font-size:16px;font-weight:700;text-align:center;margin-bottom:12px;transition:background .3s,color .3s}
+.tok-status.green{background:rgba(0,214,138,.12);color:#00d68a}
+.tok-status.red{background:rgba(232,69,96,.14);color:#e84560}
+.btn-refresh{display:none;width:100%;background:#e84560;border:none;border-radius:14px;color:#fff;font-size:17px;font-weight:800;padding:16px 0;min-height:56px;cursor:pointer}
+.btn-refresh:active{opacity:.85;transform:scale(.98)}
+.btn-refresh.show{display:block}
+.admin-hint{font-size:13px;color:#555;text-align:center;margin-top:12px}
+
+/* ── Worker: steps ── */
+.brand{font-size:13px;text-transform:uppercase;letter-spacing:3px;color:#444;text-align:center;margin-bottom:18px}
+.step{display:none}
+.step.on{display:block}
+.step-title{font-size:24px;font-weight:700;text-align:center;margin-bottom:4px}
+.step-sub{font-size:15px;color:#777;text-align:center;margin-bottom:16px;min-height:22px}
+
+/* PIN dots */
+.dots{display:flex;justify-content:center;gap:18px;margin:0 0 18px}
+.dot{width:20px;height:20px;border-radius:50%;background:#2c2c2e;border:2px solid #38383a;transition:background .12s,border-color .12s}
+.dot.on{background:#e84560;border-color:#e84560}
+
+/* Keypad — duże pola dotykowe */
+.kp{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:6px}
+.key{background:#2c2c2e;border:none;border-radius:16px;color:#f0f0f2;font-size:28px;font-weight:600;min-height:64px;padding:14px 0;cursor:pointer;user-select:none;transition:background .1s,transform .1s}
+.key:active{background:#e84560;transform:scale(.93)}
+.key.sym{color:#888;font-size:22px}
+.key.clr{color:#e84560;font-weight:800;font-size:20px}
+
+/* Action buttons */
+.action-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.btn{border:none;border-radius:16px;font-size:17px;font-weight:700;min-height:60px;padding:16px 0;cursor:pointer;color:#fff;transition:opacity .1s,transform .1s}
+.btn:active{transform:scale(.96);opacity:.85}
+.btn-in{background:#00a86b}
+.btn-out{background:#2979ff}
+.btn-abs{width:100%;background:#8e5cd9;margin-top:10px}
+.btn-full{width:100%;margin-top:12px;background:#e84560}
+.btn-back{width:100%;background:none;border:1px solid #2c2c2e;border-radius:14px;color:#777;font-size:15px;min-height:48px;padding:12px;cursor:pointer;margin-top:12px;transition:background .1s}
+.btn-back:active{background:#2c2c2e}
+
+/* Formularze (nieobecność / uzasadnienie) */
+.f-lbl{font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:#666;margin:12px 0 6px;display:block}
+.f-inp,.f-sel,.f-ta{width:100%;background:#242427;border:1px solid #3a3a3c;border-radius:14px;color:#f0f0f2;font-size:16px;padding:14px;font-family:inherit;min-height:52px}
+.f-inp:focus,.f-sel:focus,.f-ta:focus{outline:none;border-color:#e84560}
+.f-sel{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9'%3E%3Cpath d='M1 1l6 6 6-6' stroke='%23888' stroke-width='2' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px}
+.f-ta{resize:vertical;min-height:88px;line-height:1.5}
+.f-row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ovr-alert{background:rgba(232,181,69,.12);border:1px solid rgba(232,181,69,.4);border-radius:14px;padding:14px;font-size:15px;line-height:1.5;color:#e8b545;font-weight:600;text-align:center;margin-bottom:4px}
+.skip-link{display:block;width:100%;background:none;border:none;color:#555;font-size:13px;text-align:center;margin-top:12px;cursor:pointer;text-decoration:underline}
+
+/* Success */
+.ok-wrap{text-align:center;padding:8px 0}
+.ok-icon{font-size:64px;margin-bottom:12px}
+.ok-title{font-size:24px;font-weight:700;color:#00a86b;margin-bottom:8px}
+.ok-sub{font-size:16px;color:#999;line-height:1.5}
+
+/* Toast */
+#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(80px);opacity:0;background:#e84560;color:#fff;padding:13px 24px;border-radius:40px;font-size:15px;font-weight:600;pointer-events:none;transition:.25s cubic-bezier(.4,0,.2,1);z-index:99;max-width:92vw;text-align:center;white-space:pre-line}
+#toast.on{transform:translateX(-50%) translateY(0);opacity:1}
+#toast.ok{background:#00a86b}
+</style>
+</head>
+<body>
+
+<? if (PAGE === 'admin') { ?>
+
+<!-- ═══════════════════════════════════════════
+     WIDOK ADMINA — wyświetlanie kodu
+════════════════════════════════════════════════ -->
+<div class="card">
+  <div class="admin-label">We SMILE</div>
+  <div class="admin-sublabel">Aktywny kod autoryzacyjny</div>
+  <div id="token" class="green">----</div>
+  <div class="prog-wrap"><div class="prog-fill" id="prog"></div></div>
+  <div class="tok-status green" id="tok-status">✅ Przepisz kod</div>
+  <button class="btn-refresh" id="btn-refresh">🔄 Odśwież kod</button>
+  <div class="admin-hint">Kod zmienia się co 30 sekund</div>
+</div>
+
+<? } else { ?>
+
+<!-- ═══════════════════════════════════════════
+     WIDOK PRACOWNIKA — rejestracja odbicia
+════════════════════════════════════════════════ -->
+<div class="card">
+  <div class="brand">We SMILE — RCP</div>
+
+  <!-- Krok 1: wpisz PIN -->
+  <div class="step on" id="s-pin">
+    <div class="step-title">Wpisz swój PIN</div>
+    <div class="step-sub">4-cyfrowy kod osobisty</div>
+    <div class="dots">
+      <div class="dot" id="p0"></div><div class="dot" id="p1"></div>
+      <div class="dot" id="p2"></div><div class="dot" id="p3"></div>
+    </div>
+    <div class="kp" id="kp-pin">
+      <button class="key" data-v="1">1</button><button class="key" data-v="2">2</button><button class="key" data-v="3">3</button>
+      <button class="key" data-v="4">4</button><button class="key" data-v="5">5</button><button class="key" data-v="6">6</button>
+      <button class="key" data-v="7">7</button><button class="key" data-v="8">8</button><button class="key" data-v="9">9</button>
+      <button class="key clr" data-v="C">C</button><button class="key" data-v="0">0</button><button class="key sym" data-v="X">⌫</button>
+    </div>
+  </div>
+
+  <!-- Krok 2: wpisz kod z tabletu + wybierz akcję -->
+  <div class="step" id="s-code">
+    <div class="step-title" id="w-name">Pracownik</div>
+    <div class="step-sub" id="w-role"></div>
+    <div class="dots">
+      <div class="dot" id="c0"></div><div class="dot" id="c1"></div>
+      <div class="dot" id="c2"></div><div class="dot" id="c3"></div>
+    </div>
+    <div class="kp" id="kp-code">
+      <button class="key" data-c="1">1</button><button class="key" data-c="2">2</button><button class="key" data-c="3">3</button>
+      <button class="key" data-c="4">4</button><button class="key" data-c="5">5</button><button class="key" data-c="6">6</button>
+      <button class="key" data-c="7">7</button><button class="key" data-c="8">8</button><button class="key" data-c="9">9</button>
+      <button class="key clr" data-c="C">C</button><button class="key" data-c="0">0</button><button class="key sym" data-c="X">⌫</button>
+    </div>
+    <div class="action-row">
+      <button class="btn btn-in"  id="btn-in">✅ WEJŚCIE</button>
+      <button class="btn btn-out" id="btn-out">🚪 WYJŚCIE</button>
+    </div>
+    <button class="btn btn-abs" id="btn-abs">🏖️ Zgłoś nieobecność</button>
+    <button class="btn-back" id="btn-back">← Zmień PIN</button>
+  </div>
+
+  <!-- Krok 2b: zgłoszenie nieobecności (bez kodu z tabletu) -->
+  <div class="step" id="s-abs">
+    <div class="step-title">Nieobecność</div>
+    <div class="step-sub" id="abs-who"></div>
+
+    <div class="f-row2">
+      <div>
+        <label class="f-lbl" for="abs-from">Od dnia</label>
+        <input type="date" id="abs-from" class="f-inp">
+      </div>
+      <div>
+        <label class="f-lbl" for="abs-to">Do dnia</label>
+        <input type="date" id="abs-to" class="f-inp">
+      </div>
+    </div>
+
+    <label class="f-lbl" for="abs-typ">Typ nieobecności</label>
+    <select id="abs-typ" class="f-sel">
+      <option value="">— wybierz typ —</option>
+    </select>
+
+    <label class="f-lbl" for="abs-note">Adnotacja (widoczna dla admina i właściciela)</label>
+    <textarea id="abs-note" class="f-ta" placeholder="Np. numer L4, powód, dodatkowe informacje…"></textarea>
+
+    <button class="btn btn-full" id="abs-submit">Zgłoś nieobecność</button>
+    <button class="btn-back" id="abs-back">← Wróć</button>
+  </div>
+
+  <!-- Krok 2c: uzasadnienie pracy poza godzinami Kliniki -->
+  <div class="step" id="s-ovr">
+    <div class="step-title">⚠️ Uwaga</div>
+    <div class="step-sub" id="ovr-sub"></div>
+    <div class="ovr-alert">Przekroczono regularne godziny pracy Kliniki — uzasadnij konieczność:</div>
+    <textarea id="ovr-note" class="f-ta" placeholder="Wpisz uzasadnienie (przypisane do dzisiejszego dnia)…"></textarea>
+    <button class="btn btn-full" id="ovr-save">Zapisz uzasadnienie</button>
+    <button class="skip-link" id="ovr-skip">Pomiń — uzupełni administrator</button>
+  </div>
+
+  <!-- Krok 3: potwierdzenie -->
+  <div class="step" id="s-ok">
+    <div class="ok-wrap">
+      <div class="ok-icon" id="ok-icon">✅</div>
+      <div class="ok-title" id="ok-title">Zarejestrowano!</div>
+      <div class="ok-sub" id="ok-msg"></div>
+    </div>
+  </div>
+
+</div>
+
+<? } ?>
+
+<div id="toast"></div>
+
+<script>
+/* global google */
+var PAGE = "<?= PAGE ?>";
+
+// ── Toast ─────────────────────────────────────────────────────
+var _tt;
+function toast(msg, isOk) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'on' + (isOk ? ' ok' : '');
+  clearTimeout(_tt);
+  _tt = setTimeout(function () { el.className = ''; }, 3200);
+}
+
+// ── GAS call ──────────────────────────────────────────────────
+function gas(action, args, cb) {
+  google.script.run
+    .withSuccessHandler(cb)
+    .withFailureHandler(function (e) { toast(e.message || 'Błąd połączenia.', false); })
+    .callRCP(action, JSON.stringify(args || []));
+}
+
+// ════════════════════════════════════════════════════════════
+if (PAGE === 'admin') {
+// ════════════════════════════════════════════════════════════
+
+  var WIN = 30;          // sekundy okna
+  var GREEN_UNTIL = 20;  // 0–20 s od zmiany kodu → zielony
+  var left = 0;          // sekundy do zmiany kodu
+  var loading = false;
+
+  var elToken   = document.getElementById('token');
+  var elProg    = document.getElementById('prog');
+  var elStatus  = document.getElementById('tok-status');
+  var elRefresh = document.getElementById('btn-refresh');
+
+  function refreshToken() {
+    if (loading) return;
+    loading = true;
+    gas('getToken', [], function (res) {
+      loading = false;
+      if (!res || !res.ok) return;
+      elToken.textContent = res.token;
+      WIN  = res.winSec || 30;
+      left = Math.max(1, Math.min(WIN, parseInt(res.secLeft, 10) || WIN));
+      render();
+    });
+  }
+
+  function render() {
+    var elapsed = WIN - left;
+    var green = elapsed <= GREEN_UNTIL;
+
+    elToken.className = green ? 'green' : 'red';
+    elProg.style.width = Math.round((left / WIN) * 100) + '%';
+    elProg.className = 'prog-fill' + (green ? '' : ' red');
+
+    if (green) {
+      elStatus.className = 'tok-status green';
+      elStatus.textContent = '✅ Przepisz kod — ważny jeszcze ' + left + ' s';
+      elRefresh.className = 'btn-refresh';
+    } else {
+      elStatus.className = 'tok-status red';
+      elStatus.textContent = '⚠️ Kod wkrótce ulegnie przedawnieniu (' + left + ' s)';
+      elRefresh.className = 'btn-refresh show';
+    }
+  }
+
+  elRefresh.addEventListener('click', refreshToken);
+
+  var retryIn = 0;
+  setInterval(function () {
+    if (left > 0) {
+      left--;
+      render();
+      if (left === 0) refreshToken();
+    } else if (!loading) {
+      // brak danych (np. błąd sieci) — ponów co 5 s
+      retryIn--;
+      if (retryIn <= 0) { retryIn = 5; refreshToken(); }
+    }
+  }, 1000);
+
+  refreshToken();
+
+// ════════════════════════════════════════════════════════════
+} else {
+// ════════════════════════════════════════════════════════════
+
+  var pin = '', code = '', empPin = '', empName = '';
+  var absTypes = null;
+  var resetTimer = null;
+
+  // Przełączanie kroków
+  function show(id) {
+    ['s-pin', 's-code', 's-abs', 's-ovr', 's-ok'].forEach(function (s) {
+      document.getElementById(s).className = 'step' + (s === id ? ' on' : '');
+    });
+  }
+
+  function resetAll() {
+    pin = ''; code = ''; empPin = ''; empName = '';
+    setDots(pin, 'p');
+    setDots(code, 'c');
+    show('s-pin');
+  }
+
+  function finishOk(icon, title, msg, delayMs) {
+    document.getElementById('ok-icon').textContent  = icon;
+    document.getElementById('ok-title').textContent = title;
+    document.getElementById('ok-msg').textContent   = msg;
+    show('s-ok');
+    clearTimeout(resetTimer);
+    resetTimer = setTimeout(resetAll, delayMs || 3000);
+  }
+
+  // Aktualizacja kropek
+  function setDots(val, pfx) {
+    for (var i = 0; i < 4; i++) {
+      var d = document.getElementById(pfx + i);
+      if (d) d.className = 'dot' + (i < val.length ? ' on' : '');
+    }
+  }
+
+  function todayStr() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') +
+           '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  // ── Klawiatura PIN ────────────────────────────────────────
+  document.getElementById('kp-pin').addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-v]');
+    if (!btn) return;
+    var v = btn.getAttribute('data-v');
+    if (v === 'C')      { pin = ''; }
+    else if (v === 'X') { pin = pin.slice(0, -1); }
+    else if (pin.length < 4) { pin += v; }
+    setDots(pin, 'p');
+
+    if (pin.length === 4) {
+      toast('Weryfikacja…', true);
+      gas('checkPin', [pin], function (res) {
+        if (res && res.ok) {
+          empPin  = pin;
+          empName = res.imie + ' ' + res.nazwisko;
+          document.getElementById('w-name').textContent = empName;
+          document.getElementById('w-role').textContent = res.rola;
+          code = '';
+          setDots(code, 'c');
+          show('s-code');
+        } else {
+          toast((res && res.msg) || 'Nieprawidłowy PIN.', false);
+          pin = '';
+          setDots(pin, 'p');
+        }
+      });
+    }
+  });
+
+  // ── Klawiatura kodu ───────────────────────────────────────
+  document.getElementById('kp-code').addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-c]');
+    if (!btn) return;
+    var v = btn.getAttribute('data-c');
+    if (v === 'C')      { code = ''; }
+    else if (v === 'X') { code = code.slice(0, -1); }
+    else if (code.length < 4) { code += v; }
+    setDots(code, 'c');
+  });
+
+  // ── Rejestracja zdarzenia ─────────────────────────────────
+  function submit(action) {
+    if (code.length !== 4) {
+      toast('Wpisz 4-cyfrowy kod z tabletu admina.', false);
+      return;
+    }
+    toast('Rejestrowanie…', true);
+    var rpc = (action === 'WEJSCIE') ? 'clockIn' : 'clockOut';
+    gas(rpc, [empPin, code], function (res) {
+      if (res && res.ok) {
+        var label = (action === 'WEJSCIE') ? 'WEJŚCIE' : 'WYJŚCIE';
+        var msg = res.imie + ' — ' + label + ' o ' + res.godzina;
+        if (res.overtime) {
+          // Praca poza regularnymi godzinami Kliniki → uzasadnienie
+          document.getElementById('ovr-sub').textContent = msg;
+          document.getElementById('ovr-note').value = '';
+          show('s-ovr');
+        } else {
+          finishOk('✅', 'Zarejestrowano!', msg, 3000);
+        }
+      } else {
+        toast((res && res.msg) || 'Błąd rejestracji.', false);
+        code = '';
+        setDots(code, 'c');
+      }
+    });
+  }
+
+  document.getElementById('btn-in').addEventListener('click',   function () { submit('WEJSCIE'); });
+  document.getElementById('btn-out').addEventListener('click',  function () { submit('WYJSCIE'); });
+  document.getElementById('btn-back').addEventListener('click', resetAll);
+
+  // ── Uzasadnienie przekroczenia godzin ─────────────────────
+  document.getElementById('ovr-save').addEventListener('click', function () {
+    var note = document.getElementById('ovr-note').value.trim();
+    if (!note) { toast('Wpisz uzasadnienie.', false); return; }
+    toast('Zapisywanie…', true);
+    gas('setOvertimeNote', [empPin, note], function (res) {
+      if (res && res.ok) {
+        finishOk('✅', 'Zarejestrowano!', 'Uzasadnienie zapisane. Dziękujemy.', 3000);
+      } else {
+        toast((res && res.msg) || 'Błąd zapisu.', false);
+      }
+    });
+  });
+
+  document.getElementById('ovr-skip').addEventListener('click', function () {
+    finishOk('✅', 'Zarejestrowano!', 'Pamiętaj o uzupełnieniu uzasadnienia u administratora.', 3500);
+  });
+
+  // ── Nieobecność ───────────────────────────────────────────
+  function fillAbsTypes() {
+    var sel = document.getElementById('abs-typ');
+    sel.innerHTML = '<option value="">— wybierz typ —</option>';
+    (absTypes || []).forEach(function (t) {
+      var o = document.createElement('option');
+      o.value = t.code;
+      o.textContent = t.label;
+      sel.appendChild(o);
+    });
+  }
+
+  document.getElementById('btn-abs').addEventListener('click', function () {
+    document.getElementById('abs-who').textContent = empName;
+    document.getElementById('abs-from').value = todayStr();
+    document.getElementById('abs-to').value   = todayStr();
+    document.getElementById('abs-note').value = '';
+    if (absTypes) {
+      fillAbsTypes();
+      show('s-abs');
+    } else {
+      toast('Ładowanie…', true);
+      gas('getAbsenceTypes', [], function (res) {
+        if (res && res.ok) {
+          absTypes = res.types || [];
+          fillAbsTypes();
+          show('s-abs');
+        } else {
+          toast('Błąd ładowania typów nieobecności.', false);
+        }
+      });
+    }
+  });
+
+  document.getElementById('abs-back').addEventListener('click', function () {
+    show('s-code');
+  });
+
+  document.getElementById('abs-submit').addEventListener('click', function () {
+    var from = document.getElementById('abs-from').value;
+    var to   = document.getElementById('abs-to').value;
+    var typ  = document.getElementById('abs-typ').value;
+    var note = document.getElementById('abs-note').value.trim();
+
+    if (!from || !to)  { toast('Wybierz zakres dat.', false); return; }
+    if (from > to)     { toast('Data „od” nie może być późniejsza niż „do”.', false); return; }
+    if (!typ)          { toast('Wybierz typ nieobecności.', false); return; }
+    if (typ === 'INNE' && !note) { toast('Dla typu „Inne” adnotacja jest wymagana.', false); return; }
+
+    toast('Zgłaszanie…', true);
+    gas('reportAbsence', [empPin, from, to, typ, note], function (res) {
+      if (res && res.ok) {
+        var dni = res.dni === 1 ? '1 dzień' : res.dni + ' dni';
+        finishOk('🏖️', 'Zgłoszono nieobecność', res.typ + ' — ' + dni, 3500);
+      } else {
+        toast((res && res.msg) || 'Błąd zgłoszenia.', false);
+      }
+    });
+  });
+}
+</script>
+</body>
+</html>

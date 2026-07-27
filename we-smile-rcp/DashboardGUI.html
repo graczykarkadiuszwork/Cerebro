@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>We SMILE — Panel Raportowy</title>
+<style>
+/* ── Mobile-first ── */
+*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
+html{font-size:16px}
+body{background:#0f0f11;color:#f0f0f2;min-height:100vh;min-height:100dvh}
+
+/* ── LOGIN ── */
+.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;min-height:100dvh;padding:12px}
+.login-card{background:#1c1c1e;border-radius:24px;padding:26px 20px;width:100%;max-width:420px;box-shadow:0 24px 64px rgba(0,0,0,.7)}
+.login-brand{font-size:13px;text-transform:uppercase;letter-spacing:2.5px;color:#555;text-align:center;margin-bottom:18px}
+.login-title{font-size:22px;font-weight:700;text-align:center;margin-bottom:4px}
+.login-sub{font-size:15px;color:#888;text-align:center;margin-bottom:14px}
+.dots{display:flex;justify-content:center;gap:16px;margin:14px 0}
+.dot{width:18px;height:18px;border-radius:50%;background:#2c2c2e;border:2px solid #3a3a3c;transition:.12s}
+.dot.on{background:#e84560;border-color:#e84560}
+.kp{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.key{background:#2c2c2e;border:none;border-radius:14px;color:#f0f0f2;font-size:26px;font-weight:600;min-height:62px;padding:14px 0;cursor:pointer;transition:.1s;user-select:none}
+.key:active{background:#e84560;transform:scale(.94)}
+.key.sym{color:#888;font-size:20px}
+.key.clr{color:#e84560;font-weight:800;font-size:18px}
+
+/* ── APP BAR — mobile-first, elementy pełną szerokością ── */
+.app-bar{background:#1c1c1e;border-bottom:1px solid #2a2a2e;padding:10px 12px;display:flex;flex-direction:column;gap:10px;position:sticky;top:0;z-index:10}
+.bar-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.app-title{font-weight:800;font-size:16px;white-space:nowrap}
+.month-nav{display:flex;align-items:center;gap:8px;flex:1;justify-content:center}
+.nav-btn{background:#2c2c2e;border:none;border-radius:10px;color:#f0f0f2;width:44px;height:44px;cursor:pointer;font-size:16px;flex-shrink:0}
+.nav-btn:active{background:#3a3a3c}
+.month-label{font-size:16px;font-weight:700;min-width:130px;text-align:center}
+.norma-group{display:flex;align-items:center;gap:6px;background:#2a2a2e;border-radius:12px;padding:8px 12px;flex:1;min-height:44px}
+.norma-lbl{font-size:14px;color:#888;white-space:nowrap}
+.norma-inp{background:transparent;border:none;color:#f0f0f2;font-size:16px;font-weight:700;width:70px;text-align:right}
+.norma-inp:focus{outline:none}
+.norma-tick{font-size:14px;color:#00a86b;opacity:0;transition:.4s;min-width:14px}
+.norma-tick.on{opacity:1}
+.bar-right{display:flex;gap:8px;margin-left:auto}
+.btn-sm{background:#2c2c2e;border:none;border-radius:10px;color:#f0f0f2;padding:10px 16px;min-height:44px;cursor:pointer;font-size:14px;font-weight:600;white-space:nowrap}
+.btn-sm:active{background:#3a3a3c}
+.btn-red{background:#e84560;color:#fff}
+.btn-red:active{background:#c73451}
+
+/* ── MARQUEE ── */
+.marquee-bar{background:#161618;border-bottom:1px solid #2a2a2e;padding:9px 0;overflow:hidden;cursor:pointer}
+.marquee-track{display:inline-flex;white-space:nowrap;padding-left:16px;animation:none}
+@keyframes marquee-scroll{from{transform:translateX(0)}to{transform:translateX(-100%)}}
+.marquee-track.scrolling{animation:marquee-scroll 45s linear infinite}
+.marquee-item{display:inline-flex;align-items:center;gap:7px;margin-right:40px;font-size:14px;color:#ccc;font-weight:500}
+.marquee-dot{width:9px;height:9px;border-radius:50%;background:#00a86b;flex-shrink:0;animation:pulse-dot 1.6s ease-out infinite}
+@keyframes pulse-dot{0%{box-shadow:0 0 0 0 rgba(0,168,107,.6)}70%{box-shadow:0 0 0 7px rgba(0,168,107,0)}100%{box-shadow:0 0 0 0 rgba(0,168,107,0)}}
+.marquee-empty{font-size:14px;color:#444;padding-left:16px}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center;z-index:100;padding:0}
+.modal-card{background:#1c1c1e;border-radius:20px 20px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom));max-width:520px;width:100%;max-height:82vh;overflow-y:auto;box-shadow:0 -8px 48px rgba(0,0,0,.7)}
+.modal-head{display:flex;align-items:center;justify-content:space-between;font-weight:700;font-size:17px;margin-bottom:14px}
+.modal-x{background:#2c2c2e;border:none;border-radius:10px;color:#f0f0f2;width:40px;height:40px;cursor:pointer;font-size:16px}
+.modal-x:active{background:#3a3a3c}
+.modal-list{display:flex;flex-direction:column;gap:8px}
+.modal-row{display:flex;align-items:center;justify-content:space-between;background:#232326;border-radius:12px;padding:12px 14px;font-size:15px}
+.modal-row-name{display:flex;align-items:center;gap:8px}
+.modal-empty{color:#555;font-size:14px;padding:14px 0;text-align:center}
+
+/* ── DAY DETAILS ── */
+.dd-row{display:flex;justify-content:space-between;gap:10px;background:#232326;border-radius:12px;padding:12px 14px;font-size:15px;margin-bottom:8px}
+.dd-lbl{color:#888}
+.dd-val{font-weight:700;font-family:monospace}
+.dd-note{background:#232326;border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.55;margin-bottom:8px}
+.dd-note b{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:#888;margin-bottom:5px;font-family:inherit}
+.dd-abs{border-left:3px solid #8e5cd9}
+.dd-ovr{border-left:3px solid #e8b545}
+
+/* ── EXPORT MODAL ── */
+.exp-section{margin-bottom:14px}
+.exp-lbl{font-size:12px;text-transform:uppercase;letter-spacing:.7px;color:#555;margin-bottom:8px;display:block}
+.exp-lbl-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.exp-links a{color:#e84560;font-size:13px;text-decoration:none;cursor:pointer}
+.exp-links a:active{text-decoration:underline}
+.exp-radio{display:flex;align-items:center;gap:10px;font-size:15px;margin-bottom:10px;cursor:pointer;min-height:28px}
+.exp-radio input{accent-color:#e84560;width:20px;height:20px}
+.exp-input{width:100%;background:#232326;border:1px solid #3a3a3c;border-radius:12px;color:#f0f0f2;font-size:16px;padding:12px 14px;font-family:inherit;min-height:48px}
+.exp-input:focus{outline:none;border-color:#e84560}
+.exp-sublbl{font-size:12px;color:#777;margin-bottom:4px}
+.exp-range-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.exp-emp-list{max-height:200px;overflow-y:auto;background:#161618;border-radius:12px;padding:8px 10px;display:flex;flex-direction:column;gap:2px}
+.exp-emp-item{display:flex;align-items:center;gap:10px;padding:9px 4px;font-size:15px;cursor:pointer}
+.exp-emp-item input{accent-color:#e84560;width:20px;height:20px}
+.btn-generate{width:100%;background:#e84560;border:none;border-radius:14px;color:#fff;font-weight:700;font-size:16px;padding:15px 0;min-height:54px;cursor:pointer;margin-top:4px}
+.btn-generate:active{background:#c73451}
+
+/* ── PAGE ── */
+.page-wrap{max-width:960px;margin:0 auto;padding:14px 12px 40px}
+
+/* ── EMPLOYEE SELECTOR ── */
+.sel-lbl{font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:#555;margin-bottom:6px}
+.emp-sel-wrap{position:relative;margin-bottom:14px}
+.emp-input{width:100%;background:#1c1c1e;border:1px solid #3a3a3c;border-radius:14px;color:#f0f0f2;font-size:16px;font-weight:600;padding:14px 16px;min-height:52px}
+.emp-input:focus{outline:none;border-color:#e84560}
+.emp-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#1c1c1e;border:1px solid #3a3a3c;border-radius:14px;z-index:20;max-height:240px;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.6);display:none}
+.emp-opt{padding:14px 16px;cursor:pointer;font-size:16px;font-weight:500}
+.emp-opt:active{background:#2a2a2e}
+.emp-opt-none{padding:14px 16px;color:#555;font-size:14px}
+
+/* ── EMPLOYEE CARD ── */
+.emp-card{background:#1c1c1e;border:1px solid #2a2a2e;border-radius:18px;padding:16px;margin-bottom:12px;display:flex;flex-direction:column;gap:10px}
+.emp-name{font-size:20px;font-weight:800;margin-bottom:4px}
+.emp-role{font-size:13px;color:#888;background:#2a2a2e;padding:3px 12px;border-radius:20px;display:inline-block}
+.emp-hours{display:flex;align-items:baseline;gap:10px}
+.hours-lbl{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:#555}
+.hours-val{font-size:28px;font-weight:800;line-height:1}
+.hours-ok{color:#00a86b}
+.hours-bad{color:#e84560}
+.hours-neutral{color:#f0f0f2}
+.emp-flags{display:flex;gap:8px;flex-wrap:wrap}
+.flag-chip{font-size:13px;font-weight:600;padding:5px 12px;border-radius:20px}
+.flag-abs{background:rgba(142,92,217,.18);color:#b48ae8}
+.flag-ovr{background:rgba(232,181,69,.15);color:#e8b545}
+
+/* ── VIEW TOGGLE ── */
+.view-toggle{display:flex;gap:8px;margin-bottom:12px}
+.vbtn{flex:1;background:#2a2a2e;border:1px solid #3a3a3c;border-radius:12px;color:#888;padding:12px 16px;min-height:48px;cursor:pointer;font-size:15px;font-weight:600}
+.vbtn.on{background:#e84560;border-color:#e84560;color:#fff}
+
+/* ── ANNOTATION ── */
+.note-wrap{margin-bottom:14px}
+.note-lbl{font-size:12px;text-transform:uppercase;letter-spacing:.7px;color:#555;margin-bottom:6px}
+.note-ta{width:100%;background:#1c1c1e;border:1px solid #3a3a3c;border-radius:12px;color:#f0f0f2;font-size:15px;padding:12px 14px;resize:vertical;min-height:64px;line-height:1.5}
+.note-ta.warn{border-color:#e84560}
+.note-ta:focus{outline:none;border-color:#888}
+.note-save-row{display:flex;align-items:center;gap:8px;margin-top:4px}
+.note-tick{font-size:13px;color:#00a86b;opacity:0;transition:.4s}
+.note-tick.on{opacity:1}
+
+/* ── LIST TABLE ── */
+.table-wrap{overflow-x:auto;border-radius:14px;border:1px solid #2a2a2e;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{background:#111;color:#555;font-weight:600;padding:10px 12px;text-align:left;border-bottom:1px solid #222;white-space:nowrap;font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+td{padding:11px 12px;border-bottom:1px solid #1a1a1c;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr.wknd td{color:#555}
+tr[data-date]{cursor:pointer}
+.t-time{font-family:monospace;font-weight:600;color:#f0f0f2;font-size:14px}
+.t-empty{color:#333}
+.t-hours{font-weight:700;color:#00a86b;font-family:monospace}
+.t-miss{color:#e84560;font-weight:700}
+.abs-badge{display:inline-block;background:rgba(142,92,217,.18);color:#b48ae8;font-size:12px;font-weight:700;padding:4px 10px;border-radius:14px;white-space:nowrap}
+.ovr-ico{color:#e8b545;font-weight:800;margin-left:5px}
+tr.note-tr td{background:#17171a;font-size:13px;color:#999;line-height:1.5;padding:8px 12px;border-bottom:1px solid #1a1a1c}
+tr.note-tr .nt-abs{color:#b48ae8}
+tr.note-tr .nt-ovr{color:#e8b545}
+
+/* ── CALENDAR ── */
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal-head{text-align:center;font-size:12px;font-weight:700;color:#555;padding:6px 0}
+.cal-cell{background:#1c1c1e;border:1px solid #252528;border-radius:8px;padding:6px 4px;min-height:76px;font-size:11px;cursor:pointer;position:relative}
+.cal-wknd{background:#161618;border-color:#1f1f22}
+.cal-empty{background:transparent;border-color:transparent;cursor:default}
+.cal-dn{font-size:13px;font-weight:700;color:#555;margin-bottom:3px}
+.cal-in,.cal-out{font-family:monospace;font-size:11px;color:#ccc;font-weight:600;white-space:nowrap}
+.cal-h{font-size:11px;color:#00a86b;font-weight:700;margin-top:2px;font-family:monospace}
+.cal-miss{color:#e84560;font-weight:700;font-size:13px}
+.cal-abs{display:inline-block;background:rgba(142,92,217,.25);color:#b48ae8;font-size:10px;font-weight:800;padding:2px 5px;border-radius:6px;margin-top:2px}
+.cal-ovr{position:absolute;top:4px;right:5px;color:#e8b545;font-size:12px;font-weight:800}
+
+/* ── HINT / ERROR ── */
+.hint{text-align:center;color:#444;padding:40px 16px;font-size:16px}
+.hint-err{color:#e84560}
+.retry-btn{background:#2a2a2e;border:1px solid #3a3a3c;border-radius:10px;color:#f0f0f2;padding:10px 20px;min-height:44px;cursor:pointer;font-size:14px;margin-top:10px;display:inline-block}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);opacity:0;background:#e84560;color:#fff;padding:12px 24px;border-radius:40px;font-size:15px;font-weight:600;pointer-events:none;transition:.25s;z-index:110;max-width:92vw;text-align:center}
+#toast.on{transform:translateX(-50%) translateY(0);opacity:1}
+#toast.g{background:#00a86b}
+
+/* ── Większe ekrany: modale wyśrodkowane, karta w wierszu ── */
+@media(min-width:600px){
+  .app-bar{flex-direction:row;flex-wrap:wrap;padding:10px 20px}
+  .bar-row{flex:initial}
+  .norma-group{flex:initial}
+  .modal-overlay{align-items:center;padding:16px}
+  .modal-card{border-radius:18px}
+  .emp-card{flex-direction:row;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+  .page-wrap{padding:16px 20px 40px}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════ LOGIN ═══════ -->
+<div id="login" class="login-wrap">
+  <div class="login-card">
+    <div class="login-brand">We SMILE</div>
+    <div class="login-title">Panel Raportowy</div>
+    <div class="login-sub">Wpisz swój PIN</div>
+    <div class="dots">
+      <div class="dot" id="ld0"></div><div class="dot" id="ld1"></div>
+      <div class="dot" id="ld2"></div><div class="dot" id="ld3"></div>
+    </div>
+    <div class="kp" id="kp-login">
+      <button class="key" data-v="1">1</button><button class="key" data-v="2">2</button><button class="key" data-v="3">3</button>
+      <button class="key" data-v="4">4</button><button class="key" data-v="5">5</button><button class="key" data-v="6">6</button>
+      <button class="key" data-v="7">7</button><button class="key" data-v="8">8</button><button class="key" data-v="9">9</button>
+      <button class="key clr" data-v="C">C</button><button class="key" data-v="0">0</button><button class="key sym" data-v="X">⌫</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ DASHBOARD ═══════ -->
+<div id="dash" style="display:none">
+  <header class="app-bar">
+    <div class="bar-row">
+      <span class="app-title">📊 Panel Raportowy</span>
+      <div class="bar-right">
+        <button id="btn-csv" class="btn-sm">📥 Excel</button>
+        <button id="btn-logout" class="btn-sm btn-red">Wyloguj</button>
+      </div>
+    </div>
+    <div class="bar-row">
+      <div class="month-nav">
+        <button id="btn-prev" class="nav-btn">◀</button>
+        <span id="month-lbl" class="month-label"></span>
+        <button id="btn-next" class="nav-btn">▶</button>
+      </div>
+    </div>
+    <div class="bar-row">
+      <div class="norma-group">
+        <span class="norma-lbl">Norma:</span>
+        <input id="etat-inp" type="number" class="norma-inp" min="0" step="0.5" placeholder="0">
+        <span class="norma-lbl">h</span>
+        <span id="norma-tick" class="norma-tick">✓</span>
+      </div>
+    </div>
+  </header>
+
+  <div id="marquee-bar" class="marquee-bar" style="display:none">
+    <div class="marquee-track" id="marquee-track"></div>
+  </div>
+
+  <div class="page-wrap">
+    <div class="sel-lbl">Pracownik</div>
+    <div class="emp-sel-wrap">
+      <input type="text" id="emp-input" class="emp-input"
+             placeholder="Wpisz imię lub nazwisko…" autocomplete="off">
+      <div id="emp-dropdown" class="emp-dropdown"></div>
+    </div>
+    <div id="emp-data"></div>
+  </div>
+</div>
+
+<!-- ═══════ MODAL — kto w pracy ═══════ -->
+<div id="active-modal" class="modal-overlay" style="display:none">
+  <div class="modal-card">
+    <div class="modal-head">
+      <span>👥 Obecnie w pracy</span>
+      <button id="modal-close" class="modal-x">✕</button>
+    </div>
+    <div id="modal-list" class="modal-list"></div>
+  </div>
+</div>
+
+<!-- ═══════ MODAL — szczegóły dnia ═══════ -->
+<div id="day-modal" class="modal-overlay" style="display:none">
+  <div class="modal-card">
+    <div class="modal-head">
+      <span id="day-modal-title">Szczegóły dnia</span>
+      <button id="day-modal-close" class="modal-x">✕</button>
+    </div>
+    <div id="day-modal-body"></div>
+  </div>
+</div>
+
+<!-- ═══════ MODAL — eksport Excel ═══════ -->
+<div id="export-modal" class="modal-overlay" style="display:none">
+  <div class="modal-card">
+    <div class="modal-head">
+      <span>📥 Eksport Excel</span>
+      <button id="export-close" class="modal-x">✕</button>
+    </div>
+
+    <div class="exp-section">
+      <span class="exp-lbl">Zakres</span>
+      <label class="exp-radio"><input type="radio" name="exp-mode" value="month" checked> Jeden miesiąc</label>
+      <label class="exp-radio"><input type="radio" name="exp-mode" value="range"> Zakres dat</label>
+    </div>
+
+    <div id="exp-mode-month" class="exp-section">
+      <input type="month" id="exp-month" class="exp-input">
+    </div>
+
+    <div id="exp-mode-range" class="exp-section" style="display:none">
+      <div class="exp-range-row">
+        <div>
+          <div class="exp-sublbl">Od</div>
+          <input type="month" id="exp-from" class="exp-input">
+        </div>
+        <div>
+          <div class="exp-sublbl">Do</div>
+          <input type="month" id="exp-to" class="exp-input">
+        </div>
+      </div>
+    </div>
+
+    <div class="exp-section">
+      <div class="exp-lbl-row">
+        <span class="exp-lbl" style="margin-bottom:0">Pracownicy</span>
+        <span class="exp-links"><a href="#" id="exp-all">wszyscy</a> · <a href="#" id="exp-none">żaden</a></span>
+      </div>
+      <div id="exp-emp-list" class="exp-emp-list"></div>
+    </div>
+
+    <button id="exp-generate" class="btn-generate">Generuj plik</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* global google */
+
+var S = {
+  token:  null,
+  year:   new Date().getFullYear(),
+  month:  new Date().getMonth() + 1,
+  data:   null,
+  selId:  null,
+  view:   'list'   // 'list' | 'cal'
+};
+
+var MONTHS = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec',
+              'Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
+
+var _activeTimer = null;
+
+// ── Utilities ─────────────────────────────────────────────────
+
+var _tt;
+function toast(msg, ok) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'on' + (ok ? ' g' : '');
+  clearTimeout(_tt);
+  _tt = setTimeout(function(){ el.className = ''; }, 2800);
+}
+
+function gas(action, args, cb) {
+  google.script.run
+    .withSuccessHandler(function(res) {
+      try { cb(res); } catch(ex) {
+        toast('Błąd: ' + ex.message, false);
+        console.error(ex);
+      }
+    })
+    .withFailureHandler(function(e) {
+      toast((e && e.message) || 'Błąd połączenia', false);
+    })
+    .callRCP(action, JSON.stringify(args || []));
+}
+
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// Format minut jako H:MM (max 59 minut)
+function fmtHM(mins) {
+  var n = parseInt(mins, 10);
+  if (isNaN(n)) return '—';
+  var h = Math.floor(n / 60);
+  var m = n % 60;
+  return h + ':' + String(m).padStart(2, '0');
+}
+
+// Krótki kod nieobecności do kalendarza (z pełnej etykiety bierzemy kod)
+function absShort(a) {
+  return a && a.code ? a.code : '';
+}
+
+// ── Login ─────────────────────────────────────────────────────
+
+var lPin = '';
+function setDots(p) {
+  for (var i = 0; i < 4; i++)
+    document.getElementById('ld' + i).className = 'dot' + (i < p.length ? ' on' : '');
+}
+
+document.getElementById('kp-login').addEventListener('click', function(e) {
+  var btn = e.target.closest('[data-v]');
+  if (!btn) return;
+  var v = btn.getAttribute('data-v');
+  if (v === 'C') lPin = '';
+  else if (v === 'X') lPin = lPin.slice(0, -1);
+  else if (lPin.length < 4) lPin += v;
+  setDots(lPin);
+  if (lPin.length === 4) {
+    toast('Logowanie…', true);
+    gas('dashLogin', [lPin], function(res) {
+      if (res && res.ok) {
+        S.token = res.token;
+        document.getElementById('login').style.display = 'none';
+        document.getElementById('dash').style.display  = 'block';
+        updateMonthLabel();
+        loadMonth();
+        pollActive();
+        _activeTimer = setInterval(pollActive, 60000);
+      } else {
+        toast((res && res.msg) || 'Nieprawidłowy PIN.', false);
+        lPin = ''; setDots('');
+      }
+    });
+  }
+});
+
+// ── Kto jest w pracy — marquee + modal ─────────────────────────
+
+function pollActive() {
+  if (!S.token) return;
+  gas('getActive', [S.token], function(res) {
+    if (!res || !res.ok) return;
+    renderMarquee(res.active);
+    renderModalList(res.active);
+  });
+}
+
+function renderMarquee(list) {
+  var bar   = document.getElementById('marquee-bar');
+  var track = document.getElementById('marquee-track');
+  bar.style.display = 'block';
+
+  if (!list || list.length === 0) {
+    track.className = 'marquee-track';
+    track.style.paddingLeft = '16px';
+    track.innerHTML = '<span class="marquee-empty">Nikt obecnie nie jest w pracy</span>';
+    return;
+  }
+
+  var itemsHtml = list.map(function(p) {
+    return '<span class="marquee-item"><span class="marquee-dot"></span>' +
+      esc(p.imie + ' ' + p.nazwisko) + ' — od ' + esc(p.wejscie) + '</span>';
+  }).join('');
+
+  track.className = 'marquee-track';
+  track.style.paddingLeft = '16px';
+  track.innerHTML = itemsHtml;
+
+  var overflow = track.scrollWidth > bar.clientWidth;
+  if (overflow) {
+    track.style.paddingLeft = '100%';
+    track.innerHTML = itemsHtml + itemsHtml;
+    track.className = 'marquee-track scrolling';
+  }
+}
+
+function renderModalList(list) {
+  var el = document.getElementById('modal-list');
+  if (!list || list.length === 0) {
+    el.innerHTML = '<div class="modal-empty">Nikt obecnie nie jest w pracy</div>';
+    return;
+  }
+  el.innerHTML = list.map(function(p) {
+    return '<div class="modal-row"><span class="modal-row-name"><span class="marquee-dot"></span>' +
+      esc(p.imie + ' ' + p.nazwisko) + '</span>' +
+      '<span style="color:#00a86b;font-weight:700;font-family:monospace">' + esc(p.wejscie) + '</span></div>';
+  }).join('');
+}
+
+document.getElementById('marquee-bar').addEventListener('click', function() {
+  document.getElementById('active-modal').style.display = 'flex';
+});
+document.getElementById('modal-close').addEventListener('click', function() {
+  document.getElementById('active-modal').style.display = 'none';
+});
+document.getElementById('active-modal').addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
+
+// ── Miesiąc ───────────────────────────────────────────────────
+
+function updateMonthLabel() {
+  document.getElementById('month-lbl').textContent = MONTHS[S.month - 1] + ' ' + S.year;
+}
+
+document.getElementById('btn-prev').addEventListener('click', function() {
+  S.month--; if (S.month < 1) { S.month = 12; S.year--; }
+  updateMonthLabel(); loadMonth();
+});
+document.getElementById('btn-next').addEventListener('click', function() {
+  S.month++; if (S.month > 12) { S.month = 1; S.year++; }
+  updateMonthLabel(); loadMonth();
+});
+
+// ── Norma ─────────────────────────────────────────────────────
+
+function saveEtat() {
+  var val = parseFloat(document.getElementById('etat-inp').value);
+  if (isNaN(val) || val < 0) return;
+  gas('setEtat', [S.token, S.year, S.month, val], function(res) {
+    if (res && res.ok) {
+      if (S.data) S.data.etat = val;
+      var tk = document.getElementById('norma-tick');
+      tk.className = 'norma-tick on';
+      setTimeout(function(){ tk.className = 'norma-tick'; }, 2000);
+      if (S.selId) refreshEmpDisplay();
+    } else if (res && res.errorType === 'UNAUTHORIZED') {
+      doLogout();
+    } else {
+      toast('Błąd zapisu normy: ' + ((res && res.msg) || ''), false);
+    }
+  });
+}
+
+document.getElementById('etat-inp').addEventListener('blur', saveEtat);
+document.getElementById('etat-inp').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') this.blur();
+});
+
+// ── Selector pracownika ───────────────────────────────────────
+
+var _emps = [];
+
+function fillSelector(employees) {
+  _emps = employees || [];
+  renderOpts(_emps);
+}
+
+function renderOpts(list) {
+  var dl = document.getElementById('emp-dropdown');
+  if (list.length === 0) {
+    dl.innerHTML = '<div class="emp-opt-none">Brak wyników</div>';
+    return;
+  }
+  dl.innerHTML = '';
+  list.forEach(function(emp) {
+    var d = document.createElement('div');
+    d.className = 'emp-opt';
+    d.textContent = emp.imie + ' ' + emp.nazwisko;
+    d.addEventListener('mousedown', function(e) {
+      e.preventDefault();
+      pickEmp(emp);
+    });
+    dl.appendChild(d);
+  });
+}
+
+document.getElementById('emp-input').addEventListener('focus', function() {
+  renderOpts(_emps);
+  document.getElementById('emp-dropdown').style.display = 'block';
+});
+document.getElementById('emp-input').addEventListener('input', function() {
+  var q = this.value.toLowerCase();
+  renderOpts(_emps.filter(function(e) {
+    return (e.imie + ' ' + e.nazwisko).toLowerCase().indexOf(q) !== -1;
+  }));
+  document.getElementById('emp-dropdown').style.display = 'block';
+});
+document.getElementById('emp-input').addEventListener('blur', function() {
+  setTimeout(function(){ document.getElementById('emp-dropdown').style.display = 'none'; }, 160);
+});
+
+function pickEmp(emp) {
+  S.selId = emp.id;
+  document.getElementById('emp-input').value = emp.imie + ' ' + emp.nazwisko;
+  document.getElementById('emp-dropdown').style.display = 'none';
+  renderEmp(emp);
+}
+
+function getEmp(id) {
+  if (!S.data || !S.data.employees) return null;
+  for (var i = 0; i < S.data.employees.length; i++)
+    if (S.data.employees[i].id === id) return S.data.employees[i];
+  return null;
+}
+
+function refreshEmpDisplay() {
+  if (!S.selId) return;
+  var emp = getEmp(S.selId);
+  if (emp) renderEmp(emp);
+}
+
+// ── Ładowanie danych ──────────────────────────────────────────
+
+function loadMonth() {
+  document.getElementById('emp-data').innerHTML = '<div class="hint">Ładowanie danych…</div>';
+  gas('getDashboard', [S.token, S.year, S.month], function(res) {
+    if (!res || !res.ok) {
+      if (res && res.errorType === 'UNAUTHORIZED') { doLogout(); return; }
+      document.getElementById('emp-data').innerHTML =
+        '<div class="hint hint-err">' + esc((res && res.msg) || 'Błąd ładowania.') +
+        '<br><button class="retry-btn" onclick="loadMonth()">Ponów</button></div>';
+      return;
+    }
+    S.data = res;
+    document.getElementById('etat-inp').value = res.etat > 0 ? res.etat : '';
+    fillSelector(res.employees);
+    if (S.selId) {
+      var emp = getEmp(S.selId);
+      if (emp) { renderEmp(emp); return; }
+    }
+    document.getElementById('emp-data').innerHTML = '';
+  });
+}
+
+// ── Wyświetlanie pracownika ───────────────────────────────────
+
+function renderEmp(emp) {
+  var etat      = (S.data && S.data.etat > 0) ? S.data.etat : 0;
+  var etatMins  = etat > 0 ? Math.round(etat * 60) : 0;
+  var totalMins = parseInt(emp.totalMinutes, 10) || 0;
+
+  var hoursHtml, hoursCls, isBad;
+  if (etat > 0) {
+    hoursHtml = fmtHM(totalMins) + ' z ' + fmtHM(etatMins);
+    isBad     = totalMins < etatMins;
+    hoursCls  = isBad ? 'hours-bad' : 'hours-ok';
+  } else {
+    hoursHtml = fmtHM(totalMins);
+    hoursCls  = 'hours-neutral';
+    isBad     = false;
+  }
+
+  var note = esc(emp.note || '');
+
+  var html = '<div class="emp-card">';
+  html += '<div class="emp-info"><div class="emp-name">' + esc(emp.imie + ' ' + emp.nazwisko) + '</div>';
+  html += '<div class="emp-role">' + esc(emp.rola || '') + '</div></div>';
+  html += '<div><div class="hours-lbl">Przepracowane</div>';
+  html += '<div class="emp-hours"><div class="hours-val ' + hoursCls + '">' + hoursHtml + '</div></div></div>';
+  if ((emp.absDays > 0) || (emp.ovrDays > 0)) {
+    html += '<div class="emp-flags">';
+    if (emp.absDays > 0) html += '<span class="flag-chip flag-abs">🏖️ Nieobecności: ' + emp.absDays + '</span>';
+    if (emp.ovrDays > 0) html += '<span class="flag-chip flag-ovr">⚠️ Poza godz. Kliniki: ' + emp.ovrDays + '</span>';
+    html += '</div>';
+  }
+  html += '</div>';
+
+  // Adnotacja
+  html += '<div class="note-wrap">';
+  html += '<div class="note-lbl">Adnotacja' + (isBad ? ' — niedobór godzin' : '') + '</div>';
+  html += '<textarea id="note-ta" class="note-ta' + (isBad ? ' warn' : '') + '"';
+  html += ' placeholder="Wpisz adnotację…">' + note + '</textarea>';
+  html += '<div class="note-save-row"><span id="note-tick" class="note-tick">✓ Zapisano</span></div>';
+  html += '</div>';
+
+  // View toggle
+  html += '<div class="view-toggle">';
+  html += '<button class="vbtn' + (S.view === 'list' ? ' on' : '') + '" onclick="switchView(\'list\')">Lista</button>';
+  html += '<button class="vbtn' + (S.view === 'cal'  ? ' on' : '') + '" onclick="switchView(\'cal\')">Kalendarz</button>';
+  html += '</div>';
+
+  // Data view
+  html += '<div id="data-view">';
+  html += S.view === 'cal' ? renderCalendar(emp) : renderList(emp);
+  html += '</div>';
+
+  document.getElementById('emp-data').innerHTML = html;
+
+  // Bind note textarea
+  var ta = document.getElementById('note-ta');
+  if (ta) {
+    ta.addEventListener('blur', function() { saveNote(emp.id, ta.value); });
+    ta.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) ta.blur();
+    });
+  }
+}
+
+function switchView(v) {
+  S.view = v;
+  var emp = getEmp(S.selId);
+  if (!emp) return;
+  document.getElementById('data-view').innerHTML =
+    v === 'cal' ? renderCalendar(emp) : renderList(emp);
+  document.querySelectorAll('.vbtn').forEach(function(b) {
+    b.className = 'vbtn' + (b.textContent.trim() === (v === 'cal' ? 'Kalendarz' : 'Lista') ? ' on' : '');
+  });
+}
+
+// ── Lista ─────────────────────────────────────────────────────
+
+function renderList(emp) {
+  var days = Array.isArray(emp.days) ? emp.days : [];
+  var html = '<div class="table-wrap"><table>';
+  html += '<thead><tr><th>Dzień</th><th>Data</th><th>Wejście</th><th>Wyjście</th><th>Godziny</th></tr></thead><tbody>';
+  days.forEach(function(d) {
+    if (!d) return;
+    var dn   = String(d.date || '').split('-')[2] || '';
+    var mm   = String(S.month).padStart(2, '0');
+    var wknd = d.dow === 'Sb' || d.dow === 'Nd';
+    var hasH = d.mins !== null && d.mins !== undefined;
+
+    html += '<tr' + (wknd ? ' class="wknd"' : '') + ' data-date="' + esc(d.date) + '">';
+    html += '<td><strong>' + esc(d.dow || '') + '</strong>' +
+            (d.overtime ? '<span class="ovr-ico">⚠</span>' : '') + '</td>';
+    html += '<td>' + dn + '.' + mm + '</td>';
+
+    if (d.absence) {
+      html += '<td colspan="2"><span class="abs-badge">' + esc(d.absence.typ) + '</span></td>';
+      html += '<td class="t-empty">—</td>';
+    } else {
+      html += '<td class="' + (d.wejscie ? 't-time' : 't-empty') + '">' + esc(d.wejscie || '—') + '</td>';
+      html += '<td class="' + (d.wyjscie ? 't-time' : (d.wejscie ? 't-miss' : 't-empty')) + '">';
+      html += d.wyjscie ? esc(d.wyjscie) : (d.wejscie ? 'brak !' : '—');
+      html += '</td>';
+      html += '<td class="' + (hasH ? 't-hours' : 't-empty') + '">' + (hasH ? fmtHM(d.mins) : '—') + '</td>';
+    }
+    html += '</tr>';
+
+    // Wiersze z adnotacjami dnia (oznaczenie dnia, nie godzin)
+    if (d.absence && d.absence.note) {
+      html += '<tr class="note-tr" data-date="' + esc(d.date) + '"><td colspan="5">' +
+        '<span class="nt-abs">📝 ' + esc(d.absence.note) + '</span></td></tr>';
+    }
+    if (d.overtime) {
+      html += '<tr class="note-tr" data-date="' + esc(d.date) + '"><td colspan="5">' +
+        '<span class="nt-ovr">⚠ Poza godzinami Kliniki — ' +
+        (d.overtimeNote ? 'uzasadnienie: ' + esc(d.overtimeNote) : 'brak uzasadnienia') +
+        '</span></td></tr>';
+    }
+  });
+  html += '</tbody></table></div>';
+  return html;
+}
+
+// ── Kalendarz ─────────────────────────────────────────────────
+
+function renderCalendar(emp) {
+  var days = Array.isArray(emp.days) ? emp.days : [];
+  if (days.length === 0) return '<div class="hint">Brak danych</div>';
+
+  var firstJs  = new Date(days[0].date + 'T12:00:00').getDay(); // 0=Nd
+  var firstCol = firstJs === 0 ? 6 : firstJs - 1;
+
+  var html = '<div class="cal-grid">';
+  ['Pn','Wt','Śr','Cz','Pt','Sb','Nd'].forEach(function(h) {
+    html += '<div class="cal-head">' + h + '</div>';
+  });
+  for (var i = 0; i < firstCol; i++) {
+    html += '<div class="cal-cell cal-empty"></div>';
+  }
+  days.forEach(function(d) {
+    if (!d) return;
+    var dn   = parseInt(String(d.date || '').split('-')[2]) || 0;
+    var wknd = d.dow === 'Sb' || d.dow === 'Nd';
+    var hasH = d.mins !== null && d.mins !== undefined;
+    html += '<div class="cal-cell' + (wknd ? ' cal-wknd' : '') + '" data-date="' + esc(d.date) + '">';
+    if (d.overtime) html += '<span class="cal-ovr">⚠</span>';
+    html += '<div class="cal-dn">' + dn + '</div>';
+    if (d.absence) {
+      html += '<span class="cal-abs">' + esc(absShort(d.absence)) + '</span>';
+    } else if (d.wejscie) {
+      html += '<div class="cal-in">' + esc(d.wejscie) + '</div>';
+      if (d.wyjscie) {
+        html += '<div class="cal-out">' + esc(d.wyjscie) + '</div>';
+        if (hasH) html += '<div class="cal-h">' + fmtHM(d.mins) + '</div>';
+      } else {
+        html += '<div class="cal-miss">!</div>';
+      }
+    }
+    html += '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+// ── Szczegóły dnia (tap w wiersz listy / komórkę kalendarza) ──
+
+document.getElementById('emp-data').addEventListener('click', function(e) {
+  var el = e.target.closest('[data-date]');
+  if (!el) return;
+  showDayDetails(el.getAttribute('data-date'));
+});
+
+function showDayDetails(date) {
+  var emp = getEmp(S.selId);
+  if (!emp || !date) return;
+  var d = null;
+  (emp.days || []).forEach(function(x) { if (x && x.date === date) d = x; });
+  if (!d) return;
+
+  var dn = date.split('-')[2] + '.' + date.split('-')[1] + '.' + date.split('-')[0];
+  document.getElementById('day-modal-title').textContent = d.dow + ', ' + dn;
+
+  var html = '';
+  html += '<div class="dd-row"><span class="dd-lbl">Wejście</span><span class="dd-val">' + esc(d.wejscie || '—') + '</span></div>';
+  html += '<div class="dd-row"><span class="dd-lbl">Wyjście</span><span class="dd-val">' + esc(d.wyjscie || '—') + '</span></div>';
+  html += '<div class="dd-row"><span class="dd-lbl">Godziny</span><span class="dd-val">' +
+          ((d.mins !== null && d.mins !== undefined) ? fmtHM(d.mins) : '—') + '</span></div>';
+
+  if (d.absence) {
+    html += '<div class="dd-note dd-abs"><b>Nieobecność</b>' + esc(d.absence.typ) +
+      (d.absence.note ? '<br><span style="color:#999">📝 ' + esc(d.absence.note) + '</span>' : '') + '</div>';
+  }
+  if (d.overtime) {
+    html += '<div class="dd-note dd-ovr"><b>⚠ Przekroczono regularne godziny pracy Kliniki</b>' +
+      (d.overtimeNote ? 'Uzasadnienie: ' + esc(d.overtimeNote)
+                      : '<span style="color:#e84560">Brak uzasadnienia</span>') + '</div>';
+  }
+  if (!d.absence && !d.overtime && !d.wejscie && !d.wyjscie) {
+    html += '<div class="modal-empty">Brak zdarzeń tego dnia</div>';
+  }
+
+  document.getElementById('day-modal-body').innerHTML = html;
+  document.getElementById('day-modal').style.display = 'flex';
+}
+
+document.getElementById('day-modal-close').addEventListener('click', function() {
+  document.getElementById('day-modal').style.display = 'none';
+});
+document.getElementById('day-modal').addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
+
+// ── Adnotacja ─────────────────────────────────────────────────
+
+function saveNote(empId, text) {
+  gas('setNote', [S.token, empId, S.year, S.month, text], function(res) {
+    if (res && res.ok) {
+      var emp = getEmp(empId);
+      if (emp) emp.note = text;
+      var tk = document.getElementById('note-tick');
+      if (tk) { tk.className = 'note-tick on'; setTimeout(function(){ tk.className = 'note-tick'; }, 2000); }
+    } else if (res && res.errorType === 'UNAUTHORIZED') {
+      doLogout();
+    }
+  });
+}
+
+// ── Excel — okno wyboru zakresu i pracowników ──────────────────
+
+document.getElementById('btn-csv').addEventListener('click', openExportModal);
+
+function openExportModal() {
+  if (!S.token) return;
+  document.getElementById('export-modal').style.display = 'flex';
+  document.getElementById('exp-emp-list').innerHTML = '<div class="modal-empty">Ładowanie…</div>';
+
+  document.querySelector('input[name="exp-mode"][value="month"]').checked = true;
+  document.getElementById('exp-mode-month').style.display = 'block';
+  document.getElementById('exp-mode-range').style.display = 'none';
+
+  gas('getExportMeta', [S.token], function(res) {
+    if (!res || !res.ok) {
+      if (res && res.errorType === 'UNAUTHORIZED') { doLogout(); return; }
+      toast('Błąd wczytywania danych eksportu.', false);
+      document.getElementById('export-modal').style.display = 'none';
+      return;
+    }
+
+    var now = new Date();
+    var curMonthVal = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+    var earliestVal = String(res.earliest).slice(0, 7);
+
+    var monthInp = document.getElementById('exp-month');
+    monthInp.value = curMonthVal;
+    monthInp.max = curMonthVal;
+
+    var fromInp = document.getElementById('exp-from');
+    var toInp   = document.getElementById('exp-to');
+    fromInp.value = earliestVal;
+    fromInp.min   = earliestVal;
+    fromInp.max   = curMonthVal;
+    toInp.value   = curMonthVal;
+    toInp.min     = earliestVal;
+    toInp.max     = curMonthVal;
+
+    var list = document.getElementById('exp-emp-list');
+    if (!res.employees || res.employees.length === 0) {
+      list.innerHTML = '<div class="modal-empty">Brak aktywnych pracowników</div>';
+      return;
+    }
+    list.innerHTML = res.employees.map(function(e) {
+      return '<label class="exp-emp-item"><input type="checkbox" class="exp-emp-cb" value="' + esc(e.id) + '" checked> ' +
+        esc(e.imie + ' ' + e.nazwisko) + '</label>';
+    }).join('');
+  });
+}
+
+document.getElementById('export-close').addEventListener('click', function() {
+  document.getElementById('export-modal').style.display = 'none';
+});
+document.getElementById('export-modal').addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
+
+document.querySelectorAll('input[name="exp-mode"]').forEach(function(r) {
+  r.addEventListener('change', function() {
+    var isRange = document.querySelector('input[name="exp-mode"]:checked').value === 'range';
+    document.getElementById('exp-mode-month').style.display = isRange ? 'none' : 'block';
+    document.getElementById('exp-mode-range').style.display = isRange ? 'block' : 'none';
+  });
+});
+
+document.getElementById('exp-all').addEventListener('click', function(e) {
+  e.preventDefault();
+  document.querySelectorAll('.exp-emp-cb').forEach(function(cb){ cb.checked = true; });
+});
+document.getElementById('exp-none').addEventListener('click', function(e) {
+  e.preventDefault();
+  document.querySelectorAll('.exp-emp-cb').forEach(function(cb){ cb.checked = false; });
+});
+
+document.getElementById('exp-generate').addEventListener('click', function() {
+  var mode = document.querySelector('input[name="exp-mode"]:checked').value;
+  var employeeIds = Array.prototype.map.call(
+    document.querySelectorAll('.exp-emp-cb:checked'), function(cb){ return cb.value; }
+  );
+  if (employeeIds.length === 0) { toast('Wybierz przynajmniej jednego pracownika.', false); return; }
+
+  var opts = { employeeIds: employeeIds };
+
+  if (mode === 'range') {
+    var from = document.getElementById('exp-from').value;
+    var to   = document.getElementById('exp-to').value;
+    if (!from || !to) { toast('Wybierz zakres dat.', false); return; }
+    if (from > to) { toast('Data "od" nie może być późniejsza niż "do".', false); return; }
+    opts.mode = 'range';
+    opts.from = from + '-01';
+    var toYear  = parseInt(to.slice(0, 4), 10);
+    var toMonth = parseInt(to.slice(5, 7), 10);
+    var toDim   = new Date(toYear, toMonth, 0).getDate();
+    opts.to = to + '-' + String(toDim).padStart(2, '0');
+  } else {
+    var mv = document.getElementById('exp-month').value;
+    if (!mv) { toast('Wybierz miesiąc.', false); return; }
+    opts.mode  = 'month';
+    opts.year  = parseInt(mv.slice(0, 4), 10);
+    opts.month = parseInt(mv.slice(5, 7), 10);
+  }
+
+  document.getElementById('export-modal').style.display = 'none';
+  toast('Generowanie pliku Excel…', true);
+  gas('dashExportXlsx', [S.token, opts], function(res) {
+    if (!res || !res.ok) { toast('Błąd eksportu: ' + ((res && res.msg) || ''), false); return; }
+    var byteChars = atob(res.base64);
+    var byteNumbers = new Array(byteChars.length);
+    for (var i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+    var byteArray = new Uint8Array(byteNumbers);
+    var blob = new Blob([byteArray], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = res.filename;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+    toast('Plik pobrany!', true);
+  });
+});
+
+// ── Logout ────────────────────────────────────────────────────
+
+function doLogout() {
+  S.token = null; S.data = null; S.selId = null;
+  lPin = ''; setDots('');
+  if (_activeTimer) { clearInterval(_activeTimer); _activeTimer = null; }
+  document.getElementById('emp-input').value = '';
+  document.getElementById('etat-inp').value  = '';
+  document.getElementById('emp-data').innerHTML = '';
+  document.getElementById('marquee-bar').style.display = 'none';
+  document.getElementById('active-modal').style.display = 'none';
+  document.getElementById('day-modal').style.display = 'none';
+  document.getElementById('export-modal').style.display = 'none';
+  document.getElementById('dash').style.display  = 'none';
+  document.getElementById('login').style.display = 'flex';
+}
+
+document.getElementById('btn-logout').addEventListener('click', doLogout);
+</script>
+</body>
+</html>
