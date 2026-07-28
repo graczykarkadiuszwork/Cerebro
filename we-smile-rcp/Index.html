@@ -54,6 +54,8 @@
 </head>
 <body>
 
+<button class="btn-icon corner-toggle theme-ic" onclick="wsToggleTheme()" aria-label="Przełącz tryb nocny"></button>
+
 <? if (PAGE === 'admin') { ?>
 
 <!-- ═══════════════════════════════════════════
@@ -301,6 +303,7 @@ if (PAGE === 'admin') {
 
   function resetAll() {
     pin = ''; code = ''; empPin = ''; empName = '';
+    absTypes = null; // lista zależy od formy zatrudnienia — nie może przetrwać zmiany pracownika
     setDots(pin, 'p');
     setDots(code, 'c');
     show('s-pin');
@@ -445,7 +448,7 @@ if (PAGE === 'admin') {
       show('s-abs');
     } else {
       toast('Ładowanie…', true);
-      gas('getAbsenceTypes', [], function (res) {
+      gas('getAbsenceTypes', [empPin], function (res) {
         if (res && res.ok) {
           absTypes = res.types || [];
           fillAbsTypes();

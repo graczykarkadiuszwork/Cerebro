@@ -6,7 +6,6 @@
 <title>We SMILE</title>
 <?!= include('Styles'); ?>
 <style>
-.seg3{display:grid;grid-template-columns:repeat(3,1fr)}
 .month-nav{display:flex;align-items:center;gap:10px;margin-bottom:16px}
 .month-label{font-size:15px;font-weight:700;flex:1;text-align:center;color:var(--c-ink)}
 
@@ -32,12 +31,24 @@
 .confirm-row .btn{width:auto;flex:1}
 .info-box{display:flex;gap:10px;background:var(--c-navy-tint);border:1px solid var(--c-border);border-radius:var(--radius-m);padding:12px 14px;font-size:13px;line-height:1.5;color:var(--c-navy)}
 .info-box .ic{flex-shrink:0;margin-top:1px}
+
+.emp-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--c-white);border:1.5px solid var(--c-border-strong);border-radius:var(--radius-m);z-index:20;max-height:240px;overflow-y:auto;box-shadow:var(--shadow-m);display:none}
+.emp-opt{padding:14px 16px;cursor:pointer;font-size:15px;font-weight:500;color:var(--c-ink)}
+.emp-opt:active{background:var(--c-offwhite)}
+
+.staff-row{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--c-white);border:1px solid var(--c-border);border-radius:var(--radius-m);padding:12px 14px;margin-bottom:8px}
+.staff-row.warn{border-color:rgba(123,30,59,.3);background:var(--c-accent-tint)}
+.staff-name{font-weight:700;font-size:14px;color:var(--c-ink)}
+.staff-role{font-size:12px;color:var(--c-muted)}
+.staff-warn-lbl{font-size:11px;color:var(--c-accent);font-weight:700;display:block;margin-top:2px}
+.staff-forma-sel{width:auto;min-height:40px;padding:8px 32px 8px 12px;font-size:13px;flex-shrink:0}
 </style>
 </head>
 <body>
 
 <!-- LOGIN -->
 <div id="s-login" class="screen">
+  <button class="btn-icon corner-toggle theme-ic" onclick="wsToggleTheme()" aria-label="Przełącz tryb nocny"></button>
   <div class="sheet">
     <div class="wm" style="display:flex;justify-content:center;margin-bottom:14px">we<b>SMILE</b></div>
     <div class="step-title" style="text-align:center">Dostęp ograniczony</div>
@@ -62,6 +73,15 @@
     <div class="appbar-row">
       <span class="wm on-dark appbar-title">we<b>SMILE</b> · Właściciel</span>
       <div class="bar-right">
+        <button id="m-theme" class="btn-bar icon-only theme-ic" aria-label="Przełącz tryb nocny"></button>
+        <button id="nav-dashboard" class="btn-bar" title="Panel Raportowy">
+          <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-6 4 3 5-8"/></svg>
+          Raporty
+        </button>
+        <button id="nav-worker" class="btn-bar" title="Ekran odbić">
+          <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 18h6"/></svg>
+          Odbicia
+        </button>
         <button id="m-logout" class="btn-bar danger">
           <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"/><path d="M21 12H8"/><path d="M15 16l4-4-4-4"/></svg>
           Wyloguj
@@ -72,10 +92,12 @@
 
   <div class="page-wrap">
 
-    <div class="seg seg3" style="margin-bottom:18px">
+    <div class="seg seg-scroll" style="margin-bottom:18px">
       <button class="seg-btn on" id="tab-day">Dzień</button>
       <button class="seg-btn" id="tab-month">Miesiąc</button>
+      <button class="seg-btn" id="tab-range">Urlop</button>
       <button class="seg-btn" id="tab-daysoff">Dni wolne</button>
+      <button class="seg-btn" id="tab-staff">Pracownicy</button>
     </div>
 
     <!-- ── WIDOK: DZIEŃ ── -->
@@ -163,6 +185,50 @@
       <div class="hint" style="padding:16px 4px;text-align:left">Zmiana godziny zapisuje się automatycznie po opuszczeniu pola (żółte obramowanie = zapisuję, niebieskie = zapisano). Puste pole = usuwa dane zdarzenie tego dnia. Fioletowa plakietka = nieobecność, trójkąt = dzień poza godzinami Kliniki — dotknij numeru dnia, aby przejść do szybkiej edycji.</div>
     </div>
 
+    <!-- ── WIDOK: URLOP (zakres dat, dla jednego pracownika) ── -->
+    <div id="view-range" style="display:none">
+      <div class="info-box">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>
+        <span>Jednym zapisem oznacza (lub czyści) nieobecność wybranego pracownika w całym zakresie dat — bez klikania dzień po dniu. Osobne narzędzie od edycji pojedynczego dnia i od „Dni wolnych” (te dotyczą całej Kliniki).</span>
+      </div>
+
+      <div class="field" style="position:relative;margin-top:16px">
+        <span class="field-lbl">Pracownik</span>
+        <input type="text" id="rg-emp-input" class="inp" placeholder="Wpisz imię lub nazwisko…" autocomplete="off">
+        <div id="rg-emp-dropdown" class="emp-dropdown"></div>
+      </div>
+
+      <div class="field-row2">
+        <div class="field">
+          <span class="field-lbl">Od dnia</span>
+          <input type="date" id="rg-from" class="inp">
+        </div>
+        <div class="field">
+          <span class="field-lbl">Do dnia</span>
+          <input type="date" id="rg-to" class="inp">
+        </div>
+      </div>
+
+      <div class="field">
+        <span class="field-lbl">Typ</span>
+        <select id="rg-typ" class="sel">
+          <option value="">— usuń nieobecność w tym zakresie —</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <span class="field-lbl">Adnotacja</span>
+        <textarea id="rg-note" class="ta" placeholder="Powód, numer L4, dodatkowe informacje…"></textarea>
+      </div>
+
+      <button id="rg-apply" class="btn btn-accent">Zapisz dla wybranego pracownika</button>
+
+      <div class="confirm-row" id="rg-confirm" style="display:none">
+        <button id="rg-cancel" class="btn btn-ghost">Anuluj</button>
+        <button id="rg-yes" class="btn btn-accent">Tak, zapisz</button>
+      </div>
+    </div>
+
     <!-- ── WIDOK: DNI WOLNE (masowo, dla całej Kliniki) ── -->
     <div id="view-daysoff" style="display:none">
       <div class="info-box">
@@ -201,6 +267,15 @@
       </div>
     </div>
 
+    <!-- ── WIDOK: PRACOWNICY (forma zatrudnienia) ── -->
+    <div id="view-staff" style="display:none">
+      <div class="info-box">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>
+        <span>Forma zatrudnienia decyduje, jakie typy nieobecności widzi pracownik w samoobsłudze oraz czy dzień urlopu liczy się jako 8h w miesięcznej sumie godzin (dotyczy tylko UoP). Bez ustawienia tego pola pracownik widzi pełną listę, a jego urlopy nie doliczają godzin.</span>
+      </div>
+      <div id="staff-list" style="margin-top:16px"><div class="hint">Ładowanie…</div></div>
+    </div>
+
   </div>
 </div>
 
@@ -209,7 +284,7 @@
 <script>
 /* global google */
 
-var M = { token: null, empId: null, mmEmpId: null, mmYear: new Date().getFullYear(), mmMonth: new Date().getMonth() + 1 };
+var M = { token: null, empId: null, mmEmpId: null, rgEmpId: null, mmYear: new Date().getFullYear(), mmMonth: new Date().getMonth() + 1 };
 
 var MONTHS = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec',
               'Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
@@ -271,6 +346,8 @@ document.getElementById('kp-login').addEventListener('click', function(e) {
         document.getElementById('m-date').value = todayStr();
         document.getElementById('do-from').value = todayStr();
         document.getElementById('do-to').value   = todayStr();
+        document.getElementById('rg-from').value = todayStr();
+        document.getElementById('rg-to').value   = todayStr();
         loadEmployees();
         loadAbsTypes();
         updateMMLabel();
@@ -283,30 +360,34 @@ document.getElementById('kp-login').addEventListener('click', function(e) {
 });
 
 document.getElementById('m-logout').addEventListener('click', function() { location.reload(); });
+document.getElementById('m-theme').addEventListener('click', function() { wsToggleTheme(); });
+document.getElementById('nav-dashboard').addEventListener('click', function() { location.href = location.pathname + '?page=dashboard'; });
+document.getElementById('nav-worker').addEventListener('click', function() { location.href = location.pathname + '?page=worker'; });
 
 // ── Typy nieobecności ─────────────────────────────
 var _absTypes = [];
+function fillTypeSelect(sel, types, emptyLabel, selectDW) {
+  sel.innerHTML = '<option value="">' + emptyLabel + '</option>';
+  types.forEach(function(t) {
+    var o = document.createElement('option');
+    o.value = t.code; o.textContent = t.label;
+    if (selectDW && t.code === 'DW') o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
 function loadAbsTypes() {
   gas('getAbsenceTypes', [], function(res) {
     if (!res || !res.ok) return;
     _absTypes = res.types || [];
 
-    var sel = document.getElementById('m-abs');
-    sel.innerHTML = '<option value="">— brak nieobecności —</option>';
-    _absTypes.forEach(function(t) {
-      var o = document.createElement('option');
-      o.value = t.code; o.textContent = t.label;
-      sel.appendChild(o);
-    });
+    // Edycja pojedynczego pracownika (dzień / zakres) — DW zastrzeżone dla "Dni wolne".
+    var perEmp = _absTypes.filter(function(t) { return t.code !== 'DW'; });
+    fillTypeSelect(document.getElementById('m-abs'), perEmp, '— brak nieobecności —', false);
+    fillTypeSelect(document.getElementById('rg-typ'), perEmp, '— usuń nieobecność w tym zakresie —', false);
 
-    var doSel = document.getElementById('do-typ');
-    doSel.innerHTML = '<option value="">— usuń nieobecność w tym zakresie —</option>';
-    _absTypes.forEach(function(t) {
-      var o = document.createElement('option');
-      o.value = t.code; o.textContent = t.label;
-      if (t.code === 'DW') o.selected = true;
-      doSel.appendChild(o);
-    });
+    // Dni wolne (cała Klinika) — DW domyślnie wybrane.
+    fillTypeSelect(document.getElementById('do-typ'), _absTypes, '— usuń nieobecność w tym zakresie —', true);
   });
 }
 
@@ -355,12 +436,15 @@ bindEmpSelector('mm-emp-input', 'mm-emp-dropdown', function(id) {
   M.mmEmpId = id;
   if (id) loadMonthTable();
 });
+bindEmpSelector('rg-emp-input', 'rg-emp-dropdown', function(id) { M.rgEmpId = id; });
 
-// ── Przełącznik widoków (3-way) ──────────────────
+// ── Przełącznik widoków ───────────────────────────
 var TABS = {
   'tab-day':     'view-day',
   'tab-month':   'view-month',
-  'tab-daysoff': 'view-daysoff'
+  'tab-range':   'view-range',
+  'tab-daysoff': 'view-daysoff',
+  'tab-staff':   'view-staff'
 };
 Object.keys(TABS).forEach(function(tabId) {
   document.getElementById(tabId).addEventListener('click', function() {
@@ -368,6 +452,7 @@ Object.keys(TABS).forEach(function(tabId) {
       document.getElementById(id).className = 'seg-btn' + (id === tabId ? ' on' : '');
       document.getElementById(TABS[id]).style.display = (id === tabId) ? 'block' : 'none';
     });
+    if (tabId === 'tab-staff') renderStaffList();
   });
 });
 
@@ -535,6 +620,91 @@ function renderMonthTable(days) {
 
     inEl.addEventListener('change', saveRow);
     outEl.addEventListener('change', saveRow);
+  });
+}
+
+// ── Widok: Urlop (zakres dat, jeden pracownik) ────
+
+var rgArmed = false;
+var rgArmTimer = null;
+
+function rgDisarm() {
+  rgArmed = false;
+  clearTimeout(rgArmTimer);
+  document.getElementById('rg-apply').style.display = 'block';
+  document.getElementById('rg-confirm').style.display = 'none';
+}
+
+document.getElementById('rg-apply').addEventListener('click', function() {
+  if (!M.rgEmpId) { toast('Wybierz pracownika z listy.', false); return; }
+  var from = document.getElementById('rg-from').value;
+  var to   = document.getElementById('rg-to').value;
+  if (!from || !to) { toast('Wybierz zakres dat.', false); return; }
+  if (from > to) { toast('Data „od” nie może być późniejsza niż „do”.', false); return; }
+
+  rgArmed = true;
+  document.getElementById('rg-apply').style.display = 'none';
+  document.getElementById('rg-confirm').style.display = 'flex';
+  clearTimeout(rgArmTimer);
+  rgArmTimer = setTimeout(rgDisarm, 6000);
+});
+
+document.getElementById('rg-cancel').addEventListener('click', rgDisarm);
+
+document.getElementById('rg-yes').addEventListener('click', function() {
+  if (!rgArmed) return;
+  var from = document.getElementById('rg-from').value;
+  var to   = document.getElementById('rg-to').value;
+  var typ  = document.getElementById('rg-typ').value;
+  var note = document.getElementById('rg-note').value;
+
+  toast('Zapisywanie…', true);
+  gas('masterSetAbsenceRange', [M.token, M.rgEmpId, from, to, typ, note], function(res) {
+    rgDisarm();
+    if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+    if (!res || !res.ok) { toast((res && res.msg) || 'Błąd zapisu.', false); return; }
+    toast('Zapisano dla ' + res.count + ' dni.', true);
+  });
+});
+
+// ── Widok: Pracownicy (forma zatrudnienia) ────────
+
+var FORMA_LABELS = { UoP: 'Umowa o pracę', Zlecenie: 'Umowa zlecenie', B2B: 'B2B' };
+
+function renderStaffList() {
+  var wrap = document.getElementById('staff-list');
+  if (!_emps || _emps.length === 0) { wrap.innerHTML = '<div class="hint">Brak pracowników.</div>'; return; }
+
+  wrap.innerHTML = _emps.map(function(e) {
+    var unset = !e.forma;
+    var opts = ['UoP', 'Zlecenie', 'B2B'].map(function(f) {
+      return '<option value="' + f + '"' + (e.forma === f ? ' selected' : '') + '>' + FORMA_LABELS[f] + '</option>';
+    }).join('');
+    return '<div class="staff-row' + (unset ? ' warn' : '') + '" data-id="' + esc(e.id) + '">' +
+      '<div><span class="staff-name">' + esc(e.imie + ' ' + e.nazwisko) + '</span>' +
+      '<span class="staff-role">' + esc(e.rola || '') + (e.status ? ' · ' + esc(e.status) : '') + '</span>' +
+      (unset ? '<span class="staff-warn-lbl">Brak formy zatrudnienia — urlop nie doliczy godzin</span>' : '') +
+      '</div>' +
+      '<select class="sel staff-forma-sel" data-id="' + esc(e.id) + '">' +
+        '<option value=""' + (unset ? ' selected' : '') + '>— nieustawiona —</option>' + opts +
+      '</select></div>';
+  }).join('');
+
+  wrap.querySelectorAll('.staff-forma-sel').forEach(function(sel) {
+    sel.addEventListener('change', function() {
+      var id = this.getAttribute('data-id');
+      var forma = this.value;
+      toast('Zapisywanie…', true);
+      gas('masterSetEmploymentForm', [M.token, id, forma], function(res) {
+        if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+        if (!res || !res.ok) { toast((res && res.msg) || 'Błąd zapisu.', false); return; }
+        var emp = null;
+        _emps.forEach(function(e) { if (e.id === id) emp = e; });
+        if (emp) emp.forma = forma;
+        toast('Zapisano formę zatrudnienia.', true);
+        renderStaffList();
+      });
+    });
   });
 }
 

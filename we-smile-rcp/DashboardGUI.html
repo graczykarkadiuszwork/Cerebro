@@ -15,12 +15,6 @@
 .norma-inp:focus{outline:none}
 .norma-tick{color:#fff;opacity:0;transition:.4s;display:flex}
 .norma-tick.on{opacity:1}
-.bar-right{display:flex;gap:8px;margin-left:auto}
-.btn-bar{background:rgba(255,255,255,.12);border:none;border-radius:10px;color:#fff;padding:9px 14px;min-height:40px;cursor:pointer;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
-.btn-bar:active{background:rgba(255,255,255,.2)}
-.btn-bar.danger{background:rgba(123,30,59,.5)}
-.nav-btn-dark{background:rgba(255,255,255,.12);border:none;border-radius:10px;color:#fff;width:38px;height:38px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
-.nav-btn-dark:active{background:rgba(255,255,255,.22)}
 
 /* ── Presence ticker ── */
 .presence-bar{background:var(--c-white);border-bottom:1px solid var(--c-border);padding:9px 0;overflow:hidden;cursor:pointer}
@@ -28,11 +22,14 @@
 @keyframes marquee-scroll{from{transform:translateX(0)}to{transform:translateX(-100%)}}
 .presence-track.scrolling{animation:marquee-scroll 45s linear infinite}
 .presence-item{display:inline-flex;align-items:center;gap:7px;margin-right:36px;font-size:13px;color:var(--c-ink);font-weight:500}
-.p-dot{width:8px;height:8px;border-radius:50%;background:var(--c-primary);flex-shrink:0;animation:pulse-dot 1.6s ease-out infinite}
-@keyframes pulse-dot{0%{box-shadow:0 0 0 0 rgba(27,111,181,.55)}70%{box-shadow:0 0 0 7px rgba(27,111,181,0)}100%{box-shadow:0 0 0 0 rgba(27,111,181,0)}}
+.p-dot{width:8px;height:8px;border-radius:50%;background:var(--c-success);flex-shrink:0;animation:pulse-dot 1.6s ease-out infinite}
+@keyframes pulse-dot{0%{box-shadow:0 0 0 0 rgba(30,142,90,.55)}70%{box-shadow:0 0 0 7px rgba(30,142,90,0)}100%{box-shadow:0 0 0 0 rgba(30,142,90,0)}}
 .p-dot.done{background:var(--c-muted);animation:none}
 .presence-item.done{color:var(--c-muted)}
 .presence-empty{font-size:13px;color:var(--c-muted);padding-left:16px}
+
+/* ── Akcja: eksport Excel (przeniesiona z paska górnego — pkt 10/11) ── */
+.export-cta{margin-bottom:16px}
 
 .modal-sec{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--c-muted);font-weight:700;margin:12px 0 6px}
 .modal-sec:first-child{margin-top:0}
@@ -110,6 +107,7 @@ tr.note-tr .nt-ovr{color:var(--c-accent)}
 
 <!-- ═══════ LOGIN ═══════ -->
 <div id="login" class="screen">
+  <button class="btn-icon corner-toggle theme-ic" onclick="wsToggleTheme()" aria-label="Przełącz tryb nocny"></button>
   <div class="sheet">
     <div class="wm" style="display:flex;justify-content:center;margin-bottom:14px">we<b>SMILE</b></div>
     <div class="step-title" style="text-align:center">Panel Raportowy</div>
@@ -134,10 +132,7 @@ tr.note-tr .nt-ovr{color:var(--c-accent)}
     <div class="appbar-row">
       <span class="wm on-dark appbar-title">we<b>SMILE</b> · Raporty</span>
       <div class="bar-right">
-        <button id="btn-csv" class="btn-bar">
-          <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>
-          Excel
-        </button>
+        <button id="m-theme" class="btn-bar icon-only theme-ic" aria-label="Przełącz tryb nocny"></button>
         <button id="btn-logout" class="btn-bar danger">
           <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"/><path d="M21 12H8"/><path d="M15 16l4-4-4-4"/></svg>
           Wyloguj
@@ -166,6 +161,10 @@ tr.note-tr .nt-ovr{color:var(--c-accent)}
   </div>
 
   <div class="page-wrap">
+    <button id="btn-csv" class="btn btn-accent export-cta">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>
+      Eksportuj do Excel
+    </button>
     <div class="sel-lbl">Pracownik</div>
     <div class="emp-sel-wrap">
       <input type="text" id="emp-input" class="inp"
@@ -594,6 +593,7 @@ function renderEmp(emp) {
   if ((emp.absDays > 0) || (emp.ovrDays > 0)) {
     html += '<div class="emp-flags">';
     if (emp.absDays > 0) html += '<span class="chip chip-primary">' + ICO.abs + ' Nieobecności: ' + emp.absDays + '</span>';
+    if (emp.paidAbsDays > 0) html += '<span class="chip chip-success">' + ICO.abs + ' Płatny urlop (8h/dzień): ' + emp.paidAbsDays + '</span>';
     if (emp.ovrDays > 0) html += '<span class="chip chip-accent">' + ICO.warn + ' Poza godz. Kliniki: ' + emp.ovrDays + '</span>';
     html += '</div>';
   }
@@ -661,8 +661,9 @@ function renderList(emp) {
     html += '<td>' + dn + '.' + mm + '</td>';
 
     if (d.absence) {
+      var absPaid = d.mins !== null && d.mins !== undefined;
       html += '<td colspan="2"><span class="chip chip-primary">' + esc(d.absence.typ) + '</span></td>';
-      html += '<td class="t-empty">—</td>';
+      html += '<td class="' + (absPaid ? 't-hours' : 't-empty') + '">' + (absPaid ? fmtHM(d.mins) : '—') + '</td>';
     } else {
       html += '<td class="' + (d.wejscie ? 't-time' : 't-empty') + '">' + esc(d.wejscie || '—') + '</td>';
       html += '<td class="' + (d.wyjscie ? 't-time' : (d.wejscie ? 't-miss' : 't-empty')) + '">';
@@ -711,6 +712,7 @@ function renderCalendar(emp) {
     html += '<div class="cal-dn">' + dn + '</div>';
     if (d.absence) {
       html += '<span class="cal-abs">' + esc(absShort(d.absence)) + '</span>';
+      if (hasH) html += '<div class="cal-h">' + fmtHM(d.mins) + '</div>';
     } else if (d.wejscie) {
       html += '<div class="cal-in">' + esc(d.wejscie) + '</div>';
       if (d.wyjscie) {
@@ -932,6 +934,7 @@ function doLogout() {
 }
 
 document.getElementById('btn-logout').addEventListener('click', doLogout);
+document.getElementById('m-theme').addEventListener('click', function() { wsToggleTheme(); });
 </script>
 </body>
 </html>

@@ -181,8 +181,10 @@ function getDashboard(token, year, month) {
       .filter(w => String(w[4]).toLowerCase() === 'aktywny')
       .map(w => {
         const id = String(w[0]);
+        const forma = String(w[6] || '');
         let totalMins = 0;
         let absDays = 0;
+        let paidAbsDays = 0;
         let ovrDays = 0;
 
         const days = [];
@@ -207,6 +209,14 @@ function getDashboard(token, year, month) {
           if (absence)  absDays++;
           if (overtime) ovrDays++;
 
+          // Urlop UoP z kodu płatnego 8h/dzień dolicza się do sumy miesięcznej,
+          // niezależnie od tego, że w tym dniu nie ma odbić w Ewidencji.
+          if (absence && forma === FORMA_UOP && PAID_8H_CODES.indexOf(absence.code) !== -1) {
+            mins = 480;
+            totalMins += 480;
+            paidAbsDays++;
+          }
+
           const dow = DOW[new Date(ds + 'T12:00:00').getDay()];
           days.push({ date: ds, dow, wejscie, wyjscie, mins, absence, overtime, overtimeNote });
         }
@@ -222,6 +232,7 @@ function getDashboard(token, year, month) {
           totalMinutes: totalMins,
           totalHours:   Math.round((totalMins / 60) * 10) / 10,
           absDays,
+          paidAbsDays,
           ovrDays,
           note,
           days
@@ -339,6 +350,7 @@ function dashExportXlsx(token, opts) {
 
   selected.forEach(w => {
     const id = String(w[0]);
+    const forma = String(w[6] || '');
     const rawName = String(w[1]) + ' ' + String(w[2]);
     const safeName = rawName.replace(/[\\\/\?\*\[\]:]/g, ' ').slice(0, 90) || id;
     const sh = tmpSs.insertSheet(safeName);
@@ -365,6 +377,10 @@ function dashExportXlsx(token, opts) {
       }
 
       const abs = absMap[id + '_' + ds] || null;
+      if (abs && forma === FORMA_UOP && PAID_8H_CODES.indexOf(abs.code) !== -1) {
+        totalMins += 480;
+        godzTxt = _fmtHM(480);
+      }
       const uwagi = [];
       if (abs && abs.note) uwagi.push(abs.note);
       if (_dayOutsideClinic(ds, we, wy)) {
@@ -497,9 +513,75 @@ function masterLogin(pin) {
 function masterGetEmployees(token) {
   if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
   const employees = _getWorkers().map(w => ({
-    id: String(w[0]), imie: String(w[1]), nazwisko: String(w[2])
+    id: String(w[0]), imie: String(w[1]), nazwisko: String(w[2]),
+    rola: String(w[3]), status: String(w[4]), forma: String(w[6] || '')
   }));
   return { ok: true, employees };
+}
+
+// ── Forma zatrudnienia — edycja przez właściciela ──────────────
+// Puste forma = "nieustawiona" (samoobsługa pokaże wtedy pełną listę
+// typów nieobecności, a urlop nie doliczy godzin do sumy miesięcznej).
+
+function masterSetEmploymentForm(token, empId, forma) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  if (!empId) return { ok: false, msg: 'Brak pracownika.' };
+  forma = String(forma || '').trim();
+  if (forma && EMPLOYMENT_FORMS.indexOf(forma) === -1) {
+    return { ok: false, msg: 'Nieprawidłowa forma zatrudnienia.' };
+  }
+
+  const sh = _ss().getSheetByName('Pracownicy');
+  const rows = sh.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]) === String(empId)) {
+      sh.getRange(i + 1, 7).setValue(forma);
+      _logAdmin('SetFormaZatrudnienia', String(empId), forma || '(usunięto)');
+      return { ok: true };
+    }
+  }
+  return { ok: false, msg: 'Pracownik nie istnieje.' };
+}
+
+// ── Nieobecność w zakresie dat — edycja przez właściciela ──────
+// Jeden pracownik, jeden zapis dla całego zakresu (zamiast dzień po dniu).
+// Puste typeCode = usunięcie nieobecności w całym zakresie.
+
+function masterSetAbsenceRange(token, empId, dateFrom, dateTo, typeCode, note) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  if (!empId) return { ok: false, msg: 'Wybierz pracownika.' };
+
+  const re = /^\d{4}-\d{2}-\d{2}$/;
+  dateFrom = String(dateFrom || '');
+  dateTo   = String(dateTo || dateFrom);
+  if (!re.test(dateFrom) || !re.test(dateTo) || dateFrom > dateTo) {
+    return { ok: false, msg: 'Nieprawidłowy zakres dat.' };
+  }
+
+  const from = new Date(dateFrom + 'T12:00:00');
+  const to   = new Date(dateTo + 'T12:00:00');
+  const days = Math.round((to - from) / 86400000) + 1;
+  if (days > ABSENCE_MAX_DAYS) {
+    return { ok: false, msg: 'Maksymalny zakres to ' + ABSENCE_MAX_DAYS + ' dni.' };
+  }
+
+  const worker = _getWorkers().find(r => String(r[0]) === String(empId));
+  if (!worker) return { ok: false, msg: 'Pracownik nie istnieje.' };
+
+  typeCode = String(typeCode || '').trim();
+  const type = typeCode ? _absType(typeCode) : null;
+  if (typeCode && !type) return { ok: false, msg: 'Nieprawidłowy typ nieobecności.' };
+  if (type && type.code === 'DW') {
+    return { ok: false, msg: 'Ten typ jest zastrzeżony dla narzędzia „Dni wolne”.' };
+  }
+
+  note = String(note || '').trim().slice(0, 500);
+  _upsertAbsence(String(empId), String(worker[1]), String(worker[2]), dateFrom, dateTo, type, note, 'admin_range');
+
+  _logAdmin('MasterAbsenceRange', String(empId),
+    dateFrom + ' — ' + dateTo + ' → ' + (type ? type.label : 'usunięto') + (note ? ' [' + note.slice(0, 80) + ']' : ''));
+
+  return { ok: true, count: days };
 }
 
 function masterGetDay(token, empId, date) {

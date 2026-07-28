@@ -40,38 +40,68 @@ function _dayOutsideClinic(ds, wejscie, wyjscie) {
   return false;
 }
 
+// ── Forma zatrudnienia ───────────────────────────────────────
+// Ustawiana raz na pracownika (panel Właściciela → Pracownicy).
+// Decyduje o: (1) liście typów nieobecności widocznej w samoobsłudze,
+// (2) czy dzień urlopu dolicza 8h do miesięcznej sumy (tylko UoP).
+
+const FORMA_UOP = 'UoP', FORMA_ZLC = 'Zlecenie', FORMA_B2B = 'B2B';
+const EMPLOYMENT_FORMS = [FORMA_UOP, FORMA_ZLC, FORMA_B2B];
+
 // ── Typy nieobecności ────────────────────────────────────────
-// Pokrywają UoP, umowę zlecenie i B2B. Sheet przechowuje kod + etykietę.
+// Pokrywają UoP, umowę zlecenie i B2B — `forms` ogranicza widoczność
+// w samoobsłudze pracownika do jego formy zatrudnienia.
 
 const ABSENCE_TYPES = [
-  { code: 'DW',   label: 'Dzień wolny — Klinika zamknięta' },
-  { code: 'L4',   label: 'L4 — zwolnienie lekarskie' },
-  { code: 'UW',   label: 'Urlop wypoczynkowy' },
-  { code: 'UZ',   label: 'Urlop na żądanie' },
-  { code: 'UB',   label: 'Urlop bezpłatny' },
-  { code: 'UOK',  label: 'Urlop okolicznościowy' },
-  { code: 'UMR',  label: 'Urlop macierzyński / rodzicielski' },
-  { code: 'UOJ',  label: 'Urlop ojcowski' },
-  { code: 'UWY',  label: 'Urlop wychowawczy' },
-  { code: 'OPD',  label: 'Opieka nad dzieckiem (art. 188 KP)' },
-  { code: 'ZOP',  label: 'Zasiłek opiekuńczy — opieka nad chorym' },
-  { code: 'SW',   label: 'Zwolnienie — siła wyższa (art. 148¹ KP)' },
-  { code: 'HK',   label: 'Honorowe krwiodawstwo' },
-  { code: 'ODB',  label: 'Odbiór nadgodzin / dzień wolny' },
-  { code: 'NUN',  label: 'Nieobecność usprawiedliwiona niepłatna' },
-  { code: 'NN',   label: 'Nieobecność nieusprawiedliwiona' },
-  { code: 'PZL',  label: 'Przerwa w realizacji zlecenia (umowa zlecenie)' },
-  { code: 'B2B',  label: 'Przerwa w świadczeniu usług (B2B)' },
-  { code: 'DEL',  label: 'Delegacja / szkolenie' },
-  { code: 'INNE', label: 'Inne (wymagana adnotacja)' }
+  { code: 'DW',   label: 'Dzień wolny — Klinika zamknięta',                forms: [] },
+  { code: 'L4',   label: 'L4 — zwolnienie lekarskie',                      forms: EMPLOYMENT_FORMS },
+  { code: 'UW',   label: 'Urlop wypoczynkowy',                             forms: [FORMA_UOP] },
+  { code: 'UZ',   label: 'Urlop na żądanie',                               forms: [FORMA_UOP] },
+  { code: 'UB',   label: 'Urlop bezpłatny',                                forms: [FORMA_UOP] },
+  { code: 'UOK',  label: 'Urlop okolicznościowy',                          forms: [FORMA_UOP] },
+  { code: 'UMR',  label: 'Urlop macierzyński / rodzicielski',              forms: [FORMA_UOP] },
+  { code: 'UOJ',  label: 'Urlop ojcowski',                                 forms: [FORMA_UOP] },
+  { code: 'UWY',  label: 'Urlop wychowawczy',                              forms: [FORMA_UOP] },
+  { code: 'OPD',  label: 'Opieka nad dzieckiem (art. 188 KP)',             forms: [FORMA_UOP] },
+  { code: 'ZOP',  label: 'Zasiłek opiekuńczy — opieka nad chorym',         forms: [FORMA_UOP] },
+  { code: 'SW',   label: 'Zwolnienie — siła wyższa (art. 148¹ KP)',        forms: [FORMA_UOP] },
+  { code: 'HK',   label: 'Honorowe krwiodawstwo',                         forms: [FORMA_UOP] },
+  { code: 'ODB',  label: 'Odbiór nadgodzin / dzień wolny',                 forms: [FORMA_UOP] },
+  { code: 'NUN',  label: 'Nieobecność usprawiedliwiona niepłatna',         forms: EMPLOYMENT_FORMS },
+  { code: 'NN',   label: 'Nieobecność nieusprawiedliwiona',                forms: EMPLOYMENT_FORMS },
+  { code: 'PZL',  label: 'Przerwa w realizacji zlecenia (umowa zlecenie)', forms: [FORMA_ZLC] },
+  { code: 'B2B',  label: 'Przerwa w świadczeniu usług (B2B)',              forms: [FORMA_B2B] },
+  { code: 'DEL',  label: 'Delegacja / szkolenie',                          forms: EMPLOYMENT_FORMS },
+  { code: 'INNE', label: 'Inne (wymagana adnotacja)',                      forms: EMPLOYMENT_FORMS }
 ];
 const ABSENCE_MAX_DAYS = 62;
+
+// Kody urlopu, które dla pracowników na UoP doliczają 8h/dzień do
+// miesięcznej sumy godzin (art. odpowiadające płatnym nieobecnościom KP).
+const PAID_8H_CODES = ['UW', 'UZ', 'L4', 'UOK', 'UMR', 'UOJ', 'ZOP', 'SW', 'HK', 'ODB'];
 
 function _absType(code) {
   for (let i = 0; i < ABSENCE_TYPES.length; i++) {
     if (ABSENCE_TYPES[i].code === String(code)) return ABSENCE_TYPES[i];
   }
   return null;
+}
+
+// Lista typów nieobecności dostępna w samoobsłudze pracownika o danej
+// formie zatrudnienia. Brak ustawionej formy → pełna lista (poza DW),
+// żeby nigdy nie zablokować zgłoszenia — właściciel uzupełnia formę osobno.
+function _absTypesForForma(forma) {
+  if (!forma) return ABSENCE_TYPES.filter(t => t.code !== 'DW');
+  return ABSENCE_TYPES.filter(t => t.forms.indexOf(forma) !== -1);
+}
+
+// pin obecny (samoobsługa pracownika) → lista zawężona do jego formy zatrudnienia.
+// pin brak (panel Właściciela) → pełna lista, właściciel ma pełne uprawnienia.
+function getAbsenceTypes(pin) {
+  if (!pin) return { ok: true, types: ABSENCE_TYPES };
+  const worker = _findActiveByPin(pin);
+  if (!worker) return { ok: true, types: ABSENCE_TYPES.filter(t => t.code !== 'DW') };
+  return { ok: true, types: _absTypesForForma(String(worker[6] || '')) };
 }
 
 // ── Współdzielone partiale HTML (style itp.) ──────────────────
@@ -114,7 +144,7 @@ function callRCP(action, argsJson) {
       case 'checkPin':        return checkPin(args[0]);
       case 'clockIn':         return clock(args[0], args[1], 'WEJSCIE');
       case 'clockOut':        return clock(args[0], args[1], 'WYJSCIE');
-      case 'getAbsenceTypes': return { ok: true, types: ABSENCE_TYPES };
+      case 'getAbsenceTypes': return getAbsenceTypes(args[0]);
       case 'reportAbsence':   return reportAbsence(args[0], args[1], args[2], args[3], args[4]);
       case 'setOvertimeNote': return setOvertimeNote(args[0], args[1]);
       // Dashboard
@@ -134,6 +164,8 @@ function callRCP(action, argsJson) {
       case 'masterSetAbsence':      return masterSetAbsence(args[0], args[1], args[2], args[3], args[4]);
       case 'masterSetOvertimeNote': return masterSetOvertimeNote(args[0], args[1], args[2], args[3]);
       case 'masterSetClinicDayOff': return masterSetClinicDayOff(args[0], args[1], args[2], args[3], args[4]);
+      case 'masterSetAbsenceRange': return masterSetAbsenceRange(args[0], args[1], args[2], args[3], args[4], args[5]);
+      case 'masterSetEmploymentForm': return masterSetEmploymentForm(args[0], args[1], args[2]);
       default:               return { ok: false, msg: 'Nieznana akcja.' };
     }
   } catch (err) {
@@ -190,7 +222,7 @@ function _getWorkers() {
   const sh = _ss().getSheetByName('Pracownicy');
   if (!sh || sh.getLastRow() < 2) return [];
   return sh.getDataRange().getValues().slice(1);
-  // cols: 0=ID, 1=Imię, 2=Nazwisko, 3=Rola, 4=Status, 5=PIN
+  // cols: 0=ID, 1=Imię, 2=Nazwisko, 3=Rola, 4=Status, 5=PIN, 6=FormaZatrudnienia (może być puste)
 }
 
 function _findActiveByPin(pin) {
@@ -422,7 +454,7 @@ function setupRCP() {
   const spreadsheet = _ss();
 
   [
-    { name: 'Pracownicy',    h: ['ID', 'Imię', 'Nazwisko', 'Rola', 'Status', 'PIN'] },
+    { name: 'Pracownicy',    h: ['ID', 'Imię', 'Nazwisko', 'Rola', 'Status', 'PIN', 'FormaZatrudnienia'] },
     { name: 'Ewidencja',     h: ['Timestamp', 'EmpID', 'Imię', 'Nazwisko', 'Akcja', 'Data', 'Godzina', 'Źródło'] },
     { name: 'Anomalie',      h: ['Timestamp', 'EmpID', 'Opis'] },
     { name: 'Statusy',       h: ['Date', 'EmpID', 'Status', 'Notes', 'Modified'] },
@@ -431,19 +463,28 @@ function setupRCP() {
   ].forEach(def => {
     let sh = spreadsheet.getSheetByName(def.name);
     if (!sh) sh = spreadsheet.insertSheet(def.name);
-    if (sh.getLastRow() === 0) sh.appendRow(def.h);
+    if (sh.getLastRow() === 0) {
+      sh.appendRow(def.h);
+      return;
+    }
+    // Arkusz już istnieje (np. produkcyjny) — dopisz tylko brakujące nagłówki
+    // na końcu (np. nową kolumnę FormaZatrudnienia), nie ruszając danych.
+    const curCols = sh.getLastColumn();
+    if (curCols < def.h.length) {
+      sh.getRange(1, curCols + 1, 1, def.h.length - curCols).setValues([def.h.slice(curCols)]);
+    }
   });
 
   const pSh = spreadsheet.getSheetByName('Pracownicy');
 
   if (pSh.getLastRow() <= 1) {
     const employees = [
-      ['WS01', 'Arkadiusz',  'Graczyk',      'Admin',                           'Aktywny', '0371'],
-      ['WS02', 'Kaja',       'Węglarek',     'rejestratorka medyczna',          'Aktywny', '1826'],
-      ['WS03', 'Julia',      'Polishchuk',    'higienistka stomatologiczna',     'Aktywny', '0316'],
-      ['WS04', 'Oksana',     'Revutska',      'asystentka stomatologiczna',      'Aktywny', '0484'],
-      ['WS05', 'Kamila',     'Pruszczyńska', 'higienistka stomatologiczna',     'Aktywny', '4731'],
-      ['WS06', 'Katarzyna',  'Graczyk',       'higienistka stomatologiczna',     'Aktywny', '9010']
+      ['WS01', 'Arkadiusz',  'Graczyk',      'Admin',                           'Aktywny', '0371', 'UoP'],
+      ['WS02', 'Kaja',       'Węglarek',     'rejestratorka medyczna',          'Aktywny', '1826', 'UoP'],
+      ['WS03', 'Julia',      'Polishchuk',    'higienistka stomatologiczna',     'Aktywny', '0316', 'UoP'],
+      ['WS04', 'Oksana',     'Revutska',      'asystentka stomatologiczna',      'Aktywny', '0484', 'UoP'],
+      ['WS05', 'Kamila',     'Pruszczyńska', 'higienistka stomatologiczna',     'Aktywny', '4731', 'UoP'],
+      ['WS06', 'Katarzyna',  'Graczyk',       'higienistka stomatologiczna',     'Aktywny', '9010', 'UoP']
     ];
     employees.forEach(row => pSh.appendRow(row));
     Logger.log('Dodano ' + employees.length + ' pracowników.');
