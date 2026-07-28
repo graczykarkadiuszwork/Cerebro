@@ -32,10 +32,6 @@
 .info-box{display:flex;gap:10px;background:var(--c-navy-tint);border:1px solid var(--c-border);border-radius:var(--radius-m);padding:12px 14px;font-size:13px;line-height:1.5;color:var(--c-navy)}
 .info-box .ic{flex-shrink:0;margin-top:1px}
 
-.emp-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--c-white);border:1.5px solid var(--c-border-strong);border-radius:var(--radius-m);z-index:20;max-height:240px;overflow-y:auto;box-shadow:var(--shadow-m);display:none}
-.emp-opt{padding:14px 16px;cursor:pointer;font-size:15px;font-weight:500;color:var(--c-ink)}
-.emp-opt:active{background:var(--c-offwhite)}
-
 .staff-row{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--c-white);border:1px solid var(--c-border);border-radius:var(--radius-m);padding:12px 14px;margin-bottom:8px}
 .staff-row.warn{border-color:rgba(123,30,59,.3);background:var(--c-accent-tint)}
 .staff-name{font-weight:700;font-size:14px;color:var(--c-ink)}
@@ -47,10 +43,10 @@
 <body>
 
 <!-- LOGIN -->
-<div id="s-login" class="screen">
+<div id="s-login" class="screen brand-screen">
   <button class="btn-icon corner-toggle theme-ic" onclick="wsToggleTheme()" aria-label="Przełącz tryb nocny"></button>
   <div class="sheet">
-    <div class="wm" style="display:flex;justify-content:center;margin-bottom:14px">we<b>SMILE</b></div>
+    <div class="wm wm-lg" style="display:flex;justify-content:center;margin-bottom:14px">we<b>SMILE</b></div>
     <div class="step-title" style="text-align:center">Dostęp ograniczony</div>
     <div class="step-sub" style="text-align:center">Panel Właściciela</div>
     <div class="dots">
@@ -69,9 +65,9 @@
 
 <!-- PANEL -->
 <div id="s-panel" style="display:none">
-  <header class="appbar">
-    <div class="appbar-row">
-      <span class="wm on-dark appbar-title">we<b>SMILE</b> · Właściciel</span>
+  <header class="hero">
+    <div class="hero-row">
+      <span class="wm on-dark hero-title">we<b>SMILE</b> · Właściciel</span>
       <div class="bar-right">
         <button id="m-theme" class="btn-bar icon-only theme-ic" aria-label="Przełącz tryb nocny"></button>
         <button id="nav-dashboard" class="btn-bar" title="Panel Raportowy">
@@ -90,15 +86,7 @@
     </div>
   </header>
 
-  <div class="page-wrap">
-
-    <div class="seg seg-scroll" style="margin-bottom:18px">
-      <button class="seg-btn on" id="tab-day">Dzień</button>
-      <button class="seg-btn" id="tab-month">Miesiąc</button>
-      <button class="seg-btn" id="tab-range">Urlop</button>
-      <button class="seg-btn" id="tab-daysoff">Dni wolne</button>
-      <button class="seg-btn" id="tab-staff">Pracownicy</button>
-    </div>
+  <div class="page-wrap has-tabbar">
 
     <!-- ── WIDOK: DZIEŃ ── -->
     <div id="view-day">
@@ -277,6 +265,30 @@
     </div>
 
   </div>
+
+  <!-- ── Dolna nawigacja (iOS tab bar) ── -->
+  <nav class="tabbar">
+    <button class="seg-btn on" id="tab-day">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18"/><path d="M8 3v4M16 3v4"/><path d="M12 14v4M10 16h4"/></svg>
+      <span>Dzień</span>
+    </button>
+    <button class="seg-btn" id="tab-month">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18"/><path d="M8 3v4M16 3v4"/><path d="M7.5 14h.01M12 14h.01M16.5 14h.01M7.5 17.5h.01M12 17.5h.01"/></svg>
+      <span>Miesiąc</span>
+    </button>
+    <button class="seg-btn" id="tab-range">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 0 0-9 9h18a9 9 0 0 0-9-9z"/><path d="M12 3v9"/><path d="M12 12v6a2 2 0 0 0 4 0"/></svg>
+      <span>Urlop</span>
+    </button>
+    <button class="seg-btn" id="tab-daysoff">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-5h4v5"/></svg>
+      <span>Dni wolne</span>
+    </button>
+    <button class="seg-btn" id="tab-staff">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17.5" cy="9.5" r="2.6"/><path d="M15.5 14.6a5 5 0 0 1 6 4.9"/></svg>
+      <span>Zespół</span>
+    </button>
+  </nav>
 </div>
 
 <div id="toast"></div>

@@ -11,9 +11,9 @@
 #token{
   font-size:clamp(64px,22vw,100px);font-weight:700;letter-spacing:.12em;
   text-align:center;line-height:1.1;margin:6px 0 16px;font-variant-numeric:tabular-nums;
-  color:var(--c-primary);transition:color .3s;
+  background:var(--grad-brand);-webkit-background-clip:text;background-clip:text;color:transparent;
 }
-#token.red{color:var(--c-accent)}
+#token.red{background:none;-webkit-text-fill-color:var(--c-accent);color:var(--c-accent)}
 .prog-wrap{height:6px;background:var(--c-border);border-radius:4px;overflow:hidden;margin-bottom:14px}
 .prog-fill{height:100%;background:var(--c-primary);width:100%;transition:width 1s linear,background .3s}
 .prog-fill.red{background:var(--c-accent)}
@@ -54,16 +54,15 @@
 </head>
 <body>
 
-<button class="btn-icon corner-toggle theme-ic" onclick="wsToggleTheme()" aria-label="Przełącz tryb nocny"></button>
-
 <? if (PAGE === 'admin') { ?>
 
 <!-- ═══════════════════════════════════════════
      WIDOK ADMINA — wyświetlanie kodu
 ════════════════════════════════════════════════ -->
-<div class="screen">
+<div class="screen brand-screen">
+  <button class="btn-icon corner-toggle theme-ic" onclick="wsToggleTheme()" aria-label="Przełącz tryb nocny"></button>
   <div class="sheet">
-    <div class="wm" style="display:flex;justify-content:center;margin-bottom:18px">we<b>SMILE</b></div>
+    <div class="wm wm-lg" style="display:flex;justify-content:center;margin-bottom:18px">we<b>SMILE</b></div>
     <div class="tok-sub">Aktywny kod autoryzacyjny</div>
     <div id="token" class="green">----</div>
     <div class="prog-wrap"><div class="prog-fill" id="prog"></div></div>
@@ -81,9 +80,12 @@
 <!-- ═══════════════════════════════════════════
      WIDOK PRACOWNIKA — rejestracja odbicia
 ════════════════════════════════════════════════ -->
-<div class="screen">
+<div class="screen brand-screen">
+<button class="btn-icon corner-toggle theme-ic" onclick="wsToggleTheme()" aria-label="Przełącz tryb nocny"></button>
 <div class="sheet">
-  <div class="wm" style="display:flex;justify-content:center;margin-bottom:20px">we<b>SMILE</b></div>
+  <div class="wm" style="display:flex;justify-content:center">we<b>SMILE</b></div>
+  <div class="clock-time" id="live-time">--:--</div>
+  <div class="clock-date" id="live-date"></div>
 
   <!-- Krok 1: wpisz PIN -->
   <div class="step on" id="s-pin">
@@ -218,6 +220,20 @@ function gas(action, args, cb) {
     .withFailureHandler(function (e) { toast(e.message || 'Błąd połączenia.', false); })
     .callRCP(action, JSON.stringify(args || []));
 }
+
+// ── Żywy zegar (tylko widok pracownika) ───────────────────────
+(function () {
+  var t = document.getElementById('live-time');
+  if (!t) return;
+  var d = document.getElementById('live-date');
+  function tick() {
+    var now = new Date();
+    t.textContent = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+    d.textContent = now.toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' });
+  }
+  tick();
+  setInterval(tick, 1000);
+})();
 
 // ════════════════════════════════════════════════════════════
 if (PAGE === 'admin') {

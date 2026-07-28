@@ -1,7 +1,10 @@
 <style>
 /* ============================================================
-   We SMILE — Design System (brand-locked)
+   We SMILE — Design System v2 (brand-locked)
    Współdzielony przez: Index, DashboardGUI, MasterGUI
+   Język wizualny: iOS-like — gradientowe ekrany logowania,
+   okrągła klawiatura, pigułkowe CTA, wypełniane pola,
+   dolna nawigacja z ikonami, duża typografia DM Sans.
    ============================================================ */
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
 
@@ -15,11 +18,15 @@
   --c-success:#1E8E5A;
   --c-success-tint:rgba(30,142,90,.12);
 
+  --grad-brand:linear-gradient(135deg,var(--c-primary),var(--c-primary-light));
+  --grad-hero:linear-gradient(150deg,#0F3D5C 0%,#155a92 55%,#1B6FB5 100%);
+
   /* Neutrals — overridden per-theme below */
   --c-ink:#1A1A1A;
   --c-muted:#6B7280;
   --c-offwhite:#F4F4F2;
   --c-white:#FFFFFF;
+  --c-field:#EDEEF0;
 
   --c-border:rgba(15,61,92,.12);
   --c-border-strong:rgba(15,61,92,.22);
@@ -29,16 +36,18 @@
   --c-accent-tint-strong:rgba(123,30,59,.16);
   --c-navy-tint:rgba(15,61,92,.08);
 
-  --radius-s:10px;
-  --radius-m:16px;
-  --radius-l:22px;
+  --radius-s:12px;
+  --radius-m:18px;
+  --radius-l:28px;
   --radius-pill:999px;
 
   --shadow-s:0 1px 2px rgba(15,61,92,.07);
-  --shadow-m:0 6px 20px rgba(15,61,92,.10);
-  --shadow-l:0 20px 48px rgba(15,61,92,.16);
+  --shadow-m:0 8px 24px rgba(15,61,92,.12);
+  --shadow-l:0 24px 60px rgba(15,61,92,.20);
+  --shadow-cta:0 10px 24px rgba(27,111,181,.35);
+  --shadow-cta-accent:0 10px 24px rgba(123,30,59,.32);
 
-  --tap:52px;
+  --tap:54px;
   --font:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
 }
 
@@ -48,8 +57,9 @@
 :root[data-theme="dark"]{
   --c-ink:#F2F3F4;
   --c-muted:#98A2AD;
-  --c-offwhite:#10161B;
+  --c-offwhite:#0E1419;
   --c-white:#1B2329;
+  --c-field:#242E36;
 
   --c-border:rgba(244,244,242,.10);
   --c-border-strong:rgba(244,244,242,.20);
@@ -61,8 +71,10 @@
   --c-navy-tint:rgba(255,255,255,.06);
 
   --shadow-s:0 1px 2px rgba(0,0,0,.30);
-  --shadow-m:0 6px 20px rgba(0,0,0,.36);
-  --shadow-l:0 20px 48px rgba(0,0,0,.48);
+  --shadow-m:0 8px 24px rgba(0,0,0,.38);
+  --shadow-l:0 24px 60px rgba(0,0,0,.52);
+  --shadow-cta:0 10px 24px rgba(0,0,0,.45);
+  --shadow-cta-accent:0 10px 24px rgba(0,0,0,.45);
 }
 
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -82,78 +94,91 @@ button,input,select,textarea{font-family:inherit}
 .wm{
   display:inline-flex;align-items:baseline;gap:1px;
   font-weight:700;font-size:17px;letter-spacing:-.01em;
-  background:linear-gradient(135deg,var(--c-primary),var(--c-primary-light));
+  background:var(--grad-brand);
   -webkit-background-clip:text;background-clip:text;color:transparent;
 }
 .wm.on-dark{background:none;-webkit-text-fill-color:#fff;color:#fff}
+.wm.wm-lg{font-size:24px}
 .wm b{font-weight:700}
 
 /* ── Layout shells ── */
 .screen{display:flex;align-items:center;justify-content:center;min-height:100vh;min-height:100dvh;padding:20px}
-.sheet{width:100%;max-width:440px;background:var(--c-white);border-radius:var(--radius-l);padding:28px 22px 24px;box-shadow:var(--shadow-l);border:1px solid var(--c-border)}
-.page-wrap{max-width:960px;margin:0 auto;padding:16px 14px 48px}
+/* Gradientowy pełnoekranowy hol logowania / kiosku */
+.brand-screen{background:var(--grad-hero)}
+.sheet{width:100%;max-width:440px;background:var(--c-white);border-radius:var(--radius-l);padding:30px 24px 26px;box-shadow:var(--shadow-l);border:1px solid var(--c-border)}
+.brand-screen .sheet{border:none}
+.page-wrap{max-width:960px;margin:0 auto;padding:18px 16px 48px}
+.page-wrap.has-tabbar{padding-bottom:120px}
 
-/* ── App bar (navy — brandbook: tła pasków sekcji) ── */
-.appbar{
-  background:var(--c-navy);color:#fff;
-  padding:12px 14px;display:flex;flex-direction:column;gap:10px;
-  position:sticky;top:0;z-index:20;
-  box-shadow:0 2px 0 rgba(0,0,0,.06);
+/* ── Hero header (gradient — zastępuje płaski pasek) ── */
+.hero{
+  background:var(--grad-hero);color:#fff;
+  padding:16px 16px 20px;display:flex;flex-direction:column;gap:12px;
+  border-radius:0 0 26px 26px;
+  box-shadow:var(--shadow-m);
+  position:relative;z-index:20;
 }
+.hero-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.hero-title{font-weight:700;font-size:15px;color:#fff;white-space:nowrap}
+.hero-sub{font-size:11px;color:rgba(255,255,255,.65);text-transform:uppercase;letter-spacing:1.5px}
+
+/* Legacy alias — stare widoki z .appbar dostają ten sam wygląd */
+.appbar{background:var(--grad-hero);color:#fff;padding:14px;display:flex;flex-direction:column;gap:10px;position:sticky;top:0;z-index:20}
 .appbar-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .appbar-title{font-weight:700;font-size:15px;color:#fff;white-space:nowrap}
-.appbar-sub{font-size:11px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:1.5px}
 
-/* ── App-bar action buttons (Wyloguj, tryb nocny, nawigacja) ──
-   Współdzielone przez wszystkie widoki z paskiem górnym. ── */
+/* ── Przyciski w hero (Wyloguj, tryb nocny, nawigacja) ── */
 .bar-right{display:flex;gap:8px;margin-left:auto}
-.btn-bar{background:rgba(255,255,255,.12);border:none;border-radius:10px;color:#fff;padding:9px 14px;min-height:40px;cursor:pointer;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
-.btn-bar:active{background:rgba(255,255,255,.2)}
+.btn-bar{background:rgba(255,255,255,.14);border:none;border-radius:var(--radius-pill);color:#fff;padding:9px 15px;min-height:40px;cursor:pointer;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;backdrop-filter:blur(6px)}
+.btn-bar:active{background:rgba(255,255,255,.24)}
 .btn-bar.icon-only{padding:0;width:40px;justify-content:center}
-.btn-bar.danger{background:rgba(123,30,59,.5)}
-.nav-btn-dark{background:rgba(255,255,255,.12);border:none;border-radius:10px;color:#fff;width:38px;height:38px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
-.nav-btn-dark:active{background:rgba(255,255,255,.22)}
+.btn-bar.danger{background:rgba(123,30,59,.65)}
+.btn-bar.danger:active{background:rgba(123,30,59,.85)}
+.nav-btn-dark{background:rgba(255,255,255,.14);border:none;border-radius:50%;color:#fff;width:40px;height:40px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.nav-btn-dark:active{background:rgba(255,255,255,.26)}
 
 /* ── Przełącznik trybu nocnego na ekranach bez paska (kiosk) ── */
 .corner-toggle{position:fixed;top:14px;right:14px;z-index:30}
+.brand-screen .corner-toggle,.brand-screen ~ .corner-toggle{background:rgba(255,255,255,.16);border-color:transparent;color:#fff}
 
-/* ── Buttons ── */
+/* ── Buttons — pigułkowe CTA ── */
 .btn{
   display:inline-flex;align-items:center;justify-content:center;gap:8px;
-  border:none;border-radius:var(--radius-m);font-weight:600;font-size:15px;
-  min-height:var(--tap);padding:14px 18px;cursor:pointer;color:#fff;
-  transition:transform .1s,opacity .15s,background .15s;width:100%;
+  border:none;border-radius:var(--radius-pill);font-weight:700;font-size:15px;
+  min-height:var(--tap);padding:14px 20px;cursor:pointer;color:#fff;
+  transition:transform .1s,opacity .15s,background .15s,box-shadow .15s;width:100%;
+  letter-spacing:.01em;
 }
-.btn:active{transform:scale(.97);opacity:.9}
+.btn:active{transform:scale(.97);opacity:.92}
 .btn svg{flex-shrink:0}
-/* Wypełnione akcje = pierwszoplanowe → cień daje im wagę wizualną.
-   Płaskie/obrysowane akcje = drugoplanowe → bez cienia. */
-.btn-primary{background:var(--c-primary);box-shadow:var(--shadow-m)}
-.btn-primary:active{background:#175d99}
-.btn-accent{background:var(--c-accent);box-shadow:var(--shadow-m)}
+/* Wypełnione akcje = pierwszoplanowe → cień daje im wagę wizualną. */
+.btn-primary{background:var(--grad-brand);box-shadow:var(--shadow-cta)}
+.btn-primary:active{background:var(--c-primary)}
+.btn-accent{background:var(--c-accent);box-shadow:var(--shadow-cta-accent)}
 .btn-accent:active{background:var(--c-accent-dark)}
-.btn-navy{background:var(--c-navy);box-shadow:var(--shadow-s)}
-.btn-ghost{background:var(--c-white);color:var(--c-ink);border:1.5px solid var(--c-border-strong)}
+.btn-navy{background:var(--c-navy);box-shadow:var(--shadow-m)}
+.btn-ghost{background:var(--c-white);color:var(--c-ink);border:1.5px solid var(--c-border-strong);box-shadow:none}
 .btn-ghost:active{background:var(--c-offwhite)}
-.btn-soft{background:var(--c-primary-tint);color:var(--c-primary)}
+.btn-soft{background:var(--c-primary-tint);color:var(--c-primary);box-shadow:none}
 .btn-soft:active{background:var(--c-primary-tint-strong)}
-.btn-sm{min-height:40px;padding:9px 14px;font-size:13px;width:auto;border-radius:var(--radius-s)}
-.btn-icon{width:var(--tap);height:var(--tap);padding:0;border-radius:var(--radius-m);background:var(--c-white);border:1.5px solid var(--c-border-strong);color:var(--c-ink);flex-shrink:0}
+.btn-sm{min-height:40px;padding:9px 16px;font-size:13px;width:auto}
+.btn-icon{width:44px;height:44px;padding:0;border-radius:50%;background:var(--c-white);border:1.5px solid var(--c-border-strong);color:var(--c-ink);flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
 .btn-icon:active{background:var(--c-offwhite)}
-.btn-link{background:none;border:none;color:var(--c-muted);font-size:13px;font-weight:600;cursor:pointer;padding:10px;width:100%;text-align:center}
+.btn-link{background:none;border:none;color:var(--c-muted);font-size:13px;font-weight:600;cursor:pointer;padding:12px;width:100%;text-align:center}
 .btn-link:active{color:var(--c-ink)}
 .btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 
-/* ── Inputs ── */
+/* ── Inputs — wypełniane pola w stylu iOS ── */
 .field{margin-bottom:14px}
 .field:last-child{margin-bottom:0}
-.field-lbl{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--c-muted);font-weight:600;margin-bottom:6px;display:block}
+.field-lbl{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--c-muted);font-weight:700;margin-bottom:6px;display:block}
 .inp,.sel,.ta{
-  width:100%;background:var(--c-white);border:1.5px solid var(--c-border-strong);
-  border-radius:var(--radius-m);color:var(--c-ink);font-size:16px;
+  width:100%;background:var(--c-field);border:1.5px solid transparent;
+  border-radius:var(--radius-s);color:var(--c-ink);font-size:16px;
   padding:13px 14px;min-height:var(--tap);font-family:inherit;
+  transition:border-color .15s,background .15s;
 }
-.inp:focus,.sel:focus,.ta:focus{outline:none;border-color:var(--c-primary)}
+.inp:focus,.sel:focus,.ta:focus{outline:none;border-color:var(--c-primary);background:var(--c-white)}
 .sel{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9'%3E%3Cpath d='M1 1l6 6 6-6' stroke='%236B7280' stroke-width='2' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px}
 .ta{resize:vertical;min-height:84px;line-height:1.5}
 .field-row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -163,52 +188,88 @@ button,input,select,textarea{font-family:inherit}
 .section{background:var(--c-offwhite);border:1px solid var(--c-border);border-radius:var(--radius-m);padding:14px;margin-top:14px}
 .section-title{display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--c-muted);font-weight:700;margin-bottom:10px}
 
-/* ── PIN dots + keypad ── */
-.dots{display:flex;justify-content:center;gap:16px;margin:18px 0}
-.dot{width:14px;height:14px;border-radius:50%;background:var(--c-border-strong);transition:background .12s,transform .12s}
-.dot.on{background:var(--c-primary);transform:scale(1.15)}
-.kp{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+/* ── Żywy zegar (kiosk) ── */
+.clock-time{
+  font-size:52px;font-weight:700;text-align:center;line-height:1.05;
+  font-variant-numeric:tabular-nums;letter-spacing:.02em;
+  background:var(--grad-brand);-webkit-background-clip:text;background-clip:text;color:transparent;
+  margin-top:10px;
+}
+.clock-date{font-size:13px;color:var(--c-muted);text-align:center;margin:4px 0 14px;text-transform:capitalize}
+
+/* ── PIN dots + okrągła klawiatura ── */
+.dots{display:flex;justify-content:center;gap:18px;margin:18px 0 22px}
+.dot{width:15px;height:15px;border-radius:50%;background:var(--c-border-strong);transition:background .12s,transform .12s}
+.dot.on{background:var(--c-primary);transform:scale(1.2)}
+.kp{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;justify-items:center;max-width:300px;margin:0 auto}
 .key{
-  background:var(--c-offwhite);border:1px solid var(--c-border);border-radius:var(--radius-m);
-  color:var(--c-ink);font-size:24px;font-weight:600;min-height:60px;cursor:pointer;user-select:none;
+  background:var(--c-field);border:none;border-radius:50%;
+  width:72px;height:72px;
+  color:var(--c-ink);font-size:26px;font-weight:600;cursor:pointer;user-select:none;
   transition:background .1s,transform .1s;display:flex;align-items:center;justify-content:center;
 }
-.key:active{background:var(--c-primary-tint);transform:scale(.94)}
-.key.key-fn{color:var(--c-muted)}
-.key.key-fn svg{width:20px;height:20px}
+.key:active{background:var(--c-primary-tint-strong);transform:scale(.92)}
+.key.key-fn{background:transparent;color:var(--c-muted);font-size:14px;font-weight:600}
+.key.key-fn:active{background:var(--c-field)}
+.key.key-fn svg{width:22px;height:22px}
 
 /* ── Segmented control (view toggle) ── */
-.seg{display:flex;background:var(--c-offwhite);border:1px solid var(--c-border);border-radius:var(--radius-m);padding:3px;gap:3px}
-.seg-btn{flex:1;background:none;border:none;border-radius:calc(var(--radius-m) - 4px);color:var(--c-muted);padding:10px 8px;min-height:40px;cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap}
+.seg{display:flex;background:var(--c-field);border:none;border-radius:var(--radius-pill);padding:4px;gap:4px}
+.seg-btn{flex:1;background:none;border:none;border-radius:var(--radius-pill);color:var(--c-muted);padding:10px 8px;min-height:40px;cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap}
 .seg-btn.on{background:var(--c-white);color:var(--c-ink);box-shadow:var(--shadow-s)}
 /* Wariant przewijalny — gdy liczba zakładek rośnie (skalowalność paneli). */
 .seg-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .seg-scroll .seg-btn{flex:none;padding:10px 16px}
 
+/* ── Dolna nawigacja z ikonami (panel Właściciela) ── */
+.tabbar{
+  position:fixed;bottom:0;left:0;right:0;z-index:40;
+  display:flex;align-items:stretch;
+  background:var(--c-white);
+  border-top:1px solid var(--c-border);
+  padding:8px 6px calc(10px + env(safe-area-inset-bottom));
+  box-shadow:0 -8px 24px rgba(15,61,92,.10);
+}
+:root[data-theme="dark"] .tabbar{box-shadow:0 -8px 24px rgba(0,0,0,.4)}
+.tabbar .seg-btn{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  background:none;border:none;border-radius:14px;cursor:pointer;
+  color:var(--c-muted);font-size:10.5px;font-weight:600;padding:6px 2px;min-height:52px;box-shadow:none;
+}
+.tabbar .seg-btn svg{width:23px;height:23px}
+.tabbar .seg-btn.on{color:var(--c-primary);background:var(--c-primary-tint)}
+
+/* ── Autouzupełnianie pracownika (wspólne dla paneli) ── */
+.emp-dropdown{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--c-white);border:1px solid var(--c-border);border-radius:var(--radius-m);z-index:25;max-height:240px;overflow-y:auto;box-shadow:var(--shadow-m);display:none}
+.emp-opt{padding:14px 16px;cursor:pointer;font-size:15px;font-weight:500;color:var(--c-ink)}
+.emp-opt:active{background:var(--c-offwhite)}
+.emp-opt-none{padding:14px 16px;color:var(--c-muted);font-size:13px}
+
 /* ── Chips / badges ── */
-.chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:5px 11px;border-radius:var(--radius-pill)}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:5px 12px;border-radius:var(--radius-pill)}
 .chip-accent{background:var(--c-accent-tint);color:var(--c-accent)}
 .chip-primary{background:var(--c-primary-tint);color:var(--c-primary)}
 .chip-muted{background:var(--c-navy-tint);color:var(--c-navy)}
+:root[data-theme="dark"] .chip-muted{color:var(--c-muted)}
 .chip-success{background:var(--c-success-tint);color:var(--c-success)}
 .chip-warn{background:var(--c-accent-tint);color:var(--c-accent)}
 
 /* ── Toast ── */
 #toast{
-  position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(90px);opacity:0;
-  background:var(--c-ink);color:#fff;padding:12px 22px;border-radius:var(--radius-pill);
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(90px);opacity:0;
+  background:var(--c-ink);color:var(--c-offwhite);padding:13px 24px;border-radius:var(--radius-pill);
   font-size:14px;font-weight:600;pointer-events:none;transition:.25s cubic-bezier(.4,0,.2,1);
   z-index:200;max-width:92vw;text-align:center;white-space:pre-line;display:flex;align-items:center;gap:8px;
   box-shadow:var(--shadow-l);
 }
 #toast.on{transform:translateX(-50%) translateY(0);opacity:1}
-#toast.g{background:var(--c-primary)}
-#toast.err{background:var(--c-accent)}
+#toast.g{background:var(--c-primary);color:#fff}
+#toast.err{background:var(--c-accent);color:#fff}
 
 /* ── Modal / bottom sheet ── */
-.modal-overlay{position:fixed;inset:0;background:rgba(15,61,92,.35);backdrop-filter:blur(2px);display:flex;align-items:flex-end;justify-content:center;z-index:150}
-.modal-card{background:var(--c-white);border-radius:var(--radius-l) var(--radius-l) 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom));max-width:520px;width:100%;max-height:84vh;overflow-y:auto;box-shadow:var(--shadow-l)}
-.modal-head{display:flex;align-items:center;justify-content:space-between;font-weight:700;font-size:16px;margin-bottom:14px;color:var(--c-ink)}
+.modal-overlay{position:fixed;inset:0;background:rgba(8,20,30,.45);backdrop-filter:blur(3px);display:flex;align-items:flex-end;justify-content:center;z-index:150}
+.modal-card{background:var(--c-white);border-radius:var(--radius-l) var(--radius-l) 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom));max-width:520px;width:100%;max-height:84vh;overflow-y:auto;box-shadow:var(--shadow-l)}
+.modal-head{display:flex;align-items:center;justify-content:space-between;font-weight:700;font-size:17px;margin-bottom:14px;color:var(--c-ink)}
 .modal-empty{color:var(--c-muted);font-size:14px;padding:16px 0;text-align:center}
 @media(min-width:600px){
   .modal-overlay{align-items:center;padding:16px}
