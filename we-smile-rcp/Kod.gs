@@ -44,6 +44,7 @@ function _dayOutsideClinic(ds, wejscie, wyjscie) {
 // Pokrywają UoP, umowę zlecenie i B2B. Sheet przechowuje kod + etykietę.
 
 const ABSENCE_TYPES = [
+  { code: 'DW',   label: 'Dzień wolny — Klinika zamknięta' },
   { code: 'L4',   label: 'L4 — zwolnienie lekarskie' },
   { code: 'UW',   label: 'Urlop wypoczynkowy' },
   { code: 'UZ',   label: 'Urlop na żądanie' },
@@ -71,6 +72,12 @@ function _absType(code) {
     if (ABSENCE_TYPES[i].code === String(code)) return ABSENCE_TYPES[i];
   }
   return null;
+}
+
+// ── Współdzielone partiale HTML (style itp.) ──────────────────
+
+function include(filename) {
+  return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
 // ── Entry point ──────────────────────────────────────────────
@@ -103,7 +110,7 @@ function callRCP(action, argsJson) {
   try {
     const args = JSON.parse(argsJson || '[]');
     switch (action) {
-      case 'getToken':        return { ok: true, token: _currentToken(), secLeft: _tokenSecLeft(), winSec: TOKEN_WIN_SEC };
+      case 'getToken':        return _getTokenResponse(!!args[0]);
       case 'checkPin':        return checkPin(args[0]);
       case 'clockIn':         return clock(args[0], args[1], 'WEJSCIE');
       case 'clockOut':        return clock(args[0], args[1], 'WYJSCIE');
@@ -126,6 +133,7 @@ function callRCP(action, argsJson) {
       case 'masterGetMonth':        return masterGetMonth(args[0], args[1], args[2], args[3]);
       case 'masterSetAbsence':      return masterSetAbsence(args[0], args[1], args[2], args[3], args[4]);
       case 'masterSetOvertimeNote': return masterSetOvertimeNote(args[0], args[1], args[2], args[3]);
+      case 'masterSetClinicDayOff': return masterSetClinicDayOff(args[0], args[1], args[2], args[3], args[4]);
       default:               return { ok: false, msg: 'Nieznana akcja.' };
     }
   } catch (err) {
@@ -151,6 +159,15 @@ function _currentToken() {
 function _tokenSecLeft() {
   const s = Math.floor(Date.now() / 1000);
   return TOKEN_WIN_SEC - (s % TOKEN_WIN_SEC);
+}
+
+// next=true → kod kolejnego okna, pokazany z wyprzedzeniem (przycisk "Odśwież").
+// Bezpieczne: _verifyToken akceptuje okno ±1 (TOKEN_GRACE), więc kod jest
+// ważny już w momencie wyświetlenia, mimo że bieżące okno jeszcze trwa.
+function _getTokenResponse(next) {
+  const base    = Math.floor(Date.now() / 1000 / TOKEN_WIN_SEC) + (next ? 1 : 0);
+  const secLeft = _tokenSecLeft() + (next ? TOKEN_WIN_SEC : 0);
+  return { ok: true, token: _tokenForWindow(base), secLeft, winSec: TOKEN_WIN_SEC };
 }
 
 function _verifyToken(code) {

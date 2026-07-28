@@ -4,80 +4,52 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
 <title>We SMILE — RCP</title>
+<?!= include('Styles'); ?>
 <style>
-/* ── Mobile-first: duże dotykowe elementy, pełna szerokość ── */
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html{font-size:16px}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#0f0f11;color:#f0f0f2;min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:12px}
-.card{width:100%;max-width:440px;background:#1c1c1e;border-radius:24px;padding:24px 18px 20px;box-shadow:0 24px 64px rgba(0,0,0,.7)}
+/* ── Widok tokenu (admin) ───────────────────────────────────── */
+.tok-sub{font-size:13px;color:var(--c-muted);text-align:center;margin-bottom:6px}
+#token{
+  font-size:clamp(64px,22vw,100px);font-weight:700;letter-spacing:.12em;
+  text-align:center;line-height:1.1;margin:6px 0 16px;font-variant-numeric:tabular-nums;
+  color:var(--c-primary);transition:color .3s;
+}
+#token.red{color:var(--c-accent)}
+.prog-wrap{height:6px;background:var(--c-border);border-radius:4px;overflow:hidden;margin-bottom:14px}
+.prog-fill{height:100%;background:var(--c-primary);width:100%;transition:width 1s linear,background .3s}
+.prog-fill.red{background:var(--c-accent)}
+.tok-status{
+  display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;
+  border-radius:var(--radius-m);padding:12px 14px;font-size:14px;font-weight:600;text-align:center;
+  margin-bottom:12px;transition:background .3s,color .3s;
+}
+.tok-status.green{background:var(--c-primary-tint);color:var(--c-primary)}
+.tok-status.red{background:var(--c-accent-tint);color:var(--c-accent)}
+.btn-refresh{display:none}
+.btn-refresh.show{display:inline-flex}
+.tok-hint{font-size:12px;color:var(--c-muted);text-align:center;margin-top:12px}
 
-/* ── Admin: token display ── */
-.admin-label{font-size:13px;text-transform:uppercase;letter-spacing:3px;color:#555;text-align:center;margin-bottom:8px}
-.admin-sublabel{font-size:16px;color:#888;text-align:center;margin-bottom:6px}
-#token{font-size:clamp(72px,24vw,110px);font-weight:900;letter-spacing:.14em;text-align:center;line-height:1.1;margin:6px 0 14px;transition:color .3s}
-#token.green{color:#00d68a}
-#token.red{color:#e84560}
-.prog-wrap{height:8px;background:#2c2c2e;border-radius:4px;overflow:hidden;margin-bottom:14px}
-.prog-fill{height:100%;background:#00d68a;width:100%;transition:width 1s linear,background .3s}
-.prog-fill.red{background:#e84560}
-.tok-status{display:flex;align-items:center;justify-content:center;gap:8px;min-height:52px;border-radius:14px;padding:12px 14px;font-size:16px;font-weight:700;text-align:center;margin-bottom:12px;transition:background .3s,color .3s}
-.tok-status.green{background:rgba(0,214,138,.12);color:#00d68a}
-.tok-status.red{background:rgba(232,69,96,.14);color:#e84560}
-.btn-refresh{display:none;width:100%;background:#e84560;border:none;border-radius:14px;color:#fff;font-size:17px;font-weight:800;padding:16px 0;min-height:56px;cursor:pointer}
-.btn-refresh:active{opacity:.85;transform:scale(.98)}
-.btn-refresh.show{display:block}
-.admin-hint{font-size:13px;color:#555;text-align:center;margin-top:12px}
-
-/* ── Worker: steps ── */
-.brand{font-size:13px;text-transform:uppercase;letter-spacing:3px;color:#444;text-align:center;margin-bottom:18px}
+/* ── Worker steps ───────────────────────────────────────────── */
 .step{display:none}
 .step.on{display:block}
-.step-title{font-size:24px;font-weight:700;text-align:center;margin-bottom:4px}
-.step-sub{font-size:15px;color:#777;text-align:center;margin-bottom:16px;min-height:22px}
+.step-title{font-size:21px;font-weight:700;text-align:center;margin-bottom:4px;color:var(--c-ink)}
+.step-sub{font-size:14px;color:var(--c-muted);text-align:center;margin-bottom:18px;min-height:20px}
+.step-head{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.step-head .btn-icon{width:40px;height:40px}
+.ovr-alert{
+  background:var(--c-accent-tint);border:1px solid rgba(123,30,59,.22);border-radius:var(--radius-m);
+  padding:14px;font-size:14px;line-height:1.5;color:var(--c-accent-dark);font-weight:600;text-align:center;margin-bottom:14px;
+}
+.ovr-alert .ic{margin:0 auto 6px}
 
-/* PIN dots */
-.dots{display:flex;justify-content:center;gap:18px;margin:0 0 18px}
-.dot{width:20px;height:20px;border-radius:50%;background:#2c2c2e;border:2px solid #38383a;transition:background .12s,border-color .12s}
-.dot.on{background:#e84560;border-color:#e84560}
-
-/* Keypad — duże pola dotykowe */
-.kp{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:6px}
-.key{background:#2c2c2e;border:none;border-radius:16px;color:#f0f0f2;font-size:28px;font-weight:600;min-height:64px;padding:14px 0;cursor:pointer;user-select:none;transition:background .1s,transform .1s}
-.key:active{background:#e84560;transform:scale(.93)}
-.key.sym{color:#888;font-size:22px}
-.key.clr{color:#e84560;font-weight:800;font-size:20px}
-
-/* Action buttons */
-.action-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
-.btn{border:none;border-radius:16px;font-size:17px;font-weight:700;min-height:60px;padding:16px 0;cursor:pointer;color:#fff;transition:opacity .1s,transform .1s}
-.btn:active{transform:scale(.96);opacity:.85}
-.btn-in{background:#00a86b}
-.btn-out{background:#2979ff}
-.btn-abs{width:100%;background:#8e5cd9;margin-top:10px}
-.btn-full{width:100%;margin-top:12px;background:#e84560}
-.btn-back{width:100%;background:none;border:1px solid #2c2c2e;border-radius:14px;color:#777;font-size:15px;min-height:48px;padding:12px;cursor:pointer;margin-top:12px;transition:background .1s}
-.btn-back:active{background:#2c2c2e}
-
-/* Formularze (nieobecność / uzasadnienie) */
-.f-lbl{font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:#666;margin:12px 0 6px;display:block}
-.f-inp,.f-sel,.f-ta{width:100%;background:#242427;border:1px solid #3a3a3c;border-radius:14px;color:#f0f0f2;font-size:16px;padding:14px;font-family:inherit;min-height:52px}
-.f-inp:focus,.f-sel:focus,.f-ta:focus{outline:none;border-color:#e84560}
-.f-sel{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9'%3E%3Cpath d='M1 1l6 6 6-6' stroke='%23888' stroke-width='2' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px}
-.f-ta{resize:vertical;min-height:88px;line-height:1.5}
-.f-row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.ovr-alert{background:rgba(232,181,69,.12);border:1px solid rgba(232,181,69,.4);border-radius:14px;padding:14px;font-size:15px;line-height:1.5;color:#e8b545;font-weight:600;text-align:center;margin-bottom:4px}
-.skip-link{display:block;width:100%;background:none;border:none;color:#555;font-size:13px;text-align:center;margin-top:12px;cursor:pointer;text-decoration:underline}
-
-/* Success */
-.ok-wrap{text-align:center;padding:8px 0}
-.ok-icon{font-size:64px;margin-bottom:12px}
-.ok-title{font-size:24px;font-weight:700;color:#00a86b;margin-bottom:8px}
-.ok-sub{font-size:16px;color:#999;line-height:1.5}
-
-/* Toast */
-#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(80px);opacity:0;background:#e84560;color:#fff;padding:13px 24px;border-radius:40px;font-size:15px;font-weight:600;pointer-events:none;transition:.25s cubic-bezier(.4,0,.2,1);z-index:99;max-width:92vw;text-align:center;white-space:pre-line}
-#toast.on{transform:translateX(-50%) translateY(0);opacity:1}
-#toast.ok{background:#00a86b}
+/* ── Success ── */
+.ok-wrap{text-align:center;padding:6px 0}
+.ok-icon-wrap{
+  width:64px;height:64px;border-radius:50%;background:var(--c-primary-tint);color:var(--c-primary);
+  display:flex;align-items:center;justify-content:center;margin:0 auto 16px;
+}
+.ok-icon-wrap.accent{background:var(--c-accent-tint);color:var(--c-accent)}
+.ok-title{font-size:20px;font-weight:700;color:var(--c-ink);margin-bottom:8px}
+.ok-sub{font-size:14px;color:var(--c-muted);line-height:1.5}
 </style>
 </head>
 <body>
@@ -87,14 +59,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 <!-- ═══════════════════════════════════════════
      WIDOK ADMINA — wyświetlanie kodu
 ════════════════════════════════════════════════ -->
-<div class="card">
-  <div class="admin-label">We SMILE</div>
-  <div class="admin-sublabel">Aktywny kod autoryzacyjny</div>
-  <div id="token" class="green">----</div>
-  <div class="prog-wrap"><div class="prog-fill" id="prog"></div></div>
-  <div class="tok-status green" id="tok-status">✅ Przepisz kod</div>
-  <button class="btn-refresh" id="btn-refresh">🔄 Odśwież kod</button>
-  <div class="admin-hint">Kod zmienia się co 30 sekund</div>
+<div class="screen">
+  <div class="sheet">
+    <div class="wm" style="display:flex;justify-content:center;margin-bottom:18px">we<b>SMILE</b></div>
+    <div class="tok-sub">Aktywny kod autoryzacyjny</div>
+    <div id="token" class="green">----</div>
+    <div class="prog-wrap"><div class="prog-fill" id="prog"></div></div>
+    <div class="tok-status green" id="tok-status"></div>
+    <button class="btn btn-accent btn-refresh" id="btn-refresh">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-15.5 6.4L3 16"/><path d="M3 12a9 9 0 0 1 15.5-6.4L21 8"/><path d="M21 3v5h-5"/><path d="M3 21v-5h5"/></svg>
+      Odśwież kod
+    </button>
+    <div class="tok-hint">Kod zmienia się automatycznie co 30 sekund</div>
+  </div>
 </div>
 
 <? } else { ?>
@@ -102,8 +79,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 <!-- ═══════════════════════════════════════════
      WIDOK PRACOWNIKA — rejestracja odbicia
 ════════════════════════════════════════════════ -->
-<div class="card">
-  <div class="brand">We SMILE — RCP</div>
+<div class="screen">
+<div class="sheet">
+  <div class="wm" style="display:flex;justify-content:center;margin-bottom:20px">we<b>SMILE</b></div>
 
   <!-- Krok 1: wpisz PIN -->
   <div class="step on" id="s-pin">
@@ -117,7 +95,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
       <button class="key" data-v="1">1</button><button class="key" data-v="2">2</button><button class="key" data-v="3">3</button>
       <button class="key" data-v="4">4</button><button class="key" data-v="5">5</button><button class="key" data-v="6">6</button>
       <button class="key" data-v="7">7</button><button class="key" data-v="8">8</button><button class="key" data-v="9">9</button>
-      <button class="key clr" data-v="C">C</button><button class="key" data-v="0">0</button><button class="key sym" data-v="X">⌫</button>
+      <button class="key key-fn" data-v="C">Wyczyść</button><button class="key" data-v="0">0</button>
+      <button class="key key-fn" data-v="X"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-6-6 6-6z"/><path d="M14 10l4 4M18 10l-4 4"/></svg></button>
     </div>
   </div>
 
@@ -133,14 +112,24 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
       <button class="key" data-c="1">1</button><button class="key" data-c="2">2</button><button class="key" data-c="3">3</button>
       <button class="key" data-c="4">4</button><button class="key" data-c="5">5</button><button class="key" data-c="6">6</button>
       <button class="key" data-c="7">7</button><button class="key" data-c="8">8</button><button class="key" data-c="9">9</button>
-      <button class="key clr" data-c="C">C</button><button class="key" data-c="0">0</button><button class="key sym" data-c="X">⌫</button>
+      <button class="key key-fn" data-c="C">Wyczyść</button><button class="key" data-c="0">0</button>
+      <button class="key key-fn" data-c="X"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-6-6 6-6z"/><path d="M14 10l4 4M18 10l-4 4"/></svg></button>
     </div>
-    <div class="action-row">
-      <button class="btn btn-in"  id="btn-in">✅ WEJŚCIE</button>
-      <button class="btn btn-out" id="btn-out">🚪 WYJŚCIE</button>
+    <div class="btn-row" style="margin-top:16px">
+      <button class="btn btn-primary" id="btn-in">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M3 12h13"/><path d="M12 8l4 4-4 4"/></svg>
+        Wejście
+      </button>
+      <button class="btn btn-navy" id="btn-out">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"/><path d="M21 12H8"/><path d="M15 16l4-4-4-4"/></svg>
+        Wyjście
+      </button>
     </div>
-    <button class="btn btn-abs" id="btn-abs">🏖️ Zgłoś nieobecność</button>
-    <button class="btn-back" id="btn-back">← Zmień PIN</button>
+    <button class="btn btn-soft" id="btn-abs" style="margin-top:10px">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 3v4M16 3v4"/><path d="M9.5 14.5l5 5M14.5 14.5l-5 5"/></svg>
+      Zgłoś nieobecność
+    </button>
+    <button class="btn-link" id="btn-back">← Zmień PIN</button>
   </div>
 
   <!-- Krok 2b: zgłoszenie nieobecności (bez kodu z tabletu) -->
@@ -148,48 +137,58 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
     <div class="step-title">Nieobecność</div>
     <div class="step-sub" id="abs-who"></div>
 
-    <div class="f-row2">
-      <div>
-        <label class="f-lbl" for="abs-from">Od dnia</label>
-        <input type="date" id="abs-from" class="f-inp">
+    <div class="field-row2">
+      <div class="field">
+        <label class="field-lbl" for="abs-from">Od dnia</label>
+        <input type="date" id="abs-from" class="inp">
       </div>
-      <div>
-        <label class="f-lbl" for="abs-to">Do dnia</label>
-        <input type="date" id="abs-to" class="f-inp">
+      <div class="field">
+        <label class="field-lbl" for="abs-to">Do dnia</label>
+        <input type="date" id="abs-to" class="inp">
       </div>
     </div>
 
-    <label class="f-lbl" for="abs-typ">Typ nieobecności</label>
-    <select id="abs-typ" class="f-sel">
-      <option value="">— wybierz typ —</option>
-    </select>
+    <div class="field">
+      <label class="field-lbl" for="abs-typ">Typ nieobecności</label>
+      <select id="abs-typ" class="sel">
+        <option value="">— wybierz typ —</option>
+      </select>
+    </div>
 
-    <label class="f-lbl" for="abs-note">Adnotacja (widoczna dla admina i właściciela)</label>
-    <textarea id="abs-note" class="f-ta" placeholder="Np. numer L4, powód, dodatkowe informacje…"></textarea>
+    <div class="field">
+      <label class="field-lbl" for="abs-note">Adnotacja (widoczna dla admina i właściciela)</label>
+      <textarea id="abs-note" class="ta" placeholder="Np. numer L4, powód, dodatkowe informacje…"></textarea>
+    </div>
 
-    <button class="btn btn-full" id="abs-submit">Zgłoś nieobecność</button>
-    <button class="btn-back" id="abs-back">← Wróć</button>
+    <button class="btn btn-accent" id="abs-submit">Zgłoś nieobecność</button>
+    <button class="btn-link" id="abs-back">← Wróć</button>
   </div>
 
   <!-- Krok 2c: uzasadnienie pracy poza godzinami Kliniki -->
   <div class="step" id="s-ovr">
-    <div class="step-title">⚠️ Uwaga</div>
+    <div class="step-title">Uwaga</div>
     <div class="step-sub" id="ovr-sub"></div>
-    <div class="ovr-alert">Przekroczono regularne godziny pracy Kliniki — uzasadnij konieczność:</div>
-    <textarea id="ovr-note" class="f-ta" placeholder="Wpisz uzasadnienie (przypisane do dzisiejszego dnia)…"></textarea>
-    <button class="btn btn-full" id="ovr-save">Zapisz uzasadnienie</button>
-    <button class="skip-link" id="ovr-skip">Pomiń — uzupełni administrator</button>
+    <div class="ovr-alert">
+      <svg class="ic-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+      <div>Przekroczono regularne godziny pracy Kliniki — uzasadnij konieczność:</div>
+    </div>
+    <textarea id="ovr-note" class="ta" placeholder="Wpisz uzasadnienie (przypisane do dzisiejszego dnia)…"></textarea>
+    <button class="btn btn-accent" id="ovr-save" style="margin-top:12px">Zapisz uzasadnienie</button>
+    <button class="btn-link" id="ovr-skip">Pomiń — uzupełni administrator</button>
   </div>
 
   <!-- Krok 3: potwierdzenie -->
   <div class="step" id="s-ok">
     <div class="ok-wrap">
-      <div class="ok-icon" id="ok-icon">✅</div>
+      <div class="ok-icon-wrap" id="ok-icon-wrap">
+        <svg class="ic-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 5-5"/></svg>
+      </div>
       <div class="ok-title" id="ok-title">Zarejestrowano!</div>
       <div class="ok-sub" id="ok-msg"></div>
     </div>
   </div>
 
+</div>
 </div>
 
 <? } ?>
@@ -205,7 +204,7 @@ var _tt;
 function toast(msg, isOk) {
   var el = document.getElementById('toast');
   el.textContent = msg;
-  el.className = 'on' + (isOk ? ' ok' : '');
+  el.className = 'on' + (isOk ? ' g' : ' err');
   clearTimeout(_tt);
   _tt = setTimeout(function () { el.className = ''; }, 3200);
 }
@@ -226,16 +225,19 @@ if (PAGE === 'admin') {
   var GREEN_UNTIL = 20;  // 0–20 s od zmiany kodu → zielony
   var left = 0;          // sekundy do zmiany kodu
   var loading = false;
+  var retryIn = 0;
 
   var elToken   = document.getElementById('token');
   var elProg    = document.getElementById('prog');
   var elStatus  = document.getElementById('tok-status');
   var elRefresh = document.getElementById('btn-refresh');
 
-  function refreshToken() {
+  // forceNext=true → prosi serwer o kod KOLEJNEGO okna (przycisk "Odśwież"),
+  // ważny od razu dzięki tolerancji ±1 okna po stronie serwera.
+  function refreshToken(forceNext) {
     if (loading) return;
     loading = true;
-    gas('getToken', [], function (res) {
+    gas('getToken', [!!forceNext], function (res) {
       loading = false;
       if (!res || !res.ok) return;
       elToken.textContent = res.token;
@@ -255,31 +257,29 @@ if (PAGE === 'admin') {
 
     if (green) {
       elStatus.className = 'tok-status green';
-      elStatus.textContent = '✅ Przepisz kod — ważny jeszcze ' + left + ' s';
-      elRefresh.className = 'btn-refresh';
+      elStatus.textContent = 'Przepisz kod — ważny jeszcze ' + left + ' s';
+      elRefresh.className = 'btn btn-accent btn-refresh';
     } else {
       elStatus.className = 'tok-status red';
-      elStatus.textContent = '⚠️ Kod wkrótce ulegnie przedawnieniu (' + left + ' s)';
-      elRefresh.className = 'btn-refresh show';
+      elStatus.textContent = 'Kod wkrótce ulegnie przedawnieniu (' + left + ' s)';
+      elRefresh.className = 'btn btn-accent btn-refresh show';
     }
   }
 
-  elRefresh.addEventListener('click', refreshToken);
+  elRefresh.addEventListener('click', function () { refreshToken(true); });
 
-  var retryIn = 0;
   setInterval(function () {
     if (left > 0) {
       left--;
       render();
-      if (left === 0) refreshToken();
+      if (left === 0) refreshToken(false);
     } else if (!loading) {
-      // brak danych (np. błąd sieci) — ponów co 5 s
       retryIn--;
-      if (retryIn <= 0) { retryIn = 5; refreshToken(); }
+      if (retryIn <= 0) { retryIn = 5; refreshToken(false); }
     }
   }, 1000);
 
-  refreshToken();
+  refreshToken(false);
 
 // ════════════════════════════════════════════════════════════
 } else {
@@ -288,6 +288,9 @@ if (PAGE === 'admin') {
   var pin = '', code = '', empPin = '', empName = '';
   var absTypes = null;
   var resetTimer = null;
+
+  var ICON_OK  = '<svg class="ic-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 5-5"/></svg>';
+  var ICON_ABS = '<svg class="ic-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 3v4M16 3v4"/><path d="M9.5 14.5l5 5M14.5 14.5l-5 5"/></svg>';
 
   // Przełączanie kroków
   function show(id) {
@@ -303,8 +306,10 @@ if (PAGE === 'admin') {
     show('s-pin');
   }
 
-  function finishOk(icon, title, msg, delayMs) {
-    document.getElementById('ok-icon').textContent  = icon;
+  function finishOk(icon, accent, title, msg, delayMs) {
+    var wrap = document.getElementById('ok-icon-wrap');
+    wrap.className = 'ok-icon-wrap' + (accent ? ' accent' : '');
+    wrap.innerHTML = icon;
     document.getElementById('ok-title').textContent = title;
     document.getElementById('ok-msg').textContent   = msg;
     show('s-ok');
@@ -377,7 +382,7 @@ if (PAGE === 'admin') {
     var rpc = (action === 'WEJSCIE') ? 'clockIn' : 'clockOut';
     gas(rpc, [empPin, code], function (res) {
       if (res && res.ok) {
-        var label = (action === 'WEJSCIE') ? 'WEJŚCIE' : 'WYJŚCIE';
+        var label = (action === 'WEJSCIE') ? 'Wejście' : 'Wyjście';
         var msg = res.imie + ' — ' + label + ' o ' + res.godzina;
         if (res.overtime) {
           // Praca poza regularnymi godzinami Kliniki → uzasadnienie
@@ -385,7 +390,7 @@ if (PAGE === 'admin') {
           document.getElementById('ovr-note').value = '';
           show('s-ovr');
         } else {
-          finishOk('✅', 'Zarejestrowano!', msg, 3000);
+          finishOk(ICON_OK, false, 'Zarejestrowano', msg, 3000);
         }
       } else {
         toast((res && res.msg) || 'Błąd rejestracji.', false);
@@ -406,7 +411,7 @@ if (PAGE === 'admin') {
     toast('Zapisywanie…', true);
     gas('setOvertimeNote', [empPin, note], function (res) {
       if (res && res.ok) {
-        finishOk('✅', 'Zarejestrowano!', 'Uzasadnienie zapisane. Dziękujemy.', 3000);
+        finishOk(ICON_OK, false, 'Zarejestrowano', 'Uzasadnienie zapisane. Dziękujemy.', 3000);
       } else {
         toast((res && res.msg) || 'Błąd zapisu.', false);
       }
@@ -414,7 +419,7 @@ if (PAGE === 'admin') {
   });
 
   document.getElementById('ovr-skip').addEventListener('click', function () {
-    finishOk('✅', 'Zarejestrowano!', 'Pamiętaj o uzupełnieniu uzasadnienia u administratora.', 3500);
+    finishOk(ICON_OK, false, 'Zarejestrowano', 'Pamiętaj o uzupełnieniu uzasadnienia u administratora.', 3500);
   });
 
   // ── Nieobecność ───────────────────────────────────────────
@@ -422,6 +427,7 @@ if (PAGE === 'admin') {
     var sel = document.getElementById('abs-typ');
     sel.innerHTML = '<option value="">— wybierz typ —</option>';
     (absTypes || []).forEach(function (t) {
+      if (t.code === 'DW') return; // zastrzeżone dla właściciela (dzień wolny kliniki)
       var o = document.createElement('option');
       o.value = t.code;
       o.textContent = t.label;
@@ -470,7 +476,7 @@ if (PAGE === 'admin') {
     gas('reportAbsence', [empPin, from, to, typ, note], function (res) {
       if (res && res.ok) {
         var dni = res.dni === 1 ? '1 dzień' : res.dni + ' dni';
-        finishOk('🏖️', 'Zgłoszono nieobecność', res.typ + ' — ' + dni, 3500);
+        finishOk(ICON_ABS, true, 'Zgłoszono nieobecność', res.typ + ' — ' + dni, 3500);
       } else {
         toast((res && res.msg) || 'Błąd zgłoszenia.', false);
       }

@@ -4,105 +4,44 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>We SMILE</title>
+<?!= include('Styles'); ?>
 <style>
-/* ── Mobile-first ── */
-*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
-html{font-size:16px}
-body{background:#0a0a0c;color:#f0f0f2;min-height:100vh;min-height:100dvh}
-
-.wrap-login{display:flex;align-items:center;justify-content:center;min-height:100vh;min-height:100dvh;padding:12px}
-.card{background:#18181a;border:1px solid #2a2a2e;border-radius:24px;padding:26px 20px;width:100%;max-width:420px;box-shadow:0 24px 64px rgba(0,0,0,.8)}
-.brand{font-size:13px;text-transform:uppercase;letter-spacing:3px;color:#444;text-align:center;margin-bottom:18px}
-.title{font-size:21px;font-weight:700;text-align:center;margin-bottom:20px}
-
-.dots{display:flex;justify-content:center;gap:16px;margin:0 0 20px}
-.dot{width:18px;height:18px;border-radius:50%;background:#2c2c2e;border:2px solid #3a3a3c;transition:.12s}
-.dot.on{background:#9b30ff;border-color:#9b30ff}
-.kp{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.key{background:#2c2c2e;border:none;border-radius:14px;color:#f0f0f2;font-size:26px;font-weight:600;min-height:62px;padding:14px 0;cursor:pointer;transition:.1s;user-select:none}
-.key:active{background:#9b30ff;transform:scale(.94)}
-.key.sym{color:#888;font-size:20px}
-.key.clr{color:#9b30ff;font-weight:800;font-size:18px}
-
-/* ── APP BAR (panel) ── */
-.app-bar{background:#18181a;border-bottom:1px solid #2a2a2e;padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:sticky;top:0;z-index:10}
-.app-title{font-weight:800;font-size:16px;white-space:nowrap;color:#9b30ff}
-.bar-right{margin-left:auto}
-.btn-sm{background:#2c2c2e;border:none;border-radius:10px;color:#f0f0f2;padding:10px 16px;min-height:44px;cursor:pointer;font-size:14px;font-weight:600}
-.btn-sm:active{background:#3a3a3c}
-.btn-red{background:#e84560;color:#fff}
-.btn-red:active{background:#c73451}
-
-.page-wrap{max-width:720px;margin:0 auto;padding:16px 14px 40px}
-
-.view-toggle{display:flex;gap:8px;margin-bottom:18px}
-.vbtn{flex:1;background:#18181a;border:1px solid #2a2a2e;border-radius:12px;color:#888;padding:12px 12px;min-height:50px;cursor:pointer;font-size:14px;font-weight:600}
-.vbtn.on{background:#9b30ff;border-color:#9b30ff;color:#fff}
-
-.field{margin-bottom:14px}
-.lbl{font-size:12px;text-transform:uppercase;letter-spacing:.7px;color:#555;margin-bottom:6px;display:block}
-.inp{width:100%;background:#18181a;border:1px solid #2a2a2e;border-radius:12px;color:#f0f0f2;font-size:16px;padding:13px 14px;min-height:50px;font-family:inherit}
-.inp:focus{outline:none;border-color:#9b30ff}
-select.inp{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9'%3E%3Cpath d='M1 1l6 6 6-6' stroke='%23888' stroke-width='2' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px}
-textarea.inp{resize:vertical;min-height:76px;line-height:1.5}
-
-.emp-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#18181a;border:1px solid #2a2a2e;border-radius:12px;z-index:20;max-height:220px;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.6);display:none}
-.emp-opt{padding:13px 14px;cursor:pointer;font-size:16px}
-.emp-opt:active{background:#232326}
-.rel{position:relative}
-
-.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-
-.btn{width:100%;border:none;border-radius:14px;font-weight:700;font-size:16px;padding:15px 0;min-height:54px;cursor:pointer;color:#fff;margin-top:6px}
-.btn-load{background:#2c2c2e;color:#f0f0f2}
-.btn-load:active{background:#3a3a3c}
-.btn-save{background:#9b30ff}
-.btn-save:active{background:#7d20d6}
-.btn-clear{background:none;border:1px solid #2a2a2e;color:#888;margin-top:8px}
-.btn-clear:active{background:#232326}
-
-.hint{font-size:13px;color:#555;text-align:center;margin-top:14px;line-height:1.6}
-
-/* ── Sekcje dnia ── */
-.section{background:#131316;border:1px solid #232326;border-radius:16px;padding:14px;margin-top:14px}
-.section-title{font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:#777;font-weight:700;margin-bottom:10px}
-.ovr-flag{display:none;background:rgba(232,181,69,.12);border:1px solid rgba(232,181,69,.4);border-radius:12px;padding:11px 13px;font-size:14px;line-height:1.5;color:#e8b545;font-weight:600;margin-bottom:10px}
-.ovr-flag.on{display:block}
-
-/* ── Miesiąc: nawigacja ── */
+.seg3{display:grid;grid-template-columns:repeat(3,1fr)}
 .month-nav{display:flex;align-items:center;gap:10px;margin-bottom:16px}
-.nav-btn{background:#2c2c2e;border:none;border-radius:10px;color:#f0f0f2;width:46px;height:46px;cursor:pointer;font-size:16px;flex-shrink:0}
-.nav-btn:active{background:#3a3a3c}
-.month-label{font-size:16px;font-weight:700;flex:1;text-align:center}
+.month-label{font-size:15px;font-weight:700;flex:1;text-align:center;color:var(--c-ink)}
 
-/* ── Tabela edycji miesiąca ── */
+.ovr-flag{display:none;align-items:flex-start;gap:10px;background:var(--c-accent-tint);border:1px solid rgba(123,30,59,.22);border-radius:var(--radius-m);padding:12px 14px;font-size:13px;line-height:1.5;color:var(--c-accent-dark);font-weight:600;margin-bottom:10px}
+.ovr-flag.on{display:flex}
+
 .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
-.edit-table{width:100%;border-collapse:collapse;font-size:14px;border-radius:14px;overflow:hidden;border:1px solid #2a2a2e}
-.edit-table th{background:#111;color:#555;font-weight:600;padding:10px 10px;text-align:left;border-bottom:1px solid #222;font-size:11px;text-transform:uppercase}
-.edit-table td{padding:8px 8px;border-bottom:1px solid #1a1a1c;vertical-align:middle}
-.edit-table tr.wknd td{background:#131315}
+.edit-table{width:100%;border-collapse:collapse;font-size:13px;border-radius:var(--radius-m);overflow:hidden;border:1px solid var(--c-border)}
+.edit-table th{background:var(--c-offwhite);color:var(--c-muted);font-weight:600;padding:10px;text-align:left;border-bottom:1px solid var(--c-border);font-size:11px;text-transform:uppercase}
+.edit-table td{padding:8px;border-bottom:1px solid var(--c-border);vertical-align:middle}
+.edit-table tr.wknd td{background:var(--c-offwhite)}
 .edit-table tr:last-child td{border-bottom:none}
-.edit-table input[type=time]{background:#18181a;border:1px solid #2a2a2e;border-radius:10px;color:#f0f0f2;font-size:15px;padding:10px 8px;min-height:46px;width:100%;font-family:monospace}
-.edit-table input[type=time]:focus{outline:none;border-color:#9b30ff}
-.edit-table input.saved{border-color:#00a86b}
-.edit-table input.saving{border-color:#e8b545}
-.dcell{font-weight:700;white-space:nowrap}
-.dcell small{display:block;font-weight:400;color:#666;font-size:11px}
-.mm-abs{display:inline-block;background:rgba(142,92,217,.25);color:#b48ae8;font-size:10px;font-weight:800;padding:2px 5px;border-radius:6px;margin-top:2px}
-.mm-ovr{color:#e8b545;font-size:12px;font-weight:800}
+.edit-table input[type=time]{background:var(--c-white);border:1.5px solid var(--c-border-strong);border-radius:10px;color:var(--c-ink);font-size:14px;padding:9px 8px;min-height:44px;width:100%;font-family:ui-monospace,monospace}
+.edit-table input[type=time]:focus{outline:none;border-color:var(--c-primary)}
+.edit-table input.saved{border-color:var(--c-primary)}
+.edit-table input.saving{border-color:var(--c-accent)}
+.dcell{font-weight:700;white-space:nowrap;color:var(--c-ink)}
+.dcell small{display:block;font-weight:400;color:var(--c-muted);font-size:11px}
+.mm-abs{display:inline-block;background:var(--c-primary-tint);color:var(--c-primary);font-size:9px;font-weight:800;padding:2px 5px;border-radius:6px;margin-top:2px}
+.mm-ovr{color:var(--c-accent);display:inline-flex;vertical-align:-3px}
 
-#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);opacity:0;background:#e84560;color:#fff;padding:12px 24px;border-radius:40px;font-size:15px;font-weight:600;pointer-events:none;transition:.25s;z-index:99;max-width:92vw;text-align:center}
-#toast.on{transform:translateX(-50%) translateY(0);opacity:1}
-#toast.g{background:#00a86b}
+.confirm-row{display:flex;gap:10px;margin-top:6px}
+.confirm-row .btn{width:auto;flex:1}
+.info-box{display:flex;gap:10px;background:var(--c-navy-tint);border:1px solid var(--c-border);border-radius:var(--radius-m);padding:12px 14px;font-size:13px;line-height:1.5;color:var(--c-navy)}
+.info-box .ic{flex-shrink:0;margin-top:1px}
 </style>
 </head>
 <body>
 
 <!-- LOGIN -->
-<div id="s-login" class="wrap-login">
-  <div class="card">
-    <div class="brand">We SMILE</div>
-    <div class="title">🔒 Dostęp ograniczony</div>
+<div id="s-login" class="screen">
+  <div class="sheet">
+    <div class="wm" style="display:flex;justify-content:center;margin-bottom:14px">we<b>SMILE</b></div>
+    <div class="step-title" style="text-align:center">Dostęp ograniczony</div>
+    <div class="step-sub" style="text-align:center">Panel Właściciela</div>
     <div class="dots">
       <div class="dot" id="ld0"></div><div class="dot" id="ld1"></div>
       <div class="dot" id="ld2"></div><div class="dot" id="ld3"></div>
@@ -111,101 +50,155 @@ textarea.inp{resize:vertical;min-height:76px;line-height:1.5}
       <button class="key" data-v="1">1</button><button class="key" data-v="2">2</button><button class="key" data-v="3">3</button>
       <button class="key" data-v="4">4</button><button class="key" data-v="5">5</button><button class="key" data-v="6">6</button>
       <button class="key" data-v="7">7</button><button class="key" data-v="8">8</button><button class="key" data-v="9">9</button>
-      <button class="key clr" data-v="C">C</button><button class="key" data-v="0">0</button><button class="key sym" data-v="X">⌫</button>
+      <button class="key key-fn" data-v="C">Wyczyść</button><button class="key" data-v="0">0</button>
+      <button class="key key-fn" data-v="X"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-6-6 6-6z"/><path d="M14 10l4 4M18 10l-4 4"/></svg></button>
     </div>
   </div>
 </div>
 
 <!-- PANEL -->
 <div id="s-panel" style="display:none">
-  <header class="app-bar">
-    <span class="app-title">🕶️ Panel Właściciela</span>
-    <div class="bar-right">
-      <button id="m-logout" class="btn-sm btn-red">Wyloguj</button>
+  <header class="appbar">
+    <div class="appbar-row">
+      <span class="wm on-dark appbar-title">we<b>SMILE</b> · Właściciel</span>
+      <div class="bar-right">
+        <button id="m-logout" class="btn-bar danger">
+          <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"/><path d="M21 12H8"/><path d="M15 16l4-4-4-4"/></svg>
+          Wyloguj
+        </button>
+      </div>
     </div>
   </header>
 
   <div class="page-wrap">
 
-    <div class="view-toggle">
-      <button class="vbtn on" id="tab-day">Szybka edycja dnia</button>
-      <button class="vbtn" id="tab-month">Edytor miesiąca</button>
+    <div class="seg seg3" style="margin-bottom:18px">
+      <button class="seg-btn on" id="tab-day">Dzień</button>
+      <button class="seg-btn" id="tab-month">Miesiąc</button>
+      <button class="seg-btn" id="tab-daysoff">Dni wolne</button>
     </div>
 
     <!-- ── WIDOK: DZIEŃ ── -->
     <div id="view-day">
-      <div class="field rel">
-        <span class="lbl">Pracownik</span>
+      <div class="field" style="position:relative">
+        <span class="field-lbl">Pracownik</span>
         <input type="text" id="m-emp-input" class="inp" placeholder="Wpisz imię lub nazwisko…" autocomplete="off">
         <div id="m-emp-dropdown" class="emp-dropdown"></div>
       </div>
 
       <div class="field">
-        <span class="lbl">Data</span>
+        <span class="field-lbl">Data</span>
         <input type="date" id="m-date" class="inp">
       </div>
 
-      <button id="m-load" class="btn btn-load">Wczytaj istniejące dane</button>
+      <button id="m-load" class="btn btn-ghost">Wczytaj istniejące dane</button>
 
-      <div class="row2" style="margin-top:14px">
+      <div class="field-row2" style="margin-top:14px">
         <div class="field">
-          <span class="lbl">Wejście</span>
+          <span class="field-lbl">Wejście</span>
           <input type="time" id="m-in" class="inp">
         </div>
         <div class="field">
-          <span class="lbl">Wyjście</span>
+          <span class="field-lbl">Wyjście</span>
           <input type="time" id="m-out" class="inp">
         </div>
       </div>
 
       <!-- Nieobecność -->
       <div class="section">
-        <div class="section-title">🏖️ Nieobecność (dzień)</div>
+        <div class="section-title">
+          <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 3v4M16 3v4"/></svg>
+          Nieobecność (dzień)
+        </div>
         <div class="field">
-          <span class="lbl">Typ</span>
-          <select id="m-abs" class="inp">
+          <span class="field-lbl">Typ</span>
+          <select id="m-abs" class="sel">
             <option value="">— brak nieobecności —</option>
           </select>
         </div>
         <div class="field" style="margin-bottom:0">
-          <span class="lbl">Adnotacja do nieobecności</span>
-          <textarea id="m-abs-note" class="inp" placeholder="Adnotacja pracownika / właściciela…"></textarea>
+          <span class="field-lbl">Adnotacja do nieobecności</span>
+          <textarea id="m-abs-note" class="ta" placeholder="Adnotacja pracownika / właściciela…"></textarea>
         </div>
       </div>
 
       <!-- Przekroczenie godzin Kliniki -->
       <div class="section">
-        <div class="section-title">⚠️ Praca poza godzinami Kliniki</div>
-        <div class="ovr-flag" id="m-ovr-flag">Przekroczono regularne godziny pracy Kliniki (Pn–Pt 8–21, Sb 9–16, Nd nieczynne)</div>
+        <div class="section-title">
+          <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+          Praca poza godzinami Kliniki
+        </div>
+        <div class="ovr-flag" id="m-ovr-flag">
+          <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+          <span>Przekroczono regularne godziny pracy Kliniki (Pn–Pt 8–21, Sb 9–16, Nd nieczynne)</span>
+        </div>
         <div class="field" style="margin-bottom:0">
-          <span class="lbl">Uzasadnienie (oznaczenie dnia)</span>
-          <textarea id="m-ovr-note" class="inp" placeholder="Uzasadnienie konieczności pracy poza godzinami…"></textarea>
+          <span class="field-lbl">Uzasadnienie (oznaczenie dnia)</span>
+          <textarea id="m-ovr-note" class="ta" placeholder="Uzasadnienie konieczności pracy poza godzinami…"></textarea>
         </div>
       </div>
 
-      <button id="m-save" class="btn btn-save">Zapisz wszystko</button>
-      <button id="m-clear" class="btn btn-clear">Wyczyść formularz</button>
+      <button id="m-save" class="btn btn-primary" style="margin-top:16px">Zapisz wszystko</button>
+      <button id="m-clear" class="btn-link">Wyczyść formularz</button>
 
-      <div class="hint">Puste pole godziny = brak zdarzenia tego typu w tym dniu.<br>Pusty typ nieobecności = usuwa nieobecność dnia; puste uzasadnienie = usuwa uzasadnienie.<br>Zapis nadpisuje istniejące dane wybranego dnia. Każda zmiana jest logowana.</div>
+      <div class="hint" style="padding:16px 4px;text-align:left">Puste pole godziny = brak zdarzenia tego typu w tym dniu. Pusty typ nieobecności = usuwa nieobecność dnia; puste uzasadnienie = usuwa uzasadnienie. Zapis nadpisuje istniejące dane wybranego dnia. Każda zmiana jest logowana.</div>
     </div>
 
     <!-- ── WIDOK: MIESIĄC ── -->
     <div id="view-month" style="display:none">
-      <div class="field rel">
-        <span class="lbl">Pracownik</span>
+      <div class="field" style="position:relative">
+        <span class="field-lbl">Pracownik</span>
         <input type="text" id="mm-emp-input" class="inp" placeholder="Wpisz imię lub nazwisko…" autocomplete="off">
         <div id="mm-emp-dropdown" class="emp-dropdown"></div>
       </div>
 
       <div class="month-nav">
-        <button id="mm-prev" class="nav-btn">◀</button>
+        <button id="mm-prev" class="btn-icon"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
         <span id="mm-label" class="month-label">—</span>
-        <button id="mm-next" class="nav-btn">▶</button>
+        <button id="mm-next" class="btn-icon"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
       </div>
 
       <div id="mm-table-wrap"><div class="hint">Wybierz pracownika, żeby wczytać miesiąc.</div></div>
 
-      <div class="hint">Zmiana godziny zapisuje się automatycznie po opuszczeniu pola (żółty = zapisuję, zielony = zapisano). Puste pole = usuwa dane zdarzenie tego dnia.<br>Fioletowa plakietka = nieobecność, ⚠ = dzień poza godzinami Kliniki — edytuj je w „Szybkiej edycji dnia” (dotknij numeru dnia, aby przejść).</div>
+      <div class="hint" style="padding:16px 4px;text-align:left">Zmiana godziny zapisuje się automatycznie po opuszczeniu pola (żółte obramowanie = zapisuję, niebieskie = zapisano). Puste pole = usuwa dane zdarzenie tego dnia. Fioletowa plakietka = nieobecność, trójkąt = dzień poza godzinami Kliniki — dotknij numeru dnia, aby przejść do szybkiej edycji.</div>
+    </div>
+
+    <!-- ── WIDOK: DNI WOLNE (masowo, dla całej Kliniki) ── -->
+    <div id="view-daysoff" style="display:none">
+      <div class="info-box">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>
+        <span>Operacja obejmuje jednym zapisem wszystkich aktywnych pracowników — np. święto, dzień zamknięcia Kliniki, remont. To osobne narzędzie od edycji pojedynczego pracownika powyżej.</span>
+      </div>
+
+      <div class="field-row2" style="margin-top:16px">
+        <div class="field">
+          <span class="field-lbl">Od dnia</span>
+          <input type="date" id="do-from" class="inp">
+        </div>
+        <div class="field">
+          <span class="field-lbl">Do dnia</span>
+          <input type="date" id="do-to" class="inp">
+        </div>
+      </div>
+
+      <div class="field">
+        <span class="field-lbl">Typ</span>
+        <select id="do-typ" class="sel">
+          <option value="">— usuń nieobecność w tym zakresie —</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <span class="field-lbl">Adnotacja</span>
+        <textarea id="do-note" class="ta" placeholder="Np. nazwa święta, powód zamknięcia…"></textarea>
+      </div>
+
+      <button id="do-apply" class="btn btn-accent">Zastosuj dla wszystkich aktywnych pracowników</button>
+
+      <div class="confirm-row" id="do-confirm" style="display:none">
+        <button id="do-cancel" class="btn btn-ghost">Anuluj</button>
+        <button id="do-yes" class="btn btn-accent">Tak, zastosuj</button>
+      </div>
     </div>
 
   </div>
@@ -221,11 +214,15 @@ var M = { token: null, empId: null, mmEmpId: null, mmYear: new Date().getFullYea
 var MONTHS = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec',
               'Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
 
+var ICO = {
+  warn: '<svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>'
+};
+
 var _tt;
 function toast(msg, ok) {
   var el = document.getElementById('toast');
   el.textContent = msg;
-  el.className = 'on' + (ok ? ' g' : '');
+  el.className = 'on' + (ok ? ' g' : ' err');
   clearTimeout(_tt);
   _tt = setTimeout(function(){ el.className = ''; }, 2800);
 }
@@ -243,6 +240,11 @@ function esc(s) {
   return String(s == null ? '' : s)
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function todayStr() {
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 
 // ── Login ──────────────────────────────────────
@@ -266,9 +268,9 @@ document.getElementById('kp-login').addEventListener('click', function(e) {
         M.token = res.token;
         document.getElementById('s-login').style.display = 'none';
         document.getElementById('s-panel').style.display  = 'block';
-        var d = new Date();
-        document.getElementById('m-date').value =
-          d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+        document.getElementById('m-date').value = todayStr();
+        document.getElementById('do-from').value = todayStr();
+        document.getElementById('do-to').value   = todayStr();
         loadEmployees();
         loadAbsTypes();
         updateMMLabel();
@@ -288,13 +290,22 @@ function loadAbsTypes() {
   gas('getAbsenceTypes', [], function(res) {
     if (!res || !res.ok) return;
     _absTypes = res.types || [];
+
     var sel = document.getElementById('m-abs');
     sel.innerHTML = '<option value="">— brak nieobecności —</option>';
     _absTypes.forEach(function(t) {
       var o = document.createElement('option');
-      o.value = t.code;
-      o.textContent = t.label;
+      o.value = t.code; o.textContent = t.label;
       sel.appendChild(o);
+    });
+
+    var doSel = document.getElementById('do-typ');
+    doSel.innerHTML = '<option value="">— usuń nieobecność w tym zakresie —</option>';
+    _absTypes.forEach(function(t) {
+      var o = document.createElement('option');
+      o.value = t.code; o.textContent = t.label;
+      if (t.code === 'DW') o.selected = true;
+      doSel.appendChild(o);
     });
   });
 }
@@ -345,18 +356,19 @@ bindEmpSelector('mm-emp-input', 'mm-emp-dropdown', function(id) {
   if (id) loadMonthTable();
 });
 
-// ── Przełącznik widoków ──────────────────────────
-document.getElementById('tab-day').addEventListener('click', function() {
-  document.getElementById('view-day').style.display = 'block';
-  document.getElementById('view-month').style.display = 'none';
-  this.className = 'vbtn on';
-  document.getElementById('tab-month').className = 'vbtn';
-});
-document.getElementById('tab-month').addEventListener('click', function() {
-  document.getElementById('view-day').style.display = 'none';
-  document.getElementById('view-month').style.display = 'block';
-  this.className = 'vbtn on';
-  document.getElementById('tab-day').className = 'vbtn';
+// ── Przełącznik widoków (3-way) ──────────────────
+var TABS = {
+  'tab-day':     'view-day',
+  'tab-month':   'view-month',
+  'tab-daysoff': 'view-daysoff'
+};
+Object.keys(TABS).forEach(function(tabId) {
+  document.getElementById(tabId).addEventListener('click', function() {
+    Object.keys(TABS).forEach(function(id) {
+      document.getElementById(id).className = 'seg-btn' + (id === tabId ? ' on' : '');
+      document.getElementById(TABS[id]).style.display = (id === tabId) ? 'block' : 'none';
+    });
+  });
 });
 
 // ── Widok: szybka edycja dnia ─────────────────────
@@ -475,7 +487,7 @@ function renderMonthTable(days) {
     var dn = d.date.split('-')[2];
     html += '<tr' + (wknd ? ' class="wknd"' : '') + ' data-date="' + esc(d.date) + '">';
     html += '<td class="dcell mm-day" data-date="' + esc(d.date) + '">' + dn +
-            (d.overtime ? ' <span class="mm-ovr" title="Poza godzinami Kliniki">⚠</span>' : '') +
+            (d.overtime ? ' <span class="mm-ovr">' + ICO.warn + '</span>' : '') +
             ' <small>' + esc(d.dow) + '</small>' +
             (d.absence ? '<span class="mm-abs" title="' + esc(d.absence.typ) + '">' + esc(d.absence.code) + '</span>' : '') +
             '</td>';
@@ -503,14 +515,13 @@ function renderMonthTable(days) {
         if (res && res.ok) {
           inEl.classList.add('saved'); outEl.classList.add('saved');
           setTimeout(function(){ inEl.classList.remove('saved'); outEl.classList.remove('saved'); }, 1500);
-          // odśwież znacznik ⚠ dla dnia
           var dc = tr.querySelector('.mm-day');
           var ov = dc.querySelector('.mm-ovr');
           if (res.overtime && !ov) {
-            var s = document.createElement('span');
-            s.className = 'mm-ovr'; s.title = 'Poza godzinami Kliniki'; s.textContent = '⚠';
+            var wrap = document.createElement('span');
+            wrap.className = 'mm-ovr'; wrap.innerHTML = ICO.warn;
             dc.insertBefore(document.createTextNode(' '), dc.querySelector('small'));
-            dc.insertBefore(s, dc.querySelector('small'));
+            dc.insertBefore(wrap, dc.querySelector('small'));
           } else if (!res.overtime && ov) {
             ov.remove();
           }
@@ -526,6 +537,49 @@ function renderMonthTable(days) {
     outEl.addEventListener('change', saveRow);
   });
 }
+
+// ── Widok: Dni wolne (masowo, dla całej Kliniki) ──
+
+var doArmed = false;
+var doArmTimer = null;
+
+function doDisarm() {
+  doArmed = false;
+  clearTimeout(doArmTimer);
+  document.getElementById('do-apply').style.display = 'block';
+  document.getElementById('do-confirm').style.display = 'none';
+}
+
+document.getElementById('do-apply').addEventListener('click', function() {
+  var from = document.getElementById('do-from').value;
+  var to   = document.getElementById('do-to').value;
+  if (!from || !to) { toast('Wybierz zakres dat.', false); return; }
+  if (from > to) { toast('Data „od” nie może być późniejsza niż „do”.', false); return; }
+
+  doArmed = true;
+  document.getElementById('do-apply').style.display = 'none';
+  document.getElementById('do-confirm').style.display = 'flex';
+  clearTimeout(doArmTimer);
+  doArmTimer = setTimeout(doDisarm, 6000);
+});
+
+document.getElementById('do-cancel').addEventListener('click', doDisarm);
+
+document.getElementById('do-yes').addEventListener('click', function() {
+  if (!doArmed) return;
+  var from = document.getElementById('do-from').value;
+  var to   = document.getElementById('do-to').value;
+  var typ  = document.getElementById('do-typ').value;
+  var note = document.getElementById('do-note').value;
+
+  toast('Zapisywanie…', true);
+  gas('masterSetClinicDayOff', [M.token, from, to, typ, note], function(res) {
+    doDisarm();
+    if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+    if (!res || !res.ok) { toast((res && res.msg) || 'Błąd zapisu.', false); return; }
+    toast('Zastosowano dla ' + res.count + ' pracowników.', true);
+  });
+});
 </script>
 </body>
 </html>

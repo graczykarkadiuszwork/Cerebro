@@ -613,6 +613,47 @@ function masterSetOvertimeNote(token, empId, date, note) {
   return { ok: true };
 }
 
+// ── Dzień wolny dla całej Kliniki — masowe oznaczenie ──────────
+// Odrębne od edycji pojedynczego pracownika: jednym zapisem
+// oznacza (lub czyści, gdy typeCode puste) nieobecność wszystkich
+// aktywnych pracowników w podanym zakresie dat. Nie dotyka godzin
+// w Ewidencji — tylko warstwy Nieobecnosci.
+
+function masterSetClinicDayOff(token, dateFrom, dateTo, typeCode, note) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+
+  const re = /^\d{4}-\d{2}-\d{2}$/;
+  dateFrom = String(dateFrom || '');
+  dateTo   = String(dateTo || dateFrom);
+  if (!re.test(dateFrom) || !re.test(dateTo) || dateFrom > dateTo) {
+    return { ok: false, msg: 'Nieprawidłowy zakres dat.' };
+  }
+
+  const from = new Date(dateFrom + 'T12:00:00');
+  const to   = new Date(dateTo + 'T12:00:00');
+  const days = Math.round((to - from) / 86400000) + 1;
+  if (days > ABSENCE_MAX_DAYS) {
+    return { ok: false, msg: 'Maksymalny zakres to ' + ABSENCE_MAX_DAYS + ' dni.' };
+  }
+
+  typeCode = String(typeCode || '').trim();
+  const type = typeCode ? _absType(typeCode) : null;
+  if (typeCode && !type) return { ok: false, msg: 'Nieprawidłowy typ.' };
+
+  note = String(note || '').trim().slice(0, 500);
+
+  const workers = _getWorkers().filter(w => String(w[4]).toLowerCase() === 'aktywny');
+  workers.forEach(w => {
+    _upsertAbsence(String(w[0]), String(w[1]), String(w[2]), dateFrom, dateTo, type, note, 'admin_bulk');
+  });
+
+  _logAdmin('MasterBulkDayOff', '—',
+    dateFrom + ' — ' + dateTo + ' → ' + (type ? type.label : 'usunięto') +
+    ' (' + workers.length + ' os.)' + (note ? ' [' + note.slice(0, 80) + ']' : ''));
+
+  return { ok: true, count: workers.length };
+}
+
 function masterGetMonth(token, empId, year, month) {
   if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
   const y = parseInt(year, 10);
