@@ -120,11 +120,20 @@ function doGet(e) {
   // (niemiarodajny wewnątrz sandboxa HtmlService).
   const baseUrl = ScriptApp.getService().getUrl();
 
+  // KLUCZOWE dla mobile-first: HtmlService potrafi zignorować ręczny
+  // <meta name="viewport"> wpisany w treści szablonu — jedyny NIEZAWODNY
+  // sposób ustawienia viewportu na telefonie to .addMetaTag() na obiekcie
+  // HtmlOutput, wywołane tutaj, po stronie serwera. Bez tego telefon
+  // renderuje stronę tak, jakby to była szerokość desktopu (~980px) i
+  // dopiero POTEM ją pomniejsza — stąd wrażenie "strony desktopowej".
+  const VIEWPORT = 'width=device-width, initial-scale=1, viewport-fit=cover';
+
   if (p === 'dashboard') {
     const tmpl = HtmlService.createTemplateFromFile('DashboardGUI');
     tmpl.BASE_URL = baseUrl;
     return tmpl.evaluate()
       .setTitle('We SMILE — Panel Raportowy')
+      .addMetaTag('viewport', VIEWPORT)
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
   if (p === 'owner') {
@@ -132,6 +141,7 @@ function doGet(e) {
     tmpl.BASE_URL = baseUrl;
     return tmpl.evaluate()
       .setTitle('We SMILE')
+      .addMetaTag('viewport', VIEWPORT)
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
   const page = (p === 'admin') ? 'admin' : 'worker';
@@ -140,6 +150,7 @@ function doGet(e) {
   tmpl.BASE_URL = baseUrl;
   return tmpl.evaluate()
     .setTitle('We SMILE — RCP')
+    .addMetaTag('viewport', VIEWPORT)
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 

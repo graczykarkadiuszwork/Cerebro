@@ -2,7 +2,6 @@
 <html lang="pl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>We SMILE</title>
 <?!= include('Styles'); ?>
 <style>
@@ -121,9 +120,7 @@
         </div>
         <div class="field">
           <span class="field-lbl">Typ</span>
-          <select id="m-abs" class="sel">
-            <option value="">— brak nieobecności —</option>
-          </select>
+          <div id="m-abs-chips" class="chip-picker"></div>
         </div>
         <div class="field" style="margin-bottom:0">
           <span class="field-lbl">Adnotacja do nieobecności</span>
@@ -400,13 +397,32 @@ function fillTypeSelect(sel, types, emptyLabel, selectDW) {
   });
 }
 
+// ── Chip-picker typu nieobecności (widok Dzień) — dotykowe pigułki
+// zamiast <select>. Kliknięcie zaznaczonej pigułki odznacza ("brak"). ──
+var mAbsValue = '';
+var _mAbsTypes = [];
+
+function renderMAbsChips() {
+  var wrap = document.getElementById('m-abs-chips');
+  wrap.innerHTML = _mAbsTypes.map(function(t) {
+    return '<button type="button" class="chip-pick' + (mAbsValue === t.code ? ' on' : '') + '" data-code="' + t.code + '">' + esc(t.label) + '</button>';
+  }).join('');
+  wrap.querySelectorAll('.chip-pick').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      mAbsValue = (mAbsValue === btn.getAttribute('data-code')) ? '' : btn.getAttribute('data-code');
+      renderMAbsChips();
+    });
+  });
+}
+
 function loadAbsTypes() {
   gas('getAbsenceTypes', [], function(res) {
     if (!res || !res.ok) return;
     _absTypes = res.types || [];
 
     var perEmp = _absTypes.filter(function(t) { return t.code !== 'DW'; });
-    fillTypeSelect(document.getElementById('m-abs'), perEmp, '— brak nieobecności —', false);
+    _mAbsTypes = perEmp;
+    renderMAbsChips();
     fillTypeSelect(document.getElementById('rg-typ'), perEmp, '— usuń nieobecność w tym zakresie —', false);
 
     fillTypeSelect(document.getElementById('do-typ'), _absTypes, '— usuń nieobecność w tym zakresie —', true);
@@ -468,7 +484,8 @@ Object.keys(TABS).forEach(function(tabId) {
 function fillDayForm(res) {
   document.getElementById('m-in').value  = res.wejscie || '';
   document.getElementById('m-out').value = res.wyjscie || '';
-  document.getElementById('m-abs').value = res.absence ? res.absence.code : '';
+  mAbsValue = res.absence ? res.absence.code : '';
+  renderMAbsChips();
   document.getElementById('m-abs-note').value = res.absence ? (res.absence.note || '') : '';
   document.getElementById('m-ovr-note').value = res.overtimeNote || '';
   document.getElementById('m-ovr-flag').className = 'ovr-flag' + (res.overtime ? ' on' : '');
@@ -498,7 +515,7 @@ document.getElementById('m-save').addEventListener('click', function() {
   if (!date) { toast('Wybierz datę.', false); return; }
   var wejscie = document.getElementById('m-in').value;
   var wyjscie = document.getElementById('m-out').value;
-  var absCode = document.getElementById('m-abs').value;
+  var absCode = mAbsValue;
   var absNote = document.getElementById('m-abs-note').value;
   var ovrNote = document.getElementById('m-ovr-note').value;
 
@@ -525,7 +542,8 @@ document.getElementById('m-clear').addEventListener('click', function() {
   document.getElementById('m-emp-input').value = '';
   document.getElementById('m-in').value = '';
   document.getElementById('m-out').value = '';
-  document.getElementById('m-abs').value = '';
+  mAbsValue = '';
+  renderMAbsChips();
   document.getElementById('m-abs-note').value = '';
   document.getElementById('m-ovr-note').value = '';
   document.getElementById('m-ovr-flag').className = 'ovr-flag';

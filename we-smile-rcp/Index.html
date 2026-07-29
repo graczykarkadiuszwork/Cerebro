@@ -2,7 +2,6 @@
 <html lang="pl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
 <title>We SMILE — RCP</title>
 <?!= include('Styles'); ?>
 <style>
@@ -158,10 +157,8 @@
     </div>
 
     <div class="field">
-      <label class="field-lbl" for="abs-typ">Typ nieobecności</label>
-      <select id="abs-typ" class="sel">
-        <option value="">— wybierz typ —</option>
-      </select>
+      <label class="field-lbl">Typ nieobecności</label>
+      <div id="abs-typ-chips" class="chip-picker"></div>
     </div>
 
     <div class="field">
@@ -457,16 +454,21 @@ if (PAGE === 'admin') {
     finishOk(ICON_OK, false, 'Zarejestrowano', 'Pamiętaj o uzupełnieniu uzasadnienia u administratora.', 3500);
   });
 
-  // ── Nieobecność ───────────────────────────────────────────
+  // ── Nieobecność — chip-picker zamiast <select> ─────────────
+  var absTypeValue = '';
   function fillAbsTypes() {
-    var sel = document.getElementById('abs-typ');
-    sel.innerHTML = '<option value="">— wybierz typ —</option>';
-    (absTypes || []).forEach(function (t) {
-      if (t.code === 'DW') return; // zastrzeżone dla właściciela (dzień wolny kliniki)
-      var o = document.createElement('option');
-      o.value = t.code;
-      o.textContent = t.label;
-      sel.appendChild(o);
+    absTypeValue = '';
+    var wrap = document.getElementById('abs-typ-chips');
+    wrap.innerHTML = (absTypes || [])
+      .filter(function (t) { return t.code !== 'DW'; }) // zastrzeżone dla właściciela (dzień wolny kliniki)
+      .map(function (t) {
+        return '<button type="button" class="chip-pick" data-code="' + t.code + '">' + esc_h(t.label) + '</button>';
+      }).join('');
+    wrap.querySelectorAll('.chip-pick').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        absTypeValue = btn.getAttribute('data-code');
+        wrap.querySelectorAll('.chip-pick').forEach(function (b) { b.classList.toggle('on', b === btn); });
+      });
     });
   }
 
@@ -499,7 +501,7 @@ if (PAGE === 'admin') {
   document.getElementById('abs-submit').addEventListener('click', function () {
     var from = document.getElementById('abs-from').value;
     var to   = document.getElementById('abs-to').value;
-    var typ  = document.getElementById('abs-typ').value;
+    var typ  = absTypeValue;
     var note = document.getElementById('abs-note').value.trim();
 
     if (!from || !to)  { toast('Wybierz zakres dat.', false); return; }
