@@ -257,7 +257,7 @@
         <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>
         <span><span class="tip-eyebrow">Wskazówka</span>Forma zatrudnienia decyduje, jakie typy nieobecności widzi pracownik w samoobsłudze oraz czy dzień urlopu liczy się jako 8h w miesięcznej sumie godzin (dotyczy tylko UoP). Bez ustawienia tego pola pracownik widzi pełną listę, a jego urlopy nie doliczają godzin.</span>
       </div>
-      <div id="staff-list" style="margin-top:16px"><div class="hint">Ładowanie…</div></div>
+      <div id="staff-list" class="stagger" style="margin-top:16px"><div class="hint">Ładowanie…</div></div>
     </div>
 
   </div>
@@ -452,12 +452,14 @@ var TABS = {
   'tab-daysoff': 'view-daysoff',
   'tab-staff':   'view-staff'
 };
+var _tabMove = wsMountSeg(document.querySelector('.tabbar'));
 Object.keys(TABS).forEach(function(tabId) {
   document.getElementById(tabId).addEventListener('click', function() {
     Object.keys(TABS).forEach(function(id) {
       document.getElementById(id).className = 'seg-btn' + (id === tabId ? ' on' : '');
       document.getElementById(TABS[id]).style.display = (id === tabId) ? 'block' : 'none';
     });
+    _tabMove();
     if (tabId === 'tab-staff') renderStaffList();
   });
 });
@@ -549,7 +551,7 @@ document.getElementById('mm-next').addEventListener('click', function() {
 });
 
 function loadMonthTable() {
-  document.getElementById('mm-table-wrap').innerHTML = '<div class="hint">Ładowanie…</div>';
+  document.getElementById('mm-table-wrap').innerHTML = wsSkeleton('skeleton-row', 6);
   gas('masterGetMonth', [M.token, M.mmEmpId, M.mmYear, M.mmMonth], function(res) {
     if (!res || !res.ok) {
       document.getElementById('mm-table-wrap').innerHTML =

@@ -217,6 +217,7 @@ if (PAGE === 'admin') {
 
   var elToken   = document.getElementById('token');
   var elRing    = document.getElementById('ring');
+  var elRingWrap= document.querySelector('.ring-wrap');
   var elStatus  = document.getElementById('tok-status');
   var elRefresh = document.getElementById('btn-refresh');
 
@@ -240,6 +241,7 @@ if (PAGE === 'admin') {
     var offset = CIRC * (1 - left / WIN);
     elRing.style.strokeDashoffset = offset;
     elRing.className = 'ring-fill' + (green ? '' : ' red');
+    elRingWrap.classList.toggle('red', !green);
 
     if (green) {
       elStatus.className = 'tok-status green';

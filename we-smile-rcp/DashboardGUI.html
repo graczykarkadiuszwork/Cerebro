@@ -449,7 +449,9 @@ function refreshEmpDisplay() {
 // ── Ładowanie danych ──────────────────────────────────────────
 
 function loadMonth() {
-  document.getElementById('emp-data').innerHTML = '<div class="hint">Ładowanie danych…</div>';
+  document.getElementById('emp-data').innerHTML =
+    '<div class="skeleton skeleton-block" style="margin-bottom:10px"></div>' +
+    '<div class="bento">' + wsSkeleton('skeleton-tile', 4) + '</div>';
   gas('getDashboard', [S.token, S.year, S.month], function(res) {
     if (!res || !res.ok) {
       if (res && res.errorType === 'UNAUTHORIZED') { doLogout(); return; }
@@ -499,10 +501,11 @@ function renderEmp(emp) {
   html += '</div>';
 
   // Bento — cztery kafelki podsumowania (glanceable, zamiast rzędu chipów)
-  html += '<div class="bento">';
-  html += '<div class="tile"><div class="tile-lbl">' + ICO.abs + ' Nieobecności</div><div class="tile-val">' + (emp.absDays || 0) + '</div><div class="tile-sub">dni w miesiącu</div></div>';
-  html += '<div class="tile"><div class="tile-lbl">' + ICO.clock + ' Płatny urlop</div><div class="tile-val">' + (emp.paidAbsDays || 0) + '</div><div class="tile-sub">× 8h doliczone</div></div>';
-  html += '<div class="tile"><div class="tile-lbl">' + ICO.warn + ' Poza godz. Kliniki</div><div class="tile-val" style="' + (emp.ovrDays > 0 ? 'color:var(--c-accent)' : '') + '">' + (emp.ovrDays || 0) + '</div><div class="tile-sub">dni</div></div>';
+  // Liczby "ożywają" po renderze (wsCountUp) — patrz niżej.
+  html += '<div class="bento stagger">';
+  html += '<div class="tile"><div class="tile-lbl">' + ICO.abs + ' Nieobecności</div><div class="tile-val" id="tv-abs">0</div><div class="tile-sub">dni w miesiącu</div></div>';
+  html += '<div class="tile"><div class="tile-lbl">' + ICO.clock + ' Płatny urlop</div><div class="tile-val" id="tv-paid">0</div><div class="tile-sub">× 8h doliczone</div></div>';
+  html += '<div class="tile"><div class="tile-lbl">' + ICO.warn + ' Poza godz. Kliniki</div><div class="tile-val" id="tv-ovr" style="' + (emp.ovrDays > 0 ? 'color:var(--c-accent)' : '') + '">0</div><div class="tile-sub">dni</div></div>';
   html += '<div class="tile"><div class="tile-lbl">Norma miesiąca</div><div class="tile-val">' + (etat > 0 ? etat + 'h' : '—') + '</div><div class="tile-sub">' + (isBad ? 'niedobór godzin' : 'w normie') + '</div></div>';
   html += '</div>';
 
@@ -528,6 +531,12 @@ function renderEmp(emp) {
 
   document.getElementById('emp-data').innerHTML = html;
 
+  wsCountUp(document.getElementById('tv-abs'),  emp.absDays || 0);
+  wsCountUp(document.getElementById('tv-paid'), emp.paidAbsDays || 0);
+  wsCountUp(document.getElementById('tv-ovr'),  emp.ovrDays || 0);
+
+  _segMove = wsMountSeg(document.querySelector('#emp-data .seg'));
+
   var ta = document.getElementById('note-ta');
   if (ta) {
     ta.addEventListener('blur', function() { saveNote(emp.id, ta.value); });
@@ -537,15 +546,24 @@ function renderEmp(emp) {
   }
 }
 
+var _segMove = function () {};
+
 function switchView(v) {
   S.view = v;
   var emp = getEmp(S.selId);
   if (!emp) return;
-  document.getElementById('data-view').innerHTML =
-    v === 'cal' ? renderCalendar(emp) : renderList(emp);
+  var dv = document.getElementById('data-view');
+  dv.style.opacity = '0';
+  dv.style.transform = 'translateY(6px)';
+  setTimeout(function () {
+    dv.innerHTML = v === 'cal' ? renderCalendar(emp) : renderList(emp);
+    dv.style.transition = 'opacity .28s var(--ease),transform .28s var(--ease)';
+    requestAnimationFrame(function () { dv.style.opacity = '1'; dv.style.transform = 'translateY(0)'; });
+  }, 120);
   document.querySelectorAll('.seg-btn').forEach(function(b) {
     b.className = 'seg-btn' + (b.textContent.trim() === (v === 'cal' ? 'Kalendarz' : 'Lista') ? ' on' : '');
   });
+  _segMove();
 }
 
 // ── Lista ─────────────────────────────────────────────────────
@@ -612,7 +630,7 @@ function renderCalendar(emp) {
   var firstJs  = new Date(days[0].date + 'T12:00:00').getDay(); // 0=Nd
   var firstCol = firstJs === 0 ? 6 : firstJs - 1;
 
-  var html = '<div class="cal-grid">';
+  var html = '<div class="cal-grid stagger">';
   ['Pn','Wt','Śr','Cz','Pt','Sb','Nd'].forEach(function(h) {
     html += '<div class="cal-head">' + h + '</div>';
   });
