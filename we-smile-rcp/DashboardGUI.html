@@ -469,8 +469,7 @@ function renderEmp(emp) {
 
   var html = '<div class="card emp-card">';
   html += '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;width:100%">';
-  html += '<div><div class="emp-name">' + esc(emp.imie + ' ' + emp.nazwisko) + '</div>';
-  html += '<div class="emp-role">' + esc(emp.rola || '') + '</div></div>';
+  html += '<div class="emp-role">' + esc(emp.rola || '') + '</div>';
   html += '<div style="text-align:right"><div class="hours-lbl">Przepracowane</div>';
   html += '<div class="hours-val ' + hoursCls + '">' + hoursHtml + '</div></div>';
   html += '</div>';
@@ -835,7 +834,7 @@ function doLogout() {
   S.token = null; S.data = null; S.selId = null;
   lPin = ''; setDots('');
   if (_activeTimer) { clearInterval(_activeTimer); _activeTimer = null; }
-  document.getElementById('emp-input').value = '';
+  _empPicker.clear();
   document.getElementById('etat-inp').value  = '';
   document.getElementById('emp-data').innerHTML = '';
   document.getElementById('presence-bar').style.display = 'none';

@@ -119,11 +119,11 @@ button,input,select,textarea{font-family:inherit}
    Plakietka biała pod logo na ciemnych tłach (hero/kiosk): kontrast
    bez modyfikacji samego pliku logo. Min. szerokość z brandbooku
    (80px) zachowana z zapasem przy każdym rozmiarze poniżej. ── */
-.wm-logo-chip{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;
-  background:#fff;border-radius:var(--r-s);padding:7px 16px;box-shadow:var(--shadow-s)}
-.wm-logo-chip .ws-logo-img{display:block;height:20px;width:auto}
-.wm-logo-chip.wm-logo-lg{padding:16px 30px;border-radius:var(--r-m);box-shadow:var(--shadow-m)}
-.wm-logo-chip.wm-logo-lg .ws-logo-img{height:40px}
+/* Logo bez tła/ramki: napis w pliku jest biały, tło przezroczyste —
+   na ciemnych powierzchniach (hero, kiosk) działa wprost, bez plakietki. */
+.wm-logo-chip{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.wm-logo-chip .ws-logo-img{display:block;height:22px;width:auto}
+.wm-logo-chip.wm-logo-lg .ws-logo-img{height:44px}
 .hero-logo-row{display:flex;align-items:center;gap:11px}
 .hero-logo-suffix{color:#fff;font-weight:700;font-size:15px;white-space:nowrap}
 
@@ -147,42 +147,44 @@ button,input,select,textarea{font-family:inherit}
 .page-wrap.has-tabbar{padding-bottom:128px}
 .page-wrap.has-rail{padding-bottom:48px}
 
-/* ── Hero header (aurora gradient bar) ──────────────────────── */
+/* ── Pasek nawigacji górnej — płaski, jednokolorowy Deep Navy, zgodny
+   z konwencją top app bar (Material 3) / nav bar (Apple HIG): brak
+   dekoracyjnego gradientu w chrome aplikacji, gradient marki zostaje
+   zarezerwowany wyłącznie dla ekranów powitalnych (kiosk/logowanie). ── */
 .hero{
-  background:var(--grad-hero);color:#fff;
-  padding:18px 18px 22px;display:flex;flex-direction:column;gap:14px;
-  border-radius:0 0 32px 32px;box-shadow:var(--shadow-m);position:relative;z-index:20;
-  overflow:hidden;
+  background:var(--c-navy);color:#fff;
+  padding:10px 16px;display:flex;flex-direction:column;gap:10px;
+  box-shadow:var(--shadow-s);position:relative;z-index:20;
 }
-.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(80% 140% at 90% -10%,rgba(255,255,255,.14),transparent 60%);pointer-events:none}
 .hero-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:relative;z-index:1}
-.hero-title{font-weight:700;font-size:15px;color:#fff;white-space:nowrap;letter-spacing:.01em}
-.bar-right{display:flex;gap:8px;margin-left:auto}
+.hero-title{font-weight:700;font-size:16px;color:#fff;white-space:nowrap;letter-spacing:.01em}
+.bar-right{display:flex;gap:6px;margin-left:auto;align-items:center}
 
 /* Hero — dwie odrębne strefy, żeby „wszystko w jednym miejscu" nie zlewało się:
-   .hero-top = tożsamość + kontrola sesji (motyv, wylogowanie);
-   .hero-nav = przełączanie widoków, zgrupowane w osobnej kapsule pod spodem. */
-.hero-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:relative;z-index:1;width:100%}
+   .hero-top = tożsamość + kontrola sesji (motyw, wylogowanie);
+   .hero-nav = przełączanie widoków — osobna, WYRAŹNIE OBRAMOWANA grupa,
+   wzorem segmented control z Apple HIG / grouped buttons z Material. */
+.hero-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;position:relative;z-index:1;width:100%;min-height:40px}
 .hero-nav{display:flex;align-items:center;gap:10px;position:relative;z-index:1;width:100%}
-.hero-divider{width:100%;height:1px;background:rgba(255,255,255,.14);margin:2px 0 4px}
-.nav-group{display:flex;gap:4px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.10);
-  border-radius:var(--r-pill);padding:5px;backdrop-filter:blur(8px)}
-.nav-group .btn-bar{background:transparent}
-.nav-group .btn-bar:active{background:rgba(255,255,255,.16)}
-.nav-group .btn-bar.on{background:rgba(255,255,255,.20);box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.hero-divider{width:100%;height:1px;background:rgba(255,255,255,.16);margin:0}
+.nav-group{display:flex;gap:2px;background:transparent;border:1.5px solid rgba(255,255,255,.4);
+  border-radius:var(--r-pill);padding:3px}
+.nav-group .btn-bar{background:transparent;padding:8px 14px;min-height:36px}
+.nav-group .btn-bar:active{background:rgba(255,255,255,.14)}
+.nav-group .btn-bar.on{background:#fff;color:var(--c-navy)}
 
-.btn-bar{background:rgba(255,255,255,.14);border:none;border-radius:var(--r-pill);color:#fff;padding:10px 16px;min-height:42px;
-  cursor:pointer;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;backdrop-filter:blur(8px);
+.btn-bar{background:transparent;border:1.5px solid rgba(255,255,255,.4);border-radius:var(--r-pill);color:#fff;padding:9px 15px;min-height:38px;
+  cursor:pointer;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;
   transition:background .15s var(--ease),transform .1s var(--ease)}
-.btn-bar:active{background:rgba(255,255,255,.26);transform:scale(.96)}
-.btn-bar.icon-only{padding:0;width:42px;justify-content:center;flex-shrink:0}
-.btn-bar.danger{background:rgba(123,30,59,.55);margin-left:auto}
-.btn-bar.danger:active{background:rgba(123,30,59,.8)}
-.nav-btn-dark{background:rgba(255,255,255,.14);border:none;border-radius:50%;color:#fff;width:42px;height:42px;cursor:pointer;flex-shrink:0;
+.btn-bar:active{background:rgba(255,255,255,.16);transform:scale(.96)}
+.btn-bar.icon-only{padding:0;width:38px;justify-content:center;flex-shrink:0}
+.btn-bar.danger{background:var(--c-accent);border-color:var(--c-accent);margin-left:auto}
+.btn-bar.danger:active{background:var(--c-accent-dark)}
+.nav-btn-dark{background:transparent;border:1.5px solid rgba(255,255,255,.4);border-radius:50%;color:#fff;width:38px;height:38px;cursor:pointer;flex-shrink:0;
   display:flex;align-items:center;justify-content:center;transition:background .15s var(--ease)}
-.nav-btn-dark:active{background:rgba(255,255,255,.28)}
+.nav-btn-dark:active{background:rgba(255,255,255,.16)}
 
-.corner-toggle{position:fixed;top:16px;right:16px;z-index:30;background:rgba(255,255,255,.14);border-color:transparent;color:#fff;backdrop-filter:blur(8px)}
+.corner-toggle{position:fixed;top:16px;right:16px;z-index:30;background:transparent;border:1.5px solid rgba(255,255,255,.4);color:#fff}
 
 /* ── Buttons ─────────────────────────────────────────────────
    Wypełnione = akcja pierwszoplanowa (kolorowy cień daje wagę).
@@ -384,7 +386,7 @@ button,input,select,textarea{font-family:inherit}
   :root[data-theme="dark"] .tabbar{box-shadow:12px 0 28px rgba(0,0,0,.35)}
   .tabbar .seg-btn{min-height:64px}
   .page-wrap.has-tabbar{padding-left:120px;padding-bottom:48px}
-  .hero{margin-left:104px;border-radius:0 0 32px 0}
+  .hero{margin-left:104px}
 }
 
 /* ── Wybór pracownika — mobile-first, INNY komponent per breakpoint ──
@@ -395,6 +397,14 @@ button,input,select,textarea{font-family:inherit}
    do wysokości ekranu — to jest to, czego brakowało na desktopie. ── */
 .emp-dropdown{position:absolute;top:calc(100% + 8px);left:0;right:0;background:var(--c-surface);border:1px solid var(--c-border);
   border-radius:var(--r-m);z-index:25;max-height:250px;overflow-y:auto;box-shadow:var(--shadow-m);display:none}
+
+/* Po wyborze: pole znika, zostaje neutralny przycisk zmiany — bez
+   powtarzania imienia/nazwiska (patrz wsMountEmpPicker.pick()). */
+.emp-picked-chip{display:none;align-items:center;justify-content:space-between;gap:10px;
+  background:var(--c-primary-tint);border:1.5px solid var(--c-primary);border-radius:var(--r-s);
+  padding:0 8px 0 16px;min-height:var(--tap)}
+.emp-picked-name{font-weight:700;font-size:16px;color:var(--c-ink)}
+.emp-picked-change{background:none;border:none;color:var(--c-primary);font-weight:700;font-size:13px;cursor:pointer;padding:12px 10px}
 .emp-opt{padding:15px 17px;cursor:pointer;font-size:15px;font-weight:500;color:var(--c-ink);transition:background .12s var(--ease)}
 .emp-opt:active{background:var(--c-field)}
 .emp-opt-none{padding:15px 17px;color:var(--c-muted);font-size:13px}
@@ -587,7 +597,7 @@ tr.note-tr .nt-ovr{color:var(--c-accent)}
 
 .month-nav{display:flex;align-items:center;gap:10px;flex:1;justify-content:center}
 .month-label{font-size:20px;font-family:var(--font-display);font-weight:600;min-width:160px;text-align:center;color:#fff;letter-spacing:.01em}
-.norma-group{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.13);border-radius:var(--r-pill);padding:9px 17px;flex:1;min-height:46px;backdrop-filter:blur(8px)}
+.norma-group{display:flex;align-items:center;gap:7px;background:transparent;border:1.5px solid rgba(255,255,255,.4);border-radius:var(--r-pill);padding:8px 17px;flex:1;min-height:42px}
 .norma-lbl{font-size:13px;color:rgba(255,255,255,.68);white-space:nowrap}
 .norma-inp{background:transparent;border:none;color:#fff;font-size:15px;font-weight:700;width:66px;text-align:right}
 .norma-inp:focus{outline:none}
@@ -597,7 +607,6 @@ tr.note-tr .nt-ovr{color:var(--c-accent)}
 .sel-lbl{font-size:11px;text-transform:uppercase;letter-spacing:.9px;color:var(--c-muted);font-weight:600;margin-bottom:7px}
 .emp-sel-wrap{position:relative;margin-bottom:18px}
 
-.emp-name{font-size:20px;font-weight:700;color:var(--c-ink);margin-bottom:4px;font-family:var(--font-display)}
 .emp-role{font-size:12px;color:var(--c-muted);background:var(--c-field);padding:4px 12px;border-radius:var(--r-pill);display:inline-block}
 .hours-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--c-muted)}
 .hours-val{font-family:var(--font-display);font-size:30px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
@@ -752,7 +761,7 @@ window.wsMountEmpPicker = function (cfg) {
   var input = document.getElementById(cfg.inputId);
   var dropdown = document.getElementById(cfg.dropdownId);
   var panel = document.getElementById(cfg.panelId);
-  if (!input || !dropdown || !panel) return { refresh: function () {}, setSelected: function () {} };
+  if (!input || !dropdown || !panel) return { refresh: function () {}, setSelected: function () {}, clear: function () {} };
 
   var page = 0, selectedId = null;
 
@@ -773,10 +782,44 @@ window.wsMountEmpPicker = function (cfg) {
       });
   }
 
+  function escName(s) {
+    return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  var chip = null;
+  function ensureChip() {
+    if (chip) return chip;
+    chip = document.createElement('div');
+    chip.className = 'emp-picked-chip';
+    input.parentNode.insertBefore(chip, input.nextSibling);
+    return chip;
+  }
+
+  // Po wyborze pole wyszukiwania znika, a jego miejsce zajmuje JEDEN,
+  // wyraźny nagłówek z imieniem i nazwiskiem — to jedyne miejsce, w
+  // którym się ono pokazuje (żadnego powielania w kartach poniżej).
+  function showPicked(name) {
+    input.style.display = 'none';
+    var c = ensureChip();
+    c.innerHTML = '<span class="emp-picked-name">' + escName(name) + '</span>' +
+      '<button type="button" class="emp-picked-change">Zmień</button>';
+    c.style.display = 'flex';
+    c.querySelector('.emp-picked-change').addEventListener('click', function () {
+      selectedId = null;
+      input.value = '';
+      input.style.display = '';
+      c.style.display = 'none';
+      input.focus();
+      cfg.onPick(null);
+      refresh();
+    });
+  }
+
   function pick(e) {
     selectedId = e.id;
-    input.value = e.imie + ' ' + e.nazwisko;
+    input.value = '';
     dropdown.style.display = 'none';
+    showPicked(e.imie + ' ' + e.nazwisko);
     cfg.onPick(e.id);
     refresh();
   }
@@ -839,7 +882,19 @@ window.wsMountEmpPicker = function (cfg) {
 
   return {
     refresh: refresh,
-    setSelected: function (id) { selectedId = id; refresh(); }
+    setSelected: function (id) {
+      selectedId = id;
+      var e = (cfg.getEmployees() || []).find(function (x) { return x.id === id; });
+      if (e) showPicked(e.imie + ' ' + e.nazwisko);
+      refresh();
+    },
+    clear: function () {
+      selectedId = null;
+      input.value = '';
+      input.style.display = '';
+      if (chip) chip.style.display = 'none';
+      refresh();
+    }
   };
 };
 </script>

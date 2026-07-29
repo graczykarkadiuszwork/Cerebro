@@ -568,7 +568,7 @@ document.getElementById('m-save').addEventListener('click', function() {
 });
 
 document.getElementById('m-clear').addEventListener('click', function() {
-  document.getElementById('m-emp-input').value = '';
+  _empPickers[0].clear();
   document.getElementById('m-in').value = '';
   document.getElementById('m-out').value = '';
   mAbsValue = '';
@@ -622,7 +622,6 @@ function gotoDay(date) {
   var emp = null;
   _emps.forEach(function(e){ if (e.id === M.mmEmpId) emp = e; });
   if (emp) {
-    document.getElementById('m-emp-input').value = emp.imie + ' ' + emp.nazwisko;
     _empPickers[0].setSelected(emp.id);
   }
   document.getElementById('tab-day').click();
