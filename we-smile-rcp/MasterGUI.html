@@ -9,19 +9,30 @@
 :root[data-theme="dark"] .ovr-flag{color:#F4B8C6}
 .ovr-flag.on{display:flex}
 
-.edit-table{width:100%;border-collapse:collapse;font-size:13px;border-radius:var(--r-m);overflow:hidden;border:1px solid var(--c-border)}
-.edit-table th{background:var(--c-field);color:var(--c-muted);font-weight:600;padding:10px;text-align:left;border-bottom:1px solid var(--c-border);font-size:11px;text-transform:uppercase}
-.edit-table td{padding:8px;border-bottom:1px solid var(--c-border);vertical-align:middle}
-.edit-table tr.wknd td{background:var(--c-field)}
-.edit-table tr:last-child td{border-bottom:none}
-.edit-table input[type=time]{background:var(--c-surface);border:1.5px solid var(--c-border-strong);border-radius:10px;color:var(--c-ink);font-size:14px;padding:9px 8px;min-height:44px;width:100%;font-family:ui-monospace,monospace;transition:border-color .2s var(--ease)}
-.edit-table input[type=time]:focus{outline:none;border-color:var(--c-primary)}
-.edit-table input.saved{border-color:var(--c-primary)}
-.edit-table input.saving{border-color:var(--c-accent)}
-.dcell{font-weight:700;white-space:nowrap;color:var(--c-ink)}
-.dcell small{display:block;font-weight:400;color:var(--c-muted);font-size:11px}
-.mm-abs{display:inline-block;background:var(--c-primary-tint);color:var(--c-primary);font-size:9px;font-weight:800;padding:2px 5px;border-radius:6px;margin-top:2px}
-.mm-ovr{color:var(--c-accent);display:inline-flex;vertical-align:-3px}
+/* ── Miesiąc — lista kart dnia (mobile-first) zamiast tabeli ──
+   Tabele wymagają przewijania w poziomie na telefonie; karta na
+   dzień skaluje się naturalnie i jest dotykowo wygodna. ── */
+.mm-total-card{display:flex;align-items:center;justify-content:space-between;background:var(--grad-brand);color:#fff;
+  border-radius:var(--r-m);padding:16px 18px;margin-bottom:14px;box-shadow:var(--shadow-cta)}
+.mm-total-lbl{font-size:11px;text-transform:uppercase;letter-spacing:.8px;opacity:.85;font-weight:700}
+.mm-total-val{font-family:var(--font-display);font-size:28px;font-weight:600;font-variant-numeric:tabular-nums}
+
+.day-card{background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--r-m);padding:14px;margin-bottom:10px}
+.day-card.wknd{background:var(--c-field)}
+.day-card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;cursor:pointer}
+.day-card-date{font-weight:700;font-size:15px;color:var(--c-ink);display:flex;align-items:center;gap:7px}
+.day-card-date small{font-weight:400;color:var(--c-muted);font-size:12px;margin-left:2px}
+.day-card-hours{font-family:ui-monospace,monospace;font-weight:700;color:var(--c-primary);font-size:15px}
+.mm-ovr{color:var(--c-accent);display:inline-flex}
+.mm-abs-badge{display:inline-block;background:var(--c-primary-tint);color:var(--c-primary);font-size:10px;font-weight:800;padding:2px 7px;border-radius:6px}
+
+.mm-time-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.mm-time-row input[type=time]{background:var(--c-field);border:1.5px solid var(--c-border-strong);border-radius:var(--r-s);color:var(--c-ink);
+  font-size:14px;padding:10px;min-height:44px;width:100%;font-family:ui-monospace,monospace;transition:border-color .2s var(--ease)}
+.mm-time-row input[type=time]:focus{outline:none;border-color:var(--c-primary)}
+.mm-time-row input.saved{border-color:var(--c-primary)}
+.mm-time-row input.saving{border-color:var(--c-accent)}
+.mm-abs-chips .chip-pick{padding:8px 14px;font-size:12px}
 </style>
 </head>
 <body>
@@ -202,10 +213,8 @@
       </div>
 
       <div class="field">
-        <span class="field-lbl">Typ</span>
-        <select id="rg-typ" class="sel">
-          <option value="">— usuń nieobecność w tym zakresie —</option>
-        </select>
+        <span class="field-lbl">Typ (tap = usuń nieobecność w zakresie)</span>
+        <div id="rg-typ-chips" class="chip-picker"></div>
       </div>
 
       <div class="field">
@@ -241,9 +250,7 @@
 
       <div class="field">
         <span class="field-lbl">Typ</span>
-        <select id="do-typ" class="sel">
-          <option value="">— usuń nieobecność w tym zakresie —</option>
-        </select>
+        <div id="do-typ-chips" class="chip-picker"></div>
       </div>
 
       <div class="field">
@@ -387,15 +394,6 @@ document.getElementById('nav-worker').addEventListener('click', function() { loc
 
 // ── Typy nieobecności ─────────────────────────────
 var _absTypes = [];
-function fillTypeSelect(sel, types, emptyLabel, selectDW) {
-  sel.innerHTML = '<option value="">' + emptyLabel + '</option>';
-  types.forEach(function(t) {
-    var o = document.createElement('option');
-    o.value = t.code; o.textContent = t.label;
-    if (selectDW && t.code === 'DW') o.selected = true;
-    sel.appendChild(o);
-  });
-}
 
 // ── Chip-picker typu nieobecności (widok Dzień) — dotykowe pigułki
 // zamiast <select>. Kliknięcie zaznaczonej pigułki odznacza ("brak"). ──
@@ -415,6 +413,36 @@ function renderMAbsChips() {
   });
 }
 
+var rgTypValue = '';
+var doTypValue = 'DW';
+var _rgTypes = [], _doTypes = [];
+
+function renderRgChips() {
+  var wrap = document.getElementById('rg-typ-chips');
+  wrap.innerHTML = _rgTypes.map(function(t) {
+    return '<button type="button" class="chip-pick' + (rgTypValue === t.code ? ' on' : '') + '" data-code="' + t.code + '">' + esc(t.label) + '</button>';
+  }).join('');
+  wrap.querySelectorAll('.chip-pick').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      rgTypValue = (rgTypValue === btn.getAttribute('data-code')) ? '' : btn.getAttribute('data-code');
+      renderRgChips();
+    });
+  });
+}
+
+function renderDoChips() {
+  var wrap = document.getElementById('do-typ-chips');
+  wrap.innerHTML = _doTypes.map(function(t) {
+    return '<button type="button" class="chip-pick' + (doTypValue === t.code ? (t.code === 'DW' ? ' accent-on' : ' on') : '') + '" data-code="' + t.code + '">' + esc(t.label) + '</button>';
+  }).join('');
+  wrap.querySelectorAll('.chip-pick').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      doTypValue = (doTypValue === btn.getAttribute('data-code')) ? '' : btn.getAttribute('data-code');
+      renderDoChips();
+    });
+  });
+}
+
 function loadAbsTypes() {
   gas('getAbsenceTypes', [], function(res) {
     if (!res || !res.ok) return;
@@ -423,9 +451,10 @@ function loadAbsTypes() {
     var perEmp = _absTypes.filter(function(t) { return t.code !== 'DW'; });
     _mAbsTypes = perEmp;
     renderMAbsChips();
-    fillTypeSelect(document.getElementById('rg-typ'), perEmp, '— usuń nieobecność w tym zakresie —', false);
-
-    fillTypeSelect(document.getElementById('do-typ'), _absTypes, '— usuń nieobecność w tym zakresie —', true);
+    _rgTypes = perEmp;
+    renderRgChips();
+    _doTypes = _absTypes;
+    renderDoChips();
   });
 }
 
@@ -602,46 +631,48 @@ function gotoDay(date) {
 
 function renderMonthTable(days, totalMinutes) {
   var absTypesNoOff = (_absTypes || []).filter(function(t) { return t.code !== 'DW'; });
-  function absSelectHtml(currentCode) {
-    var opts = '<option value=""' + (!currentCode ? ' selected' : '') + '>—</option>';
-    opts += absTypesNoOff.map(function(t) {
-      return '<option value="' + esc(t.code) + '"' + (currentCode === t.code ? ' selected' : '') + '>' + esc(t.code) + '</option>';
-    }).join('');
-    return '<select class="sel mm-abs-sel" style="min-height:38px;padding:6px 26px 6px 8px;font-size:12px">' + opts + '</select>';
+  function absChipsHtml(date, currentCode) {
+    return '<div class="chip-picker mm-abs-chips" data-date="' + esc(date) + '">' +
+      absTypesNoOff.map(function(t) {
+        return '<button type="button" class="chip-pick' + (currentCode === t.code ? ' on' : '') + '" data-code="' + esc(t.code) + '">' + esc(t.code) + '</button>';
+      }).join('') + '</div>';
   }
 
-  var html = '<div class="table-scroll"><table class="edit-table"><thead><tr>' +
-    '<th>Dzień</th><th>Wejście</th><th>Wyjście</th><th>Godziny</th><th>Nieobecność</th></tr></thead><tbody>';
+  var html = '<div class="mm-total-card"><span class="mm-total-lbl">Razem w miesiącu</span><span class="mm-total-val">' + fmtHM(totalMinutes) + '</span></div>';
+  html += '<div class="stagger">';
   days.forEach(function(d) {
     var wknd = d.dow === 'Sb' || d.dow === 'Nd';
     var dn = d.date.split('-')[2];
-    html += '<tr' + (wknd ? ' class="wknd"' : '') + ' data-date="' + esc(d.date) + '">';
-    html += '<td class="dcell mm-day" data-date="' + esc(d.date) + '">' + dn +
+    var hasH = d.mins !== null && d.mins !== undefined;
+    html += '<div class="day-card' + (wknd ? ' wknd' : '') + '" data-date="' + esc(d.date) + '">';
+    html += '<div class="day-card-head mm-day" data-date="' + esc(d.date) + '">';
+    html += '<span class="day-card-date">' + dn + '<small>' + esc(d.dow) + '</small>' +
             (d.overtime ? ' <span class="mm-ovr">' + ICO.warn + '</span>' : '') +
-            ' <small>' + esc(d.dow) + '</small>' +
-            '</td>';
-    html += '<td><input type="time" class="mm-in" value="' + esc(d.wejscie || '') + '"></td>';
-    html += '<td><input type="time" class="mm-out" value="' + esc(d.wyjscie || '') + '"></td>';
-    html += '<td class="t-hours">' + ((d.mins !== null && d.mins !== undefined) ? fmtHM(d.mins) : '—') + '</td>';
-    html += '<td>' + absSelectHtml(d.absence ? d.absence.code : '') + '</td>';
-    html += '</tr>';
+            (d.absence ? ' <span class="mm-abs-badge">' + esc(d.absence.code) + '</span>' : '') +
+            '</span>';
+    html += '<span class="day-card-hours">' + (hasH ? fmtHM(d.mins) : '—') + '</span>';
+    html += '</div>';
+    html += '<div class="mm-time-row">' +
+      '<input type="time" class="mm-in" value="' + esc(d.wejscie || '') + '">' +
+      '<input type="time" class="mm-out" value="' + esc(d.wyjscie || '') + '"></div>';
+    html += absChipsHtml(d.date, d.absence ? d.absence.code : '');
+    html += '</div>';
   });
-  html += '</tbody><tfoot><tr><td colspan="3" style="text-align:right;font-weight:700">RAZEM</td>' +
-    '<td class="t-hours" style="font-weight:700">' + fmtHM(totalMinutes) + '</td><td></td></tr></tfoot></table></div>';
+  html += '</div>';
   document.getElementById('mm-table-wrap').innerHTML = html;
 
-  document.querySelectorAll('#mm-table-wrap .mm-day').forEach(function(td) {
-    td.addEventListener('click', function() { gotoDay(td.getAttribute('data-date')); });
+  document.querySelectorAll('#mm-table-wrap .mm-day').forEach(function(el) {
+    el.addEventListener('click', function() { gotoDay(el.getAttribute('data-date')); });
   });
 
   var dayByDate = {};
   days.forEach(function(d) { dayByDate[d.date] = d; });
 
-  document.querySelectorAll('#mm-table-wrap tr[data-date]').forEach(function(tr) {
-    var date = tr.getAttribute('data-date');
-    var inEl  = tr.querySelector('.mm-in');
-    var outEl = tr.querySelector('.mm-out');
-    var absSel = tr.querySelector('.mm-abs-sel');
+  document.querySelectorAll('#mm-table-wrap .day-card').forEach(function(card) {
+    var date = card.getAttribute('data-date');
+    var inEl  = card.querySelector('.mm-in');
+    var outEl = card.querySelector('.mm-out');
+    var chipsWrap = card.querySelector('.mm-abs-chips');
 
     function saveRow() {
       inEl.classList.remove('saved'); outEl.classList.remove('saved');
@@ -659,15 +690,19 @@ function renderMonthTable(days, totalMinutes) {
     }
 
     inEl.addEventListener('change', saveRow);
+    inEl.addEventListener('click', function(e) { e.stopPropagation(); });
     outEl.addEventListener('change', saveRow);
+    outEl.addEventListener('click', function(e) { e.stopPropagation(); });
 
-    // Oznaczanie nieobecności bezpośrednio z widoku Miesiąc (bez skoku do "Dzień").
-    if (absSel) {
-      absSel.addEventListener('change', function() {
+    // Oznaczanie nieobecności bezpośrednio z widoku Miesiąc (bez skoku do "Dnia").
+    chipsWrap.addEventListener('click', function(e) { e.stopPropagation(); });
+    chipsWrap.querySelectorAll('.chip-pick').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var code = btn.classList.contains('on') ? '' : btn.getAttribute('data-code');
         // Nie kasuj istniejącej adnotacji przy samej zmianie typu — zachowaj ją,
         // jeśli dzień już miał zapisaną nieobecność (edytowalna tylko w "Dniu").
         var existing = dayByDate[date] && dayByDate[date].absence ? dayByDate[date].absence.note : '';
-        gas('masterSetAbsence', [M.token, M.mmEmpId, date, absSel.value, existing || ''], function(res) {
+        gas('masterSetAbsence', [M.token, M.mmEmpId, date, code, existing || ''], function(res) {
           if (res && res.ok) {
             toast('Zapisano.', true);
             loadMonthTable();
@@ -678,7 +713,7 @@ function renderMonthTable(days, totalMinutes) {
           }
         });
       });
-    }
+    });
   });
 }
 
@@ -714,7 +749,7 @@ document.getElementById('rg-yes').addEventListener('click', function() {
   if (!rgArmed) return;
   var from = document.getElementById('rg-from').value;
   var to   = document.getElementById('rg-to').value;
-  var typ  = document.getElementById('rg-typ').value;
+  var typ  = rgTypValue;
   var note = document.getElementById('rg-note').value;
 
   toast('Zapisywanie…', true);
@@ -734,25 +769,27 @@ function renderStaffList() {
   var wrap = document.getElementById('staff-list');
   if (!_emps || _emps.length === 0) { wrap.innerHTML = '<div class="hint">Brak pracowników.</div>'; return; }
 
+  wrap.className = 'stagger';
   wrap.innerHTML = _emps.map(function(e) {
     var unset = !e.forma;
-    var opts = ['UoP', 'Zlecenie', 'B2B'].map(function(f) {
-      return '<option value="' + f + '"' + (e.forma === f ? ' selected' : '') + '>' + FORMA_LABELS[f] + '</option>';
+    var chips = ['UoP', 'Zlecenie', 'B2B'].map(function(f) {
+      return '<button type="button" class="chip-pick' + (e.forma === f ? ' on' : '') + '" data-id="' + esc(e.id) + '" data-forma="' + f + '">' + FORMA_LABELS[f] + '</button>';
     }).join('');
-    return '<div class="staff-row' + (unset ? ' warn' : '') + '" data-id="' + esc(e.id) + '">' +
-      '<div><span class="staff-name">' + esc(e.imie + ' ' + e.nazwisko) + '</span>' +
+    return '<div class="staff-row' + (unset ? ' warn' : '') + '">' +
+      '<div><span class="staff-name">' + esc(e.imie + ' ' + e.nazwisko) + '</span><br>' +
       '<span class="staff-role">' + esc(e.rola || '') + (e.status ? ' · ' + esc(e.status) : '') + '</span>' +
       (unset ? '<span class="staff-warn-lbl">Brak formy zatrudnienia — urlop nie doliczy godzin</span>' : '') +
       '</div>' +
-      '<select class="sel staff-forma-sel" data-id="' + esc(e.id) + '">' +
-        '<option value=""' + (unset ? ' selected' : '') + '>— nieustawiona —</option>' + opts +
-      '</select></div>';
+      '<div class="staff-forma-chips">' + chips + '</div>' +
+      '</div>';
   }).join('');
 
-  wrap.querySelectorAll('.staff-forma-sel').forEach(function(sel) {
-    sel.addEventListener('change', function() {
+  wrap.querySelectorAll('.staff-forma-chips .chip-pick').forEach(function(btn) {
+    btn.addEventListener('click', function() {
       var id = this.getAttribute('data-id');
-      var forma = this.value;
+      var current = null;
+      _emps.forEach(function(e) { if (e.id === id) current = e; });
+      var forma = (current && current.forma === this.getAttribute('data-forma')) ? '' : this.getAttribute('data-forma');
       toast('Zapisywanie…', true);
       gas('masterSetEmploymentForm', [M.token, id, forma], function(res) {
         if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
@@ -798,7 +835,7 @@ document.getElementById('do-yes').addEventListener('click', function() {
   if (!doArmed) return;
   var from = document.getElementById('do-from').value;
   var to   = document.getElementById('do-to').value;
-  var typ  = document.getElementById('do-typ').value;
+  var typ  = doTypValue;
   var note = document.getElementById('do-note').value;
 
   toast('Zapisywanie…', true);
