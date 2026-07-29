@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>We SMILE</title>
+<?!= include('Styles'); ?>
+<style>
+.ovr-flag{display:none;align-items:flex-start;gap:10px;background:var(--c-accent-tint);border:1px solid rgba(123,30,59,.22);border-radius:var(--r-m);padding:13px 15px;font-size:13px;line-height:1.5;color:var(--c-accent-dark);font-weight:600;margin-bottom:10px}
+:root[data-theme="dark"] .ovr-flag{color:#F4B8C6}
+.ovr-flag.on{display:flex}
+
+.edit-table{width:100%;border-collapse:collapse;font-size:13px;border-radius:var(--r-m);overflow:hidden;border:1px solid var(--c-border)}
+.edit-table th{background:var(--c-field);color:var(--c-muted);font-weight:600;padding:10px;text-align:left;border-bottom:1px solid var(--c-border);font-size:11px;text-transform:uppercase}
+.edit-table td{padding:8px;border-bottom:1px solid var(--c-border);vertical-align:middle}
+.edit-table tr.wknd td{background:var(--c-field)}
+.edit-table tr:last-child td{border-bottom:none}
+.edit-table input[type=time]{background:var(--c-surface);border:1.5px solid var(--c-border-strong);border-radius:10px;color:var(--c-ink);font-size:14px;padding:9px 8px;min-height:44px;width:100%;font-family:ui-monospace,monospace;transition:border-color .2s var(--ease)}
+.edit-table input[type=time]:focus{outline:none;border-color:var(--c-primary)}
+.edit-table input.saved{border-color:var(--c-primary)}
+.edit-table input.saving{border-color:var(--c-accent)}
+.dcell{font-weight:700;white-space:nowrap;color:var(--c-ink)}
+.dcell small{display:block;font-weight:400;color:var(--c-muted);font-size:11px}
+.mm-abs{display:inline-block;background:var(--c-primary-tint);color:var(--c-primary);font-size:9px;font-weight:800;padding:2px 5px;border-radius:6px;margin-top:2px}
+.mm-ovr{color:var(--c-accent);display:inline-flex;vertical-align:-3px}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="s-login" class="stage">
+  <button class="btn-icon corner-toggle theme-ic" onclick="wsToggleTheme()" aria-label="Przełącz tryb nocny"></button>
+  <div class="stage-body">
+    <div class="wm wm-lg on-dark" style="margin-bottom:20px">we<b>SMILE</b></div>
+    <div class="pin-title">Dostęp ograniczony</div>
+    <div class="pin-sub">Panel Właściciela</div>
+    <div class="dots">
+      <div class="dot" id="ld0"></div><div class="dot" id="ld1"></div>
+      <div class="dot" id="ld2"></div><div class="dot" id="ld3"></div>
+    </div>
+    <div class="kp" id="kp-login">
+      <button class="key" data-v="1">1</button><button class="key" data-v="2">2</button><button class="key" data-v="3">3</button>
+      <button class="key" data-v="4">4</button><button class="key" data-v="5">5</button><button class="key" data-v="6">6</button>
+      <button class="key" data-v="7">7</button><button class="key" data-v="8">8</button><button class="key" data-v="9">9</button>
+      <button class="key key-fn" data-v="C">Wyczyść</button><button class="key" data-v="0">0</button>
+      <button class="key key-fn" data-v="X"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-6-6 6-6z"/><path d="M14 10l4 4M18 10l-4 4"/></svg></button>
+    </div>
+  </div>
+</div>
+
+<!-- PANEL -->
+<div id="s-panel" style="display:none">
+  <header class="hero">
+    <div class="hero-row">
+      <span class="wm on-dark hero-title">we<b>SMILE</b> · Właściciel</span>
+      <div class="bar-right">
+        <button id="m-theme" class="btn-bar icon-only theme-ic" aria-label="Przełącz tryb nocny"></button>
+        <button id="nav-dashboard" class="btn-bar" title="Panel Raportowy">
+          <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-6 4 3 5-8"/></svg>
+          Raporty
+        </button>
+        <button id="nav-worker" class="btn-bar" title="Ekran odbić">
+          <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 18h6"/></svg>
+          Odbicia
+        </button>
+        <button id="m-logout" class="btn-bar danger">
+          <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"/><path d="M21 12H8"/><path d="M15 16l4-4-4-4"/></svg>
+          Wyloguj
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="page-wrap has-tabbar">
+
+    <!-- ── WIDOK: DZIEŃ ── -->
+    <div id="view-day">
+      <div class="field" style="position:relative">
+        <span class="field-lbl">Pracownik</span>
+        <input type="text" id="m-emp-input" class="inp" placeholder="Wpisz imię lub nazwisko…" autocomplete="off">
+        <div id="m-emp-dropdown" class="emp-dropdown"></div>
+      </div>
+
+      <div class="field">
+        <span class="field-lbl">Data</span>
+        <input type="date" id="m-date" class="inp">
+      </div>
+
+      <button id="m-load" class="btn btn-ghost">Wczytaj istniejące dane</button>
+
+      <div class="field-row2" style="margin-top:14px">
+        <div class="field">
+          <span class="field-lbl">Wejście</span>
+          <input type="time" id="m-in" class="inp">
+        </div>
+        <div class="field">
+          <span class="field-lbl">Wyjście</span>
+          <input type="time" id="m-out" class="inp">
+        </div>
+      </div>
+
+      <!-- Nieobecność -->
+      <div class="section">
+        <div class="section-title">
+          <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 3v4M16 3v4"/></svg>
+          Nieobecność (dzień)
+        </div>
+        <div class="field">
+          <span class="field-lbl">Typ</span>
+          <select id="m-abs" class="sel">
+            <option value="">— brak nieobecności —</option>
+          </select>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <span class="field-lbl">Adnotacja do nieobecności</span>
+          <textarea id="m-abs-note" class="ta" placeholder="Adnotacja pracownika / właściciela…"></textarea>
+        </div>
+      </div>
+
+      <!-- Przekroczenie godzin Kliniki -->
+      <div class="section">
+        <div class="section-title">
+          <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+          Praca poza godzinami Kliniki
+        </div>
+        <div class="ovr-flag" id="m-ovr-flag">
+          <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+          <span>Przekroczono regularne godziny pracy Kliniki (Pn–Pt 8–21, Sb 9–16, Nd nieczynne)</span>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <span class="field-lbl">Uzasadnienie (oznaczenie dnia)</span>
+          <textarea id="m-ovr-note" class="ta" placeholder="Uzasadnienie konieczności pracy poza godzinami…"></textarea>
+        </div>
+      </div>
+
+      <button id="m-save" class="btn btn-primary" style="margin-top:16px">Zapisz wszystko</button>
+      <button id="m-clear" class="btn-link">Wyczyść formularz</button>
+
+      <div class="hint" style="padding:16px 4px;text-align:left">Puste pole godziny = brak zdarzenia tego typu w tym dniu. Pusty typ nieobecności = usuwa nieobecność dnia; puste uzasadnienie = usuwa uzasadnienie. Zapis nadpisuje istniejące dane wybranego dnia. Każda zmiana jest logowana.</div>
+    </div>
+
+    <!-- ── WIDOK: MIESIĄC ── -->
+    <div id="view-month" style="display:none">
+      <div class="field" style="position:relative">
+        <span class="field-lbl">Pracownik</span>
+        <input type="text" id="mm-emp-input" class="inp" placeholder="Wpisz imię lub nazwisko…" autocomplete="off">
+        <div id="mm-emp-dropdown" class="emp-dropdown"></div>
+      </div>
+
+      <div class="month-nav" style="margin:16px 0">
+        <button id="mm-prev" class="btn-icon"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <span id="mm-label" class="month-label" style="color:var(--c-ink)">—</span>
+        <button id="mm-next" class="btn-icon"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+      </div>
+
+      <div id="mm-table-wrap"><div class="hint">Wybierz pracownika, żeby wczytać miesiąc.</div></div>
+
+      <div class="hint" style="padding:16px 4px;text-align:left">Zmiana godziny zapisuje się automatycznie po opuszczeniu pola (żółte obramowanie = zapisuję, niebieskie = zapisano). Puste pole = usuwa dane zdarzenie tego dnia. Fioletowa plakietka = nieobecność, trójkąt = dzień poza godzinami Kliniki — dotknij numeru dnia, aby przejść do szybkiej edycji.</div>
+    </div>
+
+    <!-- ── WIDOK: URLOP (zakres dat, dla jednego pracownika) ── -->
+    <div id="view-range" style="display:none">
+      <div class="info-box">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>
+        <span>Jednym zapisem oznacza (lub czyści) nieobecność wybranego pracownika w całym zakresie dat — bez klikania dzień po dniu. Osobne narzędzie od edycji pojedynczego dnia i od „Dni wolnych” (te dotyczą całej Kliniki).</span>
+      </div>
+
+      <div class="field" style="position:relative;margin-top:16px">
+        <span class="field-lbl">Pracownik</span>
+        <input type="text" id="rg-emp-input" class="inp" placeholder="Wpisz imię lub nazwisko…" autocomplete="off">
+        <div id="rg-emp-dropdown" class="emp-dropdown"></div>
+      </div>
+
+      <div class="field-row2">
+        <div class="field">
+          <span class="field-lbl">Od dnia</span>
+          <input type="date" id="rg-from" class="inp">
+        </div>
+        <div class="field">
+          <span class="field-lbl">Do dnia</span>
+          <input type="date" id="rg-to" class="inp">
+        </div>
+      </div>
+
+      <div class="field">
+        <span class="field-lbl">Typ</span>
+        <select id="rg-typ" class="sel">
+          <option value="">— usuń nieobecność w tym zakresie —</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <span class="field-lbl">Adnotacja</span>
+        <textarea id="rg-note" class="ta" placeholder="Powód, numer L4, dodatkowe informacje…"></textarea>
+      </div>
+
+      <button id="rg-apply" class="btn btn-accent">Zapisz dla wybranego pracownika</button>
+
+      <div class="confirm-row" id="rg-confirm" style="display:none">
+        <button id="rg-cancel" class="btn btn-ghost">Anuluj</button>
+        <button id="rg-yes" class="btn btn-accent">Tak, zapisz</button>
+      </div>
+    </div>
+
+    <!-- ── WIDOK: DNI WOLNE (masowo, dla całej Kliniki) ── -->
+    <div id="view-daysoff" style="display:none">
+      <div class="info-box">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>
+        <span>Operacja obejmuje jednym zapisem wszystkich aktywnych pracowników — np. święto, dzień zamknięcia Kliniki, remont. To osobne narzędzie od edycji pojedynczego pracownika powyżej.</span>
+      </div>
+
+      <div class="field-row2" style="margin-top:16px">
+        <div class="field">
+          <span class="field-lbl">Od dnia</span>
+          <input type="date" id="do-from" class="inp">
+        </div>
+        <div class="field">
+          <span class="field-lbl">Do dnia</span>
+          <input type="date" id="do-to" class="inp">
+        </div>
+      </div>
+
+      <div class="field">
+        <span class="field-lbl">Typ</span>
+        <select id="do-typ" class="sel">
+          <option value="">— usuń nieobecność w tym zakresie —</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <span class="field-lbl">Adnotacja</span>
+        <textarea id="do-note" class="ta" placeholder="Np. nazwa święta, powód zamknięcia…"></textarea>
+      </div>
+
+      <button id="do-apply" class="btn btn-accent">Zastosuj dla wszystkich aktywnych pracowników</button>
+
+      <div class="confirm-row" id="do-confirm" style="display:none">
+        <button id="do-cancel" class="btn btn-ghost">Anuluj</button>
+        <button id="do-yes" class="btn btn-accent">Tak, zastosuj</button>
+      </div>
+    </div>
+
+    <!-- ── WIDOK: PRACOWNICY (forma zatrudnienia) ── -->
+    <div id="view-staff" style="display:none">
+      <div class="info-box">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>
+        <span>Forma zatrudnienia decyduje, jakie typy nieobecności widzi pracownik w samoobsłudze oraz czy dzień urlopu liczy się jako 8h w miesięcznej sumie godzin (dotyczy tylko UoP). Bez ustawienia tego pola pracownik widzi pełną listę, a jego urlopy nie doliczają godzin.</span>
+      </div>
+      <div id="staff-list" style="margin-top:16px"><div class="hint">Ładowanie…</div></div>
+    </div>
+
+  </div>
+
+  <!-- ── Dolna nawigacja (mobile) / szyna boczna (desktop) ── -->
+  <nav class="tabbar">
+    <button class="seg-btn on" id="tab-day">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18"/><path d="M8 3v4M16 3v4"/><path d="M12 14v4M10 16h4"/></svg>
+      <span>Dzień</span>
+    </button>
+    <button class="seg-btn" id="tab-month">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18"/><path d="M8 3v4M16 3v4"/><path d="M7.5 14h.01M12 14h.01M16.5 14h.01M7.5 17.5h.01M12 17.5h.01"/></svg>
+      <span>Miesiąc</span>
+    </button>
+    <button class="seg-btn" id="tab-range">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 0 0-9 9h18a9 9 0 0 0-9-9z"/><path d="M12 3v9"/><path d="M12 12v6a2 2 0 0 0 4 0"/></svg>
+      <span>Urlop</span>
+    </button>
+    <button class="seg-btn" id="tab-daysoff">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-5h4v5"/></svg>
+      <span>Dni wolne</span>
+    </button>
+    <button class="seg-btn" id="tab-staff">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17.5" cy="9.5" r="2.6"/><path d="M15.5 14.6a5 5 0 0 1 6 4.9"/></svg>
+      <span>Zespół</span>
+    </button>
+  </nav>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* global google */
+
+var M = { token: null, empId: null, mmEmpId: null, rgEmpId: null, mmYear: new Date().getFullYear(), mmMonth: new Date().getMonth() + 1 };
+
+var MONTHS = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec',
+              'Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
+
+var ICO = {
+  warn: '<svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>'
+};
+
+var _tt;
+function toast(msg, ok) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'on' + (ok ? ' g' : ' err');
+  clearTimeout(_tt);
+  _tt = setTimeout(function(){ el.className = ''; }, 2800);
+}
+
+function gas(action, args, cb) {
+  google.script.run
+    .withSuccessHandler(function(res) {
+      try { cb(res); } catch(ex) { toast('Błąd: ' + ex.message, false); }
+    })
+    .withFailureHandler(function(e) { toast((e && e.message) || 'Błąd połączenia', false); })
+    .callRCP(action, JSON.stringify(args || []));
+}
+
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function todayStr() {
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+// ── Login ──────────────────────────────────────
+var lPin = '';
+function setDots(p) {
+  for (var i = 0; i < 4; i++)
+    document.getElementById('ld' + i).className = 'dot' + (i < p.length ? ' on' : '');
+}
+
+document.getElementById('kp-login').addEventListener('click', function(e) {
+  var btn = e.target.closest('[data-v]');
+  if (!btn) return;
+  var v = btn.getAttribute('data-v');
+  if (v === 'C') lPin = '';
+  else if (v === 'X') lPin = lPin.slice(0, -1);
+  else if (lPin.length < 4) lPin += v;
+  setDots(lPin);
+  if (lPin.length === 4) {
+    gas('masterLogin', [lPin], function(res) {
+      if (res && res.ok) {
+        M.token = res.token;
+        document.getElementById('s-login').style.display = 'none';
+        document.getElementById('s-panel').style.display  = 'block';
+        document.getElementById('m-date').value = todayStr();
+        document.getElementById('do-from').value = todayStr();
+        document.getElementById('do-to').value   = todayStr();
+        document.getElementById('rg-from').value = todayStr();
+        document.getElementById('rg-to').value   = todayStr();
+        loadEmployees();
+        loadAbsTypes();
+        updateMMLabel();
+      } else {
+        toast((res && res.msg) || 'Brak dostępu.', false);
+        lPin = ''; setDots('');
+      }
+    });
+  }
+});
+
+document.getElementById('m-logout').addEventListener('click', function() { location.reload(); });
+document.getElementById('m-theme').addEventListener('click', function() { wsToggleTheme(); });
+document.getElementById('nav-dashboard').addEventListener('click', function() { location.href = location.pathname + '?page=dashboard'; });
+document.getElementById('nav-worker').addEventListener('click', function() { location.href = location.pathname + '?page=worker'; });
+
+// ── Typy nieobecności ─────────────────────────────
+var _absTypes = [];
+function fillTypeSelect(sel, types, emptyLabel, selectDW) {
+  sel.innerHTML = '<option value="">' + emptyLabel + '</option>';
+  types.forEach(function(t) {
+    var o = document.createElement('option');
+    o.value = t.code; o.textContent = t.label;
+    if (selectDW && t.code === 'DW') o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+function loadAbsTypes() {
+  gas('getAbsenceTypes', [], function(res) {
+    if (!res || !res.ok) return;
+    _absTypes = res.types || [];
+
+    var perEmp = _absTypes.filter(function(t) { return t.code !== 'DW'; });
+    fillTypeSelect(document.getElementById('m-abs'), perEmp, '— brak nieobecności —', false);
+    fillTypeSelect(document.getElementById('rg-typ'), perEmp, '— usuń nieobecność w tym zakresie —', false);
+
+    fillTypeSelect(document.getElementById('do-typ'), _absTypes, '— usuń nieobecność w tym zakresie —', true);
+  });
+}
+
+// ── Pracownicy (wspólna lista dla obu widoków) ───
+var _emps = [];
+function loadEmployees() {
+  gas('masterGetEmployees', [M.token], function(res) {
+    if (!res || !res.ok) { toast('Błąd wczytywania listy pracowników.', false); return; }
+    _emps = res.employees || [];
+  });
+}
+
+function bindEmpSelector(inputId, dropdownId, onPick) {
+  var input = document.getElementById(inputId);
+  var dl    = document.getElementById(dropdownId);
+
+  function renderOpts(list) {
+    if (list.length === 0) { dl.innerHTML = ''; dl.style.display = 'none'; return; }
+    dl.innerHTML = list.map(function(e) {
+      return '<div class="emp-opt" data-id="' + esc(e.id) + '">' + esc(e.imie + ' ' + e.nazwisko) + '</div>';
+    }).join('');
+    dl.style.display = 'block';
+    dl.querySelectorAll('.emp-opt').forEach(function(el) {
+      el.addEventListener('mousedown', function(ev) {
+        ev.preventDefault();
+        input.value = el.textContent;
+        dl.style.display = 'none';
+        onPick(el.getAttribute('data-id'));
+      });
+    });
+  }
+
+  input.addEventListener('focus', function() { renderOpts(_emps); });
+  input.addEventListener('input', function() {
+    var q = this.value.toLowerCase();
+    onPick(null);
+    renderOpts(_emps.filter(function(e){ return (e.imie+' '+e.nazwisko).toLowerCase().indexOf(q) !== -1; }));
+  });
+  input.addEventListener('blur', function() {
+    setTimeout(function(){ dl.style.display = 'none'; }, 160);
+  });
+}
+
+bindEmpSelector('m-emp-input', 'm-emp-dropdown', function(id) { M.empId = id; });
+bindEmpSelector('mm-emp-input', 'mm-emp-dropdown', function(id) {
+  M.mmEmpId = id;
+  if (id) loadMonthTable();
+});
+bindEmpSelector('rg-emp-input', 'rg-emp-dropdown', function(id) { M.rgEmpId = id; });
+
+// ── Przełącznik widoków ───────────────────────────
+var TABS = {
+  'tab-day':     'view-day',
+  'tab-month':   'view-month',
+  'tab-range':   'view-range',
+  'tab-daysoff': 'view-daysoff',
+  'tab-staff':   'view-staff'
+};
+Object.keys(TABS).forEach(function(tabId) {
+  document.getElementById(tabId).addEventListener('click', function() {
+    Object.keys(TABS).forEach(function(id) {
+      document.getElementById(id).className = 'seg-btn' + (id === tabId ? ' on' : '');
+      document.getElementById(TABS[id]).style.display = (id === tabId) ? 'block' : 'none';
+    });
+    if (tabId === 'tab-staff') renderStaffList();
+  });
+});
+
+// ── Widok: szybka edycja dnia ─────────────────────
+
+function fillDayForm(res) {
+  document.getElementById('m-in').value  = res.wejscie || '';
+  document.getElementById('m-out').value = res.wyjscie || '';
+  document.getElementById('m-abs').value = res.absence ? res.absence.code : '';
+  document.getElementById('m-abs-note').value = res.absence ? (res.absence.note || '') : '';
+  document.getElementById('m-ovr-note').value = res.overtimeNote || '';
+  document.getElementById('m-ovr-flag').className = 'ovr-flag' + (res.overtime ? ' on' : '');
+}
+
+function loadDay(cb) {
+  gas('masterGetDay', [M.token, M.empId, document.getElementById('m-date').value], function(res) {
+    if (!res || !res.ok) { toast((res && res.msg) || 'Błąd wczytywania.', false); return; }
+    fillDayForm(res);
+    if (cb) cb();
+  });
+}
+
+document.getElementById('m-load').addEventListener('click', function() {
+  if (!M.empId) { toast('Wybierz pracownika z listy.', false); return; }
+  if (!document.getElementById('m-date').value) { toast('Wybierz datę.', false); return; }
+  loadDay(function() { toast('Wczytano dane dnia.', true); });
+});
+
+document.getElementById('m-date').addEventListener('change', function() {
+  if (M.empId && this.value) loadDay();
+});
+
+document.getElementById('m-save').addEventListener('click', function() {
+  if (!M.empId) { toast('Wybierz pracownika z listy.', false); return; }
+  var date = document.getElementById('m-date').value;
+  if (!date) { toast('Wybierz datę.', false); return; }
+  var wejscie = document.getElementById('m-in').value;
+  var wyjscie = document.getElementById('m-out').value;
+  var absCode = document.getElementById('m-abs').value;
+  var absNote = document.getElementById('m-abs-note').value;
+  var ovrNote = document.getElementById('m-ovr-note').value;
+
+  toast('Zapisywanie…', true);
+  gas('masterSetDay', [M.token, M.empId, date, wejscie, wyjscie], function(res) {
+    if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+    if (!res || !res.ok) { toast((res && res.msg) || 'Błąd zapisu godzin.', false); return; }
+    document.getElementById('m-ovr-flag').className = 'ovr-flag' + (res.overtime ? ' on' : '');
+
+    gas('masterSetAbsence', [M.token, M.empId, date, absCode, absNote], function(res2) {
+      if (res2 && res2.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+      if (!res2 || !res2.ok) { toast((res2 && res2.msg) || 'Błąd zapisu nieobecności.', false); return; }
+
+      gas('masterSetOvertimeNote', [M.token, M.empId, date, ovrNote], function(res3) {
+        if (res3 && res3.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+        if (!res3 || !res3.ok) { toast((res3 && res3.msg) || 'Błąd zapisu uzasadnienia.', false); return; }
+        toast('Zapisano wszystko.', true);
+      });
+    });
+  });
+});
+
+document.getElementById('m-clear').addEventListener('click', function() {
+  document.getElementById('m-emp-input').value = '';
+  document.getElementById('m-in').value = '';
+  document.getElementById('m-out').value = '';
+  document.getElementById('m-abs').value = '';
+  document.getElementById('m-abs-note').value = '';
+  document.getElementById('m-ovr-note').value = '';
+  document.getElementById('m-ovr-flag').className = 'ovr-flag';
+  M.empId = null;
+});
+
+// ── Widok: edytor miesiąca ────────────────────────
+
+function updateMMLabel() {
+  document.getElementById('mm-label').textContent = MONTHS[M.mmMonth - 1] + ' ' + M.mmYear;
+}
+
+document.getElementById('mm-prev').addEventListener('click', function() {
+  M.mmMonth--; if (M.mmMonth < 1) { M.mmMonth = 12; M.mmYear--; }
+  updateMMLabel();
+  if (M.mmEmpId) loadMonthTable();
+});
+document.getElementById('mm-next').addEventListener('click', function() {
+  M.mmMonth++; if (M.mmMonth > 12) { M.mmMonth = 1; M.mmYear++; }
+  updateMMLabel();
+  if (M.mmEmpId) loadMonthTable();
+});
+
+function loadMonthTable() {
+  document.getElementById('mm-table-wrap').innerHTML = '<div class="hint">Ładowanie…</div>';
+  gas('masterGetMonth', [M.token, M.mmEmpId, M.mmYear, M.mmMonth], function(res) {
+    if (!res || !res.ok) {
+      document.getElementById('mm-table-wrap').innerHTML =
+        '<div class="hint">' + esc((res && res.msg) || 'Błąd ładowania.') + '</div>';
+      return;
+    }
+    renderMonthTable(res.days);
+  });
+}
+
+function gotoDay(date) {
+  document.getElementById('m-date').value = date;
+  M.empId = M.mmEmpId;
+  var emp = null;
+  _emps.forEach(function(e){ if (e.id === M.mmEmpId) emp = e; });
+  if (emp) document.getElementById('m-emp-input').value = emp.imie + ' ' + emp.nazwisko;
+  document.getElementById('tab-day').click();
+  loadDay();
+}
+
+function renderMonthTable(days) {
+  var html = '<div class="table-scroll"><table class="edit-table"><thead><tr><th>Dzień</th><th>Wejście</th><th>Wyjście</th></tr></thead><tbody>';
+  days.forEach(function(d) {
+    var wknd = d.dow === 'Sb' || d.dow === 'Nd';
+    var dn = d.date.split('-')[2];
+    html += '<tr' + (wknd ? ' class="wknd"' : '') + ' data-date="' + esc(d.date) + '">';
+    html += '<td class="dcell mm-day" data-date="' + esc(d.date) + '">' + dn +
+            (d.overtime ? ' <span class="mm-ovr">' + ICO.warn + '</span>' : '') +
+            ' <small>' + esc(d.dow) + '</small>' +
+            (d.absence ? '<span class="mm-abs" title="' + esc(d.absence.typ) + '">' + esc(d.absence.code) + '</span>' : '') +
+            '</td>';
+    html += '<td><input type="time" class="mm-in" value="' + esc(d.wejscie || '') + '"></td>';
+    html += '<td><input type="time" class="mm-out" value="' + esc(d.wyjscie || '') + '"></td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+  document.getElementById('mm-table-wrap').innerHTML = html;
+
+  document.querySelectorAll('#mm-table-wrap .mm-day').forEach(function(td) {
+    td.addEventListener('click', function() { gotoDay(td.getAttribute('data-date')); });
+  });
+
+  document.querySelectorAll('#mm-table-wrap tr[data-date]').forEach(function(tr) {
+    var date = tr.getAttribute('data-date');
+    var inEl  = tr.querySelector('.mm-in');
+    var outEl = tr.querySelector('.mm-out');
+
+    function saveRow() {
+      inEl.classList.remove('saved'); outEl.classList.remove('saved');
+      inEl.classList.add('saving');   outEl.classList.add('saving');
+      gas('masterSetDay', [M.token, M.mmEmpId, date, inEl.value, outEl.value], function(res) {
+        inEl.classList.remove('saving'); outEl.classList.remove('saving');
+        if (res && res.ok) {
+          inEl.classList.add('saved'); outEl.classList.add('saved');
+          setTimeout(function(){ inEl.classList.remove('saved'); outEl.classList.remove('saved'); }, 1500);
+          var dc = tr.querySelector('.mm-day');
+          var ov = dc.querySelector('.mm-ovr');
+          if (res.overtime && !ov) {
+            var wrap = document.createElement('span');
+            wrap.className = 'mm-ovr'; wrap.innerHTML = ICO.warn;
+            dc.insertBefore(document.createTextNode(' '), dc.querySelector('small'));
+            dc.insertBefore(wrap, dc.querySelector('small'));
+          } else if (!res.overtime && ov) {
+            ov.remove();
+          }
+        } else if (res && res.errorType === 'UNAUTHORIZED') {
+          location.reload();
+        } else {
+          toast((res && res.msg) || 'Błąd zapisu.', false);
+        }
+      });
+    }
+
+    inEl.addEventListener('change', saveRow);
+    outEl.addEventListener('change', saveRow);
+  });
+}
+
+// ── Widok: Urlop (zakres dat, jeden pracownik) ────
+
+var rgArmed = false;
+var rgArmTimer = null;
+
+function rgDisarm() {
+  rgArmed = false;
+  clearTimeout(rgArmTimer);
+  document.getElementById('rg-apply').style.display = 'block';
+  document.getElementById('rg-confirm').style.display = 'none';
+}
+
+document.getElementById('rg-apply').addEventListener('click', function() {
+  if (!M.rgEmpId) { toast('Wybierz pracownika z listy.', false); return; }
+  var from = document.getElementById('rg-from').value;
+  var to   = document.getElementById('rg-to').value;
+  if (!from || !to) { toast('Wybierz zakres dat.', false); return; }
+  if (from > to) { toast('Data „od” nie może być późniejsza niż „do”.', false); return; }
+
+  rgArmed = true;
+  document.getElementById('rg-apply').style.display = 'none';
+  document.getElementById('rg-confirm').style.display = 'flex';
+  clearTimeout(rgArmTimer);
+  rgArmTimer = setTimeout(rgDisarm, 6000);
+});
+
+document.getElementById('rg-cancel').addEventListener('click', rgDisarm);
+
+document.getElementById('rg-yes').addEventListener('click', function() {
+  if (!rgArmed) return;
+  var from = document.getElementById('rg-from').value;
+  var to   = document.getElementById('rg-to').value;
+  var typ  = document.getElementById('rg-typ').value;
+  var note = document.getElementById('rg-note').value;
+
+  toast('Zapisywanie…', true);
+  gas('masterSetAbsenceRange', [M.token, M.rgEmpId, from, to, typ, note], function(res) {
+    rgDisarm();
+    if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+    if (!res || !res.ok) { toast((res && res.msg) || 'Błąd zapisu.', false); return; }
+    toast('Zapisano dla ' + res.count + ' dni.', true);
+  });
+});
+
+// ── Widok: Pracownicy (forma zatrudnienia) ────────
+
+var FORMA_LABELS = { UoP: 'Umowa o pracę', Zlecenie: 'Umowa zlecenie', B2B: 'B2B' };
+
+function renderStaffList() {
+  var wrap = document.getElementById('staff-list');
+  if (!_emps || _emps.length === 0) { wrap.innerHTML = '<div class="hint">Brak pracowników.</div>'; return; }
+
+  wrap.innerHTML = _emps.map(function(e) {
+    var unset = !e.forma;
+    var opts = ['UoP', 'Zlecenie', 'B2B'].map(function(f) {
+      return '<option value="' + f + '"' + (e.forma === f ? ' selected' : '') + '>' + FORMA_LABELS[f] + '</option>';
+    }).join('');
+    return '<div class="staff-row' + (unset ? ' warn' : '') + '" data-id="' + esc(e.id) + '">' +
+      '<div><span class="staff-name">' + esc(e.imie + ' ' + e.nazwisko) + '</span>' +
+      '<span class="staff-role">' + esc(e.rola || '') + (e.status ? ' · ' + esc(e.status) : '') + '</span>' +
+      (unset ? '<span class="staff-warn-lbl">Brak formy zatrudnienia — urlop nie doliczy godzin</span>' : '') +
+      '</div>' +
+      '<select class="sel staff-forma-sel" data-id="' + esc(e.id) + '">' +
+        '<option value=""' + (unset ? ' selected' : '') + '>— nieustawiona —</option>' + opts +
+      '</select></div>';
+  }).join('');
+
+  wrap.querySelectorAll('.staff-forma-sel').forEach(function(sel) {
+    sel.addEventListener('change', function() {
+      var id = this.getAttribute('data-id');
+      var forma = this.value;
+      toast('Zapisywanie…', true);
+      gas('masterSetEmploymentForm', [M.token, id, forma], function(res) {
+        if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+        if (!res || !res.ok) { toast((res && res.msg) || 'Błąd zapisu.', false); return; }
+        var emp = null;
+        _emps.forEach(function(e) { if (e.id === id) emp = e; });
+        if (emp) emp.forma = forma;
+        toast('Zapisano formę zatrudnienia.', true);
+        renderStaffList();
+      });
+    });
+  });
+}
+
+// ── Widok: Dni wolne (masowo, dla całej Kliniki) ──
+
+var doArmed = false;
+var doArmTimer = null;
+
+function doDisarm() {
+  doArmed = false;
+  clearTimeout(doArmTimer);
+  document.getElementById('do-apply').style.display = 'block';
+  document.getElementById('do-confirm').style.display = 'none';
+}
+
+document.getElementById('do-apply').addEventListener('click', function() {
+  var from = document.getElementById('do-from').value;
+  var to   = document.getElementById('do-to').value;
+  if (!from || !to) { toast('Wybierz zakres dat.', false); return; }
+  if (from > to) { toast('Data „od” nie może być późniejsza niż „do”.', false); return; }
+
+  doArmed = true;
+  document.getElementById('do-apply').style.display = 'none';
+  document.getElementById('do-confirm').style.display = 'flex';
+  clearTimeout(doArmTimer);
+  doArmTimer = setTimeout(doDisarm, 6000);
+});
+
+document.getElementById('do-cancel').addEventListener('click', doDisarm);
+
+document.getElementById('do-yes').addEventListener('click', function() {
+  if (!doArmed) return;
+  var from = document.getElementById('do-from').value;
+  var to   = document.getElementById('do-to').value;
+  var typ  = document.getElementById('do-typ').value;
+  var note = document.getElementById('do-note').value;
+
+  toast('Zapisywanie…', true);
+  gas('masterSetClinicDayOff', [M.token, from, to, typ, note], function(res) {
+    doDisarm();
+    if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+    if (!res || !res.ok) { toast((res && res.msg) || 'Błąd zapisu.', false); return; }
+    toast('Zastosowano dla ' + res.count + ' pracowników.', true);
+  });
+});
+</script>
+</body>
+</html>

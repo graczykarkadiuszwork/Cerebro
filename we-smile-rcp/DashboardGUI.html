@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>We SMILE — Panel Raportowy</title>
+<?!= include('Styles'); ?>
+<style>
+.export-cta{margin-bottom:16px}
+</style>
+</head>
+<body>
+
+<!-- ═══════ LOGIN ═══════ -->
+<div id="login" class="stage">
+  <button class="btn-icon corner-toggle theme-ic" onclick="wsToggleTheme()" aria-label="Przełącz tryb nocny"></button>
+  <div class="stage-body">
+    <div class="wm wm-lg on-dark" style="margin-bottom:20px">we<b>SMILE</b> · Raporty</div>
+    <div class="pin-title">Panel Raportowy</div>
+    <div class="pin-sub">Wpisz swój PIN</div>
+    <div class="dots">
+      <div class="dot" id="ld0"></div><div class="dot" id="ld1"></div>
+      <div class="dot" id="ld2"></div><div class="dot" id="ld3"></div>
+    </div>
+    <div class="kp" id="kp-login">
+      <button class="key" data-v="1">1</button><button class="key" data-v="2">2</button><button class="key" data-v="3">3</button>
+      <button class="key" data-v="4">4</button><button class="key" data-v="5">5</button><button class="key" data-v="6">6</button>
+      <button class="key" data-v="7">7</button><button class="key" data-v="8">8</button><button class="key" data-v="9">9</button>
+      <button class="key key-fn" data-v="C">Wyczyść</button><button class="key" data-v="0">0</button>
+      <button class="key key-fn" data-v="X"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-6-6 6-6z"/><path d="M14 10l4 4M18 10l-4 4"/></svg></button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ DASHBOARD ═══════ -->
+<div id="dash" style="display:none">
+  <header class="hero">
+    <div class="hero-row">
+      <span class="wm on-dark hero-title">we<b>SMILE</b> · Raporty</span>
+      <div class="bar-right">
+        <button id="m-theme" class="btn-bar icon-only theme-ic" aria-label="Przełącz tryb nocny"></button>
+        <button id="btn-logout" class="btn-bar danger">
+          <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"/><path d="M21 12H8"/><path d="M15 16l4-4-4-4"/></svg>
+          Wyloguj
+        </button>
+      </div>
+    </div>
+    <div class="hero-row">
+      <div class="month-nav">
+        <button id="btn-prev" class="nav-btn-dark"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <span id="month-lbl" class="month-label"></span>
+        <button id="btn-next" class="nav-btn-dark"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+      </div>
+    </div>
+    <div class="hero-row">
+      <div class="norma-group">
+        <span class="norma-lbl">Norma:</span>
+        <input id="etat-inp" type="number" class="norma-inp" min="0" step="0.5" placeholder="0">
+        <span class="norma-lbl">h</span>
+        <span id="norma-tick" class="norma-tick"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+      </div>
+    </div>
+  </header>
+
+  <div id="presence-bar" class="presence-bar" style="display:none">
+    <div class="presence-track" id="presence-track"></div>
+  </div>
+
+  <div class="page-wrap">
+    <button id="btn-csv" class="btn btn-accent export-cta">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>
+      Eksportuj do Excel
+    </button>
+    <div class="sel-lbl">Pracownik</div>
+    <div class="emp-sel-wrap">
+      <input type="text" id="emp-input" class="inp"
+             placeholder="Wpisz imię lub nazwisko…" autocomplete="off">
+      <div id="emp-dropdown" class="emp-dropdown"></div>
+    </div>
+    <div id="emp-data"></div>
+  </div>
+</div>
+
+<!-- ═══════ MODAL — obecność dzisiaj ═══════ -->
+<div id="active-modal" class="modal-overlay" style="display:none">
+  <div class="modal-card">
+    <div class="modal-head">
+      <span>Obecność dzisiaj</span>
+      <button id="modal-close" class="btn-icon">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div id="modal-list"></div>
+  </div>
+</div>
+
+<!-- ═══════ MODAL — szczegóły dnia ═══════ -->
+<div id="day-modal" class="modal-overlay" style="display:none">
+  <div class="modal-card">
+    <div class="modal-head">
+      <span id="day-modal-title">Szczegóły dnia</span>
+      <button id="day-modal-close" class="btn-icon">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div id="day-modal-body"></div>
+  </div>
+</div>
+
+<!-- ═══════ MODAL — eksport Excel ═══════ -->
+<div id="export-modal" class="modal-overlay" style="display:none">
+  <div class="modal-card">
+    <div class="modal-head">
+      <span>Eksport Excel</span>
+      <button id="export-close" class="btn-icon">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="section" style="margin-top:0">
+      <div class="section-title">Zakres</div>
+      <label class="field-lbl" style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-weight:500;color:var(--c-ink);margin-bottom:10px;cursor:pointer">
+        <input type="radio" name="exp-mode" value="month" checked style="accent-color:var(--c-primary);width:18px;height:18px"> Jeden miesiąc</label>
+      <label class="field-lbl" style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-weight:500;color:var(--c-ink);cursor:pointer">
+        <input type="radio" name="exp-mode" value="range" style="accent-color:var(--c-primary);width:18px;height:18px"> Zakres dat</label>
+    </div>
+
+    <div id="exp-mode-month" class="field" style="margin-top:14px">
+      <input type="month" id="exp-month" class="inp">
+    </div>
+
+    <div id="exp-mode-range" class="field-row2" style="display:none;margin-top:14px">
+      <div class="field">
+        <div class="field-lbl">Od</div>
+        <input type="month" id="exp-from" class="inp">
+      </div>
+      <div class="field">
+        <div class="field-lbl">Do</div>
+        <input type="month" id="exp-to" class="inp">
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title" style="justify-content:space-between;display:flex">
+        <span>Pracownicy</span>
+        <span><a href="#" id="exp-all" style="color:var(--c-primary);font-weight:700">wszyscy</a> · <a href="#" id="exp-none" style="color:var(--c-primary);font-weight:700">żaden</a></span>
+      </div>
+      <div id="exp-emp-list" style="max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:2px"></div>
+    </div>
+
+    <button id="exp-generate" class="btn btn-accent" style="margin-top:14px">Generuj plik</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* global google */
+
+var S = {
+  token:  null,
+  year:   new Date().getFullYear(),
+  month:  new Date().getMonth() + 1,
+  data:   null,
+  selId:  null,
+  view:   'cal'   // 'list' | 'cal' — kalendarz z heatmapą godzin jako domyślny widok
+};
+
+var MONTHS = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec',
+              'Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
+
+var _activeTimer = null;
+
+var ICO = {
+  note: '<svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+  warn: '<svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>',
+  abs:  '<svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 3v4M16 3v4"/></svg>',
+  clock:'<svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>'
+};
+
+// ── Utilities ─────────────────────────────────────────────────
+
+var _tt;
+function toast(msg, ok) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'on' + (ok ? ' g' : ' err');
+  clearTimeout(_tt);
+  _tt = setTimeout(function(){ el.className = ''; }, 2800);
+}
+
+function gas(action, args, cb) {
+  google.script.run
+    .withSuccessHandler(function(res) {
+      try { cb(res); } catch(ex) {
+        toast('Błąd: ' + ex.message, false);
+        console.error(ex);
+      }
+    })
+    .withFailureHandler(function(e) {
+      toast((e && e.message) || 'Błąd połączenia', false);
+    })
+    .callRCP(action, JSON.stringify(args || []));
+}
+
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function fmtHM(mins) {
+  var n = parseInt(mins, 10);
+  if (isNaN(n)) return '—';
+  var h = Math.floor(n / 60);
+  var m = n % 60;
+  return h + ':' + String(m).padStart(2, '0');
+}
+
+function absShort(a) {
+  return a && a.code ? a.code : '';
+}
+
+// ── Login ─────────────────────────────────────────────────────
+
+var lPin = '';
+function setDots(p) {
+  for (var i = 0; i < 4; i++)
+    document.getElementById('ld' + i).className = 'dot' + (i < p.length ? ' on' : '');
+}
+
+document.getElementById('kp-login').addEventListener('click', function(e) {
+  var btn = e.target.closest('[data-v]');
+  if (!btn) return;
+  var v = btn.getAttribute('data-v');
+  if (v === 'C') lPin = '';
+  else if (v === 'X') lPin = lPin.slice(0, -1);
+  else if (lPin.length < 4) lPin += v;
+  setDots(lPin);
+  if (lPin.length === 4) {
+    toast('Logowanie…', true);
+    gas('dashLogin', [lPin], function(res) {
+      if (res && res.ok) {
+        S.token = res.token;
+        document.getElementById('login').style.display = 'none';
+        document.getElementById('dash').style.display  = 'block';
+        updateMonthLabel();
+        loadMonth();
+        pollActive();
+        _activeTimer = setInterval(pollActive, 60000);
+      } else {
+        toast((res && res.msg) || 'Nieprawidłowy PIN.', false);
+        lPin = ''; setDots('');
+      }
+    });
+  }
+});
+
+// ── Kto jest w pracy / kto skończył — pasek + modal ───────────
+
+function pollActive() {
+  if (!S.token) return;
+  gas('getActive', [S.token], function(res) {
+    if (!res || !res.ok) return;
+    renderPresenceBar(res.active, res.finished);
+    renderModalList(res.active, res.finished);
+  });
+}
+
+function renderPresenceBar(active, finished) {
+  var bar   = document.getElementById('presence-bar');
+  var track = document.getElementById('presence-track');
+  bar.style.display = 'block';
+  active   = active || [];
+  finished = finished || [];
+
+  if (active.length === 0 && finished.length === 0) {
+    track.className = 'presence-track';
+    track.style.paddingLeft = '18px';
+    track.innerHTML = '<span class="presence-empty">Nikt dziś nie rozpoczął pracy</span>';
+    return;
+  }
+
+  var itemsHtml = active.map(function(p) {
+    return '<span class="presence-item"><span class="p-dot"></span>' +
+      esc(p.imie + ' ' + p.nazwisko) + ' — od ' + esc(p.wejscie) + '</span>';
+  }).join('') + finished.map(function(p) {
+    return '<span class="presence-item done"><span class="p-dot done"></span>' +
+      esc(p.imie + ' ' + p.nazwisko) + ' — zakończono ' +
+      esc((p.wejscie || '?') + '–' + (p.wyjscie || '?')) + '</span>';
+  }).join('');
+
+  track.className = 'presence-track';
+  track.style.paddingLeft = '18px';
+  track.innerHTML = itemsHtml;
+
+  var overflow = track.scrollWidth > bar.clientWidth;
+  if (overflow) {
+    track.style.paddingLeft = '100%';
+    track.innerHTML = itemsHtml + itemsHtml;
+    track.className = 'presence-track scrolling';
+  }
+}
+
+function renderModalList(active, finished) {
+  var el = document.getElementById('modal-list');
+  active   = active || [];
+  finished = finished || [];
+
+  if (active.length === 0 && finished.length === 0) {
+    el.innerHTML = '<div class="modal-empty">Nikt dziś nie rozpoczął pracy</div>';
+    return;
+  }
+
+  var html = '';
+  if (active.length > 0) {
+    html += '<div class="modal-sec">W pracy</div>';
+    html += active.map(function(p) {
+      return '<div class="modal-row"><span class="modal-row-name"><span class="p-dot"></span>' +
+        esc(p.imie + ' ' + p.nazwisko) + '</span>' +
+        '<span style="color:var(--c-primary);font-weight:700;font-family:ui-monospace,monospace">od ' + esc(p.wejscie) + '</span></div>';
+    }).join('');
+  }
+  if (finished.length > 0) {
+    html += '<div class="modal-sec">Zakończyli dziś</div>';
+    html += finished.map(function(p) {
+      return '<div class="modal-row done"><span class="modal-row-name"><span class="p-dot done"></span>' +
+        esc(p.imie + ' ' + p.nazwisko) + '</span>' +
+        '<span style="color:var(--c-muted);font-weight:700;font-family:ui-monospace,monospace">' +
+        esc((p.wejscie || '?') + '–' + (p.wyjscie || '?')) + '</span></div>';
+    }).join('');
+  }
+  el.innerHTML = html;
+}
+
+document.getElementById('presence-bar').addEventListener('click', function() {
+  document.getElementById('active-modal').style.display = 'flex';
+});
+document.getElementById('modal-close').addEventListener('click', function() {
+  document.getElementById('active-modal').style.display = 'none';
+});
+document.getElementById('active-modal').addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
+
+// ── Miesiąc ───────────────────────────────────────────────────
+
+function updateMonthLabel() {
+  document.getElementById('month-lbl').textContent = MONTHS[S.month - 1] + ' ' + S.year;
+}
+
+document.getElementById('btn-prev').addEventListener('click', function() {
+  S.month--; if (S.month < 1) { S.month = 12; S.year--; }
+  updateMonthLabel(); loadMonth();
+});
+document.getElementById('btn-next').addEventListener('click', function() {
+  S.month++; if (S.month > 12) { S.month = 1; S.year++; }
+  updateMonthLabel(); loadMonth();
+});
+
+// ── Norma ─────────────────────────────────────────────────────
+
+function saveEtat() {
+  var val = parseFloat(document.getElementById('etat-inp').value);
+  if (isNaN(val) || val < 0) return;
+  gas('setEtat', [S.token, S.year, S.month, val], function(res) {
+    if (res && res.ok) {
+      if (S.data) S.data.etat = val;
+      var tk = document.getElementById('norma-tick');
+      tk.className = 'norma-tick on';
+      setTimeout(function(){ tk.className = 'norma-tick'; }, 2000);
+      if (S.selId) refreshEmpDisplay();
+    } else if (res && res.errorType === 'UNAUTHORIZED') {
+      doLogout();
+    } else {
+      toast('Błąd zapisu normy: ' + ((res && res.msg) || ''), false);
+    }
+  });
+}
+
+document.getElementById('etat-inp').addEventListener('blur', saveEtat);
+document.getElementById('etat-inp').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') this.blur();
+});
+
+// ── Selector pracownika ───────────────────────────────────────
+
+var _emps = [];
+
+function fillSelector(employees) {
+  _emps = employees || [];
+  renderOpts(_emps);
+}
+
+function renderOpts(list) {
+  var dl = document.getElementById('emp-dropdown');
+  if (list.length === 0) {
+    dl.innerHTML = '<div class="emp-opt-none">Brak wyników</div>';
+    return;
+  }
+  dl.innerHTML = '';
+  list.forEach(function(emp) {
+    var d = document.createElement('div');
+    d.className = 'emp-opt';
+    d.textContent = emp.imie + ' ' + emp.nazwisko;
+    d.addEventListener('mousedown', function(e) {
+      e.preventDefault();
+      pickEmp(emp);
+    });
+    dl.appendChild(d);
+  });
+}
+
+document.getElementById('emp-input').addEventListener('focus', function() {
+  renderOpts(_emps);
+  document.getElementById('emp-dropdown').style.display = 'block';
+});
+document.getElementById('emp-input').addEventListener('input', function() {
+  var q = this.value.toLowerCase();
+  renderOpts(_emps.filter(function(e) {
+    return (e.imie + ' ' + e.nazwisko).toLowerCase().indexOf(q) !== -1;
+  }));
+  document.getElementById('emp-dropdown').style.display = 'block';
+});
+document.getElementById('emp-input').addEventListener('blur', function() {
+  setTimeout(function(){ document.getElementById('emp-dropdown').style.display = 'none'; }, 160);
+});
+
+function pickEmp(emp) {
+  S.selId = emp.id;
+  document.getElementById('emp-input').value = emp.imie + ' ' + emp.nazwisko;
+  document.getElementById('emp-dropdown').style.display = 'none';
+  renderEmp(emp);
+}
+
+function getEmp(id) {
+  if (!S.data || !S.data.employees) return null;
+  for (var i = 0; i < S.data.employees.length; i++)
+    if (S.data.employees[i].id === id) return S.data.employees[i];
+  return null;
+}
+
+function refreshEmpDisplay() {
+  if (!S.selId) return;
+  var emp = getEmp(S.selId);
+  if (emp) renderEmp(emp);
+}
+
+// ── Ładowanie danych ──────────────────────────────────────────
+
+function loadMonth() {
+  document.getElementById('emp-data').innerHTML = '<div class="hint">Ładowanie danych…</div>';
+  gas('getDashboard', [S.token, S.year, S.month], function(res) {
+    if (!res || !res.ok) {
+      if (res && res.errorType === 'UNAUTHORIZED') { doLogout(); return; }
+      document.getElementById('emp-data').innerHTML =
+        '<div class="hint" style="color:var(--c-accent)">' + esc((res && res.msg) || 'Błąd ładowania.') +
+        '<br><button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="loadMonth()">Ponów</button></div>';
+      return;
+    }
+    S.data = res;
+    document.getElementById('etat-inp').value = res.etat > 0 ? res.etat : '';
+    fillSelector(res.employees);
+    if (S.selId) {
+      var emp = getEmp(S.selId);
+      if (emp) { renderEmp(emp); return; }
+    }
+    document.getElementById('emp-data').innerHTML = '';
+  });
+}
+
+// ── Wyświetlanie pracownika (bento + widok) ───────────────────
+
+function renderEmp(emp) {
+  var etat      = (S.data && S.data.etat > 0) ? S.data.etat : 0;
+  var etatMins  = etat > 0 ? Math.round(etat * 60) : 0;
+  var totalMins = parseInt(emp.totalMinutes, 10) || 0;
+
+  var hoursHtml, hoursCls, isBad;
+  if (etat > 0) {
+    hoursHtml = fmtHM(totalMins) + ' z ' + fmtHM(etatMins);
+    isBad     = totalMins < etatMins;
+    hoursCls  = isBad ? 'hours-bad' : 'hours-ok';
+  } else {
+    hoursHtml = fmtHM(totalMins);
+    hoursCls  = 'hours-neutral';
+    isBad     = false;
+  }
+
+  var note = esc(emp.note || '');
+
+  var html = '<div class="card emp-card">';
+  html += '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;width:100%">';
+  html += '<div><div class="emp-name">' + esc(emp.imie + ' ' + emp.nazwisko) + '</div>';
+  html += '<div class="emp-role">' + esc(emp.rola || '') + '</div></div>';
+  html += '<div style="text-align:right"><div class="hours-lbl">Przepracowane</div>';
+  html += '<div class="hours-val ' + hoursCls + '">' + hoursHtml + '</div></div>';
+  html += '</div>';
+  html += '</div>';
+
+  // Bento — cztery kafelki podsumowania (glanceable, zamiast rzędu chipów)
+  html += '<div class="bento">';
+  html += '<div class="tile"><div class="tile-lbl">' + ICO.abs + ' Nieobecności</div><div class="tile-val">' + (emp.absDays || 0) + '</div><div class="tile-sub">dni w miesiącu</div></div>';
+  html += '<div class="tile"><div class="tile-lbl">' + ICO.clock + ' Płatny urlop</div><div class="tile-val">' + (emp.paidAbsDays || 0) + '</div><div class="tile-sub">× 8h doliczone</div></div>';
+  html += '<div class="tile"><div class="tile-lbl">' + ICO.warn + ' Poza godz. Kliniki</div><div class="tile-val" style="' + (emp.ovrDays > 0 ? 'color:var(--c-accent)' : '') + '">' + (emp.ovrDays || 0) + '</div><div class="tile-sub">dni</div></div>';
+  html += '<div class="tile"><div class="tile-lbl">Norma miesiąca</div><div class="tile-val">' + (etat > 0 ? etat + 'h' : '—') + '</div><div class="tile-sub">' + (isBad ? 'niedobór godzin' : 'w normie') + '</div></div>';
+  html += '</div>';
+
+  // Adnotacja
+  html += '<div class="card" style="margin-top:12px">';
+  html += '<div class="note-lbl">Adnotacja' + (isBad ? ' — niedobór godzin' : '') + '</div>';
+  html += '<textarea id="note-ta" class="ta' + (isBad ? ' warn' : '') + '"';
+  html += ' placeholder="Wpisz adnotację…">' + note + '</textarea>';
+  html += '<div class="note-save-row"><span id="note-tick" class="note-tick">' +
+          '<svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Zapisano</span></div>';
+  html += '</div>';
+
+  // View toggle
+  html += '<div class="seg" style="margin-top:14px">';
+  html += '<button class="seg-btn' + (S.view === 'cal'  ? ' on' : '') + '" onclick="switchView(\'cal\')">Kalendarz</button>';
+  html += '<button class="seg-btn' + (S.view === 'list' ? ' on' : '') + '" onclick="switchView(\'list\')">Lista</button>';
+  html += '</div>';
+
+  // Data view
+  html += '<div id="data-view" style="margin-top:14px">';
+  html += S.view === 'cal' ? renderCalendar(emp) : renderList(emp);
+  html += '</div>';
+
+  document.getElementById('emp-data').innerHTML = html;
+
+  var ta = document.getElementById('note-ta');
+  if (ta) {
+    ta.addEventListener('blur', function() { saveNote(emp.id, ta.value); });
+    ta.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) ta.blur();
+    });
+  }
+}
+
+function switchView(v) {
+  S.view = v;
+  var emp = getEmp(S.selId);
+  if (!emp) return;
+  document.getElementById('data-view').innerHTML =
+    v === 'cal' ? renderCalendar(emp) : renderList(emp);
+  document.querySelectorAll('.seg-btn').forEach(function(b) {
+    b.className = 'seg-btn' + (b.textContent.trim() === (v === 'cal' ? 'Kalendarz' : 'Lista') ? ' on' : '');
+  });
+}
+
+// ── Lista ─────────────────────────────────────────────────────
+
+function renderList(emp) {
+  var days = Array.isArray(emp.days) ? emp.days : [];
+  var html = '<div class="table-wrap"><table>';
+  html += '<thead><tr><th>Dzień</th><th>Data</th><th>Wejście</th><th>Wyjście</th><th>Godziny</th></tr></thead><tbody>';
+  days.forEach(function(d) {
+    if (!d) return;
+    var dn   = String(d.date || '').split('-')[2] || '';
+    var mm   = String(S.month).padStart(2, '0');
+    var wknd = d.dow === 'Sb' || d.dow === 'Nd';
+    var hasH = d.mins !== null && d.mins !== undefined;
+
+    html += '<tr' + (wknd ? ' class="wknd"' : '') + ' data-date="' + esc(d.date) + '">';
+    html += '<td><strong>' + esc(d.dow || '') + '</strong>' +
+            (d.overtime ? '<span class="ovr-ico">' + ICO.warn + '</span>' : '') + '</td>';
+    html += '<td>' + dn + '.' + mm + '</td>';
+
+    if (d.absence) {
+      var absPaid = d.mins !== null && d.mins !== undefined;
+      html += '<td colspan="2"><span class="chip chip-primary">' + esc(d.absence.typ) + '</span></td>';
+      html += '<td class="' + (absPaid ? 't-hours' : 't-empty') + '">' + (absPaid ? fmtHM(d.mins) : '—') + '</td>';
+    } else {
+      html += '<td class="' + (d.wejscie ? 't-time' : 't-empty') + '">' + esc(d.wejscie || '—') + '</td>';
+      html += '<td class="' + (d.wyjscie ? 't-time' : (d.wejscie ? 't-miss' : 't-empty')) + '">';
+      html += d.wyjscie ? esc(d.wyjscie) : (d.wejscie ? 'brak !' : '—');
+      html += '</td>';
+      html += '<td class="' + (hasH ? 't-hours' : 't-empty') + '">' + (hasH ? fmtHM(d.mins) : '—') + '</td>';
+    }
+    html += '</tr>';
+
+    if (d.absence && d.absence.note) {
+      html += '<tr class="note-tr" data-date="' + esc(d.date) + '"><td colspan="5"><span class="nt-row nt-abs">' + ICO.note + ' ' + esc(d.absence.note) + '</span></td></tr>';
+    }
+    if (d.overtime) {
+      html += '<tr class="note-tr" data-date="' + esc(d.date) + '"><td colspan="5"><span class="nt-row nt-ovr">' + ICO.warn + ' Poza godzinami Kliniki — ' +
+        (d.overtimeNote ? 'uzasadnienie: ' + esc(d.overtimeNote) : 'brak uzasadnienia') +
+        '</span></td></tr>';
+    }
+  });
+  html += '</tbody></table></div>';
+  return html;
+}
+
+// ── Kalendarz — heatmapa godzin ───────────────────────────────
+// Intensywność wypełnienia komórki proporcjonalna do godzin dnia
+// względem 8h referencyjnych (typowy dzień pracy w klinice).
+
+function _heatClass(mins) {
+  if (mins === null || mins === undefined || mins <= 0) return '';
+  var ratio = mins / 480;
+  if (ratio >= 0.95) return 'h4';
+  if (ratio >= 0.65) return 'h3';
+  if (ratio >= 0.3)  return 'h2';
+  return 'h1';
+}
+
+function renderCalendar(emp) {
+  var days = Array.isArray(emp.days) ? emp.days : [];
+  if (days.length === 0) return '<div class="hint">Brak danych</div>';
+
+  var firstJs  = new Date(days[0].date + 'T12:00:00').getDay(); // 0=Nd
+  var firstCol = firstJs === 0 ? 6 : firstJs - 1;
+
+  var html = '<div class="cal-grid">';
+  ['Pn','Wt','Śr','Cz','Pt','Sb','Nd'].forEach(function(h) {
+    html += '<div class="cal-head">' + h + '</div>';
+  });
+  for (var i = 0; i < firstCol; i++) {
+    html += '<div class="cal-cell cal-empty"></div>';
+  }
+  days.forEach(function(d) {
+    if (!d) return;
+    var dn   = parseInt(String(d.date || '').split('-')[2]) || 0;
+    var wknd = d.dow === 'Sb' || d.dow === 'Nd';
+    var hasH = d.mins !== null && d.mins !== undefined;
+    var heat = _heatClass(d.mins);
+    var cls  = 'cal-cell' + (wknd && !heat ? ' cal-wknd' : '') + (heat ? ' ' + heat : '');
+    html += '<div class="' + cls + '" data-date="' + esc(d.date) + '">';
+    if (d.overtime) html += '<span class="cal-ovr">' + ICO.warn + '</span>';
+    html += '<div class="cal-dn">' + dn + '</div>';
+    if (d.absence) {
+      html += '<span class="cal-abs">' + esc(absShort(d.absence)) + '</span>';
+      if (hasH) html += '<div class="cal-h">' + fmtHM(d.mins) + '</div>';
+    } else if (d.wejscie) {
+      html += '<div class="cal-in">' + esc(d.wejscie) + '</div>';
+      if (d.wyjscie) {
+        html += '<div class="cal-out">' + esc(d.wyjscie) + '</div>';
+        if (hasH) html += '<div class="cal-h">' + fmtHM(d.mins) + '</div>';
+      } else {
+        html += '<div class="cal-miss">!</div>';
+      }
+    }
+    html += '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+// ── Szczegóły dnia (tap w wiersz listy / komórkę kalendarza) ──
+
+document.getElementById('emp-data').addEventListener('click', function(e) {
+  var el = e.target.closest('[data-date]');
+  if (!el) return;
+  showDayDetails(el.getAttribute('data-date'));
+});
+
+function showDayDetails(date) {
+  var emp = getEmp(S.selId);
+  if (!emp || !date) return;
+  var d = null;
+  (emp.days || []).forEach(function(x) { if (x && x.date === date) d = x; });
+  if (!d) return;
+
+  var dn = date.split('-')[2] + '.' + date.split('-')[1] + '.' + date.split('-')[0];
+  document.getElementById('day-modal-title').textContent = d.dow + ', ' + dn;
+
+  var row = function(lbl, val) {
+    return '<div style="display:flex;justify-content:space-between;gap:10px;background:var(--c-field);border-radius:14px;padding:13px 15px;font-size:14px;margin-bottom:8px">' +
+      '<span class="muted">' + lbl + '</span><span style="font-weight:700;font-family:ui-monospace,monospace">' + val + '</span></div>';
+  };
+
+  var html = '';
+  html += row('Wejście', esc(d.wejscie || '—'));
+  html += row('Wyjście', esc(d.wyjscie || '—'));
+  html += row('Godziny', (d.mins !== null && d.mins !== undefined) ? fmtHM(d.mins) : '—');
+
+  if (d.absence) {
+    html += '<div class="section" style="border-left:3px solid var(--c-primary)"><div class="section-title" style="margin-bottom:4px">Nieobecność</div>' + esc(d.absence.typ) +
+      (d.absence.note ? '<div class="muted" style="margin-top:6px">' + ICO.note + ' ' + esc(d.absence.note) + '</div>' : '') + '</div>';
+  }
+  if (d.overtime) {
+    html += '<div class="section" style="border-left:3px solid var(--c-accent)"><div class="section-title" style="margin-bottom:4px;color:var(--c-accent)">Przekroczono regularne godziny pracy Kliniki</div>' +
+      (d.overtimeNote ? 'Uzasadnienie: ' + esc(d.overtimeNote)
+                      : '<span style="color:var(--c-accent)">Brak uzasadnienia</span>') + '</div>';
+  }
+  if (!d.absence && !d.overtime && !d.wejscie && !d.wyjscie) {
+    html += '<div class="modal-empty">Brak zdarzeń tego dnia</div>';
+  }
+
+  document.getElementById('day-modal-body').innerHTML = html;
+  document.getElementById('day-modal').style.display = 'flex';
+}
+
+document.getElementById('day-modal-close').addEventListener('click', function() {
+  document.getElementById('day-modal').style.display = 'none';
+});
+document.getElementById('day-modal').addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
+
+// ── Adnotacja ─────────────────────────────────────────────────
+
+function saveNote(empId, text) {
+  gas('setNote', [S.token, empId, S.year, S.month, text], function(res) {
+    if (res && res.ok) {
+      var emp = getEmp(empId);
+      if (emp) emp.note = text;
+      var tk = document.getElementById('note-tick');
+      if (tk) { tk.className = 'note-tick on'; setTimeout(function(){ tk.className = 'note-tick'; }, 2000); }
+    } else if (res && res.errorType === 'UNAUTHORIZED') {
+      doLogout();
+    }
+  });
+}
+
+// ── Excel — okno wyboru zakresu i pracowników ──────────────────
+
+document.getElementById('btn-csv').addEventListener('click', openExportModal);
+
+function openExportModal() {
+  if (!S.token) return;
+  document.getElementById('export-modal').style.display = 'flex';
+  document.getElementById('exp-emp-list').innerHTML = '<div class="modal-empty">Ładowanie…</div>';
+
+  document.querySelector('input[name="exp-mode"][value="month"]').checked = true;
+  document.getElementById('exp-mode-month').style.display = 'block';
+  document.getElementById('exp-mode-range').style.display = 'none';
+
+  gas('getExportMeta', [S.token], function(res) {
+    if (!res || !res.ok) {
+      if (res && res.errorType === 'UNAUTHORIZED') { doLogout(); return; }
+      toast('Błąd wczytywania danych eksportu.', false);
+      document.getElementById('export-modal').style.display = 'none';
+      return;
+    }
+
+    var now = new Date();
+    var curMonthVal = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+    var earliestVal = String(res.earliest).slice(0, 7);
+
+    var monthInp = document.getElementById('exp-month');
+    monthInp.value = curMonthVal;
+    monthInp.max = curMonthVal;
+
+    var fromInp = document.getElementById('exp-from');
+    var toInp   = document.getElementById('exp-to');
+    fromInp.value = earliestVal;
+    fromInp.min   = earliestVal;
+    fromInp.max   = curMonthVal;
+    toInp.value   = curMonthVal;
+    toInp.min     = earliestVal;
+    toInp.max     = curMonthVal;
+
+    var list = document.getElementById('exp-emp-list');
+    if (!res.employees || res.employees.length === 0) {
+      list.innerHTML = '<div class="modal-empty">Brak aktywnych pracowników</div>';
+      return;
+    }
+    list.innerHTML = res.employees.map(function(e) {
+      return '<label style="display:flex;align-items:center;gap:10px;padding:9px 4px;font-size:14px;cursor:pointer">' +
+        '<input type="checkbox" class="exp-emp-cb" value="' + esc(e.id) + '" checked style="accent-color:var(--c-primary);width:19px;height:19px"> ' +
+        esc(e.imie + ' ' + e.nazwisko) + '</label>';
+    }).join('');
+  });
+}
+
+document.getElementById('export-close').addEventListener('click', function() {
+  document.getElementById('export-modal').style.display = 'none';
+});
+document.getElementById('export-modal').addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
+
+document.querySelectorAll('input[name="exp-mode"]').forEach(function(r) {
+  r.addEventListener('change', function() {
+    var isRange = document.querySelector('input[name="exp-mode"]:checked').value === 'range';
+    document.getElementById('exp-mode-month').style.display = isRange ? 'none' : 'block';
+    document.getElementById('exp-mode-range').style.display = isRange ? 'block' : 'none';
+  });
+});
+
+document.getElementById('exp-all').addEventListener('click', function(e) {
+  e.preventDefault();
+  document.querySelectorAll('.exp-emp-cb').forEach(function(cb){ cb.checked = true; });
+});
+document.getElementById('exp-none').addEventListener('click', function(e) {
+  e.preventDefault();
+  document.querySelectorAll('.exp-emp-cb').forEach(function(cb){ cb.checked = false; });
+});
+
+document.getElementById('exp-generate').addEventListener('click', function() {
+  var mode = document.querySelector('input[name="exp-mode"]:checked').value;
+  var employeeIds = Array.prototype.map.call(
+    document.querySelectorAll('.exp-emp-cb:checked'), function(cb){ return cb.value; }
+  );
+  if (employeeIds.length === 0) { toast('Wybierz przynajmniej jednego pracownika.', false); return; }
+
+  var opts = { employeeIds: employeeIds };
+
+  if (mode === 'range') {
+    var from = document.getElementById('exp-from').value;
+    var to   = document.getElementById('exp-to').value;
+    if (!from || !to) { toast('Wybierz zakres dat.', false); return; }
+    if (from > to) { toast('Data "od" nie może być późniejsza niż "do".', false); return; }
+    opts.mode = 'range';
+    opts.from = from + '-01';
+    var toYear  = parseInt(to.slice(0, 4), 10);
+    var toMonth = parseInt(to.slice(5, 7), 10);
+    var toDim   = new Date(toYear, toMonth, 0).getDate();
+    opts.to = to + '-' + String(toDim).padStart(2, '0');
+  } else {
+    var mv = document.getElementById('exp-month').value;
+    if (!mv) { toast('Wybierz miesiąc.', false); return; }
+    opts.mode  = 'month';
+    opts.year  = parseInt(mv.slice(0, 4), 10);
+    opts.month = parseInt(mv.slice(5, 7), 10);
+  }
+
+  document.getElementById('export-modal').style.display = 'none';
+  toast('Generowanie pliku Excel…', true);
+  gas('dashExportXlsx', [S.token, opts], function(res) {
+    if (!res || !res.ok) { toast('Błąd eksportu: ' + ((res && res.msg) || ''), false); return; }
+    var byteChars = atob(res.base64);
+    var byteNumbers = new Array(byteChars.length);
+    for (var i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+    var byteArray = new Uint8Array(byteNumbers);
+    var blob = new Blob([byteArray], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = res.filename;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+    toast('Plik pobrany!', true);
+  });
+});
+
+// ── Logout ────────────────────────────────────────────────────
+
+function doLogout() {
+  S.token = null; S.data = null; S.selId = null;
+  lPin = ''; setDots('');
+  if (_activeTimer) { clearInterval(_activeTimer); _activeTimer = null; }
+  document.getElementById('emp-input').value = '';
+  document.getElementById('etat-inp').value  = '';
+  document.getElementById('emp-data').innerHTML = '';
+  document.getElementById('presence-bar').style.display = 'none';
+  document.getElementById('active-modal').style.display = 'none';
+  document.getElementById('day-modal').style.display = 'none';
+  document.getElementById('export-modal').style.display = 'none';
+  document.getElementById('dash').style.display  = 'none';
+  document.getElementById('login').style.display = 'flex';
+}
+
+document.getElementById('btn-logout').addEventListener('click', doLogout);
+document.getElementById('m-theme').addEventListener('click', function() { wsToggleTheme(); });
+</script>
+</body>
+</html>
