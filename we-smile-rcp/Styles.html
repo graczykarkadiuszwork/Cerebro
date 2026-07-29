@@ -214,6 +214,13 @@ button,input,select,textarea{font-family:inherit}
   background-repeat:no-repeat;background-position:right 15px center;padding-right:40px}
 .ta{resize:vertical;min-height:88px;line-height:1.55}
 .field-row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+/* Mobile-first: jedna kolumna na telefonie, dwie na szerszych ekranach —
+   desktop faktycznie wykorzystuje dodatkową szerokość zamiast tego samego
+   pojedynczego stosu pól co na komórce. */
+.field-row2-lg{display:grid;grid-template-columns:1fr;gap:10px}
+@media(min-width:720px){.field-row2-lg{grid-template-columns:1fr 1fr}}
+.field-grid3{display:grid;grid-template-columns:1fr;gap:10px}
+@media(min-width:720px){.field-grid3{grid-template-columns:repeat(3,1fr)}}
 
 /* ── Surfaces ────────────────────────────────────────────────*/
 .card{background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--r-l);padding:20px;box-shadow:var(--shadow-s)}
@@ -356,12 +363,30 @@ button,input,select,textarea{font-family:inherit}
   .hero{margin-left:104px;border-radius:0 0 32px 0}
 }
 
-/* ── Autouzupełnianie pracownika ────────────────────────────*/
+/* ── Wybór pracownika — mobile-first, INNY komponent per breakpoint ──
+   <900px: pole tekstowe + rozwijana lista (autouzupełnianie), tak jak
+   dotychczas — najlepsze dla jednej ręki na telefonie.
+   ≥900px: pole tekstowe tylko filtruje; pod nim stały panel z PEŁNĄ
+   listą (bez przewijania w nieskończoność) i stronicowaniem dopasowanym
+   do wysokości ekranu — to jest to, czego brakowało na desktopie. ── */
 .emp-dropdown{position:absolute;top:calc(100% + 8px);left:0;right:0;background:var(--c-surface);border:1px solid var(--c-border);
   border-radius:var(--r-m);z-index:25;max-height:250px;overflow-y:auto;box-shadow:var(--shadow-m);display:none}
 .emp-opt{padding:15px 17px;cursor:pointer;font-size:15px;font-weight:500;color:var(--c-ink);transition:background .12s var(--ease)}
 .emp-opt:active{background:var(--c-field)}
 .emp-opt-none{padding:15px 17px;color:var(--c-muted);font-size:13px}
+
+.emp-panel{display:none}
+.emp-panel-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-top:10px}
+.emp-panel-row{display:flex;align-items:center;gap:10px;background:var(--c-field);border:1.5px solid transparent;border-radius:var(--r-s);
+  padding:12px 14px;cursor:pointer;font-size:14px;font-weight:600;color:var(--c-ink);text-align:left;min-height:48px}
+.emp-panel-row.on{background:var(--c-primary-tint);border-color:var(--c-primary)}
+.emp-panel-row .emp-panel-dot{width:8px;height:8px;border-radius:50%;background:var(--c-border-strong);flex-shrink:0}
+.emp-panel-row.on .emp-panel-dot{background:var(--c-primary)}
+.emp-panel-pager{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:12px;color:var(--c-muted);font-size:13px;font-weight:600}
+@media(min-width:900px){
+  .emp-panel{display:block}
+  .emp-dropdown{display:none !important}
+}
 
 /* ── Chips ───────────────────────────────────────────────────*/
 .chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:6px 13px;border-radius:var(--r-pill)}
@@ -674,5 +699,102 @@ window.wsSkeleton = function (cls, n) {
   var html = '';
   for (var i = 0; i < (n || 1); i++) html += '<div class="skeleton ' + cls + '"></div>';
   return html;
+};
+
+/* ── Wybór pracownika — mobile-first, dwa różne komponenty ──────
+   <900px: input + rozwijana lista (jak dotychczas).
+   ≥900px: input tylko filtruje; pod nim stały panel z całą listą i
+   stronicowaniem, którego rozmiar strony liczy się z wysokości okna —
+   żeby lista pracowników mieściła się w całości bez przewijania.
+   cfg: { inputId, dropdownId, panelId, getEmployees(), onPick(id) } ── */
+window.wsMountEmpPicker = function (cfg) {
+  var input = document.getElementById(cfg.inputId);
+  var dropdown = document.getElementById(cfg.dropdownId);
+  var panel = document.getElementById(cfg.panelId);
+  if (!input || !dropdown || !panel) return { refresh: function () {}, setSelected: function () {} };
+
+  var page = 0, selectedId = null;
+
+  function pageSize() {
+    var perRow = Math.max(1, Math.floor(panel.clientWidth / 210) || 1);
+    var rows = Math.max(2, Math.floor((window.innerHeight - 460) / 58));
+    return perRow * rows;
+  }
+
+  function filtered() {
+    var q = (input.value || '').toLowerCase();
+    return (cfg.getEmployees() || []).filter(function (e) {
+      return (e.imie + ' ' + e.nazwisko).toLowerCase().indexOf(q) !== -1;
+    });
+  }
+
+  function pick(e) {
+    selectedId = e.id;
+    input.value = e.imie + ' ' + e.nazwisko;
+    dropdown.style.display = 'none';
+    cfg.onPick(e.id);
+    refresh();
+  }
+
+  function renderMobile(list) {
+    if (list.length === 0) { dropdown.innerHTML = '<div class="emp-opt-none">Brak wyników</div>'; return; }
+    dropdown.innerHTML = '';
+    list.forEach(function (e) {
+      var d = document.createElement('div');
+      d.className = 'emp-opt';
+      d.textContent = e.imie + ' ' + e.nazwisko;
+      d.addEventListener('mousedown', function (ev) { ev.preventDefault(); pick(e); });
+      dropdown.appendChild(d);
+    });
+  }
+
+  function renderDesktop(list) {
+    if (list.length === 0) { panel.innerHTML = '<div class="emp-opt-none">Brak wyników</div>'; return; }
+    var ps = pageSize();
+    var totalPages = Math.max(1, Math.ceil(list.length / ps));
+    if (page >= totalPages) page = totalPages - 1;
+    var slice = list.slice(page * ps, page * ps + ps);
+    var html = '<div class="emp-panel-list stagger">' + slice.map(function (e) {
+      var on = e.id === selectedId;
+      return '<button type="button" class="emp-panel-row' + (on ? ' on' : '') + '" data-id="' + e.id + '">' +
+        '<span class="emp-panel-dot"></span><span>' + e.imie + ' ' + e.nazwisko + '</span></button>';
+    }).join('') + '</div>';
+    if (totalPages > 1) {
+      html += '<div class="emp-panel-pager">' +
+        '<button type="button" class="btn-icon btn-sm" data-pg="prev" aria-label="Poprzednia strona">' +
+        '<svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>' +
+        '<span>' + (page + 1) + ' / ' + totalPages + '</span>' +
+        '<button type="button" class="btn-icon btn-sm" data-pg="next" aria-label="Następna strona">' +
+        '<svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button></div>';
+    }
+    panel.innerHTML = html;
+    panel.querySelectorAll('[data-id]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var id = btn.getAttribute('data-id');
+        var e = list.find(function (x) { return x.id === id; });
+        if (e) pick(e);
+      });
+    });
+    var prevBtn = panel.querySelector('[data-pg="prev"]');
+    var nextBtn = panel.querySelector('[data-pg="next"]');
+    if (prevBtn) prevBtn.addEventListener('click', function () { if (page > 0) { page--; renderDesktop(filtered()); } });
+    if (nextBtn) nextBtn.addEventListener('click', function () { if (page < totalPages - 1) { page++; renderDesktop(filtered()); } });
+  }
+
+  function refresh() {
+    var list = filtered();
+    renderMobile(list);
+    renderDesktop(list);
+  }
+
+  input.addEventListener('focus', function () { refresh(); dropdown.style.display = 'block'; });
+  input.addEventListener('input', function () { page = 0; refresh(); dropdown.style.display = 'block'; });
+  input.addEventListener('blur', function () { setTimeout(function () { dropdown.style.display = 'none'; }, 160); });
+  window.addEventListener('resize', function () { renderDesktop(filtered()); });
+
+  return {
+    refresh: refresh,
+    setSelected: function (id) { selectedId = id; refresh(); }
+  };
 };
 </script>

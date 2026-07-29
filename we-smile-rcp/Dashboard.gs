@@ -203,7 +203,10 @@ function getDashboard(token, year, month) {
             }
           }
 
-          const absence  = absMap[key] || null;
+          // Weekend nigdy nie jest dniem nieobecności (klinika i tak zamknięta) —
+          // nawet jeśli zakres zgłoszenia go technicznie objął, w widoku i w
+          // licznikach dzień sobotni/niedzielny się nie liczy.
+          const absence  = _isWeekend(ds) ? null : (absMap[key] || null);
           const overtime = _dayOutsideClinic(ds, wejscie, wyjscie);
           const overtimeNote = ovrNotes[key] || '';
           if (absence)  absDays++;
@@ -420,6 +423,11 @@ function dashExportXlsx(token, opts) {
 }
 
 // ── Pomocnicze — konwersja wartości z Sheets ──────────────────
+
+function _isWeekend(ds) {
+  const dow = new Date(ds + 'T12:00:00').getDay(); // 0=Nd, 6=Sb
+  return dow === 0 || dow === 6;
+}
 
 function _t2m(t) {
   const p = String(t).split(':');
@@ -765,9 +773,11 @@ function masterGetMonth(token, empId, year, month) {
 
   const absMap   = _absenceMapAll();
   const ovrNotes = _overtimeNotesAll();
+  const forma    = String(worker[6] || '');
 
   const DOW = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'];
   const days = [];
+  let totalMins = 0;
   for (let d = 1; d <= daysInMonth; d++) {
     const ds  = pfx + '-' + String(d).padStart(2, '0');
     const rcp = map[ds];
@@ -775,13 +785,30 @@ function masterGetMonth(token, empId, year, month) {
     const wyjscie = (rcp && rcp.x.length) ? rcp.x.slice().sort().reverse()[0] : '';
     const dow = DOW[new Date(ds + 'T12:00:00').getDay()];
     const key = String(empId) + '_' + ds;
+
+    // Weekend nigdy nie jest dniem nieobecności — patrz getDashboard.
+    const absence = _isWeekend(ds) ? null : (absMap[key] || null);
+
+    let mins = null;
+    if (wejscie && wyjscie) {
+      const diff = _t2m(wyjscie) - _t2m(wejscie);
+      if (diff > 0) { mins = diff; totalMins += diff; }
+    }
+    if (absence && forma === FORMA_UOP && PAID_8H_CODES.indexOf(absence.code) !== -1) {
+      mins = 480;
+      totalMins += 480;
+    }
+
     days.push({
-      date: ds, dow, wejscie, wyjscie,
-      absence:      absMap[key] || null,
+      date: ds, dow, wejscie, wyjscie, mins,
+      absence,
       overtime:     _dayOutsideClinic(ds, wejscie || null, wyjscie || null),
       overtimeNote: ovrNotes[key] || ''
     });
   }
 
-  return { ok: true, imie: String(worker[1]), nazwisko: String(worker[2]), days };
+  return {
+    ok: true, imie: String(worker[1]), nazwisko: String(worker[2]),
+    totalMinutes: totalMins, days
+  };
 }

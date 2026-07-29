@@ -45,6 +45,9 @@
 ════════════════════════════════════════════════ -->
 <div class="stage">
 <button class="btn-icon corner-toggle theme-ic" onclick="wsToggleTheme()" aria-label="Przełącz tryb nocny"></button>
+<button class="btn-icon corner-toggle" style="right:70px" onclick="location.reload()" aria-label="Odśwież" title="Odśwież">
+  <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-15.5 6.4L3 16"/><path d="M3 12a9 9 0 0 1 15.5-6.4L21 8"/><path d="M21 3v5h-5"/><path d="M3 21v-5h5"/></svg>
+</button>
 <div class="stage-body">
   <div class="wm on-dark" style="margin-bottom:4px">we<b>SMILE</b></div>
   <div class="clock-time" id="live-time">--:--</div>
@@ -71,6 +74,10 @@
   <div class="step" id="s-code">
     <div class="step-title" id="w-name">Pracownik</div>
     <div class="step-sub" id="w-role"></div>
+    <button class="tip" id="pending-banner" style="display:none;width:100%;cursor:pointer;text-align:left;margin-bottom:16px;background:var(--c-accent-tint);border-color:rgba(244,184,198,.4)">
+      <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+      <span class="tip-body" style="color:#fff;font-style:normal"><span class="tip-eyebrow" style="color:#F4B8C6" id="pending-count">0 dni</span>do wyjaśnienia — poza godzinami Kliniki bez adnotacji. Dotknij, aby uzupełnić →</span>
+    </button>
     <div class="dots">
       <div class="dot" id="c0"></div><div class="dot" id="c1"></div>
       <div class="dot" id="c2"></div><div class="dot" id="c3"></div>
@@ -96,7 +103,41 @@
       <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 3v4M16 3v4"/><path d="M9.5 14.5l5 5M14.5 14.5l-5 5"/></svg>
       Zgłoś nieobecność
     </button>
+    <button class="btn btn-ghost" id="btn-month" style="margin-top:11px;width:100%;background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.18);color:#fff">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 3v4M16 3v4"/><path d="M7.5 14h.01M12 14h.01M16.5 14h.01M7.5 17.5h.01M12 17.5h.01"/></svg>
+      Mój miesiąc
+    </button>
     <button class="btn-link" id="btn-back" style="color:rgba(255,255,255,.7)">← Zmień PIN</button>
+  </div>
+
+  <!-- Krok 2d: "Mój miesiąc" — niedytowalne godziny, edytowalne adnotacje -->
+  <div class="step" id="s-month">
+    <div class="step-panel on-light" style="width:100%">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <button class="btn-icon" id="mym-prev"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <span class="month-label" id="mym-label" style="color:var(--c-ink)">—</span>
+        <button class="btn-icon" id="mym-next"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+      </div>
+      <div class="bento" style="margin:14px 0">
+        <div class="tile"><div class="tile-lbl">Przepracowane</div><div class="tile-val" id="mym-hours">—</div></div>
+        <div class="tile"><div class="tile-lbl">Nieobecności</div><div class="tile-val" id="mym-abs">0</div></div>
+      </div>
+      <div id="mym-cal"><div class="hint">Ładowanie…</div></div>
+      <button class="btn-link" id="mym-back">← Wróć</button>
+    </div>
+  </div>
+
+  <!-- Modal: adnotacja dnia w "Moim miesiącu" -->
+  <div id="mym-modal" class="modal-overlay" style="display:none">
+    <div class="modal-card">
+      <div class="modal-head">
+        <span id="mym-modal-title">Dzień</span>
+        <button id="mym-modal-close" class="btn-icon">
+          <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div id="mym-modal-body"></div>
+    </div>
   </div>
 
   <!-- Krok 2b: zgłoszenie nieobecności -->
@@ -281,7 +322,7 @@ if (PAGE === 'admin') {
   var ICON_ABS = '<svg class="ic-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 3v4M16 3v4"/><path d="M9.5 14.5l5 5M14.5 14.5l-5 5"/></svg>';
 
   function show(id) {
-    ['s-pin', 's-code', 's-abs', 's-ovr', 's-ok'].forEach(function (s) {
+    ['s-pin', 's-code', 's-abs', 's-ovr', 's-month', 's-ok'].forEach(function (s) {
       document.getElementById(s).className = 'step' + (s === id ? ' on' : '');
     });
   }
@@ -338,6 +379,14 @@ if (PAGE === 'admin') {
           document.getElementById('w-role').textContent = res.rola;
           code = '';
           setDots(code, 'c');
+          var banner = document.getElementById('pending-banner');
+          if (res.pendingJustifications > 0) {
+            document.getElementById('pending-count').textContent =
+              res.pendingJustifications + (res.pendingJustifications === 1 ? ' dzień ' : ' dni ');
+            banner.style.display = 'block';
+          } else {
+            banner.style.display = 'none';
+          }
           show('s-code');
         } else {
           toast((res && res.msg) || 'Nieprawidłowy PIN.', false);
@@ -467,6 +516,141 @@ if (PAGE === 'admin') {
         toast((res && res.msg) || 'Błąd zgłoszenia.', false);
       }
     });
+  });
+
+  // ── "Mój miesiąc" — niedytowalne godziny, edytowalne adnotacje ─────
+  var MYM = { year: new Date().getFullYear(), month: new Date().getMonth() + 1, days: [] };
+  var MYM_MONTHS = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec',
+                     'Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
+
+  function fmtHM(mins) {
+    var n = parseInt(mins, 10);
+    if (isNaN(n)) return '—';
+    return Math.floor(n / 60) + ':' + String(n % 60).padStart(2, '0');
+  }
+
+  document.getElementById('btn-month').addEventListener('click', function () {
+    show('s-month');
+    loadMyMonth();
+  });
+  document.getElementById('mym-back').addEventListener('click', function () { show('s-code'); });
+  document.getElementById('mym-prev').addEventListener('click', function () {
+    MYM.month--; if (MYM.month < 1) { MYM.month = 12; MYM.year--; }
+    loadMyMonth();
+  });
+  document.getElementById('mym-next').addEventListener('click', function () {
+    MYM.month++; if (MYM.month > 12) { MYM.month = 1; MYM.year++; }
+    loadMyMonth();
+  });
+
+  function loadMyMonth() {
+    document.getElementById('mym-label').textContent = MYM_MONTHS[MYM.month - 1] + ' ' + MYM.year;
+    document.getElementById('mym-cal').innerHTML = '<div class="hint">Ładowanie…</div>';
+    gas('getMyMonth', [empPin, MYM.year, MYM.month], function (res) {
+      if (!res || !res.ok) {
+        document.getElementById('mym-cal').innerHTML = '<div class="hint">' + ((res && res.msg) || 'Błąd ładowania.') + '</div>';
+        return;
+      }
+      MYM.days = res.days || [];
+      document.getElementById('mym-hours').textContent = fmtHM(res.totalMinutes);
+      document.getElementById('mym-abs').textContent = res.absDays || 0;
+      renderMyCalendar();
+    });
+  }
+
+  function renderMyCalendar() {
+    var days = MYM.days;
+    if (days.length === 0) { document.getElementById('mym-cal').innerHTML = '<div class="hint">Brak danych</div>'; return; }
+    var firstJs = new Date(days[0].date + 'T12:00:00').getDay();
+    var firstCol = firstJs === 0 ? 6 : firstJs - 1;
+    var html = '<div class="cal-grid stagger">';
+    ['Pn','Wt','Śr','Cz','Pt','Sb','Nd'].forEach(function (h) { html += '<div class="cal-head">' + h + '</div>'; });
+    for (var i = 0; i < firstCol; i++) html += '<div class="cal-cell cal-empty"></div>';
+    days.forEach(function (d) {
+      var dn = parseInt(d.date.split('-')[2]);
+      var wknd = d.dow === 'Sb' || d.dow === 'Nd';
+      var pending = d.overtime && !d.overtimeNote;
+      html += '<div class="cal-cell' + (wknd ? ' cal-wknd' : '') + '" data-date="' + d.date + '">';
+      if (d.overtime) html += '<span class="cal-ovr" style="color:' + (pending ? 'var(--c-accent)' : 'var(--c-primary)') + '">' +
+        '<svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>';
+      html += '<div class="cal-dn">' + dn + '</div>';
+      if (d.absence) html += '<span class="cal-abs">' + d.absence.code + '</span>';
+      else if (d.wejscie) {
+        html += '<div class="cal-in">' + d.wejscie + '</div>';
+        if (d.wyjscie) html += '<div class="cal-out">' + d.wyjscie + '</div>';
+      }
+      html += '</div>';
+    });
+    html += '</div>';
+    document.getElementById('mym-cal').innerHTML = html;
+    document.querySelectorAll('#mym-cal [data-date]').forEach(function (el) {
+      el.addEventListener('click', function () { openMyDayModal(el.getAttribute('data-date')); });
+    });
+  }
+
+  function openMyDayModal(date) {
+    var d = null;
+    MYM.days.forEach(function (x) { if (x.date === date) d = x; });
+    if (!d) return;
+    var dn = date.split('-')[2] + '.' + date.split('-')[1] + '.' + date.split('-')[0];
+    document.getElementById('mym-modal-title').textContent = d.dow + ', ' + dn;
+
+    var html = '';
+    html += '<div style="display:flex;justify-content:space-between;gap:10px;background:var(--c-field);border-radius:14px;padding:12px 14px;font-size:14px;margin-bottom:8px">' +
+      '<span class="muted">Wejście / Wyjście</span><span style="font-weight:700;font-family:ui-monospace,monospace">' +
+      (d.wejscie || '—') + ' – ' + (d.wyjscie || '—') + '</span></div>';
+
+    if (!d.editable) {
+      html += '<div class="hint" style="padding:16px 0">Ten dzień jest już poza oknem edycji (bieżący i poprzedni miesiąc).</div>';
+    } else {
+      if (d.absence) {
+        html += '<div class="field"><span class="field-lbl">Adnotacja nieobecności (' + esc_h(d.absence.typ) + ')</span>' +
+          '<textarea id="mym-abs-note" class="ta">' + esc_h(d.absence.note || '') + '</textarea></div>' +
+          '<button class="btn btn-primary btn-sm" style="width:100%" id="mym-save-abs">Zapisz adnotację nieobecności</button>';
+      }
+      if (d.overtime) {
+        html += '<div class="field" style="margin-top:14px"><span class="field-lbl">Uzasadnienie pracy poza godzinami Kliniki</span>' +
+          '<textarea id="mym-ovr-note" class="ta">' + esc_h(d.overtimeNote || '') + '</textarea></div>' +
+          '<button class="btn btn-accent btn-sm" style="width:100%;margin-top:8px" id="mym-save-ovr">Zapisz uzasadnienie</button>';
+      }
+      if (!d.absence && !d.overtime) {
+        html += '<div class="hint" style="padding:16px 0">Brak zdarzeń wymagających adnotacji tego dnia.</div>';
+      }
+    }
+
+    document.getElementById('mym-modal-body').innerHTML = html;
+    document.getElementById('mym-modal').style.display = 'flex';
+
+    var absBtn = document.getElementById('mym-save-abs');
+    if (absBtn) absBtn.addEventListener('click', function () {
+      gas('setMyAbsenceNote', [empPin, date, document.getElementById('mym-abs-note').value], function (res) {
+        if (res && res.ok) { toast('Zapisano.', true); document.getElementById('mym-modal').style.display = 'none'; loadMyMonth(); }
+        else toast((res && res.msg) || 'Błąd zapisu.', false);
+      });
+    });
+    var ovrBtn = document.getElementById('mym-save-ovr');
+    if (ovrBtn) ovrBtn.addEventListener('click', function () {
+      gas('setMyOvertimeNote', [empPin, date, document.getElementById('mym-ovr-note').value], function (res) {
+        if (res && res.ok) { toast('Zapisano.', true); document.getElementById('mym-modal').style.display = 'none'; loadMyMonth(); }
+        else toast((res && res.msg) || 'Błąd zapisu.', false);
+      });
+    });
+  }
+
+  function esc_h(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  document.getElementById('mym-modal-close').addEventListener('click', function () {
+    document.getElementById('mym-modal').style.display = 'none';
+  });
+  document.getElementById('mym-modal').addEventListener('click', function (e) {
+    if (e.target === this) this.style.display = 'none';
+  });
+
+  document.getElementById('pending-banner').addEventListener('click', function () {
+    document.getElementById('btn-month').click();
   });
 }
 </script>

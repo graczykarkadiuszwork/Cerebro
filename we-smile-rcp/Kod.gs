@@ -114,21 +114,30 @@ function include(filename) {
 
 function doGet(e) {
   const p = e && e.parameter && e.parameter.page;
+  // URL bieżącego wdrożenia — wstrzykiwana do każdego widoku, żeby przyciski
+  // nawigacji (Raporty/Odbicia/Panel Właściciela) mogły przejść na sztywny,
+  // absolutny adres w tej samej karcie zamiast liczyć na location.pathname
+  // (niemiarodajny wewnątrz sandboxa HtmlService).
+  const baseUrl = ScriptApp.getService().getUrl();
+
   if (p === 'dashboard') {
-    return HtmlService.createTemplateFromFile('DashboardGUI')
-      .evaluate()
+    const tmpl = HtmlService.createTemplateFromFile('DashboardGUI');
+    tmpl.BASE_URL = baseUrl;
+    return tmpl.evaluate()
       .setTitle('We SMILE — Panel Raportowy')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
   if (p === 'owner') {
-    return HtmlService.createTemplateFromFile('MasterGUI')
-      .evaluate()
+    const tmpl = HtmlService.createTemplateFromFile('MasterGUI');
+    tmpl.BASE_URL = baseUrl;
+    return tmpl.evaluate()
       .setTitle('We SMILE')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
   const page = (p === 'admin') ? 'admin' : 'worker';
   const tmpl = HtmlService.createTemplateFromFile('Index');
-  tmpl.PAGE  = page;
+  tmpl.PAGE     = page;
+  tmpl.BASE_URL = baseUrl;
   return tmpl.evaluate()
     .setTitle('We SMILE — RCP')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
@@ -147,6 +156,10 @@ function callRCP(action, argsJson) {
       case 'getAbsenceTypes': return getAbsenceTypes(args[0]);
       case 'reportAbsence':   return reportAbsence(args[0], args[1], args[2], args[3], args[4]);
       case 'setOvertimeNote': return setOvertimeNote(args[0], args[1]);
+      // Widok "Mój miesiąc" (pracownik — niedytowalne godziny, edytowalne adnotacje)
+      case 'getMyMonth':           return getMyMonth(args[0], args[1], args[2]);
+      case 'setMyOvertimeNote':    return setMyOvertimeNote(args[0], args[1], args[2]);
+      case 'setMyAbsenceNote':     return setMyAbsenceNote(args[0], args[1], args[2]);
       // Dashboard
       case 'dashLogin':      return dashLogin(args[0]);
       case 'getDashboard':   return getDashboard(args[0], args[1], args[2]);
@@ -274,8 +287,41 @@ function checkPin(pin) {
     id:       String(worker[0]),
     imie:     String(worker[1]),
     nazwisko: String(worker[2]),
-    rola:     String(worker[3])
+    rola:     String(worker[3]),
+    pendingJustifications: _countPendingJustifications(String(worker[0]))
   };
+}
+
+// Dni z tego i poprzedniego miesiąca, w których pracownik pracował poza
+// godzinami Kliniki (na podstawie realnych odbić), a nikt — ani on sam
+// na kiosku, ani właściciel ręcznie — nie zostawił uzasadnienia. Obejmuje
+// też dni wpisane/nadpisane ręcznie przez właściciela (masterSetDay),
+// które nigdy nie przechodzą przez ekran uzasadnienia na kiosku.
+function _countPendingJustifications(empId) {
+  const w = _myEditWindow();
+  const ewidSh = _ss().getSheetByName('Ewidencja');
+  const rows = (ewidSh && ewidSh.getLastRow() >= 2) ? ewidSh.getDataRange().getValues().slice(1) : [];
+  const map = {};
+  rows.forEach(r => {
+    if (String(r[1]) !== empId) return;
+    const ds = _sheetDate(r[5]);
+    if (ds < w.min || ds > w.max) return;
+    if (!map[ds]) map[ds] = { e: [], x: [] };
+    const akcja = String(r[4]).trim();
+    const godz  = _sheetTime(r[6]);
+    if (akcja === 'WEJSCIE') map[ds].e.push(godz);
+    else if (akcja === 'WYJSCIE') map[ds].x.push(godz);
+  });
+
+  const ovrNotes = _overtimeNotesAll();
+  let count = 0;
+  Object.keys(map).forEach(ds => {
+    const rcp = map[ds];
+    const wejscie = rcp.e.length ? rcp.e.slice().sort()[0] : null;
+    const wyjscie = rcp.x.length ? rcp.x.slice().sort().reverse()[0] : null;
+    if (_dayOutsideClinic(ds, wejscie, wyjscie) && !ovrNotes[empId + '_' + ds]) count++;
+  });
+  return count;
 }
 
 // ── clock — rejestracja zdarzenia (krok 2) ───────────────────
@@ -427,6 +473,146 @@ function setOvertimeNote(pin, note) {
 
   _saveOvertimeNote(String(worker[0]), _todayPL(), note, 'worker');
   return { ok: true };
+}
+
+// ── "Mój miesiąc" — niedytowalne podsumowanie własnych godzin ─
+// Pracownik widzi swój miesiąc (bez możliwości zmiany wejść/wyjść) i może
+// dopisać/zmienić adnotację nieobecności lub uzasadnienie pracy poza
+// godzinami Kliniki dla dowolnego dnia z okna [1. dzień poprz. miesiąca; dziś].
+
+// Okno dat, w którym pracownik może edytować własne adnotacje wstecz.
+function _myEditWindow() {
+  const today = new Date(_todayPL() + 'T12:00:00');
+  const prevMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1, 12);
+  return {
+    min: Utilities.formatDate(prevMonthStart, 'Europe/Warsaw', 'yyyy-MM-dd'),
+    max: _todayPL()
+  };
+}
+
+function _inMyEditWindow(ds) {
+  const w = _myEditWindow();
+  return ds >= w.min && ds <= w.max;
+}
+
+function getMyMonth(pin, year, month) {
+  if (!pin) return { ok: false, msg: 'Brak danych.' };
+  const worker = _findActiveByPin(pin);
+  if (!worker) return { ok: false, msg: 'Nieprawidłowy PIN.' };
+
+  const y = parseInt(year, 10);
+  const m = parseInt(month, 10);
+  if (isNaN(y) || isNaN(m) || m < 1 || m > 12) {
+    return { ok: false, msg: 'Nieprawidłowy miesiąc/rok.' };
+  }
+
+  const empId = String(worker[0]);
+  const forma = String(worker[6] || '');
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const pfx = y + '-' + String(m).padStart(2, '0');
+
+  const ewidSh = _ss().getSheetByName('Ewidencja');
+  const rows = (ewidSh && ewidSh.getLastRow() >= 2) ? ewidSh.getDataRange().getValues().slice(1) : [];
+  const map = {};
+  rows.forEach(r => {
+    if (String(r[1]) !== empId) return;
+    const ds = _sheetDate(r[5]);
+    if (!ds.startsWith(pfx)) return;
+    if (!map[ds]) map[ds] = { e: [], x: [] };
+    const akcja = String(r[4]).trim();
+    const godz  = _sheetTime(r[6]);
+    if (akcja === 'WEJSCIE') map[ds].e.push(godz);
+    else if (akcja === 'WYJSCIE') map[ds].x.push(godz);
+  });
+
+  const absMap   = _absenceMapAll();
+  const ovrNotes = _overtimeNotesAll();
+  const editWindow = _myEditWindow();
+  const DOW = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'];
+
+  let totalMins = 0, absDays = 0, paidAbsDays = 0, ovrDays = 0;
+  const days = [];
+  for (let d = 1; d <= daysInMonth; d++) {
+    const ds  = pfx + '-' + String(d).padStart(2, '0');
+    const rcp = map[ds];
+    let wejscie = null, wyjscie = null, mins = null;
+    if (rcp) {
+      if (rcp.e.length) wejscie = rcp.e.slice().sort()[0];
+      if (rcp.x.length) wyjscie = rcp.x.slice().sort().reverse()[0];
+      if (wejscie && wyjscie) {
+        const diff = _t2m(wyjscie) - _t2m(wejscie);
+        if (diff > 0) { mins = diff; totalMins += diff; }
+      }
+    }
+
+    const key = empId + '_' + ds;
+    const absence  = _isWeekend(ds) ? null : (absMap[key] || null);
+    const overtime = _dayOutsideClinic(ds, wejscie, wyjscie);
+    const overtimeNote = ovrNotes[key] || '';
+    if (absence)  absDays++;
+    if (overtime) ovrDays++;
+    if (absence && forma === FORMA_UOP && PAID_8H_CODES.indexOf(absence.code) !== -1) {
+      mins = 480;
+      totalMins += 480;
+      paidAbsDays++;
+    }
+
+    const dow = DOW[new Date(ds + 'T12:00:00').getDay()];
+    days.push({
+      date: ds, dow, wejscie, wyjscie, mins, absence, overtime, overtimeNote,
+      editable: ds >= editWindow.min && ds <= editWindow.max
+    });
+  }
+
+  return {
+    ok: true, imie: String(worker[1]), nazwisko: String(worker[2]),
+    totalMinutes: totalMins, absDays, paidAbsDays, ovrDays, days
+  };
+}
+
+function setMyOvertimeNote(pin, date, note) {
+  if (!pin) return { ok: false, msg: 'Brak danych.' };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date))) return { ok: false, msg: 'Nieprawidłowa data.' };
+  if (!_checkRate('pin')) return { ok: false, msg: 'Zbyt wiele prób. Odczekaj 5 minut.' };
+
+  const worker = _findActiveByPin(pin);
+  if (!worker) return { ok: false, msg: 'Nieprawidłowy PIN.' };
+  _resetRate('pin');
+
+  if (!_inMyEditWindow(String(date))) {
+    return { ok: false, msg: 'Adnotacje można edytować tylko dla bieżącego i poprzedniego miesiąca.' };
+  }
+
+  note = String(note || '').trim().slice(0, 500);
+  _saveOvertimeNote(String(worker[0]), String(date), note, 'worker');
+  return { ok: true };
+}
+
+function setMyAbsenceNote(pin, date, note) {
+  if (!pin) return { ok: false, msg: 'Brak danych.' };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date))) return { ok: false, msg: 'Nieprawidłowa data.' };
+  if (!_checkRate('pin')) return { ok: false, msg: 'Zbyt wiele prób. Odczekaj 5 minut.' };
+
+  const worker = _findActiveByPin(pin);
+  if (!worker) return { ok: false, msg: 'Nieprawidłowy PIN.' };
+  _resetRate('pin');
+
+  if (!_inMyEditWindow(String(date))) {
+    return { ok: false, msg: 'Adnotacje można edytować tylko dla bieżącego i poprzedniego miesiąca.' };
+  }
+
+  const empId = String(worker[0]);
+  const sh = _ss().getSheetByName('Nieobecnosci');
+  const rows = (sh && sh.getLastRow() >= 2) ? sh.getDataRange().getValues().slice(1) : [];
+  note = String(note || '').trim().slice(0, 500);
+
+  for (let i = 0; i < rows.length; i++) {
+    if (String(rows[i][1]) === empId && _sheetDate(rows[i][4]) === String(date)) {
+      sh.getRange(i + 2, 8).setValue(note); // kolumna 8 = Adnotacja
+      return { ok: true };
+    }
+  }
+  return { ok: false, msg: 'Brak nieobecności tego dnia — adnotację można dodać tylko do istniejącego wpisu.' };
 }
 
 // Zapis uzasadnienia dnia (puste note = usunięcie).

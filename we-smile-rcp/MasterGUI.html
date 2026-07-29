@@ -54,6 +54,12 @@
     <!-- Strefa 1: tożsamość + kontrola sesji (motyw, wylogowanie) -->
     <div class="hero-top">
       <span class="wm on-dark hero-title">we<b>SMILE</b> · Właściciel</span>
+      <button id="m-back" class="btn-bar icon-only" aria-label="Cofnij" title="Cofnij">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 19l-7-7 7-7"/></svg>
+      </button>
+      <button id="m-refresh" class="btn-bar icon-only" aria-label="Odśwież" title="Odśwież">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-15.5 6.4L3 16"/><path d="M3 12a9 9 0 0 1 15.5-6.4L21 8"/><path d="M21 3v5h-5"/><path d="M3 21v-5h5"/></svg>
+      </button>
       <button id="m-theme" class="btn-bar icon-only theme-ic" aria-label="Przełącz tryb nocny"></button>
       <button id="m-logout" class="btn-bar danger">
         <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"/><path d="M21 12H8"/><path d="M15 16l4-4-4-4"/></svg>
@@ -80,18 +86,21 @@
 
     <!-- ── WIDOK: DZIEŃ ── -->
     <div id="view-day">
-      <div class="field" style="position:relative">
-        <span class="field-lbl">Pracownik</span>
-        <input type="text" id="m-emp-input" class="inp" placeholder="Wpisz imię lub nazwisko…" autocomplete="off">
-        <div id="m-emp-dropdown" class="emp-dropdown"></div>
-      </div>
+      <div class="field-row2-lg">
+        <div class="field" style="position:relative;margin-bottom:0">
+          <span class="field-lbl">Pracownik</span>
+          <input type="text" id="m-emp-input" class="inp" placeholder="Wpisz imię lub nazwisko…" autocomplete="off">
+          <div id="m-emp-dropdown" class="emp-dropdown"></div>
+        </div>
 
-      <div class="field">
-        <span class="field-lbl">Data</span>
-        <input type="date" id="m-date" class="inp">
+        <div class="field" style="margin-bottom:0">
+          <span class="field-lbl">Data</span>
+          <input type="date" id="m-date" class="inp">
+        </div>
       </div>
+      <div id="m-emp-panel" class="emp-panel"></div>
 
-      <button id="m-load" class="btn btn-ghost">Wczytaj istniejące dane</button>
+      <button id="m-load" class="btn btn-ghost" style="margin-top:14px">Wczytaj istniejące dane</button>
 
       <div class="field-row2" style="margin-top:14px">
         <div class="field">
@@ -153,6 +162,7 @@
         <span class="field-lbl">Pracownik</span>
         <input type="text" id="mm-emp-input" class="inp" placeholder="Wpisz imię lub nazwisko…" autocomplete="off">
         <div id="mm-emp-dropdown" class="emp-dropdown"></div>
+        <div id="mm-emp-panel" class="emp-panel"></div>
       </div>
 
       <div class="month-nav" style="margin:16px 0">
@@ -180,6 +190,7 @@
         <span class="field-lbl">Pracownik</span>
         <input type="text" id="rg-emp-input" class="inp" placeholder="Wpisz imię lub nazwisko…" autocomplete="off">
         <div id="rg-emp-dropdown" class="emp-dropdown"></div>
+        <div id="rg-emp-panel" class="emp-panel"></div>
       </div>
 
       <div class="field-row2">
@@ -292,6 +303,7 @@
 <script>
 /* global google */
 
+var BASE_URL = "<?= BASE_URL ?>";
 var M = { token: null, empId: null, mmEmpId: null, rgEmpId: null, mmYear: new Date().getFullYear(), mmMonth: new Date().getMonth() + 1 };
 
 var MONTHS = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec',
@@ -369,8 +381,12 @@ document.getElementById('kp-login').addEventListener('click', function(e) {
 
 document.getElementById('m-logout').addEventListener('click', function() { location.reload(); });
 document.getElementById('m-theme').addEventListener('click', function() { wsToggleTheme(); });
-document.getElementById('nav-dashboard').addEventListener('click', function() { location.href = location.pathname + '?page=dashboard'; });
-document.getElementById('nav-worker').addEventListener('click', function() { location.href = location.pathname + '?page=worker'; });
+document.getElementById('m-back').addEventListener('click', function() { history.back(); });
+document.getElementById('m-refresh').addEventListener('click', function() { location.reload(); });
+// Sztywny, absolutny URL bieżącego wdrożenia (nie location.pathname —
+// wewnątrz sandboxa HtmlService bywa niemiarodajny) — ta sama karta.
+document.getElementById('nav-dashboard').addEventListener('click', function() { location.href = BASE_URL + '?page=dashboard'; });
+document.getElementById('nav-worker').addEventListener('click', function() { location.href = BASE_URL + '?page=worker'; });
 
 // ── Typy nieobecności ─────────────────────────────
 var _absTypes = [];
@@ -397,52 +413,35 @@ function loadAbsTypes() {
   });
 }
 
-// ── Pracownicy (wspólna lista dla obu widoków) ───
+// ── Pracownicy (wspólna lista dla obu widoków) ───────────────
+// Mobile: input + rozwijana lista. Desktop (≥900px): pełna lista ze
+// stronicowaniem obok (wsMountEmpPicker, patrz Styles.html).
 var _emps = [];
+var _empPickers = [];
+
 function loadEmployees() {
   gas('masterGetEmployees', [M.token], function(res) {
     if (!res || !res.ok) { toast('Błąd wczytywania listy pracowników.', false); return; }
     _emps = res.employees || [];
+    _empPickers.forEach(function(p) { p.refresh(); });
   });
 }
 
-function bindEmpSelector(inputId, dropdownId, onPick) {
-  var input = document.getElementById(inputId);
-  var dl    = document.getElementById(dropdownId);
-
-  function renderOpts(list) {
-    if (list.length === 0) { dl.innerHTML = ''; dl.style.display = 'none'; return; }
-    dl.innerHTML = list.map(function(e) {
-      return '<div class="emp-opt" data-id="' + esc(e.id) + '">' + esc(e.imie + ' ' + e.nazwisko) + '</div>';
-    }).join('');
-    dl.style.display = 'block';
-    dl.querySelectorAll('.emp-opt').forEach(function(el) {
-      el.addEventListener('mousedown', function(ev) {
-        ev.preventDefault();
-        input.value = el.textContent;
-        dl.style.display = 'none';
-        onPick(el.getAttribute('data-id'));
-      });
-    });
-  }
-
-  input.addEventListener('focus', function() { renderOpts(_emps); });
-  input.addEventListener('input', function() {
-    var q = this.value.toLowerCase();
-    onPick(null);
-    renderOpts(_emps.filter(function(e){ return (e.imie+' '+e.nazwisko).toLowerCase().indexOf(q) !== -1; }));
-  });
-  input.addEventListener('blur', function() {
-    setTimeout(function(){ dl.style.display = 'none'; }, 160);
-  });
-}
-
-bindEmpSelector('m-emp-input', 'm-emp-dropdown', function(id) { M.empId = id; });
-bindEmpSelector('mm-emp-input', 'mm-emp-dropdown', function(id) {
-  M.mmEmpId = id;
-  if (id) loadMonthTable();
-});
-bindEmpSelector('rg-emp-input', 'rg-emp-dropdown', function(id) { M.rgEmpId = id; });
+_empPickers.push(wsMountEmpPicker({
+  inputId: 'm-emp-input', dropdownId: 'm-emp-dropdown', panelId: 'm-emp-panel',
+  getEmployees: function () { return _emps; },
+  onPick: function (id) { M.empId = id; }
+}));
+_empPickers.push(wsMountEmpPicker({
+  inputId: 'mm-emp-input', dropdownId: 'mm-emp-dropdown', panelId: 'mm-emp-panel',
+  getEmployees: function () { return _emps; },
+  onPick: function (id) { M.mmEmpId = id; if (id) loadMonthTable(); }
+}));
+_empPickers.push(wsMountEmpPicker({
+  inputId: 'rg-emp-input', dropdownId: 'rg-emp-dropdown', panelId: 'rg-emp-panel',
+  getEmployees: function () { return _emps; },
+  onPick: function (id) { M.rgEmpId = id; }
+}));
 
 // ── Przełącznik widoków ───────────────────────────
 var TABS = {
@@ -550,6 +549,14 @@ document.getElementById('mm-next').addEventListener('click', function() {
   if (M.mmEmpId) loadMonthTable();
 });
 
+function fmtHM(mins) {
+  var n = parseInt(mins, 10);
+  if (isNaN(n)) return '—';
+  var h = Math.floor(n / 60);
+  var m = n % 60;
+  return h + ':' + String(m).padStart(2, '0');
+}
+
 function loadMonthTable() {
   document.getElementById('mm-table-wrap').innerHTML = wsSkeleton('skeleton-row', 6);
   gas('masterGetMonth', [M.token, M.mmEmpId, M.mmYear, M.mmMonth], function(res) {
@@ -558,7 +565,7 @@ function loadMonthTable() {
         '<div class="hint">' + esc((res && res.msg) || 'Błąd ładowania.') + '</div>';
       return;
     }
-    renderMonthTable(res.days);
+    renderMonthTable(res.days, res.totalMinutes);
   });
 }
 
@@ -567,13 +574,26 @@ function gotoDay(date) {
   M.empId = M.mmEmpId;
   var emp = null;
   _emps.forEach(function(e){ if (e.id === M.mmEmpId) emp = e; });
-  if (emp) document.getElementById('m-emp-input').value = emp.imie + ' ' + emp.nazwisko;
+  if (emp) {
+    document.getElementById('m-emp-input').value = emp.imie + ' ' + emp.nazwisko;
+    _empPickers[0].setSelected(emp.id);
+  }
   document.getElementById('tab-day').click();
   loadDay();
 }
 
-function renderMonthTable(days) {
-  var html = '<div class="table-scroll"><table class="edit-table"><thead><tr><th>Dzień</th><th>Wejście</th><th>Wyjście</th></tr></thead><tbody>';
+function renderMonthTable(days, totalMinutes) {
+  var absTypesNoOff = (_absTypes || []).filter(function(t) { return t.code !== 'DW'; });
+  function absSelectHtml(currentCode) {
+    var opts = '<option value=""' + (!currentCode ? ' selected' : '') + '>—</option>';
+    opts += absTypesNoOff.map(function(t) {
+      return '<option value="' + esc(t.code) + '"' + (currentCode === t.code ? ' selected' : '') + '>' + esc(t.code) + '</option>';
+    }).join('');
+    return '<select class="sel mm-abs-sel" style="min-height:38px;padding:6px 26px 6px 8px;font-size:12px">' + opts + '</select>';
+  }
+
+  var html = '<div class="table-scroll"><table class="edit-table"><thead><tr>' +
+    '<th>Dzień</th><th>Wejście</th><th>Wyjście</th><th>Godziny</th><th>Nieobecność</th></tr></thead><tbody>';
   days.forEach(function(d) {
     var wknd = d.dow === 'Sb' || d.dow === 'Nd';
     var dn = d.date.split('-')[2];
@@ -581,23 +601,29 @@ function renderMonthTable(days) {
     html += '<td class="dcell mm-day" data-date="' + esc(d.date) + '">' + dn +
             (d.overtime ? ' <span class="mm-ovr">' + ICO.warn + '</span>' : '') +
             ' <small>' + esc(d.dow) + '</small>' +
-            (d.absence ? '<span class="mm-abs" title="' + esc(d.absence.typ) + '">' + esc(d.absence.code) + '</span>' : '') +
             '</td>';
     html += '<td><input type="time" class="mm-in" value="' + esc(d.wejscie || '') + '"></td>';
     html += '<td><input type="time" class="mm-out" value="' + esc(d.wyjscie || '') + '"></td>';
+    html += '<td class="t-hours">' + ((d.mins !== null && d.mins !== undefined) ? fmtHM(d.mins) : '—') + '</td>';
+    html += '<td>' + absSelectHtml(d.absence ? d.absence.code : '') + '</td>';
     html += '</tr>';
   });
-  html += '</tbody></table></div>';
+  html += '</tbody><tfoot><tr><td colspan="3" style="text-align:right;font-weight:700">RAZEM</td>' +
+    '<td class="t-hours" style="font-weight:700">' + fmtHM(totalMinutes) + '</td><td></td></tr></tfoot></table></div>';
   document.getElementById('mm-table-wrap').innerHTML = html;
 
   document.querySelectorAll('#mm-table-wrap .mm-day').forEach(function(td) {
     td.addEventListener('click', function() { gotoDay(td.getAttribute('data-date')); });
   });
 
+  var dayByDate = {};
+  days.forEach(function(d) { dayByDate[d.date] = d; });
+
   document.querySelectorAll('#mm-table-wrap tr[data-date]').forEach(function(tr) {
     var date = tr.getAttribute('data-date');
     var inEl  = tr.querySelector('.mm-in');
     var outEl = tr.querySelector('.mm-out');
+    var absSel = tr.querySelector('.mm-abs-sel');
 
     function saveRow() {
       inEl.classList.remove('saved'); outEl.classList.remove('saved');
@@ -605,18 +631,7 @@ function renderMonthTable(days) {
       gas('masterSetDay', [M.token, M.mmEmpId, date, inEl.value, outEl.value], function(res) {
         inEl.classList.remove('saving'); outEl.classList.remove('saving');
         if (res && res.ok) {
-          inEl.classList.add('saved'); outEl.classList.add('saved');
-          setTimeout(function(){ inEl.classList.remove('saved'); outEl.classList.remove('saved'); }, 1500);
-          var dc = tr.querySelector('.mm-day');
-          var ov = dc.querySelector('.mm-ovr');
-          if (res.overtime && !ov) {
-            var wrap = document.createElement('span');
-            wrap.className = 'mm-ovr'; wrap.innerHTML = ICO.warn;
-            dc.insertBefore(document.createTextNode(' '), dc.querySelector('small'));
-            dc.insertBefore(wrap, dc.querySelector('small'));
-          } else if (!res.overtime && ov) {
-            ov.remove();
-          }
+          loadMonthTable();
         } else if (res && res.errorType === 'UNAUTHORIZED') {
           location.reload();
         } else {
@@ -627,6 +642,25 @@ function renderMonthTable(days) {
 
     inEl.addEventListener('change', saveRow);
     outEl.addEventListener('change', saveRow);
+
+    // Oznaczanie nieobecności bezpośrednio z widoku Miesiąc (bez skoku do "Dzień").
+    if (absSel) {
+      absSel.addEventListener('change', function() {
+        // Nie kasuj istniejącej adnotacji przy samej zmianie typu — zachowaj ją,
+        // jeśli dzień już miał zapisaną nieobecność (edytowalna tylko w "Dniu").
+        var existing = dayByDate[date] && dayByDate[date].absence ? dayByDate[date].absence.note : '';
+        gas('masterSetAbsence', [M.token, M.mmEmpId, date, absSel.value, existing || ''], function(res) {
+          if (res && res.ok) {
+            toast('Zapisano.', true);
+            loadMonthTable();
+          } else if (res && res.errorType === 'UNAUTHORIZED') {
+            location.reload();
+          } else {
+            toast((res && res.msg) || 'Błąd zapisu.', false);
+          }
+        });
+      });
+    }
   });
 }
 
