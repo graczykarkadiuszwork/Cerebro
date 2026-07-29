@@ -51,10 +51,19 @@
 <!-- PANEL -->
 <div id="s-panel" style="display:none">
   <header class="hero">
-    <div class="hero-row">
+    <!-- Strefa 1: tożsamość + kontrola sesji (motyw, wylogowanie) -->
+    <div class="hero-top">
       <span class="wm on-dark hero-title">we<b>SMILE</b> · Właściciel</span>
-      <div class="bar-right">
-        <button id="m-theme" class="btn-bar icon-only theme-ic" aria-label="Przełącz tryb nocny"></button>
+      <button id="m-theme" class="btn-bar icon-only theme-ic" aria-label="Przełącz tryb nocny"></button>
+      <button id="m-logout" class="btn-bar danger">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"/><path d="M21 12H8"/><path d="M15 16l4-4-4-4"/></svg>
+        Wyloguj
+      </button>
+    </div>
+    <div class="hero-divider"></div>
+    <!-- Strefa 2: przełączanie widoków, zgrupowane osobno od kontroli sesji -->
+    <div class="hero-nav">
+      <div class="nav-group">
         <button id="nav-dashboard" class="btn-bar" title="Panel Raportowy">
           <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-6 4 3 5-8"/></svg>
           Raporty
@@ -62,10 +71,6 @@
         <button id="nav-worker" class="btn-bar" title="Ekran odbić">
           <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 18h6"/></svg>
           Odbicia
-        </button>
-        <button id="m-logout" class="btn-bar danger">
-          <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"/><path d="M21 12H8"/><path d="M15 16l4-4-4-4"/></svg>
-          Wyloguj
         </button>
       </div>
     </div>
@@ -136,7 +141,10 @@
       <button id="m-save" class="btn btn-primary" style="margin-top:16px">Zapisz wszystko</button>
       <button id="m-clear" class="btn-link">Wyczyść formularz</button>
 
-      <div class="hint" style="padding:16px 4px;text-align:left">Puste pole godziny = brak zdarzenia tego typu w tym dniu. Pusty typ nieobecności = usuwa nieobecność dnia; puste uzasadnienie = usuwa uzasadnienie. Zapis nadpisuje istniejące dane wybranego dnia. Każda zmiana jest logowana.</div>
+      <div class="tip" style="margin-top:16px">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>
+        <span class="tip-body"><span class="tip-eyebrow">Wskazówka</span>Puste pole godziny = brak zdarzenia tego typu w tym dniu. Pusty typ nieobecności = usuwa nieobecność dnia; puste uzasadnienie = usuwa uzasadnienie. Zapis nadpisuje istniejące dane wybranego dnia. Każda zmiana jest logowana.</span>
+      </div>
     </div>
 
     <!-- ── WIDOK: MIESIĄC ── -->
@@ -155,14 +163,17 @@
 
       <div id="mm-table-wrap"><div class="hint">Wybierz pracownika, żeby wczytać miesiąc.</div></div>
 
-      <div class="hint" style="padding:16px 4px;text-align:left">Zmiana godziny zapisuje się automatycznie po opuszczeniu pola (żółte obramowanie = zapisuję, niebieskie = zapisano). Puste pole = usuwa dane zdarzenie tego dnia. Fioletowa plakietka = nieobecność, trójkąt = dzień poza godzinami Kliniki — dotknij numeru dnia, aby przejść do szybkiej edycji.</div>
+      <div class="tip" style="margin-top:16px">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>
+        <span class="tip-body"><span class="tip-eyebrow">Wskazówka</span>Zmiana godziny zapisuje się automatycznie po opuszczeniu pola (żółte obramowanie = zapisuję, niebieskie = zapisano). Puste pole = usuwa dane zdarzenie tego dnia. Fioletowa plakietka = nieobecność, trójkąt = dzień poza godzinami Kliniki — dotknij numeru dnia, aby przejść do szybkiej edycji.</span>
+      </div>
     </div>
 
     <!-- ── WIDOK: URLOP (zakres dat, dla jednego pracownika) ── -->
     <div id="view-range" style="display:none">
       <div class="info-box">
         <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>
-        <span>Jednym zapisem oznacza (lub czyści) nieobecność wybranego pracownika w całym zakresie dat — bez klikania dzień po dniu. Osobne narzędzie od edycji pojedynczego dnia i od „Dni wolnych” (te dotyczą całej Kliniki).</span>
+        <span><span class="tip-eyebrow">Wskazówka</span>Jednym zapisem oznacza (lub czyści) nieobecność wybranego pracownika w całym zakresie dat — bez klikania dzień po dniu. Osobne narzędzie od edycji pojedynczego dnia i od „Dni wolnych” (te dotyczą całej Kliniki).</span>
       </div>
 
       <div class="field" style="position:relative;margin-top:16px">
@@ -206,7 +217,7 @@
     <div id="view-daysoff" style="display:none">
       <div class="info-box">
         <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>
-        <span>Operacja obejmuje jednym zapisem wszystkich aktywnych pracowników — np. święto, dzień zamknięcia Kliniki, remont. To osobne narzędzie od edycji pojedynczego pracownika powyżej.</span>
+        <span><span class="tip-eyebrow">Wskazówka</span>Operacja obejmuje jednym zapisem wszystkich aktywnych pracowników — np. święto, dzień zamknięcia Kliniki, remont. To osobne narzędzie od edycji pojedynczego pracownika powyżej.</span>
       </div>
 
       <div class="field-row2" style="margin-top:16px">
@@ -244,7 +255,7 @@
     <div id="view-staff" style="display:none">
       <div class="info-box">
         <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>
-        <span>Forma zatrudnienia decyduje, jakie typy nieobecności widzi pracownik w samoobsłudze oraz czy dzień urlopu liczy się jako 8h w miesięcznej sumie godzin (dotyczy tylko UoP). Bez ustawienia tego pola pracownik widzi pełną listę, a jego urlopy nie doliczają godzin.</span>
+        <span><span class="tip-eyebrow">Wskazówka</span>Forma zatrudnienia decyduje, jakie typy nieobecności widzi pracownik w samoobsłudze oraz czy dzień urlopu liczy się jako 8h w miesięcznej sumie godzin (dotyczy tylko UoP). Bez ustawienia tego pola pracownik widzi pełną listę, a jego urlopy nie doliczają godzin.</span>
       </div>
       <div id="staff-list" style="margin-top:16px"><div class="hint">Ładowanie…</div></div>
     </div>

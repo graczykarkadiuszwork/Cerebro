@@ -140,12 +140,24 @@ button,input,select,textarea{font-family:inherit}
 .hero-title{font-weight:700;font-size:15px;color:#fff;white-space:nowrap;letter-spacing:.01em}
 .bar-right{display:flex;gap:8px;margin-left:auto}
 
+/* Hero — dwie odrębne strefy, żeby „wszystko w jednym miejscu" nie zlewało się:
+   .hero-top = tożsamość + kontrola sesji (motyv, wylogowanie);
+   .hero-nav = przełączanie widoków, zgrupowane w osobnej kapsule pod spodem. */
+.hero-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:relative;z-index:1;width:100%}
+.hero-nav{display:flex;align-items:center;gap:10px;position:relative;z-index:1;width:100%}
+.hero-divider{width:100%;height:1px;background:rgba(255,255,255,.14);margin:2px 0 4px}
+.nav-group{display:flex;gap:4px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.10);
+  border-radius:var(--r-pill);padding:5px;backdrop-filter:blur(8px)}
+.nav-group .btn-bar{background:transparent}
+.nav-group .btn-bar:active{background:rgba(255,255,255,.16)}
+.nav-group .btn-bar.on{background:rgba(255,255,255,.20);box-shadow:0 2px 8px rgba(0,0,0,.15)}
+
 .btn-bar{background:rgba(255,255,255,.14);border:none;border-radius:var(--r-pill);color:#fff;padding:10px 16px;min-height:42px;
   cursor:pointer;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;backdrop-filter:blur(8px);
   transition:background .15s var(--ease),transform .1s var(--ease)}
 .btn-bar:active{background:rgba(255,255,255,.26);transform:scale(.96)}
-.btn-bar.icon-only{padding:0;width:42px;justify-content:center}
-.btn-bar.danger{background:rgba(123,30,59,.55)}
+.btn-bar.icon-only{padding:0;width:42px;justify-content:center;flex-shrink:0}
+.btn-bar.danger{background:rgba(123,30,59,.55);margin-left:auto}
 .btn-bar.danger:active{background:rgba(123,30,59,.8)}
 .nav-btn-dark{background:rgba(255,255,255,.14);border:none;border-radius:50%;color:#fff;width:42px;height:42px;cursor:pointer;flex-shrink:0;
   display:flex;align-items:center;justify-content:center;transition:background .15s var(--ease)}
@@ -435,10 +447,30 @@ tr.note-tr .nt-ovr{color:var(--c-accent)}
 .ic-sm{width:16px;height:16px}
 .ic-lg{width:32px;height:32px}
 .muted{color:var(--c-muted)}
+
+/* ── Rodziny informacji ──────────────────────────────────────
+   Trzy odrębne, nie-mylące się języki wizualne:
+   1) .card / .section  — treść nadrzędna i pola robocze (patrz wyżej):
+      pełne tło, pełna krawędź, bez kursywy — "to jest dane/formularz".
+   2) .hint              — stan systemu (ładowanie, brak danych, pusty
+      wynik): wyśrodkowany, wyciszony tekst, bez ramki — nic do zrobienia.
+   3) .tip / .info-box   — samouczek/wskazówka: przerywana ramka,
+      półprzezroczyste tło, ikona + eyebrow „WSKAZÓWKA”, kursywa —
+      zawsze rozpoznawalne na pierwszy rzut oka jako pomoc, nie dane. ── */
 .hint{text-align:center;color:var(--c-muted);padding:44px 16px;font-size:15px;line-height:1.6}
-.info-box{display:flex;gap:11px;background:var(--c-navy-tint);border:1px solid var(--c-border);border-radius:var(--r-m);padding:14px 16px;font-size:13px;line-height:1.55;color:var(--c-navy)}
-:root[data-theme="dark"] .info-box{color:var(--c-muted)}
-.info-box .ic{flex-shrink:0;margin-top:1px}
+
+.tip,.info-box{
+  display:flex;gap:12px;align-items:flex-start;
+  background:rgba(107,114,128,.07);border:1.5px dashed var(--c-border-strong);
+  border-radius:var(--r-m);padding:14px 16px;color:var(--c-muted);
+}
+:root[data-theme="dark"] .tip,:root[data-theme="dark"] .info-box{background:rgba(154,166,176,.08)}
+.tip .ic,.info-box .ic{flex-shrink:0;margin-top:1px;color:var(--c-primary)}
+.tip-body,.info-box>span{font-size:13px;line-height:1.6;font-style:italic}
+.tip-eyebrow{
+  display:block;font-style:normal;font-size:10px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.9px;color:var(--c-primary);margin-bottom:3px;
+}
 .confirm-row{display:flex;gap:10px;margin-top:6px}
 .confirm-row .btn{width:auto;flex:1}
 
