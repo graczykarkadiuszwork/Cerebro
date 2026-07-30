@@ -125,6 +125,27 @@
 </head>
 <body>
 
+<script>
+/* Wybór wersji interfejsu. Apps Script nie udostępnia User-Agent w doGet,
+   więc decyzja zapada po stronie klienta — raz podjęty wybór zapamiętujemy,
+   żeby nie odbierać nikomu kontroli nad tym, czego używa. */
+(function () {
+  try {
+    var wybor = localStorage.getItem('wesmile_ui');
+    var param = (location.search.match(/[?&]ui=(\w+)/) || [])[1];
+    if (param) { localStorage.setItem('wesmile_ui', param); wybor = param; }
+    if (wybor === 'desktop') return;
+
+    var maly = window.matchMedia('(max-width:820px)').matches;
+    var dotyk = /Android|iPhone|iPod|Windows Phone/i.test(navigator.userAgent);
+    if (wybor === 'mobile' || maly || dotyk) {
+      document.documentElement.style.visibility = 'hidden';
+      window.open("<?= BASE_URL ?>?page=owner-mobile", '_top');
+    }
+  } catch (e) { /* przy jakimkolwiek problemie zostajemy na desktopie */ }
+})();
+</script>
+
 <!-- LOGIN -->
 <div id="s-login" class="screen brand-screen">
   <button class="btn-icon corner-toggle theme-ic" onclick="wsToggleTheme()" aria-label="Przełącz tryb nocny"></button>
@@ -654,6 +675,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
       <span>Pomoc</span>
     </button>
+    <button class="seg-btn" id="tab-mobile" style="margin-top:8px;border-top:1px solid var(--c-border);border-radius:0;padding-top:14px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M10.5 18.5h3"/></svg>
+      <span>Wersja mobilna</span>
+    </button>
   </nav>
 </div>
 
@@ -913,6 +938,12 @@ document.getElementById('kp-login').addEventListener('click', function(e) {
 });
 
 document.getElementById('m-logout').addEventListener('click', function() { location.reload(); });
+
+// Ręczne przejście na wersję mobilną (wybór zostaje zapamiętany).
+document.getElementById('tab-mobile').addEventListener('click', function() {
+  try { localStorage.setItem('wesmile_ui', 'mobile'); } catch (e) {}
+  window.open(BASE_URL + '?page=owner-mobile', '_top');
+});
 
 // ── Kto jest w pracy / kto skończył — pasek, zawsze widoczny ──────
 var _mActiveTimer;

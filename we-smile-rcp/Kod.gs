@@ -236,6 +236,17 @@ function doGet(e) {
       .setTitle('We SMILE')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
+  // Panel Właściciela w wersji mobilnej — osobny interfejs, nie responsywna
+  // wersja desktopu. Apps Script nie udostępnia nagłówka User-Agent w doGet,
+  // więc wyboru wersji dokonuje klient (przekierowanie + zapamiętany wybór).
+  if (p === 'owner-mobile') {
+    const tmpl = HtmlService.createTemplateFromFile('MobileGUI');
+    tmpl.BASE_URL = ScriptApp.getService().getUrl();
+    return tmpl.evaluate()
+      .setTitle('We SMILE')
+      .addMetaTag('viewport', 'width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
   const page = (p === 'admin') ? 'admin' : 'worker';
   const tmpl = HtmlService.createTemplateFromFile('Index');
   tmpl.PAGE  = page;
