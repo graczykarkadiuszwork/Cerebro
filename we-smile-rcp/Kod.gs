@@ -3,13 +3,18 @@
 // ============================================================
 //
 // Schemat arkusza (ID poniżej):
-//   Pracownicy    : [ID, Imię, Nazwisko, Rola, Status, PIN]
+//   Pracownicy    : [ID, Imię, Nazwisko, Rola, Status, PIN, FormaZatrudnienia, TagiSpecjalizacji]
 //   Ewidencja     : [Timestamp, EmpID, Imię, Nazwisko, Akcja, Data, Godzina, Źródło]
 //   Anomalie      : [Timestamp, EmpID, Opis]
 //   Nieobecnosci  : [Timestamp, EmpID, Imię, Nazwisko, Data, Kod, Typ, Adnotacja, Źródło]
 //   Przekroczenia : [Timestamp, EmpID, Data, Uzasadnienie, Źródło]
+//   Gabinety      : [ID, Nazwa, Kolejnosc, Aktywny]
+//   Grafik        : [ID, GabinetID, DzienTygodnia, Typ, OsobaID, Od, Do, AsystaWymagana, AsystaUwaga, Zmodyfikowano]
+//   GrafikAsysta  : [ID, BlokID, OsobaID, Od, Do, Zmodyfikowano]
 //
 // Po wgraniu do GAS uruchom raz ręcznie: setupRCP()
+// (bezpieczne do ponownego uruchomienia — dopisuje tylko brakujące
+//  kolumny i arkusze, nie rusza istniejących danych)
 // ============================================================
 
 const SS_ID          = '1wI3ysrolzGea5nNi7GYBo09t38y8oUgPoqGG3wn-ZsA';
@@ -54,6 +59,93 @@ function _overtimeMinutes(ds, wejscie, wyjscie) {
   if (wyjscie && _t2m(wyjscie) > h.close) mins += _t2m(wyjscie) - h.close;
   return mins;
 }
+
+// ── Grafik obsady gabinetów ──────────────────────────────────
+// Godziny OBSADY gabinetów wg szablonu grafiku: Pn–Pt 9:00–20:00,
+// Sb 10:00–15:00 (jedna zmiana), Nd — klinika nieczynna.
+//
+// UWAGA: to celowo NIE są te same wartości co w _clinicHoursFor().
+// Tamte (szersze: Pn–Pt 8–21, Sb 9–16) służą do wykrywania pracy poza
+// godzinami w RCP i mają zapas na wejście przed otwarciem i wyjście po
+// zamknięciu. Tutaj chodzi o okno, w którym gabinet ma mieć obsadę.
+
+const GRAFIK_HOURS = {
+  1: { open:  9 * 60, close: 20 * 60 },  // Poniedziałek
+  2: { open:  9 * 60, close: 20 * 60 },
+  3: { open:  9 * 60, close: 20 * 60 },
+  4: { open:  9 * 60, close: 20 * 60 },
+  5: { open:  9 * 60, close: 20 * 60 },  // Piątek
+  6: { open: 10 * 60, close: 15 * 60 },  // Sobota — jedna zmiana 10:00–15:00
+  0: null                                // Niedziela — nieczynne
+};
+
+const GRAFIK_DAYS = [1, 2, 3, 4, 5, 6];
+const GRAFIK_DAY_NAMES = {
+  1: 'Poniedziałek', 2: 'Wtorek', 3: 'Środa',
+  4: 'Czwartek', 5: 'Piątek', 6: 'Sobota'
+};
+
+// Typy bloków w gabinecie. Higienizacja zajmuje gabinet tak samo jak
+// lekarz — ta sama siatka, inny typ obsady.
+const BLOK_LEKARZ = 'Lekarz';
+const BLOK_HIGIENA = 'Higienizacja';
+const BLOK_TYPES = [BLOK_LEKARZ, BLOK_HIGIENA];
+
+// ── Grupy zawodowe ───────────────────────────────────────────
+// Rola w arkuszu Pracownicy jest polem tekstowym (historycznie wpisywana
+// swobodnie: „higienistka stomatologiczna", „asystentka stomatologiczna"…).
+// Klasyfikujemy ją do grupy, żeby grafik wiedział, kogo gdzie wolno wpisać,
+// bez wymuszania migracji istniejących danych.
+
+const GRUPA_LEKARZ = 'lekarz';
+const GRUPA_HIGIENISTKA = 'higienistka';
+const GRUPA_ASYSTENTKA = 'asystentka';
+const GRUPA_INNE = 'inne';
+
+function _grupaZawodowa(rola) {
+  const r = String(rola || '').toLowerCase();
+  if (r.indexOf('higienist') !== -1) return GRUPA_HIGIENISTKA;
+  if (r.indexOf('asystent') !== -1)  return GRUPA_ASYSTENTKA;
+  if (r.indexOf('lekarz') !== -1 || r.indexOf('dentyst') !== -1 ||
+      r.indexOf('stomatolog') === 0 || r === 'dr' || r.indexOf('doktor') !== -1) {
+    return GRUPA_LEKARZ;
+  }
+  return GRUPA_INNE;
+}
+
+// ── Tagi specjalizacji lekarzy ───────────────────────────────
+// Przypisywane w panelu Właściciela → Zespół (można wybrać kilka).
+// Silnik rekomendacji używa ich do dopasowania sugestii do konkretnego
+// lekarza (np. „ten lekarz robi endodoncję — wydłuż mu blok”).
+
+const DOCTOR_SPECIALIZATION_TAGS = [
+  'Stomatologia zachowawcza',
+  'Endodoncja',
+  'Endodoncja mikroskopowa',
+  'Protetyka',
+  'Protetyka na implantach',
+  'Implantologia',
+  'Chirurgia stomatologiczna',
+  'Ekstrakcje chirurgiczne',
+  'Periodontologia',
+  'Ortodoncja',
+  'Ortodoncja — aparaty stałe',
+  'Ortodoncja — nakładkowa',
+  'Pedodoncja (dzieci)',
+  'Stomatologia estetyczna',
+  'Licówki',
+  'Wybielanie',
+  'Profilaktyka i higienizacja',
+  'Korony i mosty',
+  'Leczenie w sedacji',
+  'Znieczulenie ogólne',
+  'Diagnostyka RTG / CBCT',
+  'Zaburzenia SSŻ / bruksizm',
+  'Gnatologia',
+  'Traumatologia stomatologiczna',
+  'Leczenie pod mikroskopem',
+  'Konsultacje / pierwsza wizyta'
+];
 
 // ── Forma zatrudnienia ───────────────────────────────────────
 // Ustawiana raz na pracownika (panel Właściciela → Pracownicy).
@@ -185,6 +277,14 @@ function callRCP(action, argsJson) {
       case 'masterSetAbsenceRange': return masterSetAbsenceRange(args[0], args[1], args[2], args[3], args[4], args[5]);
       case 'masterSetEmploymentForm': return masterSetEmploymentForm(args[0], args[1], args[2]);
       case 'masterGetArchivedEmployees': return masterGetArchivedEmployees(args[0]);
+      case 'masterSetDoctorTags':   return masterSetDoctorTags(args[0], args[1], args[2]);
+      // Grafik obsady gabinetów + rekomendacje
+      case 'masterGetGrafik':       return masterGetGrafik(args[0]);
+      case 'masterSaveGabinet':     return masterSaveGabinet(args[0], args[1], args[2], args[3]);
+      case 'masterRemoveGabinet':   return masterRemoveGabinet(args[0], args[1]);
+      case 'masterSaveGrafikBlok':  return masterSaveGrafikBlok(args[0], args[1]);
+      case 'masterDeleteGrafikBlok': return masterDeleteGrafikBlok(args[0], args[1]);
+      case 'masterSetGrafikAsysta': return masterSetGrafikAsysta(args[0], args[1], args[2]);
       case 'masterRemoveEmployee':  return masterRemoveEmployee(args[0], args[1]);
       case 'masterRestoreEmployee': return masterRestoreEmployee(args[0], args[1]);
       case 'masterAddEmployee':     return masterAddEmployee(args[0], args[1], args[2], args[3], args[4]);
@@ -253,7 +353,17 @@ function _getWorkers() {
   const sh = _ss().getSheetByName('Pracownicy');
   if (!sh || sh.getLastRow() < 2) return [];
   return sh.getDataRange().getValues().slice(1);
-  // cols: 0=ID, 1=Imię, 2=Nazwisko, 3=Rola, 4=Status, 5=PIN, 6=FormaZatrudnienia (może być puste)
+  // cols: 0=ID, 1=Imię, 2=Nazwisko, 3=Rola, 4=Status, 5=PIN,
+  //       6=FormaZatrudnienia (może być puste), 7=TagiSpecjalizacji (CSV, może być puste)
+}
+
+// Pracownicy objęci RCP (odbicia, raporty miesięczne, eksport, pasek obecności).
+// Lekarze siedzą w tej samej tabeli, żeby cała kadra miała spójną strukturę,
+// ale nie odbijają się na kiosku — pokazywanie ich w raportach dawałoby stałe
+// 0 h i fałszowało obraz. W Zespole i w Grafiku są widoczni normalnie.
+function _isRcpWorker(w) {
+  return String(w[4]).toLowerCase() === 'aktywny' &&
+         _grupaZawodowa(w[3]) !== GRUPA_LEKARZ;
 }
 
 function _findActiveByPin(pin) {
@@ -265,8 +375,13 @@ function _findActiveByPin(pin) {
 // Porównuje PINy z uwzględnieniem wiodących zer
 // (Sheets może zapisać "0371" jako liczbę 371)
 function _pinMatch(stored, entered) {
-  const a = String(stored).padStart(4, '0');
-  const b = String(entered).padStart(4, '0');
+  // Pracownik bez PIN-u (np. lekarz, który nie odbija się w RCP) NIGDY nie może
+  // zostać dopasowany — inaczej padStart('') dałoby '0000' i wpisanie 0000
+  // logowałoby na jego konto. Pusty PIN = konto bez dostępu do kiosku.
+  const rawStored = String(stored == null ? '' : stored).trim();
+  if (!rawStored) return false;
+  const a = rawStored.padStart(4, '0');
+  const b = String(entered == null ? '' : entered).trim().padStart(4, '0');
   return a === b;
 }
 
@@ -485,12 +600,16 @@ function setupRCP() {
   const spreadsheet = _ss();
 
   [
-    { name: 'Pracownicy',    h: ['ID', 'Imię', 'Nazwisko', 'Rola', 'Status', 'PIN', 'FormaZatrudnienia'] },
+    { name: 'Pracownicy',    h: ['ID', 'Imię', 'Nazwisko', 'Rola', 'Status', 'PIN', 'FormaZatrudnienia', 'TagiSpecjalizacji'] },
     { name: 'Ewidencja',     h: ['Timestamp', 'EmpID', 'Imię', 'Nazwisko', 'Akcja', 'Data', 'Godzina', 'Źródło'] },
     { name: 'Anomalie',      h: ['Timestamp', 'EmpID', 'Opis'] },
     { name: 'Statusy',       h: ['Date', 'EmpID', 'Status', 'Notes', 'Modified'] },
     { name: 'Nieobecnosci',  h: ['Timestamp', 'EmpID', 'Imię', 'Nazwisko', 'Data', 'Kod', 'Typ', 'Adnotacja', 'Źródło'] },
-    { name: 'Przekroczenia', h: ['Timestamp', 'EmpID', 'Data', 'Uzasadnienie', 'Źródło'] }
+    { name: 'Przekroczenia', h: ['Timestamp', 'EmpID', 'Data', 'Uzasadnienie', 'Źródło'] },
+    // ── Grafik obsady gabinetów ──
+    { name: 'Gabinety',      h: ['ID', 'Nazwa', 'Kolejnosc', 'Aktywny'] },
+    { name: 'Grafik',        h: ['ID', 'GabinetID', 'DzienTygodnia', 'Typ', 'OsobaID', 'Od', 'Do', 'AsystaWymagana', 'AsystaUwaga', 'Zmodyfikowano'] },
+    { name: 'GrafikAsysta',  h: ['ID', 'BlokID', 'OsobaID', 'Od', 'Do', 'Zmodyfikowano'] }
   ].forEach(def => {
     let sh = spreadsheet.getSheetByName(def.name);
     if (!sh) sh = spreadsheet.insertSheet(def.name);
@@ -521,6 +640,20 @@ function setupRCP() {
     Logger.log('Dodano ' + employees.length + ' pracowników.');
   } else {
     Logger.log('Pracownicy już istnieją — pominięto import.');
+  }
+
+  // Gabinety — startowo 3 (jak w szablonie grafiku), ale lista jest w pełni
+  // edytowalna w panelu Właściciela: można dodać, zmienić nazwę i wycofać.
+  const gSh = spreadsheet.getSheetByName('Gabinety');
+  if (gSh.getLastRow() <= 1) {
+    [
+      ['G1', 'Gabinet 1', 1, 'TAK'],
+      ['G2', 'Gabinet 2', 2, 'TAK'],
+      ['G3', 'Gabinet 3', 3, 'TAK']
+    ].forEach(row => gSh.appendRow(row));
+    Logger.log('Dodano 3 startowe gabinety.');
+  } else {
+    Logger.log('Gabinety już istnieją — pominięto import.');
   }
 
   const props = PropertiesService.getScriptProperties();

@@ -202,7 +202,7 @@ function _dashboardData(year, month) {
     const DOW = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'];
 
     const employees = _getWorkers()
-      .filter(w => String(w[4]).toLowerCase() === 'aktywny')
+      .filter(_isRcpWorker)
       .map(w => {
         const id = String(w[0]);
         const forma = String(w[6] || '');
@@ -352,7 +352,7 @@ function _exportMetaData() {
   const { minDate } = _buildEwidMap();
   const today = _todayPL();
   const employees = _getWorkers()
-    .filter(w => String(w[4]).toLowerCase() === 'aktywny')
+    .filter(_isRcpWorker)
     .map(w => ({ id: String(w[0]), imie: String(w[1]), nazwisko: String(w[2]) }));
 
   return {
@@ -401,7 +401,7 @@ function _dashExportXlsxData(opts) {
     return { ok: false, msg: 'Nieprawidłowy zakres dat.' };
   }
 
-  const workers = _getWorkers().filter(w => String(w[4]).toLowerCase() === 'aktywny');
+  const workers = _getWorkers().filter(_isRcpWorker);
   const wantedIds = Array.isArray(opts.employeeIds) && opts.employeeIds.length
     ? opts.employeeIds.map(String)
     : workers.map(w => String(w[0]));
@@ -586,11 +586,24 @@ function masterGetEmployees(token) {
   if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
   const employees = _getWorkers()
     .filter(w => String(w[4]).toLowerCase() === 'aktywny')
-    .map(w => ({
-      id: String(w[0]), imie: String(w[1]), nazwisko: String(w[2]),
-      rola: String(w[3]), status: String(w[4]), forma: String(w[6] || '')
-    }));
-  return { ok: true, employees };
+    .map(_workerToObj);
+  return { ok: true, employees, tagiDostepne: DOCTOR_SPECIALIZATION_TAGS };
+}
+
+// Wspólne mapowanie wiersza arkusza na obiekt dla frontendu.
+function _workerToObj(w) {
+  const tagiRaw = String(w[7] || '').trim();
+  return {
+    id: String(w[0]),
+    imie: String(w[1]),
+    nazwisko: String(w[2]),
+    rola: String(w[3]),
+    status: String(w[4]),
+    forma: String(w[6] || ''),
+    tagi: tagiRaw ? tagiRaw.split(',').map(t => t.trim()).filter(t => t) : [],
+    grupa: _grupaZawodowa(w[3]),
+    maPin: !!String(w[5] == null ? '' : w[5]).trim()
+  };
 }
 
 // ── Archiwum pracowników — usunięcie z zespołu = zmiana statusu,
@@ -601,10 +614,7 @@ function masterGetArchivedEmployees(token) {
   if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
   const employees = _getWorkers()
     .filter(w => String(w[4]).toLowerCase() !== 'aktywny')
-    .map(w => ({
-      id: String(w[0]), imie: String(w[1]), nazwisko: String(w[2]),
-      rola: String(w[3]), status: String(w[4]), forma: String(w[6] || '')
-    }));
+    .map(_workerToObj);
   return { ok: true, employees };
 }
 
@@ -651,11 +661,23 @@ function masterAddEmployee(token, imie, nazwisko, rola, pin) {
   pin = String(pin || '').trim();
 
   if (!imie || !nazwisko) return { ok: false, msg: 'Podaj imię i nazwisko.' };
-  if (!/^\d{4}$/.test(pin)) return { ok: false, msg: 'PIN musi mieć dokładnie 4 cyfry.' };
+
+  // Lekarze nie odbijają się w RCP — PIN jest dla nich opcjonalny. Trzymamy ich
+  // jednak w tej samej tabeli Pracownicy, żeby cała kadra miała spójną strukturę
+  // (jedna lista, jedno archiwum, jedne nieobecności).
+  const grupa = _grupaZawodowa(rola);
+  const pinOptional = (grupa === GRUPA_LEKARZ);
+
+  if (!pin && !pinOptional) {
+    return { ok: false, msg: 'PIN musi mieć dokładnie 4 cyfry.' };
+  }
+  if (pin && !/^\d{4}$/.test(pin)) {
+    return { ok: false, msg: 'PIN musi mieć dokładnie 4 cyfry.' };
+  }
 
   const sh = _ss().getSheetByName('Pracownicy');
   const rows = sh.getDataRange().getValues().slice(1);
-  if (rows.some(r => _pinMatch(r[5], pin))) {
+  if (pin && rows.some(r => _pinMatch(r[5], pin))) {
     return { ok: false, msg: 'Ten PIN jest już używany przez innego pracownika.' };
   }
 
@@ -666,9 +688,42 @@ function masterAddEmployee(token, imie, nazwisko, rola, pin) {
   });
   const id = 'WS' + String(maxNum + 1).padStart(2, '0');
 
-  sh.appendRow([id, imie, nazwisko, rola || '—', 'Aktywny', pin, '']);
-  _logAdmin('DodaniePracownika', id, imie + ' ' + nazwisko);
-  return { ok: true, employee: { id, imie, nazwisko, rola: rola || '—', status: 'Aktywny', forma: '' } };
+  sh.appendRow([id, imie, nazwisko, rola || '—', 'Aktywny', pin, '', '']);
+  _logAdmin('DodaniePracownika', id, imie + ' ' + nazwisko + ' (' + (rola || '—') + ')');
+  return {
+    ok: true,
+    employee: {
+      id, imie, nazwisko, rola: rola || '—', status: 'Aktywny',
+      forma: '', tagi: [], grupa
+    }
+  };
+}
+
+// ── Tagi specjalizacji lekarza ────────────────────────────────
+// Lista wielokrotnego wyboru z DOCTOR_SPECIALIZATION_TAGS; zapisywana
+// jako CSV w kolumnie 8. Zasila silnik rekomendacji grafiku.
+
+function masterSetDoctorTags(token, empId, tags) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  if (!empId) return { ok: false, msg: 'Brak pracownika.' };
+
+  const list = (Array.isArray(tags) ? tags : String(tags || '').split(','))
+    .map(t => String(t).trim())
+    .filter(t => t && DOCTOR_SPECIALIZATION_TAGS.indexOf(t) !== -1);
+
+  const unique = [];
+  list.forEach(t => { if (unique.indexOf(t) === -1) unique.push(t); });
+
+  const sh = _ss().getSheetByName('Pracownicy');
+  const rows = sh.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]) === String(empId)) {
+      sh.getRange(i + 1, 8).setValue(unique.join(', '));
+      _logAdmin('SetTagiSpecjalizacji', String(empId), unique.join(', ') || '(wyczyszczono)');
+      return { ok: true, tagi: unique };
+    }
+  }
+  return { ok: false, msg: 'Pracownik nie istnieje.' };
 }
 
 // ── Forma zatrudnienia — edycja przez właściciela ──────────────
@@ -876,7 +931,7 @@ function masterSetClinicDayOff(token, dateFrom, dateTo, typeCode, note) {
 
   note = String(note || '').trim().slice(0, 500);
 
-  const workers = _getWorkers().filter(w => String(w[4]).toLowerCase() === 'aktywny');
+  const workers = _getWorkers().filter(_isRcpWorker);
   workers.forEach(w => {
     _upsertAbsence(String(w[0]), String(w[1]), String(w[2]), dateFrom, dateTo, type, note, 'admin_bulk');
   });

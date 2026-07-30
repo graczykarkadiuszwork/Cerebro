@@ -47,6 +47,80 @@
 .staff-role{font-size:12px;color:var(--c-muted)}
 .staff-warn-lbl{font-size:11px;color:var(--c-accent);font-weight:700;display:block;margin-top:2px}
 .staff-forma-sel{width:auto;min-height:40px;padding:8px 32px 8px 12px;font-size:13px;flex-shrink:0}
+.staff-tags{flex-basis:100%;display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.staff-tag{font-size:11px;font-weight:600;padding:4px 9px;border-radius:var(--radius-pill);background:var(--c-primary-tint);color:var(--c-primary);border:none;cursor:pointer}
+.staff-tag.off{background:var(--c-field);color:var(--c-muted)}
+.staff-tags-toggle{font-size:12px;color:var(--c-primary);font-weight:700;background:none;border:none;cursor:pointer;padding:4px 0}
+
+/* ── Grafik obsady gabinetów ── */
+.gr-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.gr-toolbar .btn{width:auto;flex:0 1 auto;margin-top:0}
+.gr-rek-btn{position:relative}
+.gr-badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--c-accent);color:#fff;font-size:11px;font-weight:800;margin-left:6px}
+.gr-badge.zero{background:var(--c-success)}
+
+.gr-day-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.gr-day-name{font-size:17px;font-weight:700;color:var(--c-ink)}
+.gr-day-okno{font-size:12px;color:var(--c-muted);font-weight:600}
+
+.gr-gab{background:var(--c-white);border:1px solid var(--c-border);border-radius:var(--radius-m);margin-bottom:12px;overflow:hidden}
+.gr-gab-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 14px;background:var(--c-offwhite);border-bottom:1px solid var(--c-border)}
+.gr-gab-nazwa{font-weight:700;font-size:14px;color:var(--c-ink)}
+.gr-gab-wyk{font-size:11px;font-weight:700;color:var(--c-muted)}
+.gr-gab-body{padding:10px 12px}
+
+.gr-blok{display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:var(--radius-s);background:var(--c-primary-tint);border-left:3px solid var(--c-primary);margin-bottom:8px;cursor:pointer;text-align:left;width:100%;border-top:none;border-right:none;border-bottom:none;font-family:inherit}
+.gr-blok.higiena{background:var(--c-success-tint);border-left-color:var(--c-success)}
+.gr-blok-czas{font-family:ui-monospace,monospace;font-weight:700;font-size:13px;color:var(--c-ink);flex-shrink:0;min-width:88px}
+.gr-blok-body{flex:1;min-width:0}
+.gr-blok-osoba{font-weight:700;font-size:14px;color:var(--c-ink)}
+.gr-blok-meta{font-size:12px;color:var(--c-muted);margin-top:2px;line-height:1.45}
+.gr-blok-meta.brak{color:var(--c-accent);font-weight:600}
+
+.gr-luka{display:flex;align-items:center;gap:10px;padding:10px;border-radius:var(--radius-s);border:1.5px dashed var(--c-border-strong);margin-bottom:8px;cursor:pointer;width:100%;background:none;text-align:left;font-family:inherit}
+.gr-luka-czas{font-family:ui-monospace,monospace;font-weight:700;font-size:13px;color:var(--c-muted);flex-shrink:0;min-width:88px}
+.gr-luka-lbl{flex:1;font-size:13px;color:var(--c-muted);font-weight:600}
+
+.gr-rek-ic{flex-shrink:0;width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;cursor:pointer;border:none;font-family:inherit}
+.gr-rek-ic.krytyczna{background:var(--c-accent);color:#fff}
+.gr-rek-ic.wazna{background:#B8860B;color:#fff}
+.gr-rek-ic.sugestia{background:var(--c-primary);color:#fff}
+.gr-rek-ic.info{background:var(--c-field);color:var(--c-muted)}
+
+.gr-ctx{font-size:13px;color:var(--c-muted);background:var(--c-offwhite);border-radius:var(--radius-s);padding:9px 12px;margin-bottom:12px;font-weight:600}
+.gr-asysta-row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.gr-asysta-row .sel{flex:1;min-height:44px}
+.gr-asysta-row .inp{width:auto;flex:0 0 92px;min-height:44px}
+
+.gr-rek-item{border-left:3px solid var(--c-border);padding:11px 13px;background:var(--c-offwhite);border-radius:var(--radius-s);margin-bottom:8px}
+.gr-rek-item.krytyczna{border-left-color:var(--c-accent)}
+.gr-rek-item.wazna{border-left-color:#B8860B}
+.gr-rek-item.sugestia{border-left-color:var(--c-primary)}
+.gr-rek-item.info{border-left-color:var(--c-success)}
+.gr-rek-tytul{font-weight:700;font-size:13.5px;color:var(--c-ink);margin-bottom:3px}
+.gr-rek-tresc{font-size:13px;color:var(--c-muted);line-height:1.5}
+.gr-rek-akcja{font-size:13px;color:var(--c-ink);line-height:1.5;margin-top:6px;font-weight:600}
+.gr-rek-kat{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--c-muted);margin-top:6px}
+
+/* ── Wydruk grafiku ── */
+#gr-print-area{display:none}
+@media print{
+  body>*{display:none !important}
+  #gr-print-area{display:block !important}
+  @page{size:A4 landscape;margin:12mm}
+  #gr-print-area{font-family:'DM Sans',Arial,sans-serif;color:#000}
+  .pr-h1{font-size:18px;font-weight:700;margin:0 0 2px}
+  .pr-sub{font-size:11px;color:#555;margin:0 0 12px}
+  .pr-table{width:100%;border-collapse:collapse;font-size:10px;table-layout:fixed}
+  .pr-table th,.pr-table td{border:1px solid #999;padding:5px 6px;vertical-align:top;text-align:left}
+  .pr-table th{background:#eee;font-size:10px;font-weight:700}
+  .pr-gab{background:#f5f5f5;font-weight:700;width:90px}
+  .pr-blok{margin-bottom:5px;line-height:1.35}
+  .pr-blok:last-child{margin-bottom:0}
+  .pr-czas{font-weight:700;font-family:ui-monospace,monospace}
+  .pr-as{color:#444}
+  .pr-pusto{color:#999;font-style:italic}
+}
 </style>
 </head>
 <body>
@@ -280,6 +354,50 @@
       </div>
     </div>
 
+    <!-- ── WIDOK: GRAFIK OBSADY GABINETÓW ── -->
+    <div id="view-grafik" style="display:none">
+      <div class="hint-banner" id="hb-grafik" data-hb-id="grafik">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>
+        <span>Stały szablon tygodniowy. Wpisz bloki lekarzy w dowolnych godzinach — system pokaże, gdzie brakuje asysty i co zrobić z pustymi miejscami. Kliknij ikonę <b>!</b> przy dniu lub bloku, żeby zobaczyć rekomendacje.</span>
+        <button class="hint-banner-close" data-hb-close="grafik" aria-label="Zamknij wskazówkę">
+          <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="gr-toolbar">
+        <button id="gr-rek-open" class="btn btn-soft gr-rek-btn" type="button">
+          <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0-3.5 10.9V17h7v-3.1A6 6 0 0 0 12 3z"/><path d="M10 20h4"/></svg>
+          <span>Rekomendacje</span>
+          <span id="gr-rek-count" class="gr-badge">0</span>
+        </button>
+        <button id="gr-print" class="btn btn-ghost" type="button">
+          <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="7" rx="2"/><path d="M6 16h12v5H6z"/></svg>
+          Wydruk
+        </button>
+        <button id="gr-gabinety-toggle" class="btn btn-ghost" type="button">Gabinety</button>
+      </div>
+
+      <div id="gr-gabinety-panel" class="section" style="display:none">
+        <div class="section-title">Gabinety</div>
+        <div id="gr-gabinety-list"></div>
+        <div class="field-row2" style="margin-top:10px">
+          <div class="field" style="margin-bottom:0">
+            <span class="field-lbl">Nazwa nowego gabinetu</span>
+            <input type="text" id="gr-gab-nazwa" class="inp" placeholder="np. Gabinet 4" autocomplete="off">
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <span class="field-lbl">&nbsp;</span>
+            <button id="gr-gab-add" class="btn btn-primary" style="margin-top:0" type="button">Dodaj gabinet</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="seg seg-scroll" id="gr-days" style="margin-bottom:14px"></div>
+
+      <div id="gr-day-head" class="gr-day-head"></div>
+      <div id="gr-grid"><div class="hint">Ładowanie…</div></div>
+    </div>
+
     <!-- ── WIDOK: ZESPÓŁ (forma zatrudnienia, dodawanie/archiwizacja) ── -->
     <div id="view-staff" style="display:none">
       <div class="info-box">
@@ -303,11 +421,18 @@
         <div class="field-row2">
           <div class="field">
             <span class="field-lbl">Rola</span>
-            <input type="text" id="staff-add-rola" class="inp" placeholder="np. higienistka stomatologiczna" autocomplete="off">
+            <select id="staff-add-rola" class="sel">
+              <option value="Lekarz">Lekarz</option>
+              <option value="higienistka stomatologiczna">Higienistka stomatologiczna</option>
+              <option value="asystentka stomatologiczna">Asystentka stomatologiczna</option>
+              <option value="rejestratorka medyczna">Rejestratorka medyczna</option>
+              <option value="Admin">Admin</option>
+            </select>
           </div>
           <div class="field">
-            <span class="field-lbl">PIN (4 cyfry)</span>
+            <span class="field-lbl" id="staff-add-pin-lbl">PIN (4 cyfry)</span>
             <input type="text" id="staff-add-pin" class="inp" inputmode="numeric" maxlength="4" autocomplete="off">
+            <span class="hint" id="staff-add-pin-hint" style="display:none;font-size:12px">Lekarze nie odbijają się w RCP — PIN możesz zostawić pusty.</span>
           </div>
         </div>
         <button id="staff-add-save" class="btn btn-primary" style="margin-top:4px">Dodaj do zespołu</button>
@@ -505,6 +630,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-5h4v5"/></svg>
       <span>Dni wolne</span>
     </button>
+    <button class="seg-btn" id="tab-grafik">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M9 9v12M15 9v12"/><path d="M8 2v4M16 2v4"/></svg>
+      <span>Grafik</span>
+    </button>
     <button class="seg-btn" id="tab-staff">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17.5" cy="9.5" r="2.6"/><path d="M15.5 14.6a5 5 0 0 1 6 4.9"/></svg>
       <span>Zespół</span>
@@ -526,6 +655,83 @@
       <span>Pomoc</span>
     </button>
   </nav>
+</div>
+
+<!-- ═══════ MODAL — blok grafiku ═══════ -->
+<div id="gr-blok-modal" class="modal-overlay" style="display:none">
+  <div class="modal-card">
+    <div class="modal-head">
+      <span id="gr-blok-title">Blok w grafiku</span>
+      <button id="gr-blok-close" class="btn-icon" aria-label="Zamknij">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div id="gr-blok-ctx" class="gr-ctx"></div>
+
+    <div class="field">
+      <span class="field-lbl">Typ bloku</span>
+      <select id="gr-blok-typ" class="sel">
+        <option value="Lekarz">Lekarz</option>
+        <option value="Higienizacja">Higienizacja</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <span class="field-lbl" id="gr-blok-osoba-lbl">Lekarz</span>
+      <select id="gr-blok-osoba" class="sel"></select>
+    </div>
+
+    <div class="field-row2">
+      <div class="field">
+        <span class="field-lbl">Od</span>
+        <input type="time" id="gr-blok-od" class="inp">
+      </div>
+      <div class="field">
+        <span class="field-lbl">Do</span>
+        <input type="time" id="gr-blok-do" class="inp">
+      </div>
+    </div>
+
+    <div id="gr-asysta-sekcja" class="section">
+      <div class="section-title">Asysta</div>
+      <div class="field">
+        <span class="field-lbl">Ile osób asysty wymaga ten blok</span>
+        <select id="gr-blok-asysta-n" class="sel">
+          <option value="1">1 — standard (lekarz + asysta)</option>
+          <option value="0">0 — bez asysty</option>
+          <option value="2">2 — dwie asystentki</option>
+          <option value="3">3 — trzy asystentki</option>
+        </select>
+      </div>
+      <div class="field" id="gr-uwaga-field" style="display:none">
+        <span class="field-lbl">Adnotacja — dlaczego odstępstwo od standardu</span>
+        <textarea id="gr-blok-uwaga" class="ta" placeholder="np. zabieg implantologiczny wymagający dwóch par rąk"></textarea>
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <span class="field-lbl">Przypisane asystentki</span>
+        <div id="gr-asysta-lista"></div>
+        <button id="gr-asysta-add" class="btn-link" type="button" style="margin-top:6px">+ Dodaj asystę</button>
+      </div>
+    </div>
+
+    <button id="gr-blok-save" class="btn btn-primary" style="margin-top:14px" type="button">Zapisz blok</button>
+    <button id="gr-blok-delete" class="btn-link" style="color:var(--c-accent);display:none" type="button">Usuń blok z grafiku</button>
+  </div>
+</div>
+
+<!-- ═══════ MODAL — rekomendacje ═══════ -->
+<div id="gr-rek-modal" class="modal-overlay" style="display:none">
+  <div class="modal-card">
+    <div class="modal-head">
+      <span id="gr-rek-title">Rekomendacje</span>
+      <button id="gr-rek-close" class="btn-icon" aria-label="Zamknij">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="faq-cats" id="gr-rek-filtry"></div>
+    <div class="faq-results" id="gr-rek-lista"></div>
+  </div>
 </div>
 
 <!-- ═══════ MODAL — eksport Excel ═══════ -->
@@ -598,6 +804,9 @@
     <div id="m-modal-list"></div>
   </div>
 </div>
+
+<!-- Kontener wydruku — poza ekranem, wypełniany przed window.print() -->
+<div id="gr-print-area"></div>
 
 <div id="toast"></div>
 
@@ -833,10 +1042,12 @@ function loadAbsTypes() {
 
 // ── Pracownicy (wspólna lista dla obu widoków) ───
 var _emps = [];
+var _tagiDostepne = [];
 function loadEmployees() {
   gas('masterGetEmployees', [M.token], function(res) {
     if (!res || !res.ok) { toast('Błąd wczytywania listy pracowników.', false); return; }
     _emps = res.employees || [];
+    if (res.tagiDostepne) _tagiDostepne = res.tagiDostepne;
   });
 }
 
@@ -889,6 +1100,7 @@ var TABS = {
   'tab-month':   'view-month',
   'tab-range':   'view-range',
   'tab-daysoff': 'view-daysoff',
+  'tab-grafik':  'view-grafik',
   'tab-staff':   'view-staff',
   'tab-reports': 'view-reports',
   'tab-code':    'view-code',
@@ -900,6 +1112,7 @@ var currentTab = 'tab-day';
 var mBack = document.getElementById('m-back');
 
 function onTabActivated(tabId) {
+  if (tabId === 'tab-grafik')  grInit();
   if (tabId === 'tab-staff')   renderStaffList();
   if (tabId === 'tab-legend')  wsRenderLegend('legend-container');
   if (tabId === 'tab-code')    mcRefreshToken(false);
@@ -1164,6 +1377,578 @@ document.getElementById('rg-yes').addEventListener('click', function() {
   });
 });
 
+// ════════════════════════════════════════════════════════════
+// ── Widok: GRAFIK obsady gabinetów ──────────────────────────
+// Szablon tygodniowy Pn–Sb. Bloki mają dowolne godziny (nie sztywne
+// zmiany). Rekomendacje przychodzą z backendu w gotowym formacie —
+// tu tylko je pokazujemy, więc podmiana silnika na AI nic tu nie zmieni.
+// ════════════════════════════════════════════════════════════
+
+var GR = { dane: null, dzien: 1, edytowany: null, filtrRek: null };
+
+function grInit() {
+  grLoad();
+}
+
+function grLoad(cb) {
+  gas('masterGetGrafik', [M.token], function(res) {
+    if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+    if (!res || !res.ok) {
+      document.getElementById('gr-grid').innerHTML =
+        '<div class="hint">' + esc((res && res.msg) || 'Błąd ładowania grafiku.') + '</div>';
+      return;
+    }
+    GR.dane = res;
+    grRenderDni();
+    grRenderDzien();
+    grRenderLicznikRek();
+    if (cb) cb();
+  });
+}
+
+function grRenderDni() {
+  var wrap = document.getElementById('gr-days');
+  var d = GR.dane;
+  wrap.innerHTML = d.dni.map(function(nr) {
+    var krot = d.godziny[nr].nazwa.slice(0, 3);
+    var ile = grRekDlaDnia(nr).length;
+    return '<button type="button" class="seg-btn' + (nr === GR.dzien ? ' on' : '') +
+      '" data-dzien="' + nr + '">' + esc(krot) +
+      (ile ? ' <span class="gr-badge">' + ile + '</span>' : '') + '</button>';
+  }).join('');
+  wrap.querySelectorAll('[data-dzien]').forEach(function(b) {
+    b.addEventListener('click', function() {
+      GR.dzien = parseInt(this.getAttribute('data-dzien'), 10);
+      grRenderDni();
+      grRenderDzien();
+    });
+  });
+}
+
+function grRekDlaDnia(nr) {
+  if (!GR.dane) return [];
+  return (GR.dane.rekomendacje || []).filter(function(r) { return r.dzien === nr; });
+}
+
+function grRenderLicznikRek() {
+  var lista = (GR.dane.rekomendacje || []).filter(function(r) { return r.waga !== 'info'; });
+  var el = document.getElementById('gr-rek-count');
+  el.textContent = lista.length;
+  el.className = 'gr-badge' + (lista.length === 0 ? ' zero' : '');
+}
+
+function grOsobaNazwa(id) {
+  var p = (GR.dane.personel || []).find(function(x) { return x.id === id; });
+  return p ? (p.imie + ' ' + p.nazwisko) : id;
+}
+
+function grIkonaRek(lista, tytul) {
+  if (!lista.length) return '';
+  var rank = { krytyczna: 0, wazna: 1, sugestia: 2, info: 3 };
+  var naj = lista.slice().sort(function(a, b) { return rank[a.waga] - rank[b.waga]; })[0];
+  var znak = naj.waga === 'info' ? 'i' : '!';
+  return '<button type="button" class="gr-rek-ic ' + naj.waga +
+    '" data-rek="' + esc(tytul) + '" title="' + esc(naj.tytul) + '">' + znak + '</button>';
+}
+
+function grRenderDzien() {
+  var d = GR.dane;
+  var nr = GR.dzien;
+  var g = d.godziny[nr];
+
+  document.getElementById('gr-day-head').innerHTML =
+    '<span class="gr-day-name">' + esc(g.nazwa) + '</span>' +
+    '<span class="gr-day-okno">klinika czynna ' + esc(g.open) + '–' + esc(g.close) + '</span>' +
+    grIkonaRek(grRekDlaDnia(nr), g.nazwa);
+
+  if (!d.gabinety.length) {
+    document.getElementById('gr-grid').innerHTML =
+      '<div class="hint">Brak gabinetów. Dodaj je przyciskiem „Gabinety".</div>';
+    grBindRekIkony();
+    return;
+  }
+
+  var html = d.gabinety.map(function(gab) {
+    var bloki = (d.bloki || []).filter(function(b) {
+      return b.dzien === nr && b.gabinetId === gab.id;
+    }).sort(function(a, b) { return grT2M(a.od) - grT2M(b.od); });
+
+    var oknoOd = grT2M(g.open), oknoDo = grT2M(g.close);
+    var praca = 0;
+    bloki.forEach(function(b) { praca += grT2M(b.do) - grT2M(b.od); });
+    var wyk = Math.round(praca / (oknoDo - oknoOd) * 100);
+
+    var rows = '';
+    var kursor = oknoOd;
+    bloki.forEach(function(b) {
+      if (grT2M(b.od) > kursor) rows += grLukaHtml(gab.id, kursor, grT2M(b.od));
+      rows += grBlokHtml(b, gab);
+      kursor = Math.max(kursor, grT2M(b.do));
+    });
+    if (kursor < oknoDo) rows += grLukaHtml(gab.id, kursor, oknoDo);
+
+    return '<div class="gr-gab">' +
+      '<div class="gr-gab-head">' +
+        '<span class="gr-gab-nazwa">' + esc(gab.nazwa) + '</span>' +
+        '<span class="gr-gab-wyk">' + wyk + '% obsady</span>' +
+      '</div>' +
+      '<div class="gr-gab-body">' + rows + '</div>' +
+    '</div>';
+  }).join('');
+
+  document.getElementById('gr-grid').innerHTML = html;
+
+  document.getElementById('gr-grid').querySelectorAll('[data-blok]').forEach(function(el) {
+    el.addEventListener('click', function(e) {
+      if (e.target.closest('.gr-rek-ic')) return;
+      grOtworzBlok(this.getAttribute('data-blok'), null, null, null);
+    });
+  });
+  document.getElementById('gr-grid').querySelectorAll('[data-luka]').forEach(function(el) {
+    el.addEventListener('click', function() {
+      var p = this.getAttribute('data-luka').split('|');
+      grOtworzBlok(null, p[0], p[1], p[2]);
+    });
+  });
+  grBindRekIkony();
+}
+
+function grLukaHtml(gabinetId, od, do_) {
+  var odT = grM2T(od), doT = grM2T(do_);
+  var mins = do_ - od;
+  return '<button type="button" class="gr-luka" data-luka="' + esc(gabinetId) + '|' + odT + '|' + doT + '">' +
+    '<span class="gr-luka-czas">' + odT + '–' + doT + '</span>' +
+    '<span class="gr-luka-lbl">wolne (' + grHM(mins) + ') — kliknij, żeby obsadzić</span>' +
+    '</button>';
+}
+
+function grBlokHtml(b, gab) {
+  var rek = (GR.dane.rekomendacje || []).filter(function(r) { return r.blokId === b.id; });
+  var asysta = b.asysta || [];
+  var meta, klasaMeta = 'gr-blok-meta';
+
+  if (b.typ === 'Higienizacja') {
+    meta = 'Higienizacja';
+  } else if (asysta.length === 0) {
+    meta = 'Brak asysty';
+    klasaMeta += ' brak';
+  } else {
+    meta = 'Asysta: ' + asysta.map(function(a) {
+      var sameGodz = (a.od === b.od && a.do === b.do);
+      return esc(grOsobaNazwa(a.osobaId)) + (sameGodz ? '' : ' (' + esc(a.od) + '–' + esc(a.do) + ')');
+    }).join(', ');
+  }
+  if (b.asystaUwaga) meta += ' · ' + esc(b.asystaUwaga);
+
+  return '<button type="button" class="gr-blok' + (b.typ === 'Higienizacja' ? ' higiena' : '') +
+    '" data-blok="' + esc(b.id) + '">' +
+    '<span class="gr-blok-czas">' + esc(b.od) + '–' + esc(b.do) + '</span>' +
+    '<span class="gr-blok-body">' +
+      '<span class="gr-blok-osoba">' + esc(grOsobaNazwa(b.osobaId)) + '</span>' +
+      '<span class="' + klasaMeta + '">' + meta + '</span>' +
+    '</span>' +
+    grIkonaRek(rek, gab.nazwa + ' ' + b.od + '–' + b.do) +
+    '</button>';
+}
+
+function grBindRekIkony() {
+  document.querySelectorAll('.gr-rek-ic[data-rek]').forEach(function(el) {
+    el.addEventListener('click', function(e) {
+      e.stopPropagation();
+      grOtworzRek(this.getAttribute('data-rek'));
+    });
+  });
+}
+
+function grT2M(t) {
+  var p = String(t).split(':');
+  return parseInt(p[0], 10) * 60 + parseInt(p[1], 10);
+}
+function grM2T(m) {
+  return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+}
+function grHM(m) {
+  var h = Math.floor(m / 60), mm = m % 60;
+  if (h && mm) return h + ' h ' + mm + ' min';
+  if (h) return h + ' h';
+  return mm + ' min';
+}
+
+// ── Edytor bloku ──────────────────────────────────────────────
+
+function grOtworzBlok(blokId, gabinetId, od, do_) {
+  var d = GR.dane;
+  var blok = blokId ? (d.bloki || []).find(function(b) { return b.id === blokId; }) : null;
+  GR.edytowany = blok ? blok.id : null;
+
+  var gabId = blok ? blok.gabinetId : gabinetId;
+  var gab = d.gabinety.find(function(g) { return g.id === gabId; });
+  var g = d.godziny[GR.dzien];
+
+  document.getElementById('gr-blok-title').textContent = blok ? 'Edytuj blok' : 'Nowy blok';
+  document.getElementById('gr-blok-ctx').textContent =
+    (gab ? gab.nazwa : '—') + ' · ' + g.nazwa + ' · klinika ' + g.open + '–' + g.close;
+  document.getElementById('gr-blok-modal').setAttribute('data-gabinet', gabId || '');
+
+  document.getElementById('gr-blok-typ').value = blok ? blok.typ : 'Lekarz';
+  document.getElementById('gr-blok-od').value = blok ? blok.od : (od || g.open);
+  document.getElementById('gr-blok-do').value = blok ? blok.do : (do_ || g.close);
+  document.getElementById('gr-blok-asysta-n').value =
+    (blok && blok.asystaWymagana !== null && blok.asystaWymagana !== undefined)
+      ? String(blok.asystaWymagana) : '1';
+  document.getElementById('gr-blok-uwaga').value = blok ? (blok.asystaUwaga || '') : '';
+
+  grWypelnijOsoby();
+  if (blok) document.getElementById('gr-blok-osoba').value = blok.osobaId;
+
+  grRenderAsysta(blok ? (blok.asysta || []) : []);
+  grOnTypChange();
+
+  document.getElementById('gr-blok-delete').style.display = blok ? 'block' : 'none';
+  document.getElementById('gr-blok-modal').style.display = 'flex';
+}
+
+function grWypelnijOsoby() {
+  var typ = document.getElementById('gr-blok-typ').value;
+  var grupa = (typ === 'Higienizacja') ? 'higienistka' : 'lekarz';
+  var sel = document.getElementById('gr-blok-osoba');
+  var lista = (GR.dane.personel || []).filter(function(p) { return p.grupa === grupa; });
+
+  document.getElementById('gr-blok-osoba-lbl').textContent =
+    (typ === 'Higienizacja') ? 'Higienistka' : 'Lekarz';
+
+  if (!lista.length) {
+    sel.innerHTML = '<option value="">— brak osób z tą rolą w zespole —</option>';
+    return;
+  }
+  sel.innerHTML = '<option value="">— wybierz —</option>' + lista.map(function(p) {
+    var tagi = (p.tagi || []).length ? ' — ' + p.tagi.slice(0, 2).join(', ') : '';
+    return '<option value="' + esc(p.id) + '">' + esc(p.imie + ' ' + p.nazwisko + tagi) + '</option>';
+  }).join('');
+}
+
+function grOnTypChange() {
+  var typ = document.getElementById('gr-blok-typ').value;
+  var higiena = (typ === 'Higienizacja');
+  document.getElementById('gr-asysta-sekcja').style.display = higiena ? 'none' : 'block';
+  grOnAsystaNChange();
+}
+
+function grOnAsystaNChange() {
+  var n = document.getElementById('gr-blok-asysta-n').value;
+  document.getElementById('gr-uwaga-field').style.display = (n === '1') ? 'none' : 'block';
+}
+
+function grRenderAsysta(lista) {
+  var wrap = document.getElementById('gr-asysta-lista');
+  var asystentki = (GR.dane.personel || []).filter(function(p) { return p.grupa === 'asystentka'; });
+
+  if (!asystentki.length) {
+    wrap.innerHTML = '<div class="hint" style="padding:6px 0">Brak asystentek w zespole — dodaj je w zakładce Zespół.</div>';
+    return;
+  }
+  if (!lista.length) {
+    wrap.innerHTML = '<div class="hint" style="padding:6px 0">Nikt jeszcze nie przypisany.</div>';
+    return;
+  }
+
+  wrap.innerHTML = lista.map(function(a, i) {
+    var opts = asystentki.map(function(p) {
+      return '<option value="' + esc(p.id) + '"' + (p.id === a.osobaId ? ' selected' : '') + '>' +
+        esc(p.imie + ' ' + p.nazwisko) + '</option>';
+    }).join('');
+    return '<div class="gr-asysta-row" data-i="' + i + '">' +
+      '<select class="sel gr-as-osoba">' + opts + '</select>' +
+      '<input type="time" class="inp gr-as-od" value="' + esc(a.od) + '">' +
+      '<input type="time" class="inp gr-as-do" value="' + esc(a.do) + '">' +
+      '<button type="button" class="btn-icon gr-as-del" aria-label="Usuń asystę">' +
+      '<svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>' +
+      '</div>';
+  }).join('');
+
+  wrap.querySelectorAll('.gr-as-del').forEach(function(b) {
+    b.addEventListener('click', function() {
+      var i = parseInt(this.closest('[data-i]').getAttribute('data-i'), 10);
+      var cur = grZbierzAsyste();
+      cur.splice(i, 1);
+      grRenderAsysta(cur);
+    });
+  });
+}
+
+function grZbierzAsyste() {
+  var out = [];
+  document.querySelectorAll('#gr-asysta-lista .gr-asysta-row').forEach(function(row) {
+    var id = row.querySelector('.gr-as-osoba').value;
+    if (!id) return;
+    out.push({
+      osobaId: id,
+      od: row.querySelector('.gr-as-od').value,
+      do: row.querySelector('.gr-as-do').value
+    });
+  });
+  return out;
+}
+
+document.getElementById('gr-blok-typ').addEventListener('change', function() {
+  grWypelnijOsoby();
+  grOnTypChange();
+});
+document.getElementById('gr-blok-asysta-n').addEventListener('change', grOnAsystaNChange);
+
+document.getElementById('gr-asysta-add').addEventListener('click', function() {
+  var cur = grZbierzAsyste();
+  cur.push({
+    osobaId: '',
+    od: document.getElementById('gr-blok-od').value,
+    do: document.getElementById('gr-blok-do').value
+  });
+  var asystentki = (GR.dane.personel || []).filter(function(p) { return p.grupa === 'asystentka'; });
+  if (asystentki.length) cur[cur.length - 1].osobaId = asystentki[0].id;
+  grRenderAsysta(cur);
+});
+
+document.getElementById('gr-blok-close').addEventListener('click', function() {
+  document.getElementById('gr-blok-modal').style.display = 'none';
+});
+document.getElementById('gr-blok-modal').addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
+
+document.getElementById('gr-blok-save').addEventListener('click', function() {
+  var modal = document.getElementById('gr-blok-modal');
+  var typ = document.getElementById('gr-blok-typ').value;
+  var osobaId = document.getElementById('gr-blok-osoba').value;
+  if (!osobaId) { toast('Wybierz osobę.', false); return; }
+
+  var blok = {
+    id: GR.edytowany || '',
+    gabinetId: modal.getAttribute('data-gabinet'),
+    dzien: GR.dzien,
+    typ: typ,
+    osobaId: osobaId,
+    od: document.getElementById('gr-blok-od').value,
+    do: document.getElementById('gr-blok-do').value,
+    asystaWymagana: (typ === 'Higienizacja') ? 0 : parseInt(document.getElementById('gr-blok-asysta-n').value, 10),
+    asystaUwaga: document.getElementById('gr-blok-uwaga').value
+  };
+
+  var asysta = (typ === 'Higienizacja') ? [] : grZbierzAsyste();
+
+  gas('masterSaveGrafikBlok', [M.token, blok], function(res) {
+    if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+    if (!res || !res.ok) { toast((res && res.msg) || 'Nie udało się zapisać bloku.', false); return; }
+
+    gas('masterSetGrafikAsysta', [M.token, res.id, asysta], function(r2) {
+      if (r2 && !r2.ok && r2.msg) { toast(r2.msg, false); }
+      modal.style.display = 'none';
+      wsConfirmPopup(GR.edytowany ? 'Zmieniono blok w grafiku.' : 'Dodano blok do grafiku.');
+      grLoad();
+    });
+  });
+});
+
+document.getElementById('gr-blok-delete').addEventListener('click', function() {
+  var btn = this;
+  if (btn.getAttribute('data-armed') !== '1') {
+    btn.setAttribute('data-armed', '1');
+    btn.textContent = 'Na pewno? Kliknij ponownie, żeby usunąć';
+    clearTimeout(btn._t);
+    btn._t = setTimeout(function() {
+      btn.removeAttribute('data-armed');
+      btn.textContent = 'Usuń blok z grafiku';
+    }, 4000);
+    return;
+  }
+  btn.removeAttribute('data-armed');
+  btn.textContent = 'Usuń blok z grafiku';
+  gas('masterDeleteGrafikBlok', [M.token, GR.edytowany], function(res) {
+    if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+    if (!res || !res.ok) { toast((res && res.msg) || 'Nie udało się usunąć.', false); return; }
+    document.getElementById('gr-blok-modal').style.display = 'none';
+    wsConfirmPopup('Usunięto blok z grafiku.');
+    grLoad();
+  });
+});
+
+// ── Rekomendacje ──────────────────────────────────────────────
+
+function grOtworzRek(kontekst) {
+  GR.filtrRek = kontekst || null;
+  document.getElementById('gr-rek-title').textContent =
+    kontekst ? ('Rekomendacje — ' + kontekst) : 'Rekomendacje';
+  grRenderRek();
+  document.getElementById('gr-rek-modal').style.display = 'flex';
+}
+
+function grRenderRek() {
+  var wszystkie = GR.dane ? (GR.dane.rekomendacje || []) : [];
+  var kat = {};
+  wszystkie.forEach(function(r) { kat[r.kategoria] = (kat[r.kategoria] || 0) + 1; });
+
+  var aktywna = GR.katRek || null;
+  var filtry = document.getElementById('gr-rek-filtry');
+  filtry.innerHTML = '<button type="button" class="faq-cat-btn' + (!aktywna ? ' on' : '') +
+    '" data-kat="">Wszystko (' + wszystkie.length + ')</button>' +
+    Object.keys(kat).map(function(k) {
+      return '<button type="button" class="faq-cat-btn' + (aktywna === k ? ' on' : '') +
+        '" data-kat="' + esc(k) + '">' + esc(k) + ' (' + kat[k] + ')</button>';
+    }).join('');
+  filtry.querySelectorAll('[data-kat]').forEach(function(b) {
+    b.addEventListener('click', function() {
+      GR.katRek = this.getAttribute('data-kat') || null;
+      grRenderRek();
+    });
+  });
+
+  var lista = wszystkie.filter(function(r) {
+    return !aktywna || r.kategoria === aktywna;
+  });
+
+  var out = document.getElementById('gr-rek-lista');
+  if (!lista.length) {
+    out.innerHTML = '<div class="faq-empty">Brak rekomendacji — grafik nie wymaga tu żadnej korekty.</div>';
+    return;
+  }
+  out.innerHTML = lista.map(function(r) {
+    return '<div class="gr-rek-item ' + r.waga + '">' +
+      '<div class="gr-rek-tytul">' + esc(r.tytul) + '</div>' +
+      '<div class="gr-rek-tresc">' + esc(r.tresc) + '</div>' +
+      '<div class="gr-rek-akcja">→ ' + esc(r.akcja) + '</div>' +
+      '<div class="gr-rek-kat">' + esc(r.kategoria) + ' · ' + esc(r.waga) + '</div>' +
+      '</div>';
+  }).join('');
+}
+
+document.getElementById('gr-rek-open').addEventListener('click', function() {
+  GR.katRek = null;
+  grOtworzRek(null);
+});
+document.getElementById('gr-rek-close').addEventListener('click', function() {
+  document.getElementById('gr-rek-modal').style.display = 'none';
+});
+document.getElementById('gr-rek-modal').addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
+
+// ── Gabinety ──────────────────────────────────────────────────
+
+document.getElementById('gr-gabinety-toggle').addEventListener('click', function() {
+  var p = document.getElementById('gr-gabinety-panel');
+  var open = p.style.display === 'none';
+  p.style.display = open ? 'block' : 'none';
+  if (open) grRenderGabinety();
+});
+
+function grRenderGabinety() {
+  var wrap = document.getElementById('gr-gabinety-list');
+  var lista = GR.dane ? GR.dane.gabinety : [];
+  if (!lista.length) { wrap.innerHTML = '<div class="hint">Brak gabinetów.</div>'; return; }
+
+  wrap.innerHTML = lista.map(function(g) {
+    return '<div class="staff-row" data-id="' + esc(g.id) + '">' +
+      '<input type="text" class="inp gr-gab-nazwa-inp" value="' + esc(g.nazwa) +
+      '" style="flex:1;min-width:120px;margin:0">' +
+      '<button type="button" class="btn-icon gr-gab-del" data-id="' + esc(g.id) +
+      '" title="Wycofaj gabinet" aria-label="Wycofaj gabinet">' +
+      '<svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/></svg></button>' +
+      '</div>';
+  }).join('');
+
+  wrap.querySelectorAll('.gr-gab-nazwa-inp').forEach(function(inp) {
+    inp.addEventListener('blur', function() {
+      var id = this.closest('[data-id]').getAttribute('data-id');
+      var nazwa = this.value.trim();
+      if (!nazwa) { grRenderGabinety(); return; }
+      gas('masterSaveGabinet', [M.token, id, nazwa, true], function(res) {
+        if (!res || !res.ok) { toast((res && res.msg) || 'Błąd zapisu.', false); return; }
+        wsConfirmPopup('Zmieniono nazwę gabinetu.');
+        grLoad(grRenderGabinety);
+      });
+    });
+  });
+
+  wrap.querySelectorAll('.gr-gab-del').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var b = this;
+      if (b.getAttribute('data-armed') !== '1') {
+        b.setAttribute('data-armed', '1');
+        b.classList.add('danger');
+        b.title = 'Kliknij ponownie, żeby wycofać gabinet';
+        clearTimeout(b._t);
+        b._t = setTimeout(function() {
+          b.removeAttribute('data-armed');
+          b.classList.remove('danger');
+          b.title = 'Wycofaj gabinet';
+        }, 4000);
+        return;
+      }
+      gas('masterRemoveGabinet', [M.token, b.getAttribute('data-id')], function(res) {
+        if (!res || !res.ok) { toast((res && res.msg) || 'Błąd.', false); return; }
+        wsConfirmPopup('Gabinet wycofany z grafiku.');
+        grLoad(grRenderGabinety);
+      });
+    });
+  });
+}
+
+document.getElementById('gr-gab-add').addEventListener('click', function() {
+  var nazwa = document.getElementById('gr-gab-nazwa').value.trim();
+  if (!nazwa) { toast('Podaj nazwę gabinetu.', false); return; }
+  gas('masterSaveGabinet', [M.token, '', nazwa, true], function(res) {
+    if (!res || !res.ok) { toast((res && res.msg) || 'Błąd dodawania.', false); return; }
+    document.getElementById('gr-gab-nazwa').value = '';
+    wsConfirmPopup('Dodano gabinet.');
+    grLoad(grRenderGabinety);
+  });
+});
+
+// ── Wydruk ────────────────────────────────────────────────────
+// Buduje osobny, prosty układ tabelaryczny (cały tydzień na jednej
+// kartce A4 poziomo) i oddaje go przeglądarce do druku.
+
+document.getElementById('gr-print').addEventListener('click', function() {
+  if (!GR.dane) return;
+  var d = GR.dane;
+
+  var naglowki = d.dni.map(function(nr) {
+    return '<th>' + esc(d.godziny[nr].nazwa) + '<br><span style="font-weight:400">' +
+      esc(d.godziny[nr].open) + '–' + esc(d.godziny[nr].close) + '</span></th>';
+  }).join('');
+
+  var wiersze = d.gabinety.map(function(gab) {
+    var kom = d.dni.map(function(nr) {
+      var bloki = (d.bloki || []).filter(function(b) {
+        return b.dzien === nr && b.gabinetId === gab.id;
+      }).sort(function(a, b) { return grT2M(a.od) - grT2M(b.od); });
+
+      if (!bloki.length) return '<td><span class="pr-pusto">—</span></td>';
+
+      return '<td>' + bloki.map(function(b) {
+        var as = (b.asysta || []).map(function(a) { return grOsobaNazwa(a.osobaId); }).join(', ');
+        return '<div class="pr-blok">' +
+          '<span class="pr-czas">' + esc(b.od) + '–' + esc(b.do) + '</span><br>' +
+          esc(grOsobaNazwa(b.osobaId)) +
+          (b.typ === 'Higienizacja' ? ' <i>(higienizacja)</i>' : '') +
+          (as ? '<br><span class="pr-as">as. ' + esc(as) + '</span>' : '') +
+          '</div>';
+      }).join('') + '</td>';
+    }).join('');
+    return '<tr><td class="pr-gab">' + esc(gab.nazwa) + '</td>' + kom + '</tr>';
+  }).join('');
+
+  var dzis = new Date();
+  document.getElementById('gr-print-area').innerHTML =
+    '<div class="pr-h1">Grafik obsady gabinetów — We Smile</div>' +
+    '<div class="pr-sub">Szablon tygodniowy · wydruk ' +
+      dzis.getFullYear() + '-' + String(dzis.getMonth() + 1).padStart(2, '0') + '-' +
+      String(dzis.getDate()).padStart(2, '0') + '</div>' +
+    '<table class="pr-table"><thead><tr><th class="pr-gab">Gabinet</th>' + naglowki +
+    '</tr></thead><tbody>' + wiersze + '</tbody></table>';
+
+  window.print();
+});
+
 // ── Widok: Pracownicy (forma zatrudnienia) ────────
 
 var FORMA_LABELS = { UoP: 'Umowa o pracę', Zlecenie: 'Umowa zlecenie', B2B: 'B2B' };
@@ -1190,7 +1975,7 @@ function renderStaffList() {
       (isAdmin ? '' :
         '<button type="button" class="btn-icon staff-remove-btn" data-id="' + esc(e.id) + '" title="Archiwizuj pracownika" aria-label="Archiwizuj pracownika">' +
         '<svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/></svg></button>') +
-      '</div></div>';
+      '</div>' + staffTagiHtml(e) + '</div>';
   }).join('');
 
   wrap.querySelectorAll('.staff-forma-sel').forEach(function(sel) {
@@ -1209,6 +1994,8 @@ function renderStaffList() {
       });
     });
   });
+
+  bindStaffTagi(wrap);
 
   wrap.querySelectorAll('.staff-remove-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
@@ -1237,11 +2024,74 @@ function renderStaffList() {
   });
 }
 
+// ── Tagi specjalizacji lekarza (Zespół) ───────────────────────
+// Widoczne tylko dla lekarzy — to one zasilają dopasowywanie obsady
+// i rekomendacje w grafiku.
+
+var _tagiOtwarte = {};
+
+function staffTagiHtml(e) {
+  if (e.grupa !== 'lekarz') return '';
+  var wybrane = e.tagi || [];
+  var otwarte = !!_tagiOtwarte[e.id];
+
+  if (!otwarte) {
+    var podsum = wybrane.length
+      ? wybrane.map(function(t) { return '<span class="staff-tag">' + esc(t) + '</span>'; }).join('')
+      : '<span class="staff-tag off">brak specjalizacji — uzupełnij</span>';
+    return '<div class="staff-tags">' + podsum +
+      '<button type="button" class="staff-tags-toggle" data-tagi="' + esc(e.id) + '">zmień</button></div>';
+  }
+
+  var dostepne = (_tagiDostepne || []);
+  return '<div class="staff-tags">' + dostepne.map(function(t) {
+    var on = wybrane.indexOf(t) !== -1;
+    return '<button type="button" class="staff-tag' + (on ? '' : ' off') +
+      '" data-tag-emp="' + esc(e.id) + '" data-tag="' + esc(t) + '">' + esc(t) + '</button>';
+  }).join('') +
+  '<button type="button" class="staff-tags-toggle" data-tagi="' + esc(e.id) + '">gotowe</button></div>';
+}
+
+function bindStaffTagi(wrap) {
+  wrap.querySelectorAll('[data-tagi]').forEach(function(b) {
+    b.addEventListener('click', function() {
+      var id = this.getAttribute('data-tagi');
+      _tagiOtwarte[id] = !_tagiOtwarte[id];
+      renderStaffList();
+    });
+  });
+  wrap.querySelectorAll('[data-tag-emp]').forEach(function(b) {
+    b.addEventListener('click', function() {
+      var id = this.getAttribute('data-tag-emp');
+      var tag = this.getAttribute('data-tag');
+      var emp = null;
+      _emps.forEach(function(x) { if (x.id === id) emp = x; });
+      if (!emp) return;
+      var lista = (emp.tagi || []).slice();
+      var i = lista.indexOf(tag);
+      if (i === -1) lista.push(tag); else lista.splice(i, 1);
+      gas('masterSetDoctorTags', [M.token, id, lista], function(res) {
+        if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+        if (!res || !res.ok) { toast((res && res.msg) || 'Błąd zapisu tagów.', false); return; }
+        emp.tagi = res.tagi || lista;
+        renderStaffList();
+      });
+    });
+  });
+}
+
 // ── Zespół — dodawanie nowego pracownika ──────────────────────
 
 document.getElementById('staff-add-toggle').addEventListener('click', function() {
   var form = document.getElementById('staff-add-form');
   form.style.display = form.style.display === 'none' ? 'block' : 'none';
+});
+
+document.getElementById('staff-add-rola').addEventListener('change', function() {
+  var lekarz = this.value.toLowerCase().indexOf('lekarz') !== -1;
+  document.getElementById('staff-add-pin-lbl').textContent =
+    lekarz ? 'PIN (opcjonalny)' : 'PIN (4 cyfry)';
+  document.getElementById('staff-add-pin-hint').style.display = lekarz ? 'block' : 'none';
 });
 
 document.getElementById('staff-add-save').addEventListener('click', function() {
@@ -1250,7 +2100,9 @@ document.getElementById('staff-add-save').addEventListener('click', function() {
   var rola     = document.getElementById('staff-add-rola').value.trim();
   var pin      = document.getElementById('staff-add-pin').value.trim();
   if (!imie || !nazwisko) { toast('Podaj imię i nazwisko.', false); return; }
-  if (!/^\d{4}$/.test(pin)) { toast('PIN musi mieć dokładnie 4 cyfry.', false); return; }
+  var pinOpcjonalny = (rola.toLowerCase().indexOf('lekarz') !== -1);
+  if (!pin && !pinOpcjonalny) { toast('PIN musi mieć dokładnie 4 cyfry.', false); return; }
+  if (pin && !/^\d{4}$/.test(pin)) { toast('PIN musi mieć dokładnie 4 cyfry.', false); return; }
 
   gas('masterAddEmployee', [M.token, imie, nazwisko, rola, pin], function(res) {
     if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
