@@ -40,6 +40,21 @@ function _dayOutsideClinic(ds, wejscie, wyjscie) {
   return false;
 }
 
+// Ile minut danego dnia wypadło poza godzinami otwarcia Kliniki
+// (a nie tylko czy w ogóle — do sumowania miesięcznego w godzinach).
+function _overtimeMinutes(ds, wejscie, wyjscie) {
+  if (!wejscie && !wyjscie) return 0;
+  const h = _clinicHoursFor(ds);
+  if (!h) { // niedziela — cały odnotowany czas liczy się jako poza godzinami
+    if (wejscie && wyjscie) return Math.max(0, _t2m(wyjscie) - _t2m(wejscie));
+    return 0;
+  }
+  let mins = 0;
+  if (wejscie && _t2m(wejscie) < h.open)  mins += h.open - _t2m(wejscie);
+  if (wyjscie && _t2m(wyjscie) > h.close) mins += _t2m(wyjscie) - h.close;
+  return mins;
+}
+
 // ── Forma zatrudnienia ───────────────────────────────────────
 // Ustawiana raz na pracownika (panel Właściciela → Pracownicy).
 // Decyduje o: (1) liście typów nieobecności widocznej w samoobsłudze,
@@ -169,6 +184,10 @@ function callRCP(action, argsJson) {
       case 'masterSetClinicDayOff': return masterSetClinicDayOff(args[0], args[1], args[2], args[3], args[4]);
       case 'masterSetAbsenceRange': return masterSetAbsenceRange(args[0], args[1], args[2], args[3], args[4], args[5]);
       case 'masterSetEmploymentForm': return masterSetEmploymentForm(args[0], args[1], args[2]);
+      case 'masterGetArchivedEmployees': return masterGetArchivedEmployees(args[0]);
+      case 'masterRemoveEmployee':  return masterRemoveEmployee(args[0], args[1]);
+      case 'masterRestoreEmployee': return masterRestoreEmployee(args[0], args[1]);
+      case 'masterAddEmployee':     return masterAddEmployee(args[0], args[1], args[2], args[3], args[4]);
       // Owner — funkcje Panelu Raportowego, ekranu odbić i kodu, osadzone
       // w panelu Właściciela (współdzielą jego sesję masterLogin, bez
       // osobnego logowania).

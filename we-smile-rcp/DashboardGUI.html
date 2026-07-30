@@ -16,19 +16,6 @@
 .norma-tick{color:#fff;opacity:0;transition:.4s;display:flex}
 .norma-tick.on{opacity:1}
 
-/* ── Presence ticker — pływająca pigułka pod hero ── */
-.presence-bar{background:var(--c-white);border:1px solid var(--c-border);border-radius:999px;padding:10px 0;overflow:hidden;cursor:pointer;margin:14px 16px 0;box-shadow:var(--shadow-s);max-width:928px}
-@media(min-width:960px){.presence-bar{margin-left:auto;margin-right:auto}}
-.presence-track{display:inline-flex;white-space:nowrap;padding-left:16px;animation:none}
-@keyframes marquee-scroll{from{transform:translateX(0)}to{transform:translateX(-100%)}}
-.presence-track.scrolling{animation:marquee-scroll 45s linear infinite}
-.presence-item{display:inline-flex;align-items:center;gap:7px;margin-right:36px;font-size:13px;color:var(--c-ink);font-weight:500}
-.p-dot{width:8px;height:8px;border-radius:50%;background:var(--c-success);flex-shrink:0;animation:pulse-dot 1.6s ease-out infinite}
-@keyframes pulse-dot{0%{box-shadow:0 0 0 0 rgba(30,142,90,.55)}70%{box-shadow:0 0 0 7px rgba(30,142,90,0)}100%{box-shadow:0 0 0 0 rgba(30,142,90,0)}}
-.p-dot.done{background:var(--c-muted);animation:none}
-.presence-item.done{color:var(--c-muted)}
-.presence-empty{font-size:13px;color:var(--c-muted);padding-left:16px}
-
 /* ── Akcja: eksport Excel (przeniesiona z paska górnego — pkt 10/11) ── */
 .export-cta{margin-bottom:16px}
 
@@ -198,6 +185,19 @@ tr.note-tr .nt-ovr{color:var(--c-accent)}
   </div>
 </div>
 
+<!-- ═══════ MODAL — dni poza godzinami Kliniki ═══════ -->
+<div id="ovr-modal" class="modal-overlay" style="display:none">
+  <div class="modal-card">
+    <div class="modal-head">
+      <span>Poza godzinami Kliniki</span>
+      <button id="ovr-modal-close" class="btn-icon">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div id="ovr-modal-list"></div>
+  </div>
+</div>
+
 <!-- ═══════ MODAL — eksport Excel ═══════ -->
 <div id="export-modal" class="modal-overlay" style="display:none">
   <div class="modal-card">
@@ -283,13 +283,17 @@ function toast(msg, ok) {
 function gas(action, args, cb) {
   google.script.run
     .withSuccessHandler(function(res) {
+      wsSetConnStatus(true, 'Połączono.');
       try { cb(res); } catch(ex) {
         toast('Błąd: ' + ex.message, false);
         console.error(ex);
       }
     })
     .withFailureHandler(function(e) {
-      toast((e && e.message) || 'Błąd połączenia', false);
+      var msg = (e && e.message) || 'Błąd połączenia';
+      toast(msg, false);
+      wsSetConnStatus(false, 'Błąd połączenia: ' + msg);
+      wsShowError('Błąd połączenia: ' + msg);
     })
     .callRCP(action, JSON.stringify(args || []));
 }
@@ -592,7 +596,7 @@ function renderEmp(emp) {
     html += '<div class="emp-flags">';
     if (emp.absDays > 0) html += '<span class="chip chip-primary">' + ICO.abs + ' Nieobecności: ' + emp.absDays + '</span>';
     if (emp.paidAbsDays > 0) html += '<span class="chip chip-success">' + ICO.abs + ' Płatny urlop (8h/dzień): ' + emp.paidAbsDays + '</span>';
-    if (emp.ovrDays > 0) html += '<span class="chip chip-accent">' + ICO.warn + ' Poza godz. Kliniki: ' + emp.ovrDays + '</span>';
+    if (emp.ovrMinutes > 0) html += '<span class="chip chip-accent" id="ovr-chip" style="cursor:pointer">' + ICO.warn + ' Poza godz. Kliniki: ' + fmtHM(emp.ovrMinutes) + '</span>';
     html += '</div>';
   }
   html += '</div>';
@@ -627,7 +631,37 @@ function renderEmp(emp) {
       if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) ta.blur();
     });
   }
+
+  var ovrChip = document.getElementById('ovr-chip');
+  if (ovrChip) ovrChip.addEventListener('click', function() { openOvrModal(emp); });
 }
+
+// ── Modal — dni poza godzinami Kliniki (klik w chip sumy) ──────
+function openOvrModal(emp) {
+  var days = (emp.days || []).filter(function(d) { return d.overtime; });
+  var el = document.getElementById('ovr-modal-list');
+  if (days.length === 0) {
+    el.innerHTML = '<div class="modal-empty">Brak dni poza godzinami Kliniki</div>';
+  } else {
+    el.innerHTML = days.map(function(d) {
+      var czas = (d.wejscie || '?') + '–' + (d.wyjscie || '?');
+      return '<div class="modal-row" style="align-items:flex-start;flex-direction:column;gap:4px">' +
+        '<div style="display:flex;justify-content:space-between;width:100%">' +
+        '<span class="modal-row-name">' + esc(d.date) + ' (' + esc(d.dow) + ')</span>' +
+        '<span style="color:var(--c-accent);font-weight:700;font-family:ui-monospace,monospace">' + esc(czas) + '</span></div>' +
+        '<div style="font-size:13px;color:var(--c-muted)">' +
+        (d.overtimeNote ? 'Uzasadnienie: ' + esc(d.overtimeNote) : 'Brak uzasadnienia') + '</div>' +
+        '</div>';
+    }).join('');
+  }
+  document.getElementById('ovr-modal').style.display = 'flex';
+}
+document.getElementById('ovr-modal-close').addEventListener('click', function() {
+  document.getElementById('ovr-modal').style.display = 'none';
+});
+document.getElementById('ovr-modal').addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
 
 function switchView(v) {
   S.view = v;
@@ -706,10 +740,10 @@ function renderCalendar(emp) {
     var wknd = d.dow === 'Sb' || d.dow === 'Nd';
     var hasH = d.mins !== null && d.mins !== undefined;
     html += '<div class="cal-cell' + (wknd ? ' cal-wknd' : '') + '" data-date="' + esc(d.date) + '">';
-    if (d.overtime) html += '<span class="cal-ovr">' + ICO.warn + '</span>';
+    if (d.overtime) html += '<span class="cal-ovr" title="Poza godzinami Kliniki' + (d.overtimeNote ? ': ' + esc(d.overtimeNote) : ' (brak uzasadnienia)') + '">' + ICO.warn + '</span>';
     html += '<div class="cal-dn">' + dn + '</div>';
     if (d.absence) {
-      html += '<span class="cal-abs">' + esc(absShort(d.absence)) + '</span>';
+      html += '<span class="cal-abs" title="' + esc(d.absence.typ) + '">' + esc(absShort(d.absence)) + '</span>';
       if (hasH) html += '<div class="cal-h">' + fmtHM(d.mins) + '</div>';
     } else if (d.wejscie) {
       html += '<div class="cal-in">' + esc(d.wejscie) + '</div>';
@@ -910,7 +944,7 @@ document.getElementById('exp-generate').addEventListener('click', function() {
     a.href = url; a.download = res.filename;
     document.body.appendChild(a); a.click();
     document.body.removeChild(a); URL.revokeObjectURL(url);
-    toast('Plik pobrany!', true);
+    wsConfirmPopup('Plik pobrany!');
   });
 });
 
@@ -926,6 +960,7 @@ function doLogout() {
   document.getElementById('presence-bar').style.display = 'none';
   document.getElementById('active-modal').style.display = 'none';
   document.getElementById('day-modal').style.display = 'none';
+  document.getElementById('ovr-modal').style.display = 'none';
   document.getElementById('export-modal').style.display = 'none';
   document.getElementById('dash').style.display  = 'none';
   document.getElementById('login').style.display = 'flex';

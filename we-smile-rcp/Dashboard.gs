@@ -210,6 +210,7 @@ function _dashboardData(year, month) {
         let absDays = 0;
         let paidAbsDays = 0;
         let ovrDays = 0;
+        let ovrMinutes = 0;
 
         const days = [];
         for (let d = 1; d <= daysInMonth; d++) {
@@ -229,9 +230,10 @@ function _dashboardData(year, month) {
 
           const absence  = absMap[key] || null;
           const overtime = _dayOutsideClinic(ds, wejscie, wyjscie);
+          const overtimeMinutes = _overtimeMinutes(ds, wejscie, wyjscie);
           const overtimeNote = ovrNotes[key] || '';
           if (absence)  absDays++;
-          if (overtime) ovrDays++;
+          if (overtime) { ovrDays++; ovrMinutes += overtimeMinutes; }
 
           // Urlop UoP z kodu płatnego 8h/dzień dolicza się do sumy miesięcznej,
           // niezależnie od tego, że w tym dniu nie ma odbić w Ewidencji.
@@ -242,7 +244,7 @@ function _dashboardData(year, month) {
           }
 
           const dow = DOW[new Date(ds + 'T12:00:00').getDay()];
-          days.push({ date: ds, dow, wejscie, wyjscie, mins, absence, overtime, overtimeNote });
+          days.push({ date: ds, dow, wejscie, wyjscie, mins, absence, overtime, overtimeMinutes, overtimeNote });
         }
 
         const noteKey = 'note_' + id + '_' + y + '_' + String(m).padStart(2, '0');
@@ -258,6 +260,8 @@ function _dashboardData(year, month) {
           absDays,
           paidAbsDays,
           ovrDays,
+          ovrMinutes,
+          ovrHours: Math.round((ovrMinutes / 60) * 10) / 10,
           note,
           days
         };
@@ -580,11 +584,91 @@ function masterLogin(pin) {
 
 function masterGetEmployees(token) {
   if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
-  const employees = _getWorkers().map(w => ({
-    id: String(w[0]), imie: String(w[1]), nazwisko: String(w[2]),
-    rola: String(w[3]), status: String(w[4]), forma: String(w[6] || '')
-  }));
+  const employees = _getWorkers()
+    .filter(w => String(w[4]).toLowerCase() === 'aktywny')
+    .map(w => ({
+      id: String(w[0]), imie: String(w[1]), nazwisko: String(w[2]),
+      rola: String(w[3]), status: String(w[4]), forma: String(w[6] || '')
+    }));
   return { ok: true, employees };
+}
+
+// ── Archiwum pracowników — usunięcie z zespołu = zmiana statusu,
+// nigdy usunięcie wiersza. Historia (Ewidencja, Nieobecnosci, Logi)
+// pozostaje nietknięta i wraca w pełni po przywróceniu. ──
+
+function masterGetArchivedEmployees(token) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  const employees = _getWorkers()
+    .filter(w => String(w[4]).toLowerCase() !== 'aktywny')
+    .map(w => ({
+      id: String(w[0]), imie: String(w[1]), nazwisko: String(w[2]),
+      rola: String(w[3]), status: String(w[4]), forma: String(w[6] || '')
+    }));
+  return { ok: true, employees };
+}
+
+function masterRemoveEmployee(token, empId) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  if (!empId) return { ok: false, msg: 'Brak pracownika.' };
+
+  const sh = _ss().getSheetByName('Pracownicy');
+  const rows = sh.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]) === String(empId)) {
+      if (String(rows[i][3]).toLowerCase() === 'admin') {
+        return { ok: false, msg: 'Nie można zarchiwizować konta Admina.' };
+      }
+      sh.getRange(i + 1, 5).setValue('Zarchiwizowany');
+      _logAdmin('ArchiwizacjaPracownika', String(empId), rows[i][1] + ' ' + rows[i][2]);
+      return { ok: true };
+    }
+  }
+  return { ok: false, msg: 'Pracownik nie istnieje.' };
+}
+
+function masterRestoreEmployee(token, empId) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  if (!empId) return { ok: false, msg: 'Brak pracownika.' };
+
+  const sh = _ss().getSheetByName('Pracownicy');
+  const rows = sh.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]) === String(empId)) {
+      sh.getRange(i + 1, 5).setValue('Aktywny');
+      _logAdmin('PrzywroceniePracownika', String(empId), rows[i][1] + ' ' + rows[i][2]);
+      return { ok: true };
+    }
+  }
+  return { ok: false, msg: 'Pracownik nie istnieje.' };
+}
+
+function masterAddEmployee(token, imie, nazwisko, rola, pin) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  imie = String(imie || '').trim();
+  nazwisko = String(nazwisko || '').trim();
+  rola = String(rola || '').trim();
+  pin = String(pin || '').trim();
+
+  if (!imie || !nazwisko) return { ok: false, msg: 'Podaj imię i nazwisko.' };
+  if (!/^\d{4}$/.test(pin)) return { ok: false, msg: 'PIN musi mieć dokładnie 4 cyfry.' };
+
+  const sh = _ss().getSheetByName('Pracownicy');
+  const rows = sh.getDataRange().getValues().slice(1);
+  if (rows.some(r => _pinMatch(r[5], pin))) {
+    return { ok: false, msg: 'Ten PIN jest już używany przez innego pracownika.' };
+  }
+
+  let maxNum = 0;
+  rows.forEach(r => {
+    const m = String(r[0]).match(/^WS(\d+)$/);
+    if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+  });
+  const id = 'WS' + String(maxNum + 1).padStart(2, '0');
+
+  sh.appendRow([id, imie, nazwisko, rola || '—', 'Aktywny', pin, '']);
+  _logAdmin('DodaniePracownika', id, imie + ' ' + nazwisko);
+  return { ok: true, employee: { id, imie, nazwisko, rola: rola || '—', status: 'Aktywny', forma: '' } };
 }
 
 // ── Forma zatrudnienia — edycja przez właściciela ──────────────
@@ -845,9 +929,10 @@ function masterGetMonth(token, empId, year, month) {
     const key = String(empId) + '_' + ds;
     days.push({
       date: ds, dow, wejscie, wyjscie,
-      absence:      absMap[key] || null,
-      overtime:     _dayOutsideClinic(ds, wejscie || null, wyjscie || null),
-      overtimeNote: ovrNotes[key] || ''
+      absence:         absMap[key] || null,
+      overtime:        _dayOutsideClinic(ds, wejscie || null, wyjscie || null),
+      overtimeMinutes: _overtimeMinutes(ds, wejscie || null, wyjscie || null),
+      overtimeNote:    ovrNotes[key] || ''
     });
   }
 

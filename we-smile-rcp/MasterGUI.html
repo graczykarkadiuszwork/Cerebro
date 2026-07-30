@@ -32,7 +32,16 @@
 .info-box{display:flex;gap:10px;background:var(--c-navy-tint);border:1px solid var(--c-border);border-radius:var(--radius-m);padding:12px 14px;font-size:13px;line-height:1.5;color:var(--c-navy)}
 .info-box .ic{flex-shrink:0;margin-top:1px}
 
-.staff-row{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--c-white);border:1px solid var(--c-border);border-radius:var(--radius-m);padding:12px 14px;margin-bottom:8px}
+/* Domykalny baner ze wskazówką — u góry widoku (nie na dole strony,
+   gdzie ginął przy długiej treści). Zamknięcie zapamiętywane w
+   localStorage; ta sama treść zawsze też dostępna w zakładce Pomoc. */
+.hint-banner{display:flex;gap:10px;align-items:flex-start;background:var(--c-navy-tint);border:1px solid var(--c-border);border-radius:var(--radius-m);padding:12px 14px;font-size:13px;line-height:1.5;color:var(--c-navy);margin-bottom:16px}
+.hint-banner .ic-sm{flex-shrink:0;margin-top:1px}
+.hint-banner span{flex:1}
+.hint-banner-close{flex-shrink:0;background:none;border:none;cursor:pointer;color:var(--c-navy);opacity:.6;padding:2px;margin:-2px -2px 0 0}
+.hint-banner-close:active{opacity:1}
+
+.staff-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--c-white);border:1px solid var(--c-border);border-radius:var(--radius-m);padding:12px 14px;margin-bottom:8px}
 .staff-row.warn{border-color:rgba(123,30,59,.3);background:var(--c-accent-tint)}
 .staff-name{font-weight:700;font-size:14px;color:var(--c-ink)}
 .staff-role{font-size:12px;color:var(--c-muted)}
@@ -67,6 +76,9 @@
 <div id="s-panel" style="display:none">
   <header class="hero">
     <div class="hero-row">
+      <button id="m-hamburger" class="hamburger-btn" aria-label="Menu">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
       <button id="m-back" class="btn-bar icon-only" style="display:none" aria-label="Wróć">
         <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 19l-7-7 7-7"/></svg>
       </button>
@@ -81,10 +93,24 @@
     </div>
   </header>
 
+  <div id="m-presence-bar" class="presence-bar" style="display:none">
+    <div class="presence-track" id="m-presence-track"></div>
+  </div>
+
+  <div id="nav-backdrop" class="nav-backdrop"></div>
+
   <div class="page-wrap has-tabbar">
 
     <!-- ── WIDOK: DZIEŃ ── -->
     <div id="view-day">
+      <div class="hint-banner" id="hb-day" data-hb-id="day">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>
+        <span>Puste pole godziny = brak zdarzenia tego typu w tym dniu. Pusty typ nieobecności = usuwa nieobecność dnia; puste uzasadnienie = usuwa uzasadnienie. Zapis nadpisuje istniejące dane wybranego dnia. Każda zmiana jest logowana.</span>
+        <button class="hint-banner-close" data-hb-close="day" aria-label="Zamknij wskazówkę">
+          <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+
       <div class="field" style="position:relative">
         <span class="field-lbl">Pracownik</span>
         <input type="text" id="m-emp-input" class="inp" placeholder="Wpisz imię lub nazwisko…" autocomplete="off">
@@ -145,12 +171,18 @@
 
       <button id="m-save" class="btn btn-primary" style="margin-top:16px">Zapisz wszystko</button>
       <button id="m-clear" class="btn-link">Wyczyść formularz</button>
-
-      <div class="hint" style="padding:16px 4px;text-align:left">Puste pole godziny = brak zdarzenia tego typu w tym dniu. Pusty typ nieobecności = usuwa nieobecność dnia; puste uzasadnienie = usuwa uzasadnienie. Zapis nadpisuje istniejące dane wybranego dnia. Każda zmiana jest logowana.</div>
     </div>
 
     <!-- ── WIDOK: MIESIĄC ── -->
     <div id="view-month" style="display:none">
+      <div class="hint-banner" id="hb-month" data-hb-id="month">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>
+        <span>Zmiana godziny zapisuje się automatycznie po opuszczeniu pola (żółte obramowanie = zapisuję, niebieskie = zapisano). Puste pole = usuwa dane zdarzenie tego dnia. Fioletowa plakietka = nieobecność, trójkąt = dzień poza godzinami Kliniki — dotknij numeru dnia, aby przejść do szybkiej edycji.</span>
+        <button class="hint-banner-close" data-hb-close="month" aria-label="Zamknij wskazówkę">
+          <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+
       <div class="field" style="position:relative">
         <span class="field-lbl">Pracownik</span>
         <input type="text" id="mm-emp-input" class="inp" placeholder="Wpisz imię lub nazwisko…" autocomplete="off">
@@ -164,8 +196,6 @@
       </div>
 
       <div id="mm-table-wrap"><div class="hint">Wybierz pracownika, żeby wczytać miesiąc.</div></div>
-
-      <div class="hint" style="padding:16px 4px;text-align:left">Zmiana godziny zapisuje się automatycznie po opuszczeniu pola (żółte obramowanie = zapisuję, niebieskie = zapisano). Puste pole = usuwa dane zdarzenie tego dnia. Fioletowa plakietka = nieobecność, trójkąt = dzień poza godzinami Kliniki — dotknij numeru dnia, aby przejść do szybkiej edycji.</div>
     </div>
 
     <!-- ── WIDOK: URLOP (zakres dat, dla jednego pracownika) ── -->
@@ -250,13 +280,46 @@
       </div>
     </div>
 
-    <!-- ── WIDOK: PRACOWNICY (forma zatrudnienia) ── -->
+    <!-- ── WIDOK: ZESPÓŁ (forma zatrudnienia, dodawanie/archiwizacja) ── -->
     <div id="view-staff" style="display:none">
       <div class="info-box">
         <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>
         <span>Forma zatrudnienia decyduje, jakie typy nieobecności widzi pracownik w samoobsłudze oraz czy dzień urlopu liczy się jako 8h w miesięcznej sumie godzin (dotyczy tylko UoP). Bez ustawienia tego pola pracownik widzi pełną listę, a jego urlopy nie doliczają godzin.</span>
       </div>
+
+      <button id="staff-add-toggle" class="btn btn-ghost" style="margin-top:14px">+ Dodaj pracownika</button>
+      <div id="staff-add-form" class="section" style="display:none">
+        <div class="section-title">Nowy pracownik</div>
+        <div class="field-row2">
+          <div class="field">
+            <span class="field-lbl">Imię</span>
+            <input type="text" id="staff-add-imie" class="inp" autocomplete="off">
+          </div>
+          <div class="field">
+            <span class="field-lbl">Nazwisko</span>
+            <input type="text" id="staff-add-nazwisko" class="inp" autocomplete="off">
+          </div>
+        </div>
+        <div class="field-row2">
+          <div class="field">
+            <span class="field-lbl">Rola</span>
+            <input type="text" id="staff-add-rola" class="inp" placeholder="np. higienistka stomatologiczna" autocomplete="off">
+          </div>
+          <div class="field">
+            <span class="field-lbl">PIN (4 cyfry)</span>
+            <input type="text" id="staff-add-pin" class="inp" inputmode="numeric" maxlength="4" autocomplete="off">
+          </div>
+        </div>
+        <button id="staff-add-save" class="btn btn-primary" style="margin-top:4px">Dodaj do zespołu</button>
+      </div>
+
       <div id="staff-list" style="margin-top:16px"><div class="hint">Ładowanie…</div></div>
+
+      <button id="staff-archive-toggle" class="btn-link" style="margin-top:10px">Pokaż zarchiwizowanych</button>
+      <div id="staff-archive-wrap" style="display:none;margin-top:10px">
+        <div class="section-title">Archiwum</div>
+        <div id="staff-archive-list"><div class="hint">Ładowanie…</div></div>
+      </div>
     </div>
 
     <!-- ── WIDOK: RAPORTY (Panel Raportowy osadzony) ── -->
@@ -299,8 +362,13 @@
       </div>
       <div class="card" style="text-align:center">
         <div class="tok-sub">Aktywny kod autoryzacyjny</div>
-        <div id="mc-token" class="token-display green">----</div>
-        <div class="prog-wrap"><div class="prog-fill" id="mc-prog"></div></div>
+        <div class="ring-wrap">
+          <svg class="ring-svg" viewBox="0 0 120 120" aria-hidden="true">
+            <circle class="ring-track" cx="60" cy="60" r="54"></circle>
+            <circle class="ring-fill" id="mc-ring" cx="60" cy="60" r="54"></circle>
+          </svg>
+          <div id="mc-token" class="token-display green">----</div>
+        </div>
         <div class="tok-status green" id="mc-status"></div>
         <button class="btn btn-accent btn-refresh" id="mc-refresh">
           <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-15.5 6.4L3 16"/><path d="M3 12a9 9 0 0 1 15.5-6.4L21 8"/><path d="M21 3v5h-5"/><path d="M3 21v-5h5"/></svg>
@@ -402,19 +470,25 @@
       </div>
     </div>
 
-    <!-- ── WIDOK: LEGENDA ── -->
+    <!-- ── WIDOK: POMOC (dawna „Legenda") ── -->
     <div id="view-legend" style="display:none">
       <div class="info-box" style="margin-bottom:6px">
         <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>
-        <span>Wszystkie kody nieobecności i formy zatrudnienia używane w RCP — z definicjami. Te same informacje znajdziesz też w wyszukiwarce widgetu pomocy (prawy dolny róg).</span>
+        <span>Wszystkie pojęcia, kody nieobecności i formy zatrudnienia używane w RCP — z definicjami i miejscem, gdzie je znaleźć. Te same informacje dostępne też w widgecie pomocy (prawy dolny róg) na każdym ekranie.</span>
       </div>
       <div id="legend-container"></div>
     </div>
 
   </div>
 
-  <!-- ── Dolna nawigacja (iOS tab bar) ── -->
+  <!-- ── Nawigacja panelu (chowana szuflada) ── -->
   <nav class="tabbar">
+    <div class="tabbar-head">
+      <span class="tabbar-head-lbl">Menu</span>
+      <button id="m-nav-close" class="btn-icon" aria-label="Zamknij menu">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
     <button class="seg-btn on" id="tab-day">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18"/><path d="M8 3v4M16 3v4"/><path d="M12 14v4M10 16h4"/></svg>
       <span>Dzień</span>
@@ -449,9 +523,80 @@
     </button>
     <button class="seg-btn" id="tab-legend">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-      <span>Legenda</span>
+      <span>Pomoc</span>
     </button>
   </nav>
+</div>
+
+<!-- ═══════ MODAL — eksport Excel ═══════ -->
+<div id="m-export-modal" class="modal-overlay" style="display:none">
+  <div class="modal-card">
+    <div class="modal-head">
+      <span>Eksport Excel</span>
+      <button id="m-export-close" class="btn-icon">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="section" style="margin-top:0">
+      <div class="section-title">Zakres</div>
+      <label class="field-lbl" style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-weight:500;color:var(--c-ink);margin-bottom:10px;cursor:pointer">
+        <input type="radio" name="m-exp-mode" value="month" checked style="accent-color:var(--c-primary);width:18px;height:18px"> Jeden miesiąc</label>
+      <label class="field-lbl" style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-weight:500;color:var(--c-ink);cursor:pointer">
+        <input type="radio" name="m-exp-mode" value="range" style="accent-color:var(--c-primary);width:18px;height:18px"> Zakres dat</label>
+    </div>
+
+    <div id="m-exp-mode-month" class="field" style="margin-top:14px">
+      <input type="month" id="m-exp-month" class="inp">
+    </div>
+
+    <div id="m-exp-mode-range" class="field-row2" style="display:none;margin-top:14px">
+      <div class="field">
+        <div class="field-lbl">Od</div>
+        <input type="month" id="m-exp-from" class="inp">
+      </div>
+      <div class="field">
+        <div class="field-lbl">Do</div>
+        <input type="month" id="m-exp-to" class="inp">
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title" style="justify-content:space-between;display:flex">
+        <span>Pracownicy</span>
+        <span><a href="#" id="m-exp-all" style="color:var(--c-primary);font-weight:700">wszyscy</a> · <a href="#" id="m-exp-none" style="color:var(--c-primary);font-weight:700">żaden</a></span>
+      </div>
+      <div id="m-exp-emp-list" style="max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:2px"></div>
+    </div>
+
+    <button id="m-exp-generate" class="btn btn-accent" style="margin-top:14px">Generuj plik</button>
+  </div>
+</div>
+
+<!-- ═══════ MODAL — dni poza godzinami Kliniki ═══════ -->
+<div id="m-ovr-modal" class="modal-overlay" style="display:none">
+  <div class="modal-card">
+    <div class="modal-head">
+      <span>Poza godzinami Kliniki</span>
+      <button id="m-ovr-modal-close" class="btn-icon">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div id="m-ovr-modal-list"></div>
+  </div>
+</div>
+
+<!-- ═══════ MODAL — obecność teraz ═══════ -->
+<div id="m-active-modal" class="modal-overlay" style="display:none">
+  <div class="modal-card">
+    <div class="modal-head">
+      <span>Obecność dzisiaj</span>
+      <button id="m-modal-close" class="btn-icon">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div id="m-modal-list"></div>
+  </div>
 </div>
 
 <div id="toast"></div>
@@ -481,9 +626,15 @@ function toast(msg, ok) {
 function gas(action, args, cb) {
   google.script.run
     .withSuccessHandler(function(res) {
+      wsSetConnStatus(true, 'Połączono.');
       try { cb(res); } catch(ex) { toast('Błąd: ' + ex.message, false); }
     })
-    .withFailureHandler(function(e) { toast((e && e.message) || 'Błąd połączenia', false); })
+    .withFailureHandler(function(e) {
+      var msg = (e && e.message) || 'Błąd połączenia';
+      toast(msg, false);
+      wsSetConnStatus(false, 'Błąd połączenia: ' + msg);
+      wsShowError('Błąd połączenia: ' + msg);
+    })
     .callRCP(action, JSON.stringify(args || []));
 }
 
@@ -492,6 +643,19 @@ function esc(s) {
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
+
+// ── Domykalne banery ze wskazówką (u góry widoku) ──────────────
+document.querySelectorAll('[data-hb-id]').forEach(function(banner) {
+  var id = banner.getAttribute('data-hb-id');
+  if (localStorage.getItem('wesmile_hb_' + id) === '1') banner.style.display = 'none';
+});
+document.querySelectorAll('[data-hb-close]').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    var id = btn.getAttribute('data-hb-close');
+    localStorage.setItem('wesmile_hb_' + id, '1');
+    btn.closest('[data-hb-id]').style.display = 'none';
+  });
+});
 
 function todayStr() {
   var d = new Date();
@@ -524,12 +688,13 @@ document.getElementById('kp-login').addEventListener('click', function(e) {
         document.getElementById('do-to').value   = todayStr();
         document.getElementById('rg-from').value = todayStr();
         document.getElementById('rg-to').value   = todayStr();
-        document.body.classList.add('has-tabbar-space');
         loadEmployees();
         loadAbsTypes();
         updateMMLabel();
         initEmbeddedCode();
         initEmbeddedReports();
+        mPollActive();
+        _mActiveTimer = setInterval(mPollActive, 60000);
       } else {
         toast((res && res.msg) || 'Brak dostępu.', false);
         lPin = ''; setDots('');
@@ -539,6 +704,100 @@ document.getElementById('kp-login').addEventListener('click', function(e) {
 });
 
 document.getElementById('m-logout').addEventListener('click', function() { location.reload(); });
+
+// ── Kto jest w pracy / kto skończył — pasek, zawsze widoczny ──────
+var _mActiveTimer;
+function mPollActive() {
+  if (!M.token) return;
+  gas('masterGetActive', [M.token], function(res) {
+    if (!res || !res.ok) return;
+    mRenderPresenceBar(res.active, res.finished);
+    mRenderModalList(res.active, res.finished);
+  });
+}
+
+function mRenderPresenceBar(active, finished) {
+  var bar   = document.getElementById('m-presence-bar');
+  var track = document.getElementById('m-presence-track');
+  bar.style.display = 'block';
+  active   = active || [];
+  finished = finished || [];
+
+  if (active.length === 0 && finished.length === 0) {
+    track.className = 'presence-track';
+    track.style.paddingLeft = '16px';
+    track.innerHTML = '<span class="presence-empty">Nikt dziś nie rozpoczął pracy</span>';
+    return;
+  }
+
+  var itemsHtml = active.map(function(p) {
+    return '<span class="presence-item"><span class="p-dot"></span>' +
+      esc(p.imie + ' ' + p.nazwisko) + ' — od ' + esc(p.wejscie) + '</span>';
+  }).join('') + finished.map(function(p) {
+    return '<span class="presence-item done"><span class="p-dot done"></span>' +
+      esc(p.imie + ' ' + p.nazwisko) + ' — zakończono ' +
+      esc((p.wejscie || '?') + '–' + (p.wyjscie || '?')) + '</span>';
+  }).join('');
+
+  track.className = 'presence-track';
+  track.style.paddingLeft = '16px';
+  track.innerHTML = itemsHtml;
+
+  var overflow = track.scrollWidth > bar.clientWidth;
+  if (overflow) {
+    track.style.paddingLeft = '100%';
+    track.innerHTML = itemsHtml + itemsHtml;
+    track.className = 'presence-track scrolling';
+  }
+}
+
+function mRenderModalList(active, finished) {
+  var el = document.getElementById('m-modal-list');
+  active   = active || [];
+  finished = finished || [];
+
+  if (active.length === 0 && finished.length === 0) {
+    el.innerHTML = '<div class="modal-empty">Nikt dziś nie rozpoczął pracy</div>';
+    return;
+  }
+
+  var html = '';
+  if (active.length > 0) {
+    html += '<div class="modal-sec">W pracy</div>';
+    html += active.map(function(p) {
+      return '<div class="modal-row"><span class="modal-row-name"><span class="p-dot"></span>' +
+        esc(p.imie + ' ' + p.nazwisko) + '</span>' +
+        '<span style="color:var(--c-primary);font-weight:700;font-family:ui-monospace,monospace">od ' + esc(p.wejscie) + '</span></div>';
+    }).join('');
+  }
+  if (finished.length > 0) {
+    html += '<div class="modal-sec">Zakończyli dziś</div>';
+    html += finished.map(function(p) {
+      return '<div class="modal-row done"><span class="modal-row-name"><span class="p-dot done"></span>' +
+        esc(p.imie + ' ' + p.nazwisko) + '</span>' +
+        '<span style="color:var(--c-muted);font-weight:700;font-family:ui-monospace,monospace">' +
+        esc((p.wejscie || '?') + '–' + (p.wyjscie || '?')) + '</span></div>';
+    }).join('');
+  }
+  el.innerHTML = html;
+}
+
+document.getElementById('m-presence-bar').addEventListener('click', function() {
+  document.getElementById('m-active-modal').style.display = 'flex';
+});
+document.getElementById('m-modal-close').addEventListener('click', function() {
+  document.getElementById('m-active-modal').style.display = 'none';
+});
+document.getElementById('m-active-modal').addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
+
+// ── Szuflada nawigacji (hamburger) ─────────────────
+function openNav()  { document.body.classList.add('nav-open'); }
+function closeNav() { document.body.classList.remove('nav-open'); }
+document.getElementById('m-hamburger').addEventListener('click', openNav);
+document.getElementById('m-nav-close').addEventListener('click', closeNav);
+document.getElementById('nav-backdrop').addEventListener('click', closeNav);
 document.getElementById('m-theme').addEventListener('click', function() { wsToggleTheme(); });
 
 wsMountFaq();
@@ -683,7 +942,15 @@ window.addEventListener('popstate', function (e) {
 mBack.addEventListener('click', goBack);
 
 Object.keys(TABS).forEach(function(tabId) {
-  document.getElementById(tabId).addEventListener('click', function() { activateTab(tabId); });
+  document.getElementById(tabId).addEventListener('click', function() {
+    var btn = this;
+    btn.classList.remove('pulsing');
+    void btn.offsetWidth; // restart animacji przy szybkich powtórnych kliknięciach
+    btn.classList.add('pulsing');
+    setTimeout(function() { btn.classList.remove('pulsing'); }, 400);
+    activateTab(tabId);
+    closeNav();
+  });
 });
 
 // ── Widok: szybka edycja dnia ─────────────────────
@@ -708,7 +975,7 @@ function loadDay(cb) {
 document.getElementById('m-load').addEventListener('click', function() {
   if (!M.empId) { toast('Wybierz pracownika z listy.', false); return; }
   if (!document.getElementById('m-date').value) { toast('Wybierz datę.', false); return; }
-  loadDay(function() { toast('Wczytano dane dnia.', true); });
+  loadDay(function() { wsConfirmPopup('Wczytano dane dnia.'); });
 });
 
 document.getElementById('m-date').addEventListener('change', function() {
@@ -738,7 +1005,7 @@ document.getElementById('m-save').addEventListener('click', function() {
       gas('masterSetOvertimeNote', [M.token, M.empId, date, ovrNote], function(res3) {
         if (res3 && res3.errorType === 'UNAUTHORIZED') { location.reload(); return; }
         if (!res3 || !res3.ok) { toast((res3 && res3.msg) || 'Błąd zapisu uzasadnienia.', false); return; }
-        toast('Zapisano wszystko.', true);
+        wsConfirmPopup('Zapisano wszystko.');
       });
     });
   });
@@ -802,7 +1069,7 @@ function renderMonthTable(days) {
     var dn = d.date.split('-')[2];
     html += '<tr' + (wknd ? ' class="wknd"' : '') + ' data-date="' + esc(d.date) + '">';
     html += '<td class="dcell mm-day" data-date="' + esc(d.date) + '">' + dn +
-            (d.overtime ? ' <span class="mm-ovr">' + ICO.warn + '</span>' : '') +
+            (d.overtime ? ' <span class="mm-ovr" title="Poza godzinami Kliniki' + (d.overtimeNote ? ': ' + esc(d.overtimeNote) : ' (brak uzasadnienia)') + '">' + ICO.warn + '</span>' : '') +
             ' <small>' + esc(d.dow) + '</small>' +
             (d.absence ? '<span class="mm-abs" title="' + esc(d.absence.typ) + '">' + esc(d.absence.code) + '</span>' : '') +
             '</td>';
@@ -893,7 +1160,7 @@ document.getElementById('rg-yes').addEventListener('click', function() {
     rgDisarm();
     if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
     if (!res || !res.ok) { toast((res && res.msg) || 'Błąd zapisu.', false); return; }
-    toast('Zapisano dla ' + res.count + ' dni.', true);
+    wsConfirmPopup('Zapisano dla ' + res.count + ' dni.');
   });
 });
 
@@ -907,6 +1174,7 @@ function renderStaffList() {
 
   wrap.innerHTML = _emps.map(function(e) {
     var unset = !e.forma;
+    var isAdmin = String(e.rola).toLowerCase() === 'admin';
     var opts = ['UoP', 'Zlecenie', 'B2B'].map(function(f) {
       return '<option value="' + f + '"' + (e.forma === f ? ' selected' : '') + '>' + FORMA_LABELS[f] + '</option>';
     }).join('');
@@ -915,9 +1183,14 @@ function renderStaffList() {
       '<span class="staff-role">' + esc(e.rola || '') + (e.status ? ' · ' + esc(e.status) : '') + '</span>' +
       (unset ? '<span class="staff-warn-lbl">Brak formy zatrudnienia — urlop nie doliczy godzin</span>' : '') +
       '</div>' +
+      '<div style="display:flex;gap:8px;align-items:center;flex-shrink:0">' +
       '<select class="sel staff-forma-sel" data-id="' + esc(e.id) + '">' +
         '<option value=""' + (unset ? ' selected' : '') + '>— nieustawiona —</option>' + opts +
-      '</select></div>';
+      '</select>' +
+      (isAdmin ? '' :
+        '<button type="button" class="btn-icon staff-remove-btn" data-id="' + esc(e.id) + '" title="Archiwizuj pracownika" aria-label="Archiwizuj pracownika">' +
+        '<svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/></svg></button>') +
+      '</div></div>';
   }).join('');
 
   wrap.querySelectorAll('.staff-forma-sel').forEach(function(sel) {
@@ -931,7 +1204,116 @@ function renderStaffList() {
         var emp = null;
         _emps.forEach(function(e) { if (e.id === id) emp = e; });
         if (emp) emp.forma = forma;
-        toast('Zapisano formę zatrudnienia.', true);
+        wsConfirmPopup('Zapisano formę zatrudnienia.');
+        renderStaffList();
+      });
+    });
+  });
+
+  wrap.querySelectorAll('.staff-remove-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      if (btn.getAttribute('data-armed') === '1') {
+        var id = btn.getAttribute('data-id');
+        gas('masterRemoveEmployee', [M.token, id], function(res) {
+          if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+          if (!res || !res.ok) { toast((res && res.msg) || 'Błąd archiwizacji.', false); return; }
+          _emps = _emps.filter(function(e) { return e.id !== id; });
+          wsConfirmPopup('Pracownik zarchiwizowany.');
+          renderStaffList();
+          if (document.getElementById('staff-archive-wrap').style.display !== 'none') loadArchivedStaff();
+        });
+        return;
+      }
+      btn.setAttribute('data-armed', '1');
+      btn.classList.add('danger');
+      btn.setAttribute('title', 'Kliknij ponownie, aby potwierdzić archiwizację');
+      clearTimeout(btn._armTimer);
+      btn._armTimer = setTimeout(function() {
+        btn.removeAttribute('data-armed');
+        btn.classList.remove('danger');
+        btn.setAttribute('title', 'Archiwizuj pracownika');
+      }, 4000);
+    });
+  });
+}
+
+// ── Zespół — dodawanie nowego pracownika ──────────────────────
+
+document.getElementById('staff-add-toggle').addEventListener('click', function() {
+  var form = document.getElementById('staff-add-form');
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+});
+
+document.getElementById('staff-add-save').addEventListener('click', function() {
+  var imie     = document.getElementById('staff-add-imie').value.trim();
+  var nazwisko = document.getElementById('staff-add-nazwisko').value.trim();
+  var rola     = document.getElementById('staff-add-rola').value.trim();
+  var pin      = document.getElementById('staff-add-pin').value.trim();
+  if (!imie || !nazwisko) { toast('Podaj imię i nazwisko.', false); return; }
+  if (!/^\d{4}$/.test(pin)) { toast('PIN musi mieć dokładnie 4 cyfry.', false); return; }
+
+  gas('masterAddEmployee', [M.token, imie, nazwisko, rola, pin], function(res) {
+    if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+    if (!res || !res.ok) { toast((res && res.msg) || 'Błąd dodawania.', false); return; }
+    _emps.push(res.employee);
+    document.getElementById('staff-add-imie').value = '';
+    document.getElementById('staff-add-nazwisko').value = '';
+    document.getElementById('staff-add-rola').value = '';
+    document.getElementById('staff-add-pin').value = '';
+    document.getElementById('staff-add-form').style.display = 'none';
+    wsConfirmPopup('Dodano pracownika do zespołu.');
+    renderStaffList();
+  });
+});
+
+// ── Zespół — archiwum (przywracanie) ──────────────────────────
+
+var _archivedEmps = [];
+
+document.getElementById('staff-archive-toggle').addEventListener('click', function() {
+  var wrap = document.getElementById('staff-archive-wrap');
+  var opening = wrap.style.display === 'none';
+  wrap.style.display = opening ? 'block' : 'none';
+  this.textContent = opening ? 'Ukryj zarchiwizowanych' : 'Pokaż zarchiwizowanych';
+  if (opening) loadArchivedStaff();
+});
+
+function loadArchivedStaff() {
+  document.getElementById('staff-archive-list').innerHTML = '<div class="hint">Ładowanie…</div>';
+  gas('masterGetArchivedEmployees', [M.token], function(res) {
+    if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+    if (!res || !res.ok) {
+      document.getElementById('staff-archive-list').innerHTML = '<div class="hint">' + esc((res && res.msg) || 'Błąd ładowania.') + '</div>';
+      return;
+    }
+    _archivedEmps = res.employees || [];
+    renderArchivedList();
+  });
+}
+
+function renderArchivedList() {
+  var wrap = document.getElementById('staff-archive-list');
+  if (_archivedEmps.length === 0) { wrap.innerHTML = '<div class="hint">Brak zarchiwizowanych pracowników.</div>'; return; }
+
+  wrap.innerHTML = _archivedEmps.map(function(e) {
+    return '<div class="staff-row" data-id="' + esc(e.id) + '">' +
+      '<div><span class="staff-name">' + esc(e.imie + ' ' + e.nazwisko) + '</span>' +
+      '<span class="staff-role">' + esc(e.rola || '') + (e.status ? ' · ' + esc(e.status) : '') + '</span></div>' +
+      '<button type="button" class="btn btn-ghost btn-sm staff-restore-btn" data-id="' + esc(e.id) + '">Przywróć</button>' +
+      '</div>';
+  }).join('');
+
+  wrap.querySelectorAll('.staff-restore-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var id = btn.getAttribute('data-id');
+      gas('masterRestoreEmployee', [M.token, id], function(res) {
+        if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+        if (!res || !res.ok) { toast((res && res.msg) || 'Błąd przywracania.', false); return; }
+        var emp = null;
+        _archivedEmps = _archivedEmps.filter(function(e) { if (e.id === id) emp = e; return e.id !== id; });
+        if (emp) { emp.status = 'Aktywny'; _emps.push(emp); }
+        wsConfirmPopup('Pracownik przywrócony do zespołu.');
+        renderArchivedList();
         renderStaffList();
       });
     });
@@ -977,7 +1359,7 @@ document.getElementById('do-yes').addEventListener('click', function() {
     doDisarm();
     if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
     if (!res || !res.ok) { toast((res && res.msg) || 'Błąd zapisu.', false); return; }
-    toast('Zastosowano dla ' + res.count + ' pracowników.', true);
+    wsConfirmPopup('Zastosowano dla ' + res.count + ' pracowników.');
   });
 });
 
@@ -987,13 +1369,15 @@ document.getElementById('do-yes').addEventListener('click', function() {
 // ════════════════════════════════════════════════════════════
 
 var mcWin = 30, mcLeft = 0, mcLoading = false, mcRetryIn = 0, mcStarted = false;
-var mcElToken, mcElProg, mcElStatus, mcElRefresh;
+var mcElToken, mcElRing, mcElStatus, mcElRefresh;
+var MC_RING_C = 2 * Math.PI * 54;
 
 function initEmbeddedCode() {
   mcElToken   = document.getElementById('mc-token');
-  mcElProg    = document.getElementById('mc-prog');
+  mcElRing    = document.getElementById('mc-ring');
   mcElStatus  = document.getElementById('mc-status');
   mcElRefresh = document.getElementById('mc-refresh');
+  mcElRing.style.strokeDasharray = MC_RING_C;
   mcElRefresh.addEventListener('click', function () { mcRefreshToken(true); });
   setInterval(function () {
     if (!mcStarted) return;
@@ -1027,8 +1411,8 @@ function mcRender() {
   var elapsed = mcWin - mcLeft;
   var green = elapsed <= 20;
   mcElToken.className = 'token-display ' + (green ? 'green' : 'red');
-  mcElProg.style.width = Math.round((mcLeft / mcWin) * 100) + '%';
-  mcElProg.className = 'prog-fill' + (green ? '' : ' red');
+  mcElRing.style.strokeDashoffset = MC_RING_C * (1 - mcLeft / mcWin);
+  mcElRing.className = 'ring-fill' + (green ? '' : ' red');
   if (green) {
     mcElStatus.className = 'tok-status green';
     mcElStatus.textContent = 'Ważny jeszcze ' + mcLeft + ' s';
@@ -1119,7 +1503,7 @@ document.getElementById('rp-etat').addEventListener('blur', function() {
   var val = parseFloat(this.value);
   if (isNaN(val) || val < 0) return;
   gas('masterSetEtat', [M.token, RP.year, RP.month, val], function(res) {
-    if (res && res.ok) { toast('Zapisano normę.', true); if (RP.empId) rpLoadMonth(); }
+    if (res && res.ok) { wsConfirmPopup('Zapisano normę.'); if (RP.empId) rpLoadMonth(); }
     else toast((res && res.msg) || 'Błąd zapisu normy.', false);
   });
 });
@@ -1139,7 +1523,7 @@ function renderRPEmployee(emp, etat) {
     html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">';
     if (emp.absDays > 0)     html += '<span class="chip chip-primary">Nieobecności: ' + emp.absDays + '</span>';
     if (emp.paidAbsDays > 0) html += '<span class="chip chip-success">Płatny urlop (8h): ' + emp.paidAbsDays + '</span>';
-    if (emp.ovrDays > 0)     html += '<span class="chip chip-warn">Poza godz. Kliniki: ' + emp.ovrDays + '</span>';
+    if (emp.ovrMinutes > 0)  html += '<span class="chip chip-warn" id="m-ovr-chip" style="cursor:pointer">Poza godz. Kliniki: ' + rpFmtHM(emp.ovrMinutes) + '</span>';
     html += '</div>';
   }
   html += '<div class="field" style="margin-top:14px;margin-bottom:0"><span class="field-lbl">Adnotacja miesięczna</span><textarea id="rp-note" class="ta">' + esc(emp.note || '') + '</textarea></div>';
@@ -1150,7 +1534,7 @@ function renderRPEmployee(emp, etat) {
     var wknd = d.dow === 'Sb' || d.dow === 'Nd';
     var dn = d.date.split('-')[2];
     html += '<tr' + (wknd ? ' class="wknd"' : '') + '>';
-    html += '<td class="dcell">' + dn + (d.overtime ? ' <span class="mm-ovr">' + ICO.warn + '</span>' : '') +
+    html += '<td class="dcell">' + dn + (d.overtime ? ' <span class="mm-ovr" title="Poza godzinami Kliniki' + (d.overtimeNote ? ': ' + esc(d.overtimeNote) : ' (brak uzasadnienia)') + '">' + ICO.warn + '</span>' : '') +
             ' <small>' + esc(d.dow) + '</small>' + (d.absence ? '<span class="mm-abs" title="' + esc(d.absence.typ) + '">' + esc(d.absence.code) + '</span>' : '') + '</td>';
     if (d.absence) {
       html += '<td colspan="2" style="color:var(--c-muted)">' + esc(d.absence.typ) + '</td>';
@@ -1165,15 +1549,148 @@ function renderRPEmployee(emp, etat) {
   document.getElementById('rp-data').innerHTML = html;
   document.getElementById('rp-note').addEventListener('blur', function() {
     gas('masterSetNote', [M.token, RP.empId, RP.year, RP.month, this.value], function(res) {
-      if (res && res.ok) toast('Zapisano adnotację.', true);
+      if (res && res.ok) wsConfirmPopup('Zapisano adnotację.');
     });
+  });
+
+  var ovrChip = document.getElementById('m-ovr-chip');
+  if (ovrChip) ovrChip.addEventListener('click', function() { openMOvrModal(emp); });
+}
+
+// ── Modal — dni poza godzinami Kliniki (klik w chip sumy) ──────
+function openMOvrModal(emp) {
+  var days = (emp.days || []).filter(function(d) { return d.overtime; });
+  var el = document.getElementById('m-ovr-modal-list');
+  if (days.length === 0) {
+    el.innerHTML = '<div class="modal-empty">Brak dni poza godzinami Kliniki</div>';
+  } else {
+    el.innerHTML = days.map(function(d) {
+      var czas = (d.wejscie || '?') + '–' + (d.wyjscie || '?');
+      return '<div class="modal-row" style="align-items:flex-start;flex-direction:column;gap:4px">' +
+        '<div style="display:flex;justify-content:space-between;width:100%">' +
+        '<span class="modal-row-name">' + esc(d.date) + ' (' + esc(d.dow) + ')</span>' +
+        '<span style="color:var(--c-accent);font-weight:700;font-family:ui-monospace,monospace">' + esc(czas) + '</span></div>' +
+        '<div style="font-size:13px;color:var(--c-muted)">' +
+        (d.overtimeNote ? 'Uzasadnienie: ' + esc(d.overtimeNote) : 'Brak uzasadnienia') + '</div>' +
+        '</div>';
+    }).join('');
+  }
+  document.getElementById('m-ovr-modal').style.display = 'flex';
+}
+document.getElementById('m-ovr-modal-close').addEventListener('click', function() {
+  document.getElementById('m-ovr-modal').style.display = 'none';
+});
+document.getElementById('m-ovr-modal').addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
+
+// ── Excel — okno wyboru zakresu i pracowników (Raporty) ────────
+
+document.getElementById('rp-export').addEventListener('click', openMExportModal);
+
+function openMExportModal() {
+  if (!M.token) return;
+  document.getElementById('m-export-modal').style.display = 'flex';
+  document.getElementById('m-exp-emp-list').innerHTML = '<div class="modal-empty">Ładowanie…</div>';
+
+  document.querySelector('input[name="m-exp-mode"][value="month"]').checked = true;
+  document.getElementById('m-exp-mode-month').style.display = 'block';
+  document.getElementById('m-exp-mode-range').style.display = 'none';
+
+  gas('masterGetExportMeta', [M.token], function(res) {
+    if (!res || !res.ok) {
+      if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+      toast('Błąd wczytywania danych eksportu.', false);
+      document.getElementById('m-export-modal').style.display = 'none';
+      return;
+    }
+
+    var now = new Date();
+    var curMonthVal = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+    var earliestVal = String(res.earliest).slice(0, 7);
+
+    var monthInp = document.getElementById('m-exp-month');
+    monthInp.value = curMonthVal;
+    monthInp.max = curMonthVal;
+
+    var fromInp = document.getElementById('m-exp-from');
+    var toInp   = document.getElementById('m-exp-to');
+    fromInp.value = earliestVal;
+    fromInp.min   = earliestVal;
+    fromInp.max   = curMonthVal;
+    toInp.value   = curMonthVal;
+    toInp.min     = earliestVal;
+    toInp.max     = curMonthVal;
+
+    var list = document.getElementById('m-exp-emp-list');
+    if (!res.employees || res.employees.length === 0) {
+      list.innerHTML = '<div class="modal-empty">Brak aktywnych pracowników</div>';
+      return;
+    }
+    list.innerHTML = res.employees.map(function(e) {
+      return '<label style="display:flex;align-items:center;gap:10px;padding:9px 4px;font-size:14px;cursor:pointer">' +
+        '<input type="checkbox" class="m-exp-emp-cb" value="' + esc(e.id) + '"' +
+        (RP.empId && e.id === RP.empId ? ' checked' : (RP.empId ? '' : ' checked')) +
+        ' style="accent-color:var(--c-primary);width:19px;height:19px"> ' +
+        esc(e.imie + ' ' + e.nazwisko) + '</label>';
+    }).join('');
   });
 }
 
-document.getElementById('rp-export').addEventListener('click', function() {
+document.getElementById('m-export-close').addEventListener('click', function() {
+  document.getElementById('m-export-modal').style.display = 'none';
+});
+document.getElementById('m-export-modal').addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
+
+document.querySelectorAll('input[name="m-exp-mode"]').forEach(function(r) {
+  r.addEventListener('change', function() {
+    var isRange = document.querySelector('input[name="m-exp-mode"]:checked').value === 'range';
+    document.getElementById('m-exp-mode-month').style.display = isRange ? 'none' : 'block';
+    document.getElementById('m-exp-mode-range').style.display = isRange ? 'block' : 'none';
+  });
+});
+
+document.getElementById('m-exp-all').addEventListener('click', function(e) {
+  e.preventDefault();
+  document.querySelectorAll('.m-exp-emp-cb').forEach(function(cb){ cb.checked = true; });
+});
+document.getElementById('m-exp-none').addEventListener('click', function(e) {
+  e.preventDefault();
+  document.querySelectorAll('.m-exp-emp-cb').forEach(function(cb){ cb.checked = false; });
+});
+
+document.getElementById('m-exp-generate').addEventListener('click', function() {
+  var mode = document.querySelector('input[name="m-exp-mode"]:checked').value;
+  var employeeIds = Array.prototype.map.call(
+    document.querySelectorAll('.m-exp-emp-cb:checked'), function(cb){ return cb.value; }
+  );
+  if (employeeIds.length === 0) { toast('Wybierz przynajmniej jednego pracownika.', false); return; }
+
+  var opts = { employeeIds: employeeIds };
+
+  if (mode === 'range') {
+    var from = document.getElementById('m-exp-from').value;
+    var to   = document.getElementById('m-exp-to').value;
+    if (!from || !to) { toast('Wybierz zakres dat.', false); return; }
+    if (from > to) { toast('Data "od" nie może być późniejsza niż "do".', false); return; }
+    opts.mode = 'range';
+    opts.from = from + '-01';
+    var toYear  = parseInt(to.slice(0, 4), 10);
+    var toMonth = parseInt(to.slice(5, 7), 10);
+    var toDim   = new Date(toYear, toMonth, 0).getDate();
+    opts.to = to + '-' + String(toDim).padStart(2, '0');
+  } else {
+    var mv = document.getElementById('m-exp-month').value;
+    if (!mv) { toast('Wybierz miesiąc.', false); return; }
+    opts.mode  = 'month';
+    opts.year  = parseInt(mv.slice(0, 4), 10);
+    opts.month = parseInt(mv.slice(5, 7), 10);
+  }
+
+  document.getElementById('m-export-modal').style.display = 'none';
   toast('Generowanie pliku Excel…', true);
-  var opts = { mode: 'month', year: RP.year, month: RP.month };
-  if (RP.empId) opts.employeeIds = [RP.empId];
   gas('masterDashExportXlsx', [M.token, opts], function(res) {
     if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
     if (!res || !res.ok) { toast('Błąd eksportu: ' + ((res && res.msg) || ''), false); return; }
@@ -1187,7 +1704,7 @@ document.getElementById('rp-export').addEventListener('click', function() {
     a.href = url; a.download = res.filename;
     document.body.appendChild(a); a.click();
     document.body.removeChild(a); URL.revokeObjectURL(url);
-    toast('Plik pobrany!', true);
+    wsConfirmPopup('Plik pobrany!');
   });
 });
 

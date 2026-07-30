@@ -119,9 +119,10 @@ button,input,select,textarea{font-family:inherit}
 .brand-screen{background:var(--grad-hero)}
 .sheet{width:100%;max-width:440px;background:var(--c-white);border-radius:var(--radius-l);padding:clamp(22px,6vw,30px) clamp(18px,5vw,24px) 26px;box-shadow:var(--shadow-l);border:1px solid var(--c-border)}
 .brand-screen .sheet{border:none}
-.page-wrap{max-width:960px;margin:0 auto;padding:14px var(--pad-x) 48px;width:100%}
-.page-wrap.has-tabbar{padding-bottom:calc(96px + env(safe-area-inset-bottom))}
-@media(min-width:900px){ .page-wrap.has-tabbar{padding-bottom:48px} }
+.page-wrap{max-width:960px;margin:0 auto;padding:14px var(--pad-x) 88px;width:100%}
+/* Szuflada nawigacji jest teraz zawsze off-canvas (overlay), więc
+   treść strony nie potrzebuje już stałego marginesu na stały pasek. */
+.page-wrap.has-tabbar{padding-bottom:88px}
 
 /* ── Hero header (gradient — zastępuje płaski pasek) ── */
 .hero{
@@ -186,6 +187,7 @@ button,input,select,textarea{font-family:inherit}
 .btn-sm{min-height:40px;padding:9px 16px;font-size:13px;width:auto}
 .btn-icon{width:44px;height:44px;padding:0;border-radius:50%;background:var(--c-white);border:1.5px solid var(--c-border-strong);color:var(--c-ink);flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
 .btn-icon:active{background:var(--c-offwhite)}
+.btn-icon.danger{border-color:var(--c-accent);color:var(--c-accent);background:var(--c-accent-tint)}
 .btn-link{background:none;border:none;color:var(--c-muted);font-size:13px;font-weight:600;cursor:pointer;padding:12px;width:100%;text-align:center}
 .btn-link:active{color:var(--c-ink)}
 .btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -221,9 +223,16 @@ button,input,select,textarea{font-family:inherit}
   background:var(--grad-brand);-webkit-background-clip:text;background-clip:text;color:transparent;
 }
 .token-display.red{background:none;-webkit-text-fill-color:var(--c-accent);color:var(--c-accent)}
-.prog-wrap{height:6px;background:var(--c-border);border-radius:4px;overflow:hidden;margin-bottom:14px}
-.prog-fill{height:100%;background:var(--c-primary);width:100%;transition:width 1s linear,background .3s}
-.prog-fill.red{background:var(--c-accent)}
+
+/* ── Pierścień odliczania ważności kodu — okrąg zamiast paska,
+   bardziej czytelny przy pierwszym rzucie oka. Współdzielony przez
+   kiosk (?page=admin) i osadzoną zakładkę „Kod” w panelu Właściciela. ── */
+.ring-wrap{position:relative;width:min(220px,58vw);aspect-ratio:1/1;margin:6px auto 16px;display:flex;align-items:center;justify-content:center}
+.ring-svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
+.ring-track{fill:none;stroke:var(--c-border);stroke-width:6}
+.ring-fill{fill:none;stroke:var(--c-primary);stroke-width:6;stroke-linecap:round;transition:stroke-dashoffset 1s linear,stroke .3s}
+.ring-fill.red{stroke:var(--c-accent)}
+.ring-wrap .token-display{position:relative;margin:0;font-size:clamp(30px,9vw,44px)}
 .tok-status{
   display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;
   border-radius:var(--radius-m);padding:12px 14px;font-size:14px;font-weight:600;text-align:center;
@@ -234,6 +243,47 @@ button,input,select,textarea{font-family:inherit}
 .btn-refresh{display:none}
 .btn-refresh.show{display:inline-flex}
 .tok-hint{font-size:12px;color:var(--c-muted);text-align:center;margin-top:12px}
+
+/* ── Popup potwierdzenia zapisu — na środku ekranu ── */
+.ws-confirm-popup{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.85);
+  background:var(--c-white);border-radius:var(--radius-l);box-shadow:var(--shadow-l);
+  padding:22px 30px;display:flex;flex-direction:column;align-items:center;gap:10px;
+  z-index:300;opacity:0;pointer-events:none;
+  transition:opacity .22s ease,transform .22s ease;
+  max-width:min(340px,80vw);text-align:center;
+}
+.ws-confirm-popup.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.ws-confirm-icon{width:44px;height:44px;border-radius:50%;background:var(--c-primary-tint);color:var(--c-primary);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ws-confirm-msg{font-size:15px;font-weight:700;color:var(--c-ink);line-height:1.4}
+
+/* ── Popup błędu — samodzielnie zamykany, u góry ekranu ── */
+.ws-error-popup{
+  position:fixed;top:18px;left:50%;transform:translateX(-50%) translateY(-14px);
+  display:flex;align-items:flex-start;gap:10px;
+  background:var(--c-white);border:1px solid rgba(123,30,59,.25);border-radius:var(--radius-m);
+  box-shadow:var(--shadow-l);padding:14px 14px 14px 16px;max-width:min(420px,88vw);
+  z-index:290;opacity:0;pointer-events:none;transition:opacity .22s ease,transform .22s ease;
+}
+.ws-error-popup.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+.ws-error-icon{color:var(--c-accent);flex-shrink:0;margin-top:1px}
+.ws-error-msg{font-size:14px;font-weight:600;color:var(--c-ink);line-height:1.4;flex:1}
+.ws-error-close{flex-shrink:0;margin:-6px -6px 0 0}
+
+/* ── Stopka statusu połączenia — zawsze widoczna, na samym dole ── */
+.ws-status-footer{
+  position:fixed;left:0;right:0;bottom:0;z-index:60;
+  display:flex;align-items:center;gap:10px;
+  background:var(--c-white);border-top:1px solid var(--c-border);
+  padding:8px var(--pad-x) calc(8px + env(safe-area-inset-bottom));
+  font-size:12px;color:var(--c-muted);
+  box-shadow:0 -2px 10px rgba(6,16,24,.06);
+}
+.ws-status-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;background:var(--c-success);box-shadow:0 0 0 3px var(--c-success-tint)}
+.ws-status-dot.err{background:var(--c-accent);box-shadow:0 0 0 3px var(--c-accent-tint)}
+.ws-status-msg{flex:1;min-width:0;overflow:hidden;white-space:nowrap}
+.ws-status-msg span{display:inline-block}
+.ws-status-msg.marquee span{animation:marquee-scroll 14s linear infinite}
 
 /* ── Krokowa maszyna stanów (PIN → kod → akcja → potwierdzenie) ──
    Współdzielona przez kiosk pracownika (Index.html) i osadzoną
@@ -294,46 +344,60 @@ button,input,select,textarea{font-family:inherit}
 .seg-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .seg-scroll .seg-btn{flex:none;padding:10px 16px}
 
-/* ── Nawigacja panelu Właściciela ──────────────────────────────
-   Mobile: dolny pasek, przewijany w poziomie (może pomieścić
-   dowolną liczbę zakładek bez ściskania ich do nieczytelności —
-   przesuwasz kciukiem zamiast czytać skrócone etykiety).
-   Desktop (≥900px): pionowa szyna po lewej, przewijana w pionie
-   jeśli zakładek przybędzie ponad wysokość ekranu. ── */
+/* ── Nawigacja panelu Właściciela — chowana szuflada ────────────
+   Ta sama konstrukcja na każdej szerokości ekranu: domyślnie
+   schowana całkowicie poza kadrem (translateX(-100%)), więc w stanie
+   spoczynku NIGDY nie zachodzi na nagłówek (.hero) — to był źródłem
+   błędu z logo znikającym pod menu. Otwierana hamburgerem w pasku
+   górnym; gdy otwarta, świadomie nakłada się na cały ekran (wyższy
+   z-index niż .hero) jako pełnoekranowa nakładka z przyciemnionym
+   tłem (.nav-backdrop), zamykana dotknięciem poza panelem. ── */
 .tabbar{
-  position:fixed;bottom:0;left:0;right:0;z-index:40;
-  display:flex;align-items:stretch;
+  position:fixed;top:0;left:0;bottom:0;z-index:70;
+  width:min(300px,84vw);
+  display:flex;flex-direction:column;gap:2px;
   background:var(--c-white);
-  border-top:1px solid var(--c-border);
-  padding:8px 6px calc(10px + env(safe-area-inset-bottom));
-  box-shadow:0 -8px 24px rgba(15,61,92,.10);
-  overflow-x:auto;-webkit-overflow-scrolling:touch;
-  scrollbar-width:none;
+  border-right:1px solid var(--c-border);
+  padding:16px 10px calc(16px + env(safe-area-inset-bottom));
+  box-shadow:var(--shadow-l);
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+  transform:translateX(-100%);
+  transition:transform .3s var(--ease,cubic-bezier(.4,0,.2,1));
 }
-.tabbar::-webkit-scrollbar{display:none}
-:root[data-theme="dark"] .tabbar{box-shadow:0 -8px 24px rgba(0,0,0,.4)}
+body.nav-open .tabbar{transform:translateX(0)}
+.tabbar-head{display:flex;align-items:center;justify-content:space-between;padding:6px 8px 14px}
+.tabbar-head-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--c-muted)}
 .tabbar .seg-btn{
-  flex:0 0 auto;width:68px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
-  background:none;border:none;border-radius:14px;cursor:pointer;
-  color:var(--c-muted);font-size:10px;font-weight:600;padding:6px 2px;min-height:52px;box-shadow:none;
-  white-space:nowrap;
+  flex:0 0 auto;width:100%;display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:12px;
+  background:none;border:none;border-radius:var(--radius-m);cursor:pointer;
+  color:var(--c-ink);font-size:14px;font-weight:600;padding:12px 14px;min-height:50px;box-shadow:none;
+  white-space:nowrap;text-align:left;
 }
-.tabbar .seg-btn svg{width:22px;height:22px}
+.tabbar .seg-btn svg{width:21px;height:21px;color:var(--c-muted);flex-shrink:0}
 .tabbar .seg-btn.on{color:var(--c-primary);background:var(--c-primary-tint)}
+.tabbar .seg-btn.on svg{color:var(--c-primary)}
+.nav-backdrop{position:fixed;inset:0;background:rgba(6,16,24,.42);backdrop-filter:blur(2px);z-index:65;display:none}
+body.nav-open .nav-backdrop{display:block}
 
-@media(min-width:900px){
-  .tabbar{
-    top:0;bottom:0;left:0;right:auto;width:112px;
-    flex-direction:column;justify-content:flex-start;gap:4px;
-    padding:96px 8px 20px;overflow-y:auto;overflow-x:hidden;
-    border-top:none;border-right:1px solid var(--c-border);
-    box-shadow:6px 0 20px rgba(15,61,92,.06);
-  }
-  :root[data-theme="dark"] .tabbar{box-shadow:6px 0 20px rgba(0,0,0,.3)}
-  .tabbar .seg-btn{width:100%;min-height:60px}
-  .page-wrap.has-tabbar{padding-left:calc(112px + var(--pad-x))}
-  .hero.hero-owner{margin-left:112px}
-}
+.hamburger-btn{background:transparent;border:1.5px solid rgba(255,255,255,.4);border-radius:var(--radius-s);color:#fff;width:40px;height:40px;flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.hamburger-btn:active{background:rgba(255,255,255,.16)}
+
+/* Klik w pozycję menu → krótkie „odbicie” ikony (informacja zwrotna). */
+@keyframes navIconPulse{0%{transform:scale(1)}40%{transform:scale(1.35)}100%{transform:scale(1)}}
+.tabbar .seg-btn.pulsing svg{animation:navIconPulse .38s var(--ease-snap,ease-out)}
+
+/* ── Presence ticker — pływająca pigułka pod hero (wspólna: Raporty + Właściciel) ── */
+.presence-bar{background:var(--c-white);border:1px solid var(--c-border);border-radius:999px;padding:10px 0;overflow:hidden;cursor:pointer;margin:14px 16px 0;box-shadow:var(--shadow-s);max-width:928px}
+@media(min-width:960px){.presence-bar{margin-left:auto;margin-right:auto}}
+.presence-track{display:inline-flex;white-space:nowrap;padding-left:16px;animation:none}
+@keyframes marquee-scroll{from{transform:translateX(0)}to{transform:translateX(-100%)}}
+.presence-track.scrolling{animation:marquee-scroll 45s linear infinite}
+.presence-item{display:inline-flex;align-items:center;gap:7px;margin-right:36px;font-size:13px;color:var(--c-ink);font-weight:500}
+.p-dot{width:8px;height:8px;border-radius:50%;background:var(--c-success);flex-shrink:0;animation:pulse-dot 1.6s ease-out infinite}
+@keyframes pulse-dot{0%{box-shadow:0 0 0 0 rgba(30,142,90,.55)}70%{box-shadow:0 0 0 7px rgba(30,142,90,0)}100%{box-shadow:0 0 0 0 rgba(30,142,90,0)}}
+.p-dot.done{background:var(--c-muted);animation:none}
+.presence-item.done{color:var(--c-muted)}
+.presence-empty{font-size:13px;color:var(--c-muted);padding-left:16px}
 
 /* ── Autouzupełnianie pracownika (wspólne dla paneli) ── */
 .emp-dropdown{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--c-white);border:1px solid var(--c-border);border-radius:var(--radius-m);z-index:25;max-height:240px;overflow-y:auto;box-shadow:var(--shadow-m);display:none}
@@ -352,7 +416,7 @@ button,input,select,textarea{font-family:inherit}
 
 /* ── Toast ── */
 #toast{
-  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(90px);opacity:0;
+  position:fixed;bottom:70px;left:50%;transform:translateX(-50%) translateY(90px);opacity:0;
   background:var(--c-ink);color:var(--c-offwhite);padding:13px 24px;border-radius:var(--radius-pill);
   font-size:14px;font-weight:600;pointer-events:none;transition:.25s cubic-bezier(.4,0,.2,1);
   z-index:200;max-width:92vw;text-align:center;white-space:pre-line;display:flex;align-items:center;gap:8px;
@@ -372,31 +436,19 @@ button,input,select,textarea{font-family:inherit}
   .modal-card{border-radius:var(--radius-l)}
 }
 
-/* ── Legenda (formy zatrudnienia, kody nieobecności) ──────────── */
-.legend-list{display:flex;flex-direction:column;gap:8px}
-.legend-row{display:flex;gap:12px;align-items:flex-start;background:var(--c-white);border:1px solid var(--c-border);border-radius:var(--radius-m);padding:12px 14px}
-.legend-code{flex-shrink:0;min-width:52px;text-align:center;font-weight:800;font-size:12px;letter-spacing:.3px;color:var(--c-primary);background:var(--c-primary-tint);border-radius:var(--radius-s);padding:6px 8px;font-family:ui-monospace,monospace}
-.legend-code.accent{color:var(--c-accent);background:var(--c-accent-tint)}
-.legend-body{flex:1;min-width:0}
-.legend-name{font-weight:700;font-size:14px;color:var(--c-ink);margin-bottom:2px}
-.legend-def{font-size:13px;color:var(--c-muted);line-height:1.5}
-.legend-search{position:sticky;top:0;background:var(--c-offwhite);padding-bottom:10px;z-index:2}
-
 /* ── FAQ — widget pływający + popup z wyszukiwarką ─────────────
    Ikona: kontur zęba (biały) morfujący w bordowy znak zapytania.
    Cykl (8s, w kółko): ząb → flip → znak zapytania → 2 pełne pulsy
    koloru (bordo↔biel) → 3. puls kończy się jednocześnie flipem
    z powrotem w ząb. ── */
 .faq-fab{
-  position:fixed;right:18px;bottom:calc(18px + env(safe-area-inset-bottom));z-index:80;
+  position:fixed;right:18px;bottom:calc(78px + env(safe-area-inset-bottom));z-index:80;
   width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;
   background:var(--grad-brand);box-shadow:var(--shadow-cta);
   display:flex;align-items:center;justify-content:center;
   transition:transform .15s;
 }
 .faq-fab:active{transform:scale(.92)}
-body.has-tabbar-space .faq-fab{bottom:calc(96px + env(safe-area-inset-bottom))}
-@media(min-width:900px){ body.has-tabbar-space .faq-fab{bottom:calc(18px + env(safe-area-inset-bottom))} }
 .faq-fab-icon{position:relative;width:26px;height:26px;perspective:200px}
 .faq-fab-icon svg{position:absolute;inset:0;width:100%;height:100%}
 .faq-fab-tooth{
@@ -442,15 +494,16 @@ body.has-tabbar-space .faq-fab{bottom:calc(96px + env(safe-area-inset-bottom))}
 .faq-search{position:relative;margin-bottom:14px}
 .faq-search .ic{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--c-muted);pointer-events:none}
 .faq-search .inp{padding-left:42px}
-.faq-cats{display:flex;gap:8px;overflow-x:auto;padding-bottom:10px;margin-bottom:6px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
-.faq-cats::-webkit-scrollbar{display:none}
-.faq-cat-btn{flex-shrink:0;padding:8px 14px;border-radius:var(--radius-pill);background:var(--c-field);border:none;color:var(--c-ink);font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap}
+.faq-cats{display:flex;flex-direction:column;gap:3px;max-height:38vh;overflow-y:auto;padding:2px 2px 10px;margin-bottom:8px;-webkit-overflow-scrolling:touch;border-bottom:1px solid var(--c-border)}
+.faq-cat-btn{flex-shrink:0;width:100%;text-align:left;padding:10px 14px;border-radius:var(--radius-m);background:none;border:none;color:var(--c-ink);font-size:13.5px;font-weight:600;cursor:pointer;white-space:nowrap}
+.faq-cat-btn:active{background:var(--c-field)}
 .faq-cat-btn.on{background:var(--grad-brand);color:#fff}
 .faq-results{display:flex;flex-direction:column;gap:8px;max-height:52vh;overflow-y:auto}
 .faq-item{background:var(--c-offwhite);border:1px solid var(--c-border);border-radius:var(--radius-m);padding:12px 14px}
 .faq-term{font-weight:700;font-size:13.5px;color:var(--c-ink);margin-bottom:3px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .faq-term-cat{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--c-primary);background:var(--c-primary-tint);padding:2px 8px;border-radius:var(--radius-pill)}
 .faq-def{font-size:13px;color:var(--c-muted);line-height:1.5}
+.faq-loc{font-size:11.5px;color:var(--c-primary);font-weight:600;margin-top:6px}
 .faq-empty{text-align:center;color:var(--c-muted);padding:30px 10px;font-size:14px}
 
 /* ── Icon sizing helper ── */
@@ -463,6 +516,100 @@ body.has-tabbar-space .faq-fab{bottom:calc(96px + env(safe-area-inset-bottom))}
 .hint{text-align:center;color:var(--c-muted);padding:40px 16px;font-size:15px;line-height:1.6}
 </style>
 <script>
+/* ── Centralny popup potwierdzenia (zamiast dolnej zielonej
+   pigułki) — do wywołania po udanym zapisie, z treścią dopasowaną
+   do konkretnej akcji. Wspólny dla wszystkich widoków; tworzy
+   swój element przy pierwszym użyciu, więc nie wymaga znacznika
+   w markupie strony. ── */
+window.wsConfirmPopup = function (msg) {
+  var el = document.getElementById('ws-confirm-popup');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'ws-confirm-popup';
+    el.className = 'ws-confirm-popup';
+    el.innerHTML = '<div class="ws-confirm-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div><div class="ws-confirm-msg"></div>';
+    document.body.appendChild(el);
+  }
+  el.querySelector('.ws-confirm-msg').textContent = msg;
+  el.classList.remove('show');
+  void el.offsetWidth; // restart animacji przy szybkich powtórnych wywołaniach
+  el.classList.add('show');
+  clearTimeout(el._wsT);
+  el._wsT = setTimeout(function () { el.classList.remove('show'); }, 1800);
+};
+
+/* ── Popup błędu — samodzielnie zamykany (X) + auto-znika po 6 s.
+   Do wywołania z obsługi błędów google.script.run (brak internetu,
+   błąd serwera itp.), niezależnie od zwykłego toasta w danym widoku. ── */
+window.wsShowError = function (msg) {
+  var el = document.getElementById('ws-error-popup');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'ws-error-popup';
+    el.className = 'ws-error-popup';
+    el.innerHTML =
+      '<div class="ws-error-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></div>' +
+      '<div class="ws-error-msg" id="ws-error-msg"></div>' +
+      '<button class="btn-icon ws-error-close" id="ws-error-close" aria-label="Zamknij">' +
+      '<svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>';
+    document.body.appendChild(el);
+    document.getElementById('ws-error-close').addEventListener('click', function () {
+      el.classList.remove('show');
+      clearTimeout(el._wsT);
+    });
+  }
+  document.getElementById('ws-error-msg').textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._wsT);
+  el._wsT = setTimeout(function () { el.classList.remove('show'); }, 6000);
+};
+
+/* ── Stopka statusu połączenia — zawsze widoczna na dole ekranu.
+   Aktualizowana automatycznie przy zdarzeniach online/offline
+   przeglądarki oraz (opcjonalnie) po każdym udanym/nieudanym
+   wywołaniu google.script.run z poziomu danego widoku. ── */
+window.wsSetConnStatus = function (ok, msg) {
+  var el = document.getElementById('ws-status-footer');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'ws-status-footer';
+    el.className = 'ws-status-footer';
+    el.innerHTML = '<span class="ws-status-dot" id="ws-status-dot"></span>' +
+      '<span class="ws-status-msg" id="ws-status-msg"><span id="ws-status-msg-inner"></span></span>';
+    document.body.appendChild(el);
+  }
+  var dot   = document.getElementById('ws-status-dot');
+  var wrap  = document.getElementById('ws-status-msg');
+  var inner = document.getElementById('ws-status-msg-inner');
+  dot.className = 'ws-status-dot' + (ok ? '' : ' err');
+  wrap.classList.remove('marquee');
+  inner.textContent = msg;
+  requestAnimationFrame(function () {
+    if (inner.scrollWidth > wrap.clientWidth) {
+      inner.textContent = msg + '     •     ' + msg;
+      wrap.classList.add('marquee');
+    }
+  });
+};
+
+(function () {
+  function initialStatus() {
+    window.wsSetConnStatus(navigator.onLine !== false, navigator.onLine === false ? 'Brak połączenia z internetem.' : 'Połączono.');
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initialStatus);
+  } else {
+    initialStatus();
+  }
+  window.addEventListener('online', function () {
+    window.wsSetConnStatus(true, 'Połączenie przywrócone.');
+  });
+  window.addEventListener('offline', function () {
+    window.wsSetConnStatus(false, 'Brak połączenia z internetem. Zmiany mogą się nie zapisać.');
+    window.wsShowError('Utracono połączenie z internetem.');
+  });
+})();
+
 /* ── Tryb nocny — wspólny dla wszystkich widoków ──────────────
    Zastosowany od razu w <head>, zanim strona się wyrenderuje
    (bez migotania jasnego motywu). Zapamiętywany w localStorage. */
@@ -498,53 +645,55 @@ body.has-tabbar-space .faq-fab{bottom:calc(96px + env(safe-area-inset-bottom))}
   document.addEventListener('DOMContentLoaded', function () { paintIcons(current()); });
 })();
 
-/* ── Baza pojęć RCP — wspólna dla legendy i FAQ ────────────────
+/* ── Baza pojęć RCP — wspólna dla zakładki Pomoc i FAQ ──────────
    Jedno źródło prawdy: te same definicje widać w zakładce
-   "Legenda" i w wyszukiwarce widgetu FAQ, w każdym widoku. */
+   "Pomoc" i w wyszukiwarce widgetu FAQ, w każdym widoku. */
 window.WS_GLOSSARY = [
-  { cat: 'Logowanie i dostęp', term: 'PIN', def: '4-cyfrowy kod osobisty pracownika — służy do zalogowania się na kiosku, w Panelu Raportowym i (dla Admina) w Panelu Właściciela.' },
-  { cat: 'Logowanie i dostęp', term: 'Kod autoryzacyjny (kod rotacyjny)', def: '4-cyfrowy kod wyświetlany na tablecie recepcji, zmieniający się co 30 sekund — dowód fizycznej obecności przy tablecie, wymagany przy każdym odbiciu.' },
-  { cat: 'Logowanie i dostęp', term: 'Sesja', def: 'Czas, przez jaki Panel Raportowy lub Panel Właściciela pamięta, że jesteś zalogowany (do 1 godziny nieaktywności) — potem trzeba zalogować się ponownie.' },
-  { cat: 'Logowanie i dostęp', term: 'Tryb nocny', def: 'Przełącznik ciemnych kolorów interfejsu, zapamiętywany w przeglądarce niezależnie na każdym urządzeniu.' },
-  { cat: 'Logowanie i dostęp', term: 'Zmień użytkownika', def: 'Powrót do ekranu wpisywania PIN-u, żeby zalogować się jako inny pracownik na tym samym urządzeniu — nie zmienia niczyjego PIN-u.' },
-  { cat: 'Odbicia i czas pracy', term: 'Odbicie', def: 'Zarejestrowanie Wejścia lub Wyjścia na kiosku — wymaga PIN-u pracownika i aktualnego kodu autoryzacyjnego z tabletu.' },
-  { cat: 'Odbicia i czas pracy', term: 'Godziny Kliniki', def: 'Regularne godziny otwarcia: Pn–Pt 8:00–21:00, Sb 9:00–16:00, Nd — Klinika zamknięta.' },
-  { cat: 'Odbicia i czas pracy', term: 'Praca poza godzinami Kliniki', def: 'Odbicie zarejestrowane przed otwarciem, po zamknięciu lub w niedzielę — system prosi o krótkie uzasadnienie konieczności.' },
-  { cat: 'Odbicia i czas pracy', term: 'Norma godzin', def: 'Docelowa liczba godzin pracy w miesiącu, ustawiana w Panelu Raportowym — służy tylko do porównania z faktycznie przepracowanymi godzinami.' },
-  { cat: 'Nieobecności', term: 'Zgłoś nieobecność', def: 'Samodzielne zgłoszenie nieobecności przez pracownika (np. L4, urlop) — bez potrzeby kodu z tabletu, dla dowolnego zakresu dat.' },
-  { cat: 'Nieobecności', term: 'Adnotacja', def: 'Krótka notatka dołączona do nieobecności lub przekroczenia godzin — widoczna dla administratora i właściciela.' },
-  { cat: 'Nieobecności', term: 'DW — Dzień wolny (Klinika zamknięta)', def: 'Zbiorowa nieobecność ustawiana wyłącznie przez właściciela dla całego zespołu, np. święto.' },
-  { cat: 'Nieobecności', term: 'L4 — Zwolnienie lekarskie', def: 'Nieobecność chorobowa. Dostępna dla każdej formy zatrudnienia.' },
-  { cat: 'Nieobecności', term: 'UW — Urlop wypoczynkowy', def: 'Standardowy płatny urlop — tylko dla umowy o pracę.' },
-  { cat: 'Nieobecności', term: 'UZ — Urlop na żądanie', def: 'Urlop wypoczynkowy zgłaszany bez wcześniejszego planu — tylko dla umowy o pracę.' },
-  { cat: 'Nieobecności', term: 'UB — Urlop bezpłatny', def: 'Nieobecność bez wynagrodzenia, za zgodą pracodawcy — tylko dla umowy o pracę.' },
-  { cat: 'Nieobecności', term: 'UOK — Urlop okolicznościowy', def: 'Krótki płatny urlop z powodu wydarzenia rodzinnego (np. ślub, pogrzeb) — tylko dla umowy o pracę.' },
-  { cat: 'Nieobecności', term: 'UMR — Urlop macierzyński / rodzicielski', def: 'Urlop związany z narodzinami lub opieką nad dzieckiem — tylko dla umowy o pracę.' },
-  { cat: 'Nieobecności', term: 'UOJ — Urlop ojcowski', def: 'Urlop przysługujący ojcu w związku z narodzinami dziecka — tylko dla umowy o pracę.' },
-  { cat: 'Nieobecności', term: 'UWY — Urlop wychowawczy', def: 'Dłuższa nieobecność związana z wychowaniem dziecka — tylko dla umowy o pracę.' },
-  { cat: 'Nieobecności', term: 'OPD — Opieka nad dzieckiem (art. 188 KP)', def: 'Dodatkowe dni wolne na opiekę nad dzieckiem do lat 14 — tylko dla umowy o pracę.' },
-  { cat: 'Nieobecności', term: 'ZOP — Zasiłek opiekuńczy', def: 'Nieobecność z powodu opieki nad chorym członkiem rodziny — tylko dla umowy o pracę.' },
-  { cat: 'Nieobecności', term: 'SW — Siła wyższa (art. 148¹ KP)', def: 'Krótkie, pilne zwolnienie z powodu siły wyższej w sprawach rodzinnych — tylko dla umowy o pracę.' },
-  { cat: 'Nieobecności', term: 'HK — Honorowe krwiodawstwo', def: 'Dzień wolny na oddanie krwi i dojazd — tylko dla umowy o pracę.' },
-  { cat: 'Nieobecności', term: 'ODB — Odbiór nadgodzin', def: 'Dzień wolny w zamian za wcześniej przepracowane nadgodziny — tylko dla umowy o pracę.' },
-  { cat: 'Nieobecności', term: 'NUN — Nieobecność usprawiedliwiona niepłatna', def: 'Nieobecność uznana za usprawiedliwioną, ale bez wynagrodzenia. Dostępna dla każdej formy zatrudnienia.' },
-  { cat: 'Nieobecności', term: 'NN — Nieobecność nieusprawiedliwiona', def: 'Nieobecność bez podanego lub zaakceptowanego powodu. Dostępna dla każdej formy zatrudnienia.' },
-  { cat: 'Nieobecności', term: 'PZL — Przerwa w realizacji zlecenia', def: 'Przerwa w świadczeniu usług dla osób na umowie zlecenie.' },
-  { cat: 'Nieobecności', term: 'B2B — Przerwa w świadczeniu usług', def: 'Przerwa w świadczeniu usług dla osób współpracujących w modelu B2B.' },
-  { cat: 'Nieobecności', term: 'DEL — Delegacja / szkolenie', def: 'Nieobecność związana z wyjazdem służbowym lub szkoleniem. Dostępna dla każdej formy zatrudnienia.' },
-  { cat: 'Nieobecności', term: 'INNE — Inne', def: 'Nieobecność, która nie pasuje do żadnej innej kategorii — wymaga wpisania adnotacji z powodem.' },
-  { cat: 'Forma zatrudnienia', term: 'UoP — Umowa o pracę', def: 'Pełny katalog nieobecności kodeksowych; płatny urlop (10 wybranych kodów) dolicza 8h/dzień do miesięcznej sumy godzin.' },
-  { cat: 'Forma zatrudnienia', term: 'Umowa zlecenie', def: 'Pracownik widzi kod PZL zamiast kodeksowych urlopów; nieobecności nie doliczają automatycznie godzin.' },
-  { cat: 'Forma zatrudnienia', term: 'B2B', def: 'Współpracownik widzi kod B2B zamiast kodeksowych urlopów; nieobecności nie doliczają automatycznie godzin.' },
-  { cat: 'Forma zatrudnienia', term: 'Forma nieustawiona', def: 'Dopóki właściciel nie ustawi formy zatrudnienia w zakładce „Zespół", pracownik widzi pełną listę nieobecności, a jego urlopy nie doliczają godzin automatycznie — bezpieczny stan domyślny.' },
-  { cat: 'Panele', term: 'Panel Raportowy', def: 'Widok z podglądem godzin, nieobecności i eksportem do Excela — dostępny dla każdego zalogowanego PIN-em pracownika.' },
-  { cat: 'Panele', term: 'Panel Właściciela', def: 'Widok z pełną edycją godzin, nieobecności, urlopów i zespołu — dostępny wyłącznie dla PIN-u z rolą Admin.' },
-  { cat: 'Panele', term: 'Płatny urlop (8h/dzień)', def: 'Dzień urlopu z odpowiedniego kodu, dla pracownika na UoP, automatycznie liczy się jako 8h w sumie miesięcznej — widoczne w Panelu Raportowym i eksporcie Excel.' },
-  { cat: 'Panele', term: 'Dni wolne (Klinika)', def: 'Narzędzie właściciela do jednorazowego oznaczenia tej samej nieobecności (np. święta) wszystkim aktywnym pracownikom naraz.' },
-  { cat: 'Panele', term: 'Urlop (zakres dat)', def: 'Narzędzie właściciela do oznaczenia nieobecności jednego pracownika na cały zakres dat jednym zapisem, bez klikania dzień po dniu.' },
-  { cat: 'Panele', term: 'Zespół', def: 'Zakładka właściciela do ustawiania formy zatrudnienia każdego pracownika.' },
-  { cat: 'Panele', term: 'Eksport Excel', def: 'Pobranie raportu godzin i nieobecności do pliku .xlsx, dla wybranego miesiąca lub zakresu dat i wybranych pracowników.' },
-  { cat: 'Panele', term: 'Mój miesiąc', def: 'Widok pracownika z podsumowaniem własnych godzin (bez możliwości ich zmiany) i możliwością dopisania adnotacji do nieobecności lub uzasadnienia.' }
+  { cat: 'Logowanie i dostęp', term: 'PIN', def: '4-cyfrowy kod osobisty pracownika — służy do zalogowania się na kiosku, w Panelu Raportowym i (dla Admina) w Panelu Właściciela.', loc: 'Ekran logowania (PIN) — kiosk, Panel Raportowy, Panel Właściciela' },
+  { cat: 'Logowanie i dostęp', term: 'Kod autoryzacyjny (kod rotacyjny)', def: '4-cyfrowy kod wyświetlany na tablecie recepcji, zmieniający się co 30 sekund — dowód fizycznej obecności przy tablecie, wymagany przy każdym odbiciu.', loc: 'Ekran logowania (PIN) — kiosk, Panel Raportowy, Panel Właściciela' },
+  { cat: 'Logowanie i dostęp', term: 'Sesja', def: 'Czas, przez jaki Panel Raportowy lub Panel Właściciela pamięta, że jesteś zalogowany (do 1 godziny nieaktywności) — potem trzeba zalogować się ponownie.', loc: 'Ekran logowania (PIN) — kiosk, Panel Raportowy, Panel Właściciela' },
+  { cat: 'Logowanie i dostęp', term: 'Tryb nocny', def: 'Przełącznik ciemnych kolorów interfejsu, zapamiętywany w przeglądarce niezależnie na każdym urządzeniu.', loc: 'Ekran logowania (PIN) — kiosk, Panel Raportowy, Panel Właściciela' },
+  { cat: 'Logowanie i dostęp', term: 'Zmień użytkownika', def: 'Powrót do ekranu wpisywania PIN-u, żeby zalogować się jako inny pracownik na tym samym urządzeniu — nie zmienia niczyjego PIN-u.', loc: 'Ekran logowania (PIN) — kiosk, Panel Raportowy, Panel Właściciela' },
+  { cat: 'Odbicia i czas pracy', term: 'Odbicie', def: 'Zarejestrowanie Wejścia lub Wyjścia na kiosku — wymaga PIN-u pracownika i aktualnego kodu autoryzacyjnego z tabletu.', loc: 'Kiosk (ekran pracownika) i zakładka „Odbicia” w Panelu Właściciela' },
+  { cat: 'Odbicia i czas pracy', term: 'Godziny Kliniki', def: 'Regularne godziny otwarcia: Pn–Pt 8:00–21:00, Sb 9:00–16:00, Nd — Klinika zamknięta.', loc: 'Kiosk (ekran pracownika) i zakładka „Odbicia” w Panelu Właściciela' },
+  { cat: 'Odbicia i czas pracy', term: 'Praca poza godzinami Kliniki', def: 'Odbicie zarejestrowane przed otwarciem, po zamknięciu lub w niedzielę — system prosi o krótkie uzasadnienie konieczności.', loc: 'Kiosk (ekran pracownika) i zakładka „Odbicia” w Panelu Właściciela' },
+  { cat: 'Odbicia i czas pracy', term: 'Norma godzin', def: 'Docelowa liczba godzin pracy w miesiącu, ustawiana w Panelu Raportowym — służy tylko do porównania z faktycznie przepracowanymi godzinami.', loc: 'Kiosk (ekran pracownika) i zakładka „Odbicia” w Panelu Właściciela' },
+  { cat: 'Nieobecności', term: 'Zgłoś nieobecność', def: 'Samodzielne zgłoszenie nieobecności przez pracownika (np. L4, urlop) — bez potrzeby kodu z tabletu, dla dowolnego zakresu dat.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
+  { cat: 'Nieobecności', term: 'Adnotacja', def: 'Krótka notatka dołączona do nieobecności lub przekroczenia godzin — widoczna dla administratora i właściciela.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
+  { cat: 'Nieobecności', term: 'DW — Dzień wolny (Klinika zamknięta)', def: 'Zbiorowa nieobecność ustawiana wyłącznie przez właściciela dla całego zespołu, np. święto.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
+  { cat: 'Nieobecności', term: 'L4 — Zwolnienie lekarskie', def: 'Nieobecność chorobowa. Dostępna dla każdej formy zatrudnienia.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
+  { cat: 'Nieobecności', term: 'UW — Urlop wypoczynkowy', def: 'Standardowy płatny urlop — tylko dla umowy o pracę.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
+  { cat: 'Nieobecności', term: 'UZ — Urlop na żądanie', def: 'Urlop wypoczynkowy zgłaszany bez wcześniejszego planu — tylko dla umowy o pracę.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
+  { cat: 'Nieobecności', term: 'UB — Urlop bezpłatny', def: 'Nieobecność bez wynagrodzenia, za zgodą pracodawcy — tylko dla umowy o pracę.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
+  { cat: 'Nieobecności', term: 'UOK — Urlop okolicznościowy', def: 'Krótki płatny urlop z powodu wydarzenia rodzinnego (np. ślub, pogrzeb) — tylko dla umowy o pracę.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
+  { cat: 'Nieobecności', term: 'UMR — Urlop macierzyński / rodzicielski', def: 'Urlop związany z narodzinami lub opieką nad dzieckiem — tylko dla umowy o pracę.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
+  { cat: 'Nieobecności', term: 'UOJ — Urlop ojcowski', def: 'Urlop przysługujący ojcu w związku z narodzinami dziecka — tylko dla umowy o pracę.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
+  { cat: 'Nieobecności', term: 'UWY — Urlop wychowawczy', def: 'Dłuższa nieobecność związana z wychowaniem dziecka — tylko dla umowy o pracę.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
+  { cat: 'Nieobecności', term: 'OPD — Opieka nad dzieckiem (art. 188 KP)', def: 'Dodatkowe dni wolne na opiekę nad dzieckiem do lat 14 — tylko dla umowy o pracę.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
+  { cat: 'Nieobecności', term: 'ZOP — Zasiłek opiekuńczy', def: 'Nieobecność z powodu opieki nad chorym członkiem rodziny — tylko dla umowy o pracę.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
+  { cat: 'Nieobecności', term: 'SW — Siła wyższa (art. 148¹ KP)', def: 'Krótkie, pilne zwolnienie z powodu siły wyższej w sprawach rodzinnych — tylko dla umowy o pracę.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
+  { cat: 'Nieobecności', term: 'HK — Honorowe krwiodawstwo', def: 'Dzień wolny na oddanie krwi i dojazd — tylko dla umowy o pracę.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
+  { cat: 'Nieobecności', term: 'ODB — Odbiór nadgodzin', def: 'Dzień wolny w zamian za wcześniej przepracowane nadgodziny — tylko dla umowy o pracę.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
+  { cat: 'Nieobecności', term: 'NUN — Nieobecność usprawiedliwiona niepłatna', def: 'Nieobecność uznana za usprawiedliwioną, ale bez wynagrodzenia. Dostępna dla każdej formy zatrudnienia.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
+  { cat: 'Nieobecności', term: 'NN — Nieobecność nieusprawiedliwiona', def: 'Nieobecność bez podanego lub zaakceptowanego powodu. Dostępna dla każdej formy zatrudnienia.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
+  { cat: 'Nieobecności', term: 'PZL — Przerwa w realizacji zlecenia', def: 'Przerwa w świadczeniu usług dla osób na umowie zlecenie.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
+  { cat: 'Nieobecności', term: 'B2B — Przerwa w świadczeniu usług', def: 'Przerwa w świadczeniu usług dla osób współpracujących w modelu B2B.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
+  { cat: 'Nieobecności', term: 'DEL — Delegacja / szkolenie', def: 'Nieobecność związana z wyjazdem służbowym lub szkoleniem. Dostępna dla każdej formy zatrudnienia.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
+  { cat: 'Nieobecności', term: 'INNE — Inne', def: 'Nieobecność, która nie pasuje do żadnej innej kategorii — wymaga wpisania adnotacji z powodem.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
+  { cat: 'Forma zatrudnienia', term: 'UoP — Umowa o pracę', def: 'Pełny katalog nieobecności kodeksowych; płatny urlop (10 wybranych kodów) dolicza 8h/dzień do miesięcznej sumy godzin.', loc: 'Panel Właściciela → Zespół' },
+  { cat: 'Forma zatrudnienia', term: 'Umowa zlecenie', def: 'Pracownik widzi kod PZL zamiast kodeksowych urlopów; nieobecności nie doliczają automatycznie godzin.', loc: 'Panel Właściciela → Zespół' },
+  { cat: 'Forma zatrudnienia', term: 'B2B', def: 'Współpracownik widzi kod B2B zamiast kodeksowych urlopów; nieobecności nie doliczają automatycznie godzin.', loc: 'Panel Właściciela → Zespół' },
+  { cat: 'Forma zatrudnienia', term: 'Forma nieustawiona', def: 'Dopóki właściciel nie ustawi formy zatrudnienia w zakładce „Zespół", pracownik widzi pełną listę nieobecności, a jego urlopy nie doliczają godzin automatycznie — bezpieczny stan domyślny.', loc: 'Panel Właściciela → Zespół' },
+  { cat: 'Panele', term: 'Panel Raportowy', def: 'Widok z podglądem godzin, nieobecności i eksportem do Excela — dostępny dla każdego zalogowanego PIN-em pracownika.', loc: 'Panel Raportowy (?page=dashboard) — „otwórz osobno” z Panelu Właściciela' },
+  { cat: 'Panele', term: 'Panel Właściciela', def: 'Widok z pełną edycją godzin, nieobecności, urlopów i zespołu — dostępny wyłącznie dla PIN-u z rolą Admin.', loc: 'Panel Właściciela (?page=owner)' },
+  { cat: 'Panele', term: 'Płatny urlop (8h/dzień)', def: 'Dzień urlopu z odpowiedniego kodu, dla pracownika na UoP, automatycznie liczy się jako 8h w sumie miesięcznej — widoczne w Panelu Raportowym i eksporcie Excel.', loc: 'Panel Raportowy i Panel Właściciela → Raporty' },
+  { cat: 'Panele', term: 'Dni wolne (Klinika)', def: 'Narzędzie właściciela do jednorazowego oznaczenia tej samej nieobecności (np. święta) wszystkim aktywnym pracownikom naraz.', loc: 'Panel Właściciela → Dni wolne' },
+  { cat: 'Panele', term: 'Urlop (zakres dat)', def: 'Narzędzie właściciela do oznaczenia nieobecności jednego pracownika na cały zakres dat jednym zapisem, bez klikania dzień po dniu.', loc: 'Panel Właściciela → Urlop' },
+  { cat: 'Panele', term: 'Zespół', def: 'Zakładka właściciela do ustawiania formy zatrudnienia każdego pracownika.', loc: 'Panel Właściciela → Zespół' },
+  { cat: 'Panele', term: 'Eksport Excel', def: 'Pobranie raportu godzin i nieobecności do pliku .xlsx, dla wybranego miesiąca lub zakresu dat i wybranych pracowników.', loc: 'Panel Raportowy i Panel Właściciela → Raporty' },
+  { cat: 'Panele', term: 'Mój miesiąc', def: 'Widok pracownika z podsumowaniem własnych godzin (bez możliwości ich zmiany) i możliwością dopisania adnotacji do nieobecności lub uzasadnienia.', loc: 'Panel Raportowy' },
+  { cat: 'Panele', term: 'Wskazówka — zakładka Dzień (Panel Właściciela)', def: 'Puste pole godziny = brak zdarzenia tego typu w tym dniu. Pusty typ nieobecności = usuwa nieobecność dnia; puste uzasadnienie = usuwa uzasadnienie. Zapis nadpisuje istniejące dane wybranego dnia. Każda zmiana jest logowana.', loc: 'Panel Właściciela → Dzień' },
+  { cat: 'Panele', term: 'Wskazówka — zakładka Miesiąc (Panel Właściciela)', def: 'Zmiana godziny zapisuje się automatycznie po opuszczeniu pola (żółte obramowanie = zapisuję, niebieskie = zapisano). Puste pole = usuwa dane zdarzenie tego dnia. Fioletowa plakietka = nieobecność, trójkąt = dzień poza godzinami Kliniki — dotknij numeru dnia, aby przejść do szybkiej edycji.', loc: 'Panel Właściciela → Miesiąc' }
 ];
 
 // Kategorie w kolejności pierwszego wystąpienia w danych.
@@ -628,7 +777,9 @@ window.wsMountFaq = function () {
     }
     out.innerHTML = list.map(function (e) {
       return '<div class="faq-item"><div class="faq-term">' + esc(e.term) + '<span class="faq-term-cat">' + esc(e.cat) + '</span></div>' +
-        '<div class="faq-def">' + esc(e.def) + '</div></div>';
+        '<div class="faq-def">' + esc(e.def) + '</div>' +
+        (e.loc ? '<div class="faq-loc">Gdzie znaleźć: ' + esc(e.loc) + '</div>' : '') +
+        '</div>';
     }).join('');
   }
 
@@ -643,32 +794,80 @@ window.wsMountFaq = function () {
   fab.addEventListener('click', open);
   document.getElementById('faq-close').addEventListener('click', close);
   modal.addEventListener('click', function (e) { if (e.target === modal) close(); });
-  document.getElementById('faq-q').addEventListener('input', renderResults);
+  document.getElementById('faq-q').addEventListener('input', function () {
+    // Wpisanie czegokolwiek szuka od razu we wszystkich kategoriach —
+    // nie ogranicza wyników do wcześniej wybranej kategorii.
+    if (this.value.trim() && activeCat) { activeCat = null; renderCats(); }
+    renderResults();
+  });
 };
 
-/* ── Legenda — lista formy zatrudnienia + kodów nieobecności ────
-   Wywołać wsRenderLegend('elementId') po umieszczeniu pustego
-   kontenera w widoku (np. w zakładce "Legenda" panelu Właściciela). */
+/* ── Pomoc (dawna „Legenda”) — słownik pojęć z wyszukiwarką i
+   pionową listą kategorii, osadzony bezpośrednio w widoku (nie w
+   modalu — ten sam komponent co widget FAQ, ale wbudowany na stałe
+   w zakładkę „Pomoc”). Wywołać wsRenderLegend('elementId') po
+   umieszczeniu pustego kontenera w widoku. Każdy wynik pokazuje też,
+   w którym miejscu aplikacji dana rzecz się znajduje. ── */
 window.wsRenderLegend = function (containerId) {
   var el = document.getElementById(containerId);
   if (!el) return;
-  var byCat = {};
-  var order = [];
-  window.WS_GLOSSARY.forEach(function (e) {
-    if (!byCat[e.cat]) { byCat[e.cat] = []; order.push(e.cat); }
-    byCat[e.cat].push(e);
-  });
+
+  var idQ       = containerId + '-q';
+  var idCats    = containerId + '-cats';
+  var idResults = containerId + '-results';
+
+  el.innerHTML =
+    '<div class="faq-search"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>' +
+      '<input type="text" id="' + idQ + '" class="inp" placeholder="Szukaj (np. urlop, PIN, forma zatrudnienia…)" autocomplete="off"></div>' +
+    '<div class="faq-cats" id="' + idCats + '"></div>' +
+    '<div class="faq-results" id="' + idResults + '"></div>';
+
+  var activeCat = null;
+
   function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-  el.innerHTML = order.map(function (cat) {
-    var rows = byCat[cat].map(function (e) {
-      var code = e.term.match(/^([A-Z0-9]{1,4})\s—/);
-      var accent = /nieusprawiedliwiona|B2B|PZL/.test(e.term);
-      return '<div class="legend-row">' +
-        (code ? '<span class="legend-code' + (accent ? ' accent' : '') + '">' + esc(code[1]) + '</span>' : '') +
-        '<div class="legend-body"><div class="legend-name">' + esc(e.term) + '</div><div class="legend-def">' + esc(e.def) + '</div></div>' +
+
+  function renderCats() {
+    var wrap = document.getElementById(idCats);
+    var cats = window.wsGlossaryCategories();
+    wrap.innerHTML = '<button type="button" class="faq-cat-btn' + (!activeCat ? ' on' : '') + '" data-cat="">Wszystko</button>' +
+      cats.map(function (c) {
+        return '<button type="button" class="faq-cat-btn' + (activeCat === c ? ' on' : '') + '" data-cat="' + esc(c) + '">' + esc(c) + '</button>';
+      }).join('');
+    wrap.querySelectorAll('.faq-cat-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        activeCat = btn.getAttribute('data-cat') || null;
+        renderCats();
+        renderResults();
+      });
+    });
+  }
+
+  function renderResults() {
+    var q = (document.getElementById(idQ).value || '').toLowerCase().trim();
+    var list = window.WS_GLOSSARY.filter(function (e) {
+      if (activeCat && e.cat !== activeCat) return false;
+      if (!q) return true;
+      return e.term.toLowerCase().indexOf(q) !== -1 || e.def.toLowerCase().indexOf(q) !== -1 || e.cat.toLowerCase().indexOf(q) !== -1;
+    });
+    var out = document.getElementById(idResults);
+    if (list.length === 0) {
+      out.innerHTML = '<div class="faq-empty">Brak wyników. Spróbuj innego hasła.</div>';
+      return;
+    }
+    out.innerHTML = list.map(function (e) {
+      return '<div class="faq-item"><div class="faq-term">' + esc(e.term) + '<span class="faq-term-cat">' + esc(e.cat) + '</span></div>' +
+        '<div class="faq-def">' + esc(e.def) + '</div>' +
+        (e.loc ? '<div class="faq-loc">Gdzie znaleźć: ' + esc(e.loc) + '</div>' : '') +
         '</div>';
     }).join('');
-    return '<div class="section-title" style="margin-top:18px">' + esc(cat) + '</div><div class="legend-list">' + rows + '</div>';
-  }).join('');
+  }
+
+  document.getElementById(idQ).addEventListener('input', function () {
+    if (this.value.trim() && activeCat) { activeCat = null; renderCats(); }
+    renderResults();
+  });
+
+  renderCats();
+  renderResults();
 };
 </script>
