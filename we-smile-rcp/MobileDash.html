@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>We SMILE — Raporty</title>
+<?!= include('Styles'); ?>
+<?!= include('MobileStyles'); ?>
+<style>
+/* Style specyficzne dla Panelu Raportowego na mobile.
+   Powłoka i komponenty: MobileStyles.html */
+
+#md-help .inp{min-height:52px;font-size:16px;border-radius:13px}
+#md-help .faq-results{max-height:none;overflow:visible}
+#md-help .faq-cats{max-height:none}
+#md-help .faq-cat-btn{min-height:46px}
+
+.md-norma{display:flex;align-items:center;gap:10px}
+.md-norma .m-inp{flex:1}
+.md-tick{width:34px;height:34px;border-radius:50%;flex-shrink:0;display:flex;
+  align-items:center;justify-content:center;background:var(--c-success-tint);
+  color:var(--c-success);opacity:0;transition:opacity .2s}
+.md-tick.on{opacity:1}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ LOGOWANIE ═══════════ -->
+<div id="md-login" class="m-login">
+  <div class="wm wm-lg">we<b>SMILE</b></div>
+  <div class="m-login-sub">Panel Raportowy</div>
+  <div class="m-login-card">
+    <div class="dots">
+      <div class="dot" id="dd0"></div><div class="dot" id="dd1"></div>
+      <div class="dot" id="dd2"></div><div class="dot" id="dd3"></div>
+    </div>
+    <div class="kp" id="md-kp">
+      <button class="key" data-v="1">1</button><button class="key" data-v="2">2</button><button class="key" data-v="3">3</button>
+      <button class="key" data-v="4">4</button><button class="key" data-v="5">5</button><button class="key" data-v="6">6</button>
+      <button class="key" data-v="7">7</button><button class="key" data-v="8">8</button><button class="key" data-v="9">9</button>
+      <button class="key key-fn" data-v="C">Wyczyść</button>
+      <button class="key" data-v="0">0</button>
+      <button class="key key-fn" data-v="X"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-6-6 6-6z"/><path d="M14 10l4 4M18 10l-4 4"/></svg></button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ APLIKACJA ═══════════ -->
+<div id="md-app" style="display:none">
+  <header class="m-head">
+    <button id="md-back" class="m-hbtn" style="display:none" aria-label="Wróć">
+      <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 19l-7-7 7-7"/></svg>
+    </button>
+    <span id="md-title" class="m-head-title">Dziś</span>
+    <button id="md-theme" class="m-hbtn theme-ic" aria-label="Tryb nocny"></button>
+  </header>
+
+  <main id="m-main">
+
+    <!-- ── DZIŚ ── -->
+    <section id="d-today" class="m-view on">
+      <div id="md-pres" class="m-list"></div>
+      <div class="m-note">Lista odświeża się co minutę. Dotknij „Raport”, żeby zobaczyć godziny w wybranym miesiącu.</div>
+    </section>
+
+    <!-- ── RAPORT ── -->
+    <section id="d-report" class="m-view">
+      <div class="m-stepper">
+        <button id="md-prev" class="m-step-btn"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <span id="md-lbl" class="m-stepper-l">—</span>
+        <button id="md-next" class="m-step-btn"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+      </div>
+
+      <div class="m-card">
+        <div class="m-card-t">Norma godzin w miesiącu</div>
+        <div class="md-norma">
+          <input type="number" id="md-etat" class="m-inp" min="0" step="0.5" placeholder="np. 168" inputmode="decimal">
+          <span id="md-tick" class="md-tick"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+        </div>
+      </div>
+
+      <button id="md-pick" class="m-btn m-btn-g">Wybierz pracownika</button>
+      <div id="md-body"><div class="m-empty">Wybierz pracownika, żeby zobaczyć jego miesiąc.</div></div>
+    </section>
+
+    <!-- ── WIĘCEJ ── -->
+    <section id="d-more" class="m-view">
+      <div class="m-list" id="md-more"></div>
+    </section>
+
+    <!-- ── POMOC ── -->
+    <section id="d-help" class="m-view">
+      <div id="md-help"></div>
+    </section>
+
+  </main>
+
+  <nav class="m-nav">
+    <button class="m-nav-btn on" data-view="d-today">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      <span>Dziś</span>
+    </button>
+    <button class="m-nav-btn" data-view="d-report">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-6 4 3 5-8"/></svg>
+      <span>Raport</span>
+    </button>
+    <button class="m-nav-btn" data-view="d-more">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+      <span>Więcej</span>
+    </button>
+  </nav>
+</div>
+
+<!-- ═══════════ ARKUSZ ═══════════ -->
+<div id="m-sheet" class="m-sheet">
+  <div class="m-sheet-head">
+    <button id="m-sheet-cancel" class="m-sheet-btn ghost">Anuluj</button>
+    <span id="m-sheet-title" class="m-sheet-title"></span>
+    <button id="m-sheet-ok" class="m-sheet-btn">Zapisz</button>
+  </div>
+  <div id="m-sheet-body" class="m-sheet-body"></div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* global google, wsConfirmPopup, wsShowError, wsSetConnStatus, wsRenderLegend, wsToggleTheme */
+var BASE_URL = "<?= BASE_URL ?>";
+
+var S = {
+  token: null, view: 'd-today', stack: [],
+  year: new Date().getFullYear(), month: new Date().getMonth() + 1,
+  data: null, emp: null
+};
+
+var MONTHS = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec',
+              'Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
+var TYTULY = { 'd-today':'Dziś', 'd-report':'Raport', 'd-more':'Więcej', 'd-help':'Pomoc' };
+var GLOWNE = ['d-today','d-report','d-more'];
+
+// ── Podstawy ──────────────────────────────────────────────────
+
+var _tt;
+function toast(msg, ok) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'on' + (ok ? ' g' : ' err');
+  clearTimeout(_tt);
+  _tt = setTimeout(function(){ el.className = ''; }, 2600);
+}
+
+function gas(action, args, cb) {
+  google.script.run
+    .withSuccessHandler(function(res) {
+      wsSetConnStatus(true, 'Połączono.');
+      try { cb(res); } catch (ex) { toast('Błąd: ' + ex.message, false); }
+    })
+    .withFailureHandler(function(e) {
+      var msg = (e && e.message) || 'Błąd połączenia';
+      toast(msg, false);
+      wsSetConnStatus(false, 'Błąd połączenia: ' + msg);
+      wsShowError('Błąd połączenia: ' + msg);
+    })
+    .callRCP(action, JSON.stringify(args || []));
+}
+
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function fmtHM(m) {
+  var n = parseInt(m,10); if (isNaN(n)) return '—';
+  return Math.floor(n/60) + ':' + String(n%60).padStart(2,'0');
+}
+function todayStr() {
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+// ── Nawigacja ─────────────────────────────────────────────────
+
+function go(view, opts) {
+  opts = opts || {};
+  if (view === S.view) return;
+  if (!opts.back) {
+    if (GLOWNE.indexOf(view) !== -1) S.stack = [];
+    else S.stack.push(S.view);
+  }
+  S.view = view;
+  document.querySelectorAll('.m-view').forEach(function(v){ v.classList.toggle('on', v.id === view); });
+  document.querySelectorAll('.m-nav-btn').forEach(function(b) {
+    b.classList.toggle('on', b.getAttribute('data-view') === view);
+  });
+  document.getElementById('md-title').textContent = TYTULY[view] || '';
+  document.getElementById('md-back').style.display = S.stack.length ? 'flex' : 'none';
+  window.scrollTo(0, 0);
+  if (view === 'd-today')  loadPresence();
+  if (view === 'd-report') { updLabel(); if (S.emp) loadMonth(); }
+  if (view === 'd-more')   renderMore();
+  if (view === 'd-help')   wsRenderLegend('md-help');
+}
+
+document.getElementById('md-back').addEventListener('click', function() {
+  if (S.stack.length) go(S.stack.pop(), { back: true });
+});
+document.querySelectorAll('.m-nav-btn').forEach(function(b) {
+  b.addEventListener('click', function() {
+    var self = this;
+    self.classList.remove('pop'); void self.offsetWidth; self.classList.add('pop');
+    setTimeout(function(){ self.classList.remove('pop'); }, 360);
+    go(self.getAttribute('data-view'));
+  });
+});
+document.getElementById('md-theme').addEventListener('click', function(){ wsToggleTheme(); });
+
+// ── Arkusz ────────────────────────────────────────────────────
+
+var _sheetSave = null;
+function sheet(title, html, onSave, opts) {
+  opts = opts || {};
+  document.getElementById('m-sheet-title').textContent = title;
+  document.getElementById('m-sheet-body').innerHTML = html;
+  var ok = document.getElementById('m-sheet-ok');
+  ok.textContent = opts.okLabel || 'Zapisz';
+  ok.style.display = onSave ? 'block' : 'none';
+  document.getElementById('m-sheet-cancel').textContent = opts.cancelLabel || 'Anuluj';
+  _sheetSave = onSave || null;
+  document.getElementById('m-sheet').classList.add('on');
+  if (opts.after) opts.after();
+}
+function closeSheet() {
+  document.getElementById('m-sheet').classList.remove('on');
+  _sheetSave = null;
+}
+document.getElementById('m-sheet-cancel').addEventListener('click', closeSheet);
+document.getElementById('m-sheet-ok').addEventListener('click', function(){ if (_sheetSave) _sheetSave(); });
+
+// ── Logowanie ─────────────────────────────────────────────────
+
+var lPin = '';
+function setDots(p) {
+  for (var i = 0; i < 4; i++)
+    document.getElementById('dd' + i).className = 'dot' + (i < p.length ? ' on' : '');
+}
+
+document.getElementById('md-kp').addEventListener('click', function(e) {
+  var btn = e.target.closest('[data-v]');
+  if (!btn) return;
+  var v = btn.getAttribute('data-v');
+  if (v === 'C') lPin = '';
+  else if (v === 'X') lPin = lPin.slice(0, -1);
+  else if (lPin.length < 4) lPin += v;
+  setDots(lPin);
+  if (lPin.length !== 4) return;
+
+  gas('dashLogin', [lPin], function(res) {
+    if (!res || !res.ok) {
+      toast((res && res.msg) || 'Nieprawidłowy PIN.', false);
+      lPin = ''; setDots('');
+      return;
+    }
+    S.token = res.token;
+    document.getElementById('md-login').style.display = 'none';
+    document.getElementById('md-app').style.display = 'block';
+    updLabel();
+    loadPresence();
+    setInterval(loadPresence, 60000);
+    loadMonth();
+  });
+});
+
+// ── DZIŚ — obecność ───────────────────────────────────────────
+
+function loadPresence() {
+  if (!S.token) return;
+  gas('getActive', [S.token], function(res) {
+    if (!res || !res.ok) {
+      if (res && res.errorType === 'UNAUTHORIZED') location.reload();
+      return;
+    }
+    var active = res.active || [], finished = res.finished || [];
+    var el = document.getElementById('md-pres');
+    if (!active.length && !finished.length) {
+      el.innerHTML = '<div class="m-empty">Nikt dziś jeszcze nie rozpoczął pracy.</div>';
+      return;
+    }
+    var html = '';
+    if (active.length) {
+      html += '<div style="padding:11px 14px 3px"><span class="m-card-t" style="margin:0">W pracy teraz — ' +
+        active.length + '</span></div>' + active.map(function(p) {
+        return '<div class="m-pres"><span class="p-dot"></span>' +
+          '<span class="m-pres-n">' + esc(p.imie + ' ' + p.nazwisko) + '</span>' +
+          '<span class="m-pres-t">od ' + esc(p.wejscie) + '</span></div>';
+      }).join('');
+    }
+    if (finished.length) {
+      html += '<div style="padding:11px 14px 3px;border-top:1px solid var(--c-border)">' +
+        '<span class="m-card-t" style="margin:0">Zakończyli dziś — ' + finished.length + '</span></div>' +
+        finished.map(function(p) {
+        return '<div class="m-pres done"><span class="p-dot done"></span>' +
+          '<span class="m-pres-n">' + esc(p.imie + ' ' + p.nazwisko) + '</span>' +
+          '<span class="m-pres-t">' + esc((p.wejscie||'?') + '–' + (p.wyjscie||'?')) + '</span></div>';
+      }).join('');
+    }
+    el.innerHTML = html;
+  });
+}
+
+// ── RAPORT ────────────────────────────────────────────────────
+
+function updLabel() {
+  document.getElementById('md-lbl').textContent = MONTHS[S.month - 1] + ' ' + S.year;
+}
+document.getElementById('md-prev').addEventListener('click', function() {
+  S.month--; if (S.month < 1) { S.month = 12; S.year--; }
+  updLabel(); loadMonth();
+});
+document.getElementById('md-next').addEventListener('click', function() {
+  S.month++; if (S.month > 12) { S.month = 1; S.year++; }
+  updLabel(); loadMonth();
+});
+
+function loadMonth() {
+  if (!S.token) return;
+  gas('getDashboard', [S.token, S.year, S.month], function(res) {
+    if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+    if (!res || !res.ok) { toast((res && res.msg) || 'Błąd ładowania.', false); return; }
+    S.data = res;
+    document.getElementById('md-etat').value = res.etat > 0 ? res.etat : '';
+    renderEmp();
+  });
+}
+
+document.getElementById('md-pick').addEventListener('click', function() {
+  if (!S.data) { toast('Poczekaj na wczytanie danych.', false); return; }
+  var lista = S.data.employees || [];
+  if (!lista.length) {
+    sheet('Pracownicy', '<div class="m-empty">Brak pracowników w tym miesiącu.</div>', null, { cancelLabel:'Zamknij' });
+    return;
+  }
+  var html = '<div class="m-list">' + lista.map(function(p) {
+    return '<button class="m-item" data-pid="' + esc(p.id) + '">' +
+      '<span class="m-item-body"><span class="m-item-t">' + esc(p.imie + ' ' + p.nazwisko) + '</span>' +
+      '<span class="m-item-s">' + esc(p.rola || '') + ' · ' + fmtHM(p.totalMinutes || 0) + '</span></span>' +
+      '<svg class="m-chev ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>';
+  }).join('') + '</div>';
+
+  sheet('Wybierz pracownika', html, null, { cancelLabel:'Zamknij', after: function() {
+    document.querySelectorAll('#m-sheet-body [data-pid]').forEach(function(b) {
+      b.addEventListener('click', function() {
+        S.emp = this.getAttribute('data-pid');
+        closeSheet();
+        renderEmp();
+      });
+    });
+  }});
+});
+
+function renderEmp() {
+  var box = document.getElementById('md-body');
+  if (!S.data) { box.innerHTML = '<div class="m-empty">Ładowanie…</div>'; return; }
+  var emp = (S.data.employees || []).find(function(e){ return e.id === S.emp; });
+  if (!emp) {
+    box.innerHTML = '<div class="m-empty">Wybierz pracownika, żeby zobaczyć jego miesiąc.</div>';
+    return;
+  }
+  document.getElementById('md-pick').textContent = emp.imie + ' ' + emp.nazwisko;
+
+  var mins = emp.totalMinutes || 0;
+  var etat = S.data.etat > 0 ? S.data.etat : 0;
+  var norma = etat > 0 ? Math.round(etat * 60) : 0;
+  var bad = norma > 0 && mins < norma;
+
+  var tiles = '<div class="m-tiles">' +
+    '<div class="m-tile"><div class="m-tile-v' + (bad ? ' accent' : '') + '">' + fmtHM(mins) + '</div>' +
+    '<div class="m-tile-l">Przepracowane' + (norma ? ' z ' + fmtHM(norma) : '') + '</div></div>' +
+    '<div class="m-tile"><div class="m-tile-v">' + (emp.absDays || 0) + '</div>' +
+    '<div class="m-tile-l">Dni nieobecności</div></div>' +
+    (emp.paidAbsDays ? '<div class="m-tile"><div class="m-tile-v ok">' + emp.paidAbsDays + '</div>' +
+      '<div class="m-tile-l">Płatny urlop (8h/dzień)</div></div>' : '') +
+    (emp.ovrMinutes ? '<div class="m-tile" id="md-ovr" style="cursor:pointer">' +
+      '<div class="m-tile-v accent">' + fmtHM(emp.ovrMinutes) + '</div>' +
+      '<div class="m-tile-l">Poza godz. Kliniki — dotknij</div></div>' : '') +
+    '</div>';
+
+  var dni = (emp.days || []).filter(function(d) {
+    return d.wejscie || d.wyjscie || d.absence || d.overtime;
+  });
+
+  var lista = dni.length ? dni.map(function(d) {
+    var dn = String(d.date).split('-')[2];
+    return '<button class="m-day' + ((d.dow === 'Sb' || d.dow === 'Nd') ? ' wknd' : '') +
+      '" data-day="' + esc(d.date) + '" style="width:100%;text-align:left;font-family:inherit;cursor:pointer">' +
+      '<div class="m-day-h"><span class="m-day-n">' + dn + '</span>' +
+      '<span class="m-day-d">' + esc(d.dow) + '</span>' +
+      (d.absence ? '<span class="m-badge">' + esc(d.absence.code) + '</span>' : '') +
+      (d.overtime ? '<span class="m-badge ovr">poza godz.</span>' : '') +
+      '<span class="m-day-tot">' + (d.mins != null ? fmtHM(d.mins) : '—') + '</span></div>' +
+      (d.absence
+        ? '<div class="m-item-s">' + esc(d.absence.typ) + '</div>'
+        : '<div class="m-item-s">' + esc(d.wejscie || '—') + ' → ' + esc(d.wyjscie || 'brak wyjścia') + '</div>') +
+      '</button>';
+  }).join('') : '<div class="m-empty">Brak zdarzeń w tym miesiącu.</div>';
+
+  box.innerHTML =
+    '<div class="m-card"><div class="m-card-t">' + esc(emp.rola || '') + '</div>' +
+    '<div style="font-size:18px;font-weight:800;color:var(--c-ink)">' + esc(emp.imie + ' ' + emp.nazwisko) + '</div></div>' +
+    tiles +
+    '<div class="m-field"><span class="m-lbl">Adnotacja miesięczna</span>' +
+    '<textarea id="md-note" class="m-ta" placeholder="Wpisz adnotację…">' + esc(emp.note || '') + '</textarea></div>' +
+    lista;
+
+  document.getElementById('md-note').addEventListener('blur', function() {
+    var val = this.value;
+    gas('setNote', [S.token, emp.id, S.year, S.month, val], function(res) {
+      if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+      if (res && res.ok) { emp.note = val; wsConfirmPopup('Zapisano adnotację.'); }
+    });
+  });
+
+  var ovr = document.getElementById('md-ovr');
+  if (ovr) ovr.addEventListener('click', function() {
+    var d2 = (emp.days || []).filter(function(x){ return x.overtime; });
+    sheet('Poza godzinami Kliniki', d2.length ? d2.map(function(x) {
+      return '<div class="m-day"><div class="m-day-h"><span class="m-day-n">' +
+        String(x.date).split('-')[2] + '</span><span class="m-day-d">' + esc(x.dow) + '</span>' +
+        '<span class="m-day-tot">' + esc((x.wejscie||'?') + '–' + (x.wyjscie||'?')) + '</span></div>' +
+        '<div class="m-item-s">' + (x.overtimeNote ? esc(x.overtimeNote) : 'Brak uzasadnienia') + '</div></div>';
+    }).join('') : '<div class="m-empty">Brak takich dni.</div>', null, { cancelLabel:'Zamknij' });
+  });
+
+  box.querySelectorAll('[data-day]').forEach(function(b) {
+    b.addEventListener('click', function() { daySheet(emp, this.getAttribute('data-day')); });
+  });
+}
+
+function daySheet(emp, date) {
+  var d = (emp.days || []).find(function(x){ return x.date === date; });
+  if (!d) return;
+  var html =
+    '<div class="m-card"><div class="m-card-t">' + esc(d.dow) + ' · ' + esc(date) + '</div>' +
+    '<div class="m-tiles" style="margin:0">' +
+      '<div class="m-tile"><div class="m-tile-v">' + esc(d.wejscie || '—') + '</div><div class="m-tile-l">Wejście</div></div>' +
+      '<div class="m-tile"><div class="m-tile-v">' + esc(d.wyjscie || '—') + '</div><div class="m-tile-l">Wyjście</div></div>' +
+    '</div></div>' +
+    (d.mins != null ? '<div class="m-card"><div class="m-card-t">Czas pracy</div>' +
+      '<div style="font-size:24px;font-weight:800;color:var(--c-primary)">' + fmtHM(d.mins) + '</div></div>' : '') +
+    (d.absence ? '<div class="m-card"><div class="m-card-t">Nieobecność</div>' +
+      '<div style="font-size:15px;font-weight:700;color:var(--c-ink)">' + esc(d.absence.typ) + '</div>' +
+      (d.absence.note ? '<div class="m-item-s" style="margin-top:6px">' + esc(d.absence.note) + '</div>' : '') +
+      '</div>' : '') +
+    (d.overtime ? '<div class="m-card"><div class="m-card-t">Poza godzinami Kliniki</div>' +
+      '<div class="m-item-s">' + (d.overtimeNote ? esc(d.overtimeNote) : 'Brak uzasadnienia') + '</div></div>' : '');
+
+  sheet('Szczegóły dnia', html, null, { cancelLabel: 'Zamknij' });
+}
+
+// Norma — zapis po opuszczeniu pola.
+document.getElementById('md-etat').addEventListener('blur', function() {
+  var val = parseFloat(this.value);
+  if (isNaN(val) || val < 0) return;
+  gas('setEtat', [S.token, S.year, S.month, val], function(res) {
+    if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+    if (!res || !res.ok) { toast('Błąd zapisu normy.', false); return; }
+    if (S.data) S.data.etat = val;
+    var tk = document.getElementById('md-tick');
+    tk.classList.add('on');
+    setTimeout(function(){ tk.classList.remove('on'); }, 1800);
+    renderEmp();
+  });
+});
+
+// ── EKSPORT ───────────────────────────────────────────────────
+
+function openExport() {
+  sheet('Eksport Excel', '<div class="m-empty">Ładowanie…</div>', null, { cancelLabel:'Zamknij' });
+  gas('getExportMeta', [S.token], function(res) {
+    if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+    if (!res || !res.ok) {
+      document.getElementById('m-sheet-body').innerHTML = '<div class="m-empty">Błąd wczytywania.</div>';
+      return;
+    }
+    var now = new Date();
+    var cur = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+    var earliest = String(res.earliest).slice(0, 7);
+
+    var html =
+      '<div class="m-field"><span class="m-lbl">Zakres</span>' +
+      '<select id="ex-mode" class="m-sel"><option value="month">Jeden miesiąc</option>' +
+      '<option value="range">Zakres miesięcy</option></select></div>' +
+      '<div class="m-field" id="ex-m-box"><span class="m-lbl">Miesiąc</span>' +
+      '<input type="month" id="ex-month" class="m-inp" value="' + cur + '" max="' + cur + '"></div>' +
+      '<div id="ex-r-box" style="display:none"><div class="m-row2">' +
+        '<div class="m-field"><span class="m-lbl">Od</span><input type="month" id="ex-from" class="m-inp" value="' +
+          earliest + '" min="' + earliest + '" max="' + cur + '"></div>' +
+        '<div class="m-field"><span class="m-lbl">Do</span><input type="month" id="ex-to" class="m-inp" value="' +
+          cur + '" min="' + earliest + '" max="' + cur + '"></div>' +
+      '</div></div>' +
+      '<div class="m-field"><span class="m-lbl">Pracownicy</span>' +
+      '<div style="display:flex;gap:8px;margin-bottom:10px">' +
+        '<button class="m-btn m-btn-g" id="ex-all" style="margin:0;min-height:44px">Wszyscy</button>' +
+        '<button class="m-btn m-btn-g" id="ex-none" style="margin:0;min-height:44px">Żaden</button></div>' +
+      '<div class="m-list" style="margin:0">' + (res.employees || []).map(function(e) {
+        return '<label class="m-item" style="cursor:pointer">' +
+          '<input type="checkbox" class="ex-cb" value="' + esc(e.id) + '" checked ' +
+          'style="width:24px;height:24px;accent-color:var(--c-primary);flex-shrink:0">' +
+          '<span class="m-item-body"><span class="m-item-t">' + esc(e.imie + ' ' + e.nazwisko) + '</span></span></label>';
+      }).join('') + '</div></div>';
+
+    document.getElementById('m-sheet-body').innerHTML = html;
+    var ok = document.getElementById('m-sheet-ok');
+    ok.textContent = 'Generuj';
+    ok.style.display = 'block';
+    _sheetSave = doExport;
+
+    document.getElementById('ex-mode').addEventListener('change', function() {
+      var r = this.value === 'range';
+      document.getElementById('ex-m-box').style.display = r ? 'none' : 'block';
+      document.getElementById('ex-r-box').style.display = r ? 'block' : 'none';
+    });
+    document.getElementById('ex-all').addEventListener('click', function(e) {
+      e.preventDefault();
+      document.querySelectorAll('.ex-cb').forEach(function(c){ c.checked = true; });
+    });
+    document.getElementById('ex-none').addEventListener('click', function(e) {
+      e.preventDefault();
+      document.querySelectorAll('.ex-cb').forEach(function(c){ c.checked = false; });
+    });
+  });
+}
+
+function doExport() {
+  var ids = Array.prototype.map.call(document.querySelectorAll('.ex-cb:checked'), function(c){ return c.value; });
+  if (!ids.length) { toast('Wybierz przynajmniej jedną osobę.', false); return; }
+  var opts = { employeeIds: ids };
+
+  if (document.getElementById('ex-mode').value === 'range') {
+    var f = document.getElementById('ex-from').value, t = document.getElementById('ex-to').value;
+    if (!f || !t) { toast('Wybierz zakres.', false); return; }
+    if (f > t) { toast('Data „od” nie może być późniejsza niż „do”.', false); return; }
+    var ty = parseInt(t.slice(0,4),10), tm = parseInt(t.slice(5,7),10);
+    opts.mode = 'range';
+    opts.from = f + '-01';
+    opts.to = t + '-' + String(new Date(ty, tm, 0).getDate()).padStart(2,'0');
+  } else {
+    var mv = document.getElementById('ex-month').value;
+    if (!mv) { toast('Wybierz miesiąc.', false); return; }
+    opts.mode = 'month';
+    opts.year = parseInt(mv.slice(0,4),10);
+    opts.month = parseInt(mv.slice(5,7),10);
+  }
+
+  closeSheet();
+  toast('Generowanie pliku…', true);
+  gas('dashExportXlsx', [S.token, opts], function(res) {
+    if (!res || !res.ok) { toast('Błąd eksportu: ' + ((res && res.msg) || ''), false); return; }
+    var bc = atob(res.base64), n = new Array(bc.length);
+    for (var i = 0; i < bc.length; i++) n[i] = bc.charCodeAt(i);
+    var blob = new Blob([new Uint8Array(n)],
+      { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = res.filename;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+    wsConfirmPopup('Plik pobrany.');
+  });
+}
+
+// ── WIĘCEJ ────────────────────────────────────────────────────
+
+function renderMore() {
+  document.getElementById('md-more').innerHTML =
+    '<button class="m-item" id="mo-exp">' +
+      '<span class="m-ico-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 19h16"/></svg></span>' +
+      '<span class="m-item-body"><span class="m-item-t">Eksport do Excela</span>' +
+      '<span class="m-item-s">Miesiąc lub zakres, wybrani pracownicy</span></span></button>' +
+    '<button class="m-item" id="mo-help">' +
+      '<span class="m-item-body"><span class="m-item-t">Pomoc</span>' +
+      '<span class="m-item-s">Słownik pojęć i wyszukiwarka</span></span></button>' +
+    '<button class="m-item" id="mo-desk">' +
+      '<span class="m-item-body"><span class="m-item-t">Wersja desktopowa</span>' +
+      '<span class="m-item-s">Pełny panel — lepszy na dużym ekranie</span></span></button>' +
+    '<button class="m-item" id="mo-out">' +
+      '<span class="m-item-body"><span class="m-item-t" style="color:var(--c-accent)">Wyloguj</span></span></button>';
+
+  document.getElementById('mo-exp').addEventListener('click', openExport);
+  document.getElementById('mo-help').addEventListener('click', function(){ go('d-help'); });
+  document.getElementById('mo-desk').addEventListener('click', function() {
+    try { localStorage.setItem('wesmile_ui', 'desktop'); } catch (e) {}
+    window.open(BASE_URL + '?page=dashboard&ui=desktop', '_top');
+  });
+  document.getElementById('mo-out').addEventListener('click', function(){ location.reload(); });
+}
+</script>
+</body>
+</html>

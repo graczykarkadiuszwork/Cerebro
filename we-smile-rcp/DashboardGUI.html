@@ -89,6 +89,25 @@ tr.note-tr .nt-ovr{color:var(--c-accent)}
 </head>
 <body>
 
+<script>
+/* Wybór wersji interfejsu — identyczna zasada jak w Panelu Właściciela.
+   Raz podjęty wybór zapamiętujemy w localStorage. */
+(function () {
+  try {
+    var wybor = localStorage.getItem('wesmile_ui');
+    var param = (location.search.match(/[?&]ui=(\w+)/) || [])[1];
+    if (param) { localStorage.setItem('wesmile_ui', param); wybor = param; }
+    if (wybor === 'desktop') return;
+    var maly = window.matchMedia('(max-width:820px)').matches;
+    var dotyk = /Android|iPhone|iPod|Windows Phone/i.test(navigator.userAgent);
+    if (wybor === 'mobile' || maly || dotyk) {
+      document.documentElement.style.visibility = 'hidden';
+      window.open("<?= BASE_URL ?>?page=dashboard-mobile", '_top');
+    }
+  } catch (e) { /* przy problemie zostajemy na desktopie */ }
+})();
+</script>
+
 <!-- ═══════ LOGIN ═══════ -->
 <div id="login" class="screen brand-screen">
   <button class="btn-icon corner-toggle theme-ic" onclick="wsToggleTheme()" aria-label="Przełącz tryb nocny"></button>

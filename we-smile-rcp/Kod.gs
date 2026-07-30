@@ -222,9 +222,19 @@ function include(filename) {
 function doGet(e) {
   const p = e && e.parameter && e.parameter.page;
   if (p === 'dashboard') {
-    return HtmlService.createTemplateFromFile('DashboardGUI')
-      .evaluate()
+    const tmpl = HtmlService.createTemplateFromFile('DashboardGUI');
+    tmpl.BASE_URL = ScriptApp.getService().getUrl();
+    return tmpl.evaluate()
       .setTitle('We SMILE — Panel Raportowy')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+  // Panel Raportowy w wersji mobilnej — osobny interfejs (patrz owner-mobile).
+  if (p === 'dashboard-mobile') {
+    const tmpl = HtmlService.createTemplateFromFile('MobileDash');
+    tmpl.BASE_URL = ScriptApp.getService().getUrl();
+    return tmpl.evaluate()
+      .setTitle('We SMILE — Raporty')
+      .addMetaTag('viewport', 'width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
   if (p === 'owner') {
