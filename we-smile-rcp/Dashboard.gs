@@ -89,6 +89,19 @@ function getActiveNow(token) {
   if (!_dashOk(token)) {
     return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
   }
+  return _activeNowData();
+}
+
+// Wariant dla panelu Właściciela — właściciel jest już uwierzytelniony
+// swoim PIN-em (masterLogin), nie potrzebuje osobnej sesji Raportów.
+function masterGetActive(token) {
+  if (!_masterOk(token)) {
+    return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  }
+  return _activeNowData();
+}
+
+function _activeNowData() {
   const today = _todayPL();
   const ewidSh = _ss().getSheetByName('Ewidencja');
   const rows = (ewidSh && ewidSh.getLastRow() >= 2)
@@ -138,11 +151,22 @@ function getActiveNow(token) {
 // ── Dane miesiąca (widok panelu) ──────────────────────────────
 
 function getDashboard(token, year, month) {
-  try {
-    if (!_dashOk(token)) {
-      return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła. Zaloguj się ponownie.' };
-    }
+  if (!_dashOk(token)) {
+    return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła. Zaloguj się ponownie.' };
+  }
+  return _dashboardData(year, month);
+}
 
+// Wariant dla panelu Właściciela — jego własna sesja (masterLogin) wystarcza.
+function masterGetDashboard(token, year, month) {
+  if (!_masterOk(token)) {
+    return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  }
+  return _dashboardData(year, month);
+}
+
+function _dashboardData(year, month) {
+  try {
     const y = parseInt(year, 10);
     const m = parseInt(month, 10);
     if (isNaN(y) || isNaN(m) || m < 1 || m > 12) {
@@ -253,6 +277,17 @@ function setEtat(token, year, month, hours) {
   if (!_dashOk(token)) {
     return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
   }
+  return _setEtatData(year, month, hours);
+}
+
+function masterSetEtat(token, year, month, hours) {
+  if (!_masterOk(token)) {
+    return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  }
+  return _setEtatData(year, month, hours);
+}
+
+function _setEtatData(year, month, hours) {
   const y = parseInt(year, 10);
   const m = parseInt(month, 10);
   const h = parseFloat(hours);
@@ -271,6 +306,17 @@ function setNote(token, empId, year, month, note) {
   if (!_dashOk(token)) {
     return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
   }
+  return _setNoteData(empId, year, month, note);
+}
+
+function masterSetNote(token, empId, year, month, note) {
+  if (!_masterOk(token)) {
+    return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  }
+  return _setNoteData(empId, year, month, note);
+}
+
+function _setNoteData(empId, year, month, note) {
   if (!empId) return { ok: false, msg: 'Brak danych.' };
   const y = parseInt(year, 10);
   const m = parseInt(month, 10);
@@ -288,6 +334,17 @@ function getExportMeta(token) {
   if (!_dashOk(token)) {
     return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
   }
+  return _exportMetaData();
+}
+
+function masterGetExportMeta(token) {
+  if (!_masterOk(token)) {
+    return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  }
+  return _exportMetaData();
+}
+
+function _exportMetaData() {
   const { minDate } = _buildEwidMap();
   const today = _todayPL();
   const employees = _getWorkers()
@@ -308,6 +365,17 @@ function dashExportXlsx(token, opts) {
   if (!_dashOk(token)) {
     return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
   }
+  return _dashExportXlsxData(opts);
+}
+
+function masterDashExportXlsx(token, opts) {
+  if (!_masterOk(token)) {
+    return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  }
+  return _dashExportXlsxData(opts);
+}
+
+function _dashExportXlsxData(opts) {
   opts = opts || {};
 
   let fromStr, toStr;

@@ -121,8 +121,11 @@ function doGet(e) {
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
   if (p === 'owner') {
-    return HtmlService.createTemplateFromFile('MasterGUI')
-      .evaluate()
+    const tmpl = HtmlService.createTemplateFromFile('MasterGUI');
+    // Adres bieżącego wdrożenia — potrzebny do linków "otwórz osobno"
+    // (pełnoekranowy kiosk/ekran odbić poza chrome panelu Właściciela).
+    tmpl.BASE_URL = ScriptApp.getService().getUrl();
+    return tmpl.evaluate()
       .setTitle('We SMILE')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
@@ -166,6 +169,15 @@ function callRCP(action, argsJson) {
       case 'masterSetClinicDayOff': return masterSetClinicDayOff(args[0], args[1], args[2], args[3], args[4]);
       case 'masterSetAbsenceRange': return masterSetAbsenceRange(args[0], args[1], args[2], args[3], args[4], args[5]);
       case 'masterSetEmploymentForm': return masterSetEmploymentForm(args[0], args[1], args[2]);
+      // Owner — funkcje Panelu Raportowego, ekranu odbić i kodu, osadzone
+      // w panelu Właściciela (współdzielą jego sesję masterLogin, bez
+      // osobnego logowania).
+      case 'masterGetActive':      return masterGetActive(args[0]);
+      case 'masterGetDashboard':   return masterGetDashboard(args[0], args[1], args[2]);
+      case 'masterSetEtat':        return masterSetEtat(args[0], args[1], args[2], args[3]);
+      case 'masterSetNote':        return masterSetNote(args[0], args[1], args[2], args[3], args[4]);
+      case 'masterGetExportMeta':  return masterGetExportMeta(args[0]);
+      case 'masterDashExportXlsx': return masterDashExportXlsx(args[0], args[1]);
       default:               return { ok: false, msg: 'Nieznana akcja.' };
     }
   } catch (err) {

@@ -67,17 +67,12 @@
 <div id="s-panel" style="display:none">
   <header class="hero">
     <div class="hero-row">
+      <button id="m-back" class="btn-bar icon-only" style="display:none" aria-label="Wróć">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 19l-7-7 7-7"/></svg>
+      </button>
       <span class="wm on-dark hero-title">we<b>SMILE</b> · Właściciel</span>
       <div class="bar-right">
         <button id="m-theme" class="btn-bar icon-only theme-ic" aria-label="Przełącz tryb nocny"></button>
-        <button id="nav-dashboard" class="btn-bar" title="Panel Raportowy">
-          <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-6 4 3 5-8"/></svg>
-          Raporty
-        </button>
-        <button id="nav-worker" class="btn-bar" title="Ekran odbić">
-          <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 18h6"/></svg>
-          Odbicia
-        </button>
         <button id="m-logout" class="btn-bar danger">
           <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"/><path d="M21 12H8"/><path d="M15 16l4-4-4-4"/></svg>
           Wyloguj
@@ -264,6 +259,158 @@
       <div id="staff-list" style="margin-top:16px"><div class="hint">Ładowanie…</div></div>
     </div>
 
+    <!-- ── WIDOK: RAPORTY (Panel Raportowy osadzony) ── -->
+    <div id="view-reports" style="display:none">
+      <div class="field" style="position:relative">
+        <span class="field-lbl">Pracownik</span>
+        <input type="text" id="rp-emp-input" class="inp" placeholder="Wpisz imię lub nazwisko…" autocomplete="off">
+        <div id="rp-emp-dropdown" class="emp-dropdown"></div>
+      </div>
+
+      <div class="month-nav" style="margin:14px 0">
+        <button id="rp-prev" class="btn-icon"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <span id="rp-label" class="month-label">—</span>
+        <button id="rp-next" class="btn-icon"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+      </div>
+
+      <div class="field-row2">
+        <div class="field">
+          <span class="field-lbl">Norma godzin (miesiąc)</span>
+          <input type="number" id="rp-etat" class="inp" min="0" step="0.5" placeholder="np. 168">
+        </div>
+        <div class="field">
+          <span class="field-lbl">&nbsp;</span>
+          <button id="rp-export" class="btn btn-accent" style="margin-top:0">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>
+            Eksportuj do Excel
+          </button>
+        </div>
+      </div>
+
+      <div id="rp-presence" class="info-box" style="display:none;margin-bottom:14px"></div>
+      <div id="rp-data"><div class="hint">Wybierz pracownika, żeby wczytać dane.</div></div>
+    </div>
+
+    <!-- ── WIDOK: KOD (rotacyjny kod autoryzacyjny — kiosk osadzony) ── -->
+    <div id="view-code" style="display:none">
+      <div class="info-box" style="margin-bottom:16px">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>
+        <span>Ten sam kod, co na tablecie recepcji. Do stałego wyświetlania na tablecie użyj pełnoekranowego widoku: <a id="code-open-standalone" href="#" target="_blank" style="color:var(--c-primary);font-weight:700">otwórz osobno →</a></span>
+      </div>
+      <div class="card" style="text-align:center">
+        <div class="tok-sub">Aktywny kod autoryzacyjny</div>
+        <div id="mc-token" class="token-display green">----</div>
+        <div class="prog-wrap"><div class="prog-fill" id="mc-prog"></div></div>
+        <div class="tok-status green" id="mc-status"></div>
+        <button class="btn btn-accent btn-refresh" id="mc-refresh">
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-15.5 6.4L3 16"/><path d="M3 12a9 9 0 0 1 15.5-6.4L21 8"/><path d="M21 3v5h-5"/><path d="M3 21v-5h5"/></svg>
+          Odśwież kod
+        </button>
+        <div class="tok-hint">Kod zmienia się automatycznie co 30 sekund</div>
+      </div>
+    </div>
+
+    <!-- ── WIDOK: ODBICIA (ekran pracownika osadzony) ── -->
+    <div id="view-clock" style="display:none">
+      <div class="info-box" style="margin-bottom:16px">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>
+        <span>Do codziennego odbijania się na recepcji użyj pełnoekranowego widoku: <a id="clock-open-standalone" href="#" target="_blank" style="color:var(--c-primary);font-weight:700">otwórz osobno →</a></span>
+      </div>
+      <div class="card">
+      <!-- Krok 1: PIN -->
+      <div class="step on" id="ob-s-pin">
+        <div class="step-title" style="color:var(--c-ink)">Wpisz PIN</div>
+        <div class="step-sub">4-cyfrowy kod osobisty</div>
+        <div class="dots">
+          <div class="dot" id="ob-p0"></div><div class="dot" id="ob-p1"></div>
+          <div class="dot" id="ob-p2"></div><div class="dot" id="ob-p3"></div>
+        </div>
+        <div class="kp" id="ob-kp-pin">
+          <button class="key" data-v="1">1</button><button class="key" data-v="2">2</button><button class="key" data-v="3">3</button>
+          <button class="key" data-v="4">4</button><button class="key" data-v="5">5</button><button class="key" data-v="6">6</button>
+          <button class="key" data-v="7">7</button><button class="key" data-v="8">8</button><button class="key" data-v="9">9</button>
+          <button class="key key-fn" data-v="C">Wyczyść</button><button class="key" data-v="0">0</button>
+          <button class="key key-fn" data-v="X"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-6-6 6-6z"/><path d="M14 10l4 4M18 10l-4 4"/></svg></button>
+        </div>
+      </div>
+
+      <!-- Krok 2: kod z tabletu + akcja -->
+      <div class="step" id="ob-s-code">
+        <div class="step-title" id="ob-w-name" style="color:var(--c-ink)">Pracownik</div>
+        <div class="step-sub" id="ob-w-role"></div>
+        <div class="dots">
+          <div class="dot" id="ob-c0"></div><div class="dot" id="ob-c1"></div>
+          <div class="dot" id="ob-c2"></div><div class="dot" id="ob-c3"></div>
+        </div>
+        <div class="kp" id="ob-kp-code">
+          <button class="key" data-c="1">1</button><button class="key" data-c="2">2</button><button class="key" data-c="3">3</button>
+          <button class="key" data-c="4">4</button><button class="key" data-c="5">5</button><button class="key" data-c="6">6</button>
+          <button class="key" data-c="7">7</button><button class="key" data-c="8">8</button><button class="key" data-c="9">9</button>
+          <button class="key key-fn" data-c="C">Wyczyść</button><button class="key" data-c="0">0</button>
+          <button class="key key-fn" data-c="X"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-6-6 6-6z"/><path d="M14 10l4 4M18 10l-4 4"/></svg></button>
+        </div>
+        <div class="btn-row" style="margin-top:16px">
+          <button class="btn btn-primary" id="ob-btn-in">Wejście</button>
+          <button class="btn btn-navy" id="ob-btn-out">Wyjście</button>
+        </div>
+        <button class="btn btn-accent" id="ob-btn-abs" style="margin-top:10px">Zgłoś nieobecność</button>
+        <button class="btn-link" id="ob-btn-back">← Zmień użytkownika</button>
+      </div>
+
+      <!-- Krok 2b: zgłoszenie nieobecności -->
+      <div class="step" id="ob-s-abs">
+        <div class="step-title" style="color:var(--c-ink)">Nieobecność</div>
+        <div class="step-sub" id="ob-abs-who"></div>
+        <div class="field-row2">
+          <div class="field"><label class="field-lbl">Od dnia</label><input type="date" id="ob-abs-from" class="inp"></div>
+          <div class="field"><label class="field-lbl">Do dnia</label><input type="date" id="ob-abs-to" class="inp"></div>
+        </div>
+        <div class="field">
+          <label class="field-lbl">Typ nieobecności</label>
+          <select id="ob-abs-typ" class="sel"><option value="">— wybierz typ —</option></select>
+        </div>
+        <div class="field">
+          <label class="field-lbl">Adnotacja</label>
+          <textarea id="ob-abs-note" class="ta" placeholder="Np. numer L4, powód…"></textarea>
+        </div>
+        <button class="btn btn-accent" id="ob-abs-submit">Zgłoś nieobecność</button>
+        <button class="btn-link" id="ob-abs-back">← Wróć</button>
+      </div>
+
+      <!-- Krok 2c: uzasadnienie przekroczenia -->
+      <div class="step" id="ob-s-ovr">
+        <div class="step-title" style="color:var(--c-ink)">Uwaga</div>
+        <div class="step-sub" id="ob-ovr-sub"></div>
+        <div class="ovr-flag on" style="display:flex;position:static">
+          <span>Przekroczono regularne godziny pracy Kliniki — uzasadnij konieczność:</span>
+        </div>
+        <textarea id="ob-ovr-note" class="ta" placeholder="Uzasadnienie…"></textarea>
+        <button class="btn btn-accent" id="ob-ovr-save" style="margin-top:12px">Zapisz uzasadnienie</button>
+        <button class="btn-link" id="ob-ovr-skip">Pomiń</button>
+      </div>
+
+      <!-- Krok 3: potwierdzenie -->
+      <div class="step" id="ob-s-ok">
+        <div class="ok-wrap">
+          <div class="ok-icon-wrap" id="ob-ok-icon-wrap">
+            <svg class="ic-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 5-5"/></svg>
+          </div>
+          <div class="ok-title" id="ob-ok-title">Zarejestrowano!</div>
+          <div class="ok-sub" id="ob-ok-msg"></div>
+        </div>
+      </div>
+      </div>
+    </div>
+
+    <!-- ── WIDOK: LEGENDA ── -->
+    <div id="view-legend" style="display:none">
+      <div class="info-box" style="margin-bottom:6px">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>
+        <span>Wszystkie kody nieobecności i formy zatrudnienia używane w RCP — z definicjami. Te same informacje znajdziesz też w wyszukiwarce widgetu pomocy (prawy dolny róg).</span>
+      </div>
+      <div id="legend-container"></div>
+    </div>
+
   </div>
 
   <!-- ── Dolna nawigacja (iOS tab bar) ── -->
@@ -288,6 +435,22 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17.5" cy="9.5" r="2.6"/><path d="M15.5 14.6a5 5 0 0 1 6 4.9"/></svg>
       <span>Zespół</span>
     </button>
+    <button class="seg-btn" id="tab-reports">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-6 4 3 5-8"/></svg>
+      <span>Raporty</span>
+    </button>
+    <button class="seg-btn" id="tab-code">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10v4M11 10v4M15 10v4"/></svg>
+      <span>Kod</span>
+    </button>
+    <button class="seg-btn" id="tab-clock">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 18h6"/></svg>
+      <span>Odbicia</span>
+    </button>
+    <button class="seg-btn" id="tab-legend">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      <span>Legenda</span>
+    </button>
   </nav>
 </div>
 
@@ -295,6 +458,7 @@
 
 <script>
 /* global google */
+var BASE_URL = "<?= BASE_URL ?>";
 
 var M = { token: null, empId: null, mmEmpId: null, rgEmpId: null, mmYear: new Date().getFullYear(), mmMonth: new Date().getMonth() + 1 };
 
@@ -360,9 +524,12 @@ document.getElementById('kp-login').addEventListener('click', function(e) {
         document.getElementById('do-to').value   = todayStr();
         document.getElementById('rg-from').value = todayStr();
         document.getElementById('rg-to').value   = todayStr();
+        document.body.classList.add('has-tabbar-space');
         loadEmployees();
         loadAbsTypes();
         updateMMLabel();
+        initEmbeddedCode();
+        initEmbeddedReports();
       } else {
         toast((res && res.msg) || 'Brak dostępu.', false);
         lPin = ''; setDots('');
@@ -373,8 +540,10 @@ document.getElementById('kp-login').addEventListener('click', function(e) {
 
 document.getElementById('m-logout').addEventListener('click', function() { location.reload(); });
 document.getElementById('m-theme').addEventListener('click', function() { wsToggleTheme(); });
-document.getElementById('nav-dashboard').addEventListener('click', function() { location.href = location.pathname + '?page=dashboard'; });
-document.getElementById('nav-worker').addEventListener('click', function() { location.href = location.pathname + '?page=worker'; });
+
+wsMountFaq();
+document.getElementById('code-open-standalone').href = BASE_URL + '?page=admin';
+document.getElementById('clock-open-standalone').href = BASE_URL + '?page=worker';
 
 // ── Typy nieobecności ─────────────────────────────
 var _absTypes = [];
@@ -450,22 +619,71 @@ bindEmpSelector('mm-emp-input', 'mm-emp-dropdown', function(id) {
 });
 bindEmpSelector('rg-emp-input', 'rg-emp-dropdown', function(id) { M.rgEmpId = id; });
 
-// ── Przełącznik widoków ───────────────────────────
+// ── Przełącznik widoków + historia cofania ─────────
+// Każde przejście między zakładkami odkłada poprzedni widok na stos —
+// przycisk "◀" w nagłówku (i przycisk "wstecz" przeglądarki, przez
+// history.pushState) cofają o jeden krok, z dowolnego miejsca do
+// dowolnego miejsca, bez utraty stanu (wybrany pracownik, miesiąc itd.
+// zostają w pamięci JS, nie są resetowane przy przełączaniu zakładek).
 var TABS = {
   'tab-day':     'view-day',
   'tab-month':   'view-month',
   'tab-range':   'view-range',
   'tab-daysoff': 'view-daysoff',
-  'tab-staff':   'view-staff'
+  'tab-staff':   'view-staff',
+  'tab-reports': 'view-reports',
+  'tab-code':    'view-code',
+  'tab-clock':   'view-clock',
+  'tab-legend':  'view-legend'
 };
-Object.keys(TABS).forEach(function(tabId) {
-  document.getElementById(tabId).addEventListener('click', function() {
-    Object.keys(TABS).forEach(function(id) {
-      document.getElementById(id).className = 'seg-btn' + (id === tabId ? ' on' : '');
-      document.getElementById(TABS[id]).style.display = (id === tabId) ? 'block' : 'none';
-    });
-    if (tabId === 'tab-staff') renderStaffList();
+var viewStack = [];
+var currentTab = 'tab-day';
+var mBack = document.getElementById('m-back');
+
+function onTabActivated(tabId) {
+  if (tabId === 'tab-staff')   renderStaffList();
+  if (tabId === 'tab-legend')  wsRenderLegend('legend-container');
+  if (tabId === 'tab-code')    mcRefreshToken(false);
+  if (tabId === 'tab-clock')   obReset();
+}
+
+function activateTab(tabId, opts) {
+  opts = opts || {};
+  if (!TABS[tabId] || tabId === currentTab) return;
+  if (!opts.fromBack) {
+    viewStack.push(currentTab);
+    try { history.pushState({ tab: tabId }, '', '#' + tabId); } catch (e) {}
+  }
+  currentTab = tabId;
+  Object.keys(TABS).forEach(function(id) {
+    document.getElementById(id).className = 'seg-btn' + (id === tabId ? ' on' : '');
+    document.getElementById(TABS[id]).style.display = (id === tabId) ? 'block' : 'none';
   });
+  mBack.style.display = viewStack.length ? 'inline-flex' : 'none';
+  onTabActivated(tabId);
+}
+
+function goBack() {
+  if (!viewStack.length) return;
+  var prev = viewStack.pop();
+  currentTab = null; // wymuś realną zmianę w activateTab mimo braku push
+  activateTab(prev, { fromBack: true });
+  mBack.style.display = viewStack.length ? 'inline-flex' : 'none';
+}
+
+window.addEventListener('popstate', function (e) {
+  var tab = (e.state && e.state.tab) || (location.hash || '').slice(1);
+  if (tab && TABS[tab] && tab !== currentTab) {
+    viewStack.length = 0;
+    currentTab = null;
+    activateTab(tab, { fromBack: true });
+  }
+});
+
+mBack.addEventListener('click', goBack);
+
+Object.keys(TABS).forEach(function(tabId) {
+  document.getElementById(tabId).addEventListener('click', function() { activateTab(tabId); });
 });
 
 // ── Widok: szybka edycja dnia ─────────────────────
@@ -760,6 +978,386 @@ document.getElementById('do-yes').addEventListener('click', function() {
     if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
     if (!res || !res.ok) { toast((res && res.msg) || 'Błąd zapisu.', false); return; }
     toast('Zastosowano dla ' + res.count + ' pracowników.', true);
+  });
+});
+
+// ════════════════════════════════════════════════════════════
+// ── Widok: Kod (rotacyjny kod autoryzacyjny — osadzony) ───────
+// Współdzieli sesję właściciela (masterLogin) — bez osobnego PIN-u.
+// ════════════════════════════════════════════════════════════
+
+var mcWin = 30, mcLeft = 0, mcLoading = false, mcRetryIn = 0, mcStarted = false;
+var mcElToken, mcElProg, mcElStatus, mcElRefresh;
+
+function initEmbeddedCode() {
+  mcElToken   = document.getElementById('mc-token');
+  mcElProg    = document.getElementById('mc-prog');
+  mcElStatus  = document.getElementById('mc-status');
+  mcElRefresh = document.getElementById('mc-refresh');
+  mcElRefresh.addEventListener('click', function () { mcRefreshToken(true); });
+  setInterval(function () {
+    if (!mcStarted) return;
+    if (mcLeft > 0) {
+      mcLeft--;
+      mcRender();
+      if (mcLeft === 0) mcRefreshToken(false);
+    } else if (!mcLoading) {
+      mcRetryIn--;
+      if (mcRetryIn <= 0) { mcRetryIn = 5; mcRefreshToken(false); }
+    }
+  }, 1000);
+  mcRefreshToken(false);
+}
+
+function mcRefreshToken(forceNext) {
+  if (mcLoading || !mcElToken) return;
+  mcLoading = true;
+  mcStarted = true;
+  gas('getToken', [!!forceNext], function (res) {
+    mcLoading = false;
+    if (!res || !res.ok) return;
+    mcElToken.textContent = res.token;
+    mcWin  = res.winSec || 30;
+    mcLeft = Math.max(1, Math.min(mcWin, parseInt(res.secLeft, 10) || mcWin));
+    mcRender();
+  });
+}
+
+function mcRender() {
+  var elapsed = mcWin - mcLeft;
+  var green = elapsed <= 20;
+  mcElToken.className = 'token-display ' + (green ? 'green' : 'red');
+  mcElProg.style.width = Math.round((mcLeft / mcWin) * 100) + '%';
+  mcElProg.className = 'prog-fill' + (green ? '' : ' red');
+  if (green) {
+    mcElStatus.className = 'tok-status green';
+    mcElStatus.textContent = 'Ważny jeszcze ' + mcLeft + ' s';
+    mcElRefresh.className = 'btn btn-accent btn-refresh';
+  } else {
+    mcElStatus.className = 'tok-status red';
+    mcElStatus.textContent = 'Kod wkrótce ulegnie przedawnieniu (' + mcLeft + ' s)';
+    mcElRefresh.className = 'btn btn-accent btn-refresh show';
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// ── Widok: Raporty (Panel Raportowy — osadzony) ────────────────
+// Współdzieli sesję właściciela — masterGetDashboard/masterSetEtat/
+// masterSetNote/masterGetActive/masterDashExportXlsx (nie dashOk).
+// ════════════════════════════════════════════════════════════
+
+var RP = { empId: null, year: new Date().getFullYear(), month: new Date().getMonth() + 1, data: null };
+
+function initEmbeddedReports() {
+  updateRPLabel();
+  rpLoadPresence();
+  setInterval(rpLoadPresence, 60000);
+}
+
+function updateRPLabel() {
+  document.getElementById('rp-label').textContent = MONTHS[RP.month - 1] + ' ' + RP.year;
+}
+
+document.getElementById('rp-prev').addEventListener('click', function() {
+  RP.month--; if (RP.month < 1) { RP.month = 12; RP.year--; }
+  updateRPLabel();
+  if (RP.empId) rpLoadMonth();
+});
+document.getElementById('rp-next').addEventListener('click', function() {
+  RP.month++; if (RP.month > 12) { RP.month = 1; RP.year++; }
+  updateRPLabel();
+  if (RP.empId) rpLoadMonth();
+});
+
+bindEmpSelector('rp-emp-input', 'rp-emp-dropdown', function(id) {
+  RP.empId = id;
+  if (id) rpLoadMonth();
+});
+
+function rpLoadPresence() {
+  if (!M.token) return;
+  gas('masterGetActive', [M.token], function(res) {
+    if (!res || !res.ok) return;
+    var box = document.getElementById('rp-presence');
+    var active = res.active || [], finished = res.finished || [];
+    if (active.length === 0 && finished.length === 0) { box.style.display = 'none'; return; }
+    var names = active.map(function(p){ return esc(p.imie + ' ' + p.nazwisko) + ' (od ' + esc(p.wejscie) + ')'; });
+    box.innerHTML = '<svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>' +
+      '<span>W pracy teraz: ' + (names.length ? names.join(', ') : 'nikt') + '. Zakończyło dziś: ' + finished.length + '.</span>';
+    box.style.display = 'flex';
+  });
+}
+
+function rpFmtHM(mins) {
+  var n = parseInt(mins, 10);
+  if (isNaN(n)) return '—';
+  return Math.floor(n / 60) + ':' + String(n % 60).padStart(2, '0');
+}
+
+function rpLoadMonth() {
+  document.getElementById('rp-data').innerHTML = '<div class="hint">Ładowanie…</div>';
+  gas('masterGetDashboard', [M.token, RP.year, RP.month], function(res) {
+    if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+    if (!res || !res.ok) {
+      document.getElementById('rp-data').innerHTML = '<div class="hint">' + esc((res && res.msg) || 'Błąd ładowania.') + '</div>';
+      return;
+    }
+    RP.data = res;
+    document.getElementById('rp-etat').value = res.etat > 0 ? res.etat : '';
+    var emp = null;
+    (res.employees || []).forEach(function(e) { if (e.id === RP.empId) emp = e; });
+    if (!emp) {
+      document.getElementById('rp-data').innerHTML = '<div class="hint">Brak danych dla wybranego pracownika w tym miesiącu (nieaktywny lub bez odbić).</div>';
+      return;
+    }
+    renderRPEmployee(emp, res.etat);
+  });
+}
+
+document.getElementById('rp-etat').addEventListener('blur', function() {
+  if (!RP.empId && !RP.data) return;
+  var val = parseFloat(this.value);
+  if (isNaN(val) || val < 0) return;
+  gas('masterSetEtat', [M.token, RP.year, RP.month, val], function(res) {
+    if (res && res.ok) { toast('Zapisano normę.', true); if (RP.empId) rpLoadMonth(); }
+    else toast((res && res.msg) || 'Błąd zapisu normy.', false);
+  });
+});
+
+function renderRPEmployee(emp, etat) {
+  var totalMins = emp.totalMinutes || 0;
+  var etatMins  = etat > 0 ? Math.round(etat * 60) : 0;
+  var hoursTxt  = etat > 0 ? (rpFmtHM(totalMins) + ' z ' + rpFmtHM(etatMins)) : rpFmtHM(totalMins);
+  var isBad     = etat > 0 && totalMins < etatMins;
+
+  var html = '<div class="card">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">';
+  html += '<div><div style="font-weight:700;font-size:16px;color:var(--c-ink)">' + esc(emp.imie + ' ' + emp.nazwisko) + '</div><span class="chip chip-muted">' + esc(emp.rola || '') + '</span></div>';
+  html += '<div style="text-align:right"><div class="field-lbl" style="margin-bottom:2px">Przepracowane</div><div style="font-size:22px;font-weight:700;color:' + (isBad ? 'var(--c-accent)' : 'var(--c-primary)') + '">' + hoursTxt + '</div></div>';
+  html += '</div>';
+  if (emp.absDays > 0 || emp.paidAbsDays > 0 || emp.ovrDays > 0) {
+    html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">';
+    if (emp.absDays > 0)     html += '<span class="chip chip-primary">Nieobecności: ' + emp.absDays + '</span>';
+    if (emp.paidAbsDays > 0) html += '<span class="chip chip-success">Płatny urlop (8h): ' + emp.paidAbsDays + '</span>';
+    if (emp.ovrDays > 0)     html += '<span class="chip chip-warn">Poza godz. Kliniki: ' + emp.ovrDays + '</span>';
+    html += '</div>';
+  }
+  html += '<div class="field" style="margin-top:14px;margin-bottom:0"><span class="field-lbl">Adnotacja miesięczna</span><textarea id="rp-note" class="ta">' + esc(emp.note || '') + '</textarea></div>';
+  html += '</div>';
+
+  html += '<div class="table-scroll" style="margin-top:14px"><table class="edit-table"><thead><tr><th>Dzień</th><th>Wejście</th><th>Wyjście</th><th>Godziny</th></tr></thead><tbody>';
+  (emp.days || []).forEach(function(d) {
+    var wknd = d.dow === 'Sb' || d.dow === 'Nd';
+    var dn = d.date.split('-')[2];
+    html += '<tr' + (wknd ? ' class="wknd"' : '') + '>';
+    html += '<td class="dcell">' + dn + (d.overtime ? ' <span class="mm-ovr">' + ICO.warn + '</span>' : '') +
+            ' <small>' + esc(d.dow) + '</small>' + (d.absence ? '<span class="mm-abs" title="' + esc(d.absence.typ) + '">' + esc(d.absence.code) + '</span>' : '') + '</td>';
+    if (d.absence) {
+      html += '<td colspan="2" style="color:var(--c-muted)">' + esc(d.absence.typ) + '</td>';
+    } else {
+      html += '<td>' + esc(d.wejscie || '—') + '</td><td>' + esc(d.wyjscie || '—') + '</td>';
+    }
+    html += '<td>' + (d.mins != null && d.mins !== undefined ? rpFmtHM(d.mins) : '—') + '</td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+
+  document.getElementById('rp-data').innerHTML = html;
+  document.getElementById('rp-note').addEventListener('blur', function() {
+    gas('masterSetNote', [M.token, RP.empId, RP.year, RP.month, this.value], function(res) {
+      if (res && res.ok) toast('Zapisano adnotację.', true);
+    });
+  });
+}
+
+document.getElementById('rp-export').addEventListener('click', function() {
+  toast('Generowanie pliku Excel…', true);
+  var opts = { mode: 'month', year: RP.year, month: RP.month };
+  if (RP.empId) opts.employeeIds = [RP.empId];
+  gas('masterDashExportXlsx', [M.token, opts], function(res) {
+    if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+    if (!res || !res.ok) { toast('Błąd eksportu: ' + ((res && res.msg) || ''), false); return; }
+    var byteChars = atob(res.base64);
+    var byteNumbers = new Array(byteChars.length);
+    for (var i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+    var byteArray = new Uint8Array(byteNumbers);
+    var blob = new Blob([byteArray], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = res.filename;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+    toast('Plik pobrany!', true);
+  });
+});
+
+// ════════════════════════════════════════════════════════════
+// ── Widok: Odbicia (ekran pracownika — osadzony) ───────────────
+// Nieprzypisane do sesji właściciela — działa na PIN-ie dowolnego
+// pracownika, dokładnie jak kiosk (checkPin/clockIn/clockOut/
+// reportAbsence/getAbsenceTypes/setOvertimeNote — bez zmian API).
+// ════════════════════════════════════════════════════════════
+
+var obPin = '', obCode = '', obEmpPin = '', obEmpName = '';
+var obAbsTypes = null;
+var obResetTimer = null;
+
+var OB_ICON_OK  = '<svg class="ic-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 5-5"/></svg>';
+var OB_ICON_ABS = '<svg class="ic-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 3v4M16 3v4"/><path d="M9.5 14.5l5 5M14.5 14.5l-5 5"/></svg>';
+
+function obShow(id) {
+  ['ob-s-pin', 'ob-s-code', 'ob-s-abs', 'ob-s-ovr', 'ob-s-ok'].forEach(function (s) {
+    document.getElementById(s).className = 'step' + (s === id ? ' on' : '');
+  });
+}
+
+function obSetDots(val, pfx) {
+  for (var i = 0; i < 4; i++) {
+    var d = document.getElementById(pfx + i);
+    if (d) d.className = 'dot' + (i < val.length ? ' on' : '');
+  }
+}
+
+function obReset() {
+  obPin = ''; obCode = ''; obEmpPin = ''; obEmpName = ''; obAbsTypes = null;
+  obSetDots(obPin, 'ob-p');
+  obSetDots(obCode, 'ob-c');
+  obShow('ob-s-pin');
+}
+
+function obFinishOk(icon, accent, title, msg, delayMs) {
+  var wrap = document.getElementById('ob-ok-icon-wrap');
+  wrap.className = 'ok-icon-wrap' + (accent ? ' accent' : '');
+  wrap.innerHTML = icon;
+  document.getElementById('ob-ok-title').textContent = title;
+  document.getElementById('ob-ok-msg').textContent = msg;
+  obShow('ob-s-ok');
+  clearTimeout(obResetTimer);
+  obResetTimer = setTimeout(obReset, delayMs || 3000);
+}
+
+document.getElementById('ob-kp-pin').addEventListener('click', function (e) {
+  var btn = e.target.closest('[data-v]');
+  if (!btn) return;
+  var v = btn.getAttribute('data-v');
+  if (v === 'C') obPin = '';
+  else if (v === 'X') obPin = obPin.slice(0, -1);
+  else if (obPin.length < 4) obPin += v;
+  obSetDots(obPin, 'ob-p');
+  if (obPin.length === 4) {
+    toast('Weryfikacja…', true);
+    gas('checkPin', [obPin], function (res) {
+      if (res && res.ok) {
+        obEmpPin = obPin;
+        obEmpName = res.imie + ' ' + res.nazwisko;
+        document.getElementById('ob-w-name').textContent = obEmpName;
+        document.getElementById('ob-w-role').textContent = res.rola;
+        obCode = ''; obSetDots(obCode, 'ob-c');
+        obShow('ob-s-code');
+      } else {
+        toast((res && res.msg) || 'Nieprawidłowy PIN.', false);
+        obPin = ''; obSetDots(obPin, 'ob-p');
+      }
+    });
+  }
+});
+
+document.getElementById('ob-kp-code').addEventListener('click', function (e) {
+  var btn = e.target.closest('[data-c]');
+  if (!btn) return;
+  var v = btn.getAttribute('data-c');
+  if (v === 'C') obCode = '';
+  else if (v === 'X') obCode = obCode.slice(0, -1);
+  else if (obCode.length < 4) obCode += v;
+  obSetDots(obCode, 'ob-c');
+});
+
+function obSubmit(action) {
+  if (obCode.length !== 4) { toast('Wpisz 4-cyfrowy kod z zakładki „Kod".', false); return; }
+  toast('Rejestrowanie…', true);
+  var rpc = (action === 'WEJSCIE') ? 'clockIn' : 'clockOut';
+  gas(rpc, [obEmpPin, obCode], function (res) {
+    if (res && res.ok) {
+      var label = (action === 'WEJSCIE') ? 'Wejście' : 'Wyjście';
+      var msg = res.imie + ' — ' + label + ' o ' + res.godzina;
+      if (res.overtime) {
+        document.getElementById('ob-ovr-sub').textContent = msg;
+        document.getElementById('ob-ovr-note').value = '';
+        obShow('ob-s-ovr');
+      } else {
+        obFinishOk(OB_ICON_OK, false, 'Zarejestrowano', msg, 3000);
+      }
+    } else {
+      toast((res && res.msg) || 'Błąd rejestracji.', false);
+      obCode = ''; obSetDots(obCode, 'ob-c');
+    }
+  });
+}
+
+document.getElementById('ob-btn-in').addEventListener('click', function () { obSubmit('WEJSCIE'); });
+document.getElementById('ob-btn-out').addEventListener('click', function () { obSubmit('WYJSCIE'); });
+document.getElementById('ob-btn-back').addEventListener('click', obReset);
+
+document.getElementById('ob-ovr-save').addEventListener('click', function () {
+  var note = document.getElementById('ob-ovr-note').value.trim();
+  if (!note) { toast('Wpisz uzasadnienie.', false); return; }
+  toast('Zapisywanie…', true);
+  gas('setOvertimeNote', [obEmpPin, note], function (res) {
+    if (res && res.ok) obFinishOk(OB_ICON_OK, false, 'Zarejestrowano', 'Uzasadnienie zapisane.', 3000);
+    else toast((res && res.msg) || 'Błąd zapisu.', false);
+  });
+});
+document.getElementById('ob-ovr-skip').addEventListener('click', function () {
+  obFinishOk(OB_ICON_OK, false, 'Zarejestrowano', 'Pamiętaj o uzupełnieniu uzasadnienia.', 3500);
+});
+
+function obFillAbsTypes() {
+  var sel = document.getElementById('ob-abs-typ');
+  sel.innerHTML = '<option value="">— wybierz typ —</option>';
+  (obAbsTypes || []).forEach(function (t) {
+    if (t.code === 'DW') return;
+    var o = document.createElement('option');
+    o.value = t.code; o.textContent = t.label;
+    sel.appendChild(o);
+  });
+}
+
+document.getElementById('ob-btn-abs').addEventListener('click', function () {
+  document.getElementById('ob-abs-who').textContent = obEmpName;
+  document.getElementById('ob-abs-from').value = todayStr();
+  document.getElementById('ob-abs-to').value   = todayStr();
+  document.getElementById('ob-abs-note').value = '';
+  if (obAbsTypes) {
+    obFillAbsTypes();
+    obShow('ob-s-abs');
+  } else {
+    toast('Ładowanie…', true);
+    gas('getAbsenceTypes', [obEmpPin], function (res) {
+      if (res && res.ok) { obAbsTypes = res.types || []; obFillAbsTypes(); obShow('ob-s-abs'); }
+      else toast('Błąd ładowania typów nieobecności.', false);
+    });
+  }
+});
+
+document.getElementById('ob-abs-back').addEventListener('click', function () { obShow('ob-s-code'); });
+
+document.getElementById('ob-abs-submit').addEventListener('click', function () {
+  var from = document.getElementById('ob-abs-from').value;
+  var to   = document.getElementById('ob-abs-to').value;
+  var typ  = document.getElementById('ob-abs-typ').value;
+  var note = document.getElementById('ob-abs-note').value.trim();
+  if (!from || !to)  { toast('Wybierz zakres dat.', false); return; }
+  if (from > to)     { toast('Data „od” nie może być późniejsza niż „do”.', false); return; }
+  if (!typ)          { toast('Wybierz typ nieobecności.', false); return; }
+  if (typ === 'INNE' && !note) { toast('Dla typu „Inne” adnotacja jest wymagana.', false); return; }
+  toast('Zgłaszanie…', true);
+  gas('reportAbsence', [obEmpPin, from, to, typ, note], function (res) {
+    if (res && res.ok) {
+      var dni = res.dni === 1 ? '1 dzień' : res.dni + ' dni';
+      obFinishOk(OB_ICON_ABS, true, 'Zgłoszono nieobecność', res.typ + ' — ' + dni, 3500);
+    } else {
+      toast((res && res.msg) || 'Błąd zgłoszenia.', false);
+    }
   });
 });
 </script>
