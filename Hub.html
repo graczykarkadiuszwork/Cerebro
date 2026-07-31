@@ -67,15 +67,6 @@
   .chrome-btn:hover{ color:var(--accent2); border-color:var(--accent2); box-shadow:0 0 12px var(--accent2-glow); }
   .chrome-btn svg{ width:16px; height:16px; }
 
-  #applink{
-    position:fixed; bottom:18px; left:20px; z-index:80;
-    font-size:12px; color:var(--text-dim); text-decoration:none;
-    letter-spacing:.04em;
-    border-bottom:1px solid transparent;
-    transition:color .15s, border-color .15s;
-  }
-  #applink:hover{ color:var(--accent2); border-color:var(--accent2); }
-
   /* ---------- minimized state ---------- */
   #minitab{
     position:fixed; top:16px; left:50%; transform:translateX(-50%);
@@ -85,7 +76,7 @@
     cursor:pointer; z-index:90;
   }
   #minitab:hover{ border-color:var(--accent2); box-shadow:0 0 12px var(--accent2-glow); }
-  body.minimized #stage, body.minimized #chrome, body.minimized #applink{ display:none; }
+  body.minimized #stage, body.minimized #chrome{ display:none; }
   body.minimized #minitab{ display:flex; }
 
   /* ---------- stage / breadcrumb ---------- */
@@ -309,8 +300,6 @@
     </g>
   </svg>
 </div>
-
-<a id="applink" href="?view=app">Aplikacja →</a>
 
 <div id="stage">
   <div id="back">‹ Wstecz</div>
