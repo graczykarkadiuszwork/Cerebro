@@ -3,639 +3,494 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CEREBRO 98</title></head><body>
+<title>CEREBRO</title>
+</head>
+<body>
 <style>
+  /* ==========================================================================
+     PALETA — Alabaster Grey / Lime Yellow / Royal Orchid.
+     Szary = kolor dominujący (tło paneli, obramowania, tekst).
+     Limonka = wyłącznie linie/dekoracja (pierścień rdzenia, akcenty tekstu),
+     nigdy stan interakcji.
+     Orchid = jedyny kolor podkreślający funkcję — najechanie/fokus na
+     przyciskach i węzłach koła.
+     ========================================================================== */
   :root{
-    --desktop:#008080;
-    --chrome:#c0c0c0;
-    --chrome-light:#dfdfdf;
-    --chrome-hi:#ffffff;
-    --chrome-sh:#808080;
-    --chrome-dsh:#0a0a0a;
-    --title-a:#000080;
-    --title-b:#1084d0;
-    --text:#000000;
-    --link:#0000ee;
-    --link-visited:#551a8b;
+    --void:        #060508;
+    --void-2:      #100b16;
+    --panel:       rgba(24,20,28,.82);
+    --panel-edge:  rgba(220,220,220,.22);   /* Alabaster Grey */
+    --accent:      #dcff2a;                 /* Lime Yellow — RCP / primär */
+    --accent-dim:  #626e10;
+    --accent-glow: rgba(220,255,42,.45);
+    --accent2:      #aa1ab1;                /* Royal Orchid — BatCave / gated */
+    --accent2-dim:  #4a0c4e;
+    --accent2-glow: rgba(170,26,177,.5);
+    --text:        #dcdcdc;                 /* Alabaster Grey */
+    --text-dim:    #8c8c90;
+    --danger:      #ff5d6c;
+    --success:     #58e0a0;
   }
   *{box-sizing:border-box;}
   html,body{height:100%;}
   body{
     margin:0;
-    background:var(--desktop);
-    font-family:Tahoma,"MS Sans Serif","Segoe UI",Verdana,sans-serif;
-    font-size:11px;
+    background:
+      radial-gradient(120% 90% at 50% 115%, var(--void-2), var(--void) 60%);
     color:var(--text);
+    font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
     overflow:hidden;
-    -webkit-font-smoothing:none;
+    -webkit-font-smoothing:antialiased;
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.001ms !important; transition-duration:.001ms !important;}
   }
 
-  /* ---------- bevel utility ---------- */
-  .raised{
-    border-top:1px solid var(--chrome-hi);
-    border-left:1px solid var(--chrome-hi);
-    border-right:1px solid var(--chrome-dsh);
-    border-bottom:1px solid var(--chrome-dsh);
-    box-shadow: inset 1px 1px 0 var(--chrome-light), inset -1px -1px 0 var(--chrome-sh);
+  /* ---------- ambient backdrop ---------- */
+  #stage{
+    position:fixed; inset:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:flex-end;
+    padding-bottom:8vh;
   }
-  .sunken{
-    border-top:1px solid var(--chrome-sh);
-    border-left:1px solid var(--chrome-sh);
-    border-right:1px solid var(--chrome-hi);
-    border-bottom:1px solid var(--chrome-hi);
-    box-shadow: inset 1px 1px 0 var(--chrome-dsh);
+  #stage::before{
+    content:'';
+    position:absolute; inset:0;
+    background:
+      repeating-linear-gradient(0deg, rgba(255,255,255,.015) 0 1px, transparent 1px 3px);
+    pointer-events:none;
   }
 
-  /* ---------- desktop ---------- */
-  #desktop{
-    position:relative;
-    width:100%;
-    height:100vh;
-    padding:14px 0 0 0;
+  /* ---------- top chrome (fullscreen / minimize / close) ---------- */
+  #chrome{
+    position:fixed; top:16px; right:18px;
+    display:flex; gap:8px; z-index:80;
   }
-  #icons{
-    position:absolute;
-    top:14px; left:10px;
-    display:grid;
-    grid-template-columns:76px;
-    gap:6px;
-    z-index:2;
+  .chrome-btn{
+    width:34px; height:34px;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--panel);
+    border:1px solid var(--panel-edge);
+    border-radius:6px;
+    color:var(--text-dim);
+    cursor:pointer;
+    transition:color .15s, border-color .15s, box-shadow .15s;
   }
-  .dicon{
-    width:76px;
-    padding:6px 2px 4px;
+  .chrome-btn:hover{ color:var(--accent2); border-color:var(--accent2); box-shadow:0 0 12px var(--accent2-glow); }
+  .chrome-btn svg{ width:16px; height:16px; }
+
+  #brand{
+    position:fixed; top:18px; left:20px; z-index:80;
+    font-weight:700; letter-spacing:.14em; font-size:13px;
+    color:var(--text-dim);
+    text-transform:uppercase;
+  }
+  #brand b{ color:var(--accent); }
+  #applink{
+    position:fixed; bottom:18px; left:20px; z-index:80;
+    font-size:12px; color:var(--text-dim); text-decoration:none;
+    letter-spacing:.04em;
+    border-bottom:1px solid transparent;
+    transition:color .15s, border-color .15s;
+  }
+  #applink:hover{ color:var(--accent2); border-color:var(--accent2); }
+
+  /* ---------- minimized tab ---------- */
+  #minitab{
+    position:fixed; top:16px; left:50%; transform:translateX(-50%);
+    display:none; align-items:center; gap:8px;
+    padding:8px 16px;
+    background:var(--panel); border:1px solid var(--panel-edge); border-radius:999px;
+    color:var(--text-dim); font-size:12px; letter-spacing:.08em; text-transform:uppercase;
+    cursor:pointer; z-index:90;
+  }
+  #minitab:hover{ color:var(--accent2); border-color:var(--accent2); }
+  body.minimized #stage, body.minimized #chrome, body.minimized #brand, body.minimized #applink{ display:none; }
+  body.minimized #minitab{ display:flex; }
+
+  /* ---------- breadcrumb / title ---------- */
+  #crumb{
+    position:absolute; top:9vh; left:50%; transform:translateX(-50%);
     text-align:center;
-    color:#fff;
-    cursor:pointer;
-    -webkit-user-select:none;user-select:none;
-    border:1px solid transparent;
+    z-index:5;
   }
-  .dicon.selected{
-    background:rgba(0,0,128,.55);
-    border:1px dotted #fff;
+  #crumb .path{
+    font-size:12px; letter-spacing:.25em; text-transform:uppercase;
+    color:var(--text-dim); margin-bottom:8px;
   }
-  .dicon .glyph{
-    width:32px;height:32px;
-    margin:0 auto 4px;
-    display:block;
-  }
-  .dicon span{
-    display:block;
-    line-height:1.25;
-    text-shadow:1px 1px 1px rgba(0,0,0,.9);
-    word-wrap:break-word;
+  #crumb .path b{ color:var(--accent); }
+  #crumb .headline{
+    font-size:clamp(22px,4vw,34px); font-weight:300; letter-spacing:.08em;
+    text-shadow:0 0 24px var(--accent-glow);
   }
 
-  /* ---------- taskbar ---------- */
-  #taskbar{
-    position:fixed;
-    left:0;right:0;bottom:0;
-    height:30px;
-    background:var(--chrome);
-    border-top:1px solid var(--chrome-hi);
-    display:flex;
-    align-items:center;
-    padding:3px 3px;
-    gap:4px;
-    z-index:50;
+  /* ---------- core emblem ---------- */
+  #core{
+    position:relative;
+    width:118px; height:118px;
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(circle at 50% 35%, rgba(220,255,42,.14), transparent 70%);
+    border:1px solid var(--panel-edge);
+    box-shadow:0 0 40px rgba(220,255,42,.12), inset 0 0 30px rgba(220,255,42,.06);
+    z-index:4;
   }
-  #startbtn{
-    display:flex;align-items:center;gap:4px;
-    height:22px;padding:0 8px 0 4px;
-    background:var(--chrome);
-    font-weight:bold;
-    cursor:pointer;
+  #core::before{
+    content:'';
+    position:absolute; inset:-14px;
+    border-radius:50%;
+    border:1px dashed var(--accent);
+    animation:spin 40s linear infinite;
   }
-  #startbtn.down{
-    border-top:1px solid var(--chrome-dsh)!important;
-    border-left:1px solid var(--chrome-dsh)!important;
-    border-right:1px solid var(--chrome-hi)!important;
-    border-bottom:1px solid var(--chrome-hi)!important;
-    box-shadow:inset 1px 1px 0 var(--chrome-sh);
-    padding-top:1px;
-  }
-  #startbtn .logo{width:16px;height:16px;flex:none;}
-  #tasksep{width:1px;align-self:stretch;background:var(--chrome-sh);border-right:1px solid var(--chrome-hi);margin:2px 2px;}
-  #taskitems{flex:1;display:flex;gap:4px;overflow:hidden;}
-  .taskitem{
-    height:22px;min-width:140px;max-width:200px;
-    display:flex;align-items:center;gap:5px;
-    padding:0 6px;
-    font-size:11px;
-    cursor:pointer;
-    border-top:1px solid var(--chrome-sh);
-    border-left:1px solid var(--chrome-sh);
-    border-right:1px solid var(--chrome-hi);
-    border-bottom:1px solid var(--chrome-hi);
-    box-shadow:inset 1px 1px 0 var(--chrome-dsh);
-    overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
-  }
-  #clock{
-    height:22px;padding:0 8px;
-    display:flex;align-items:center;
-    font-variant-numeric:tabular-nums;
-  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  #core span{ font-size:11px; letter-spacing:.2em; color:var(--accent); text-transform:uppercase; }
 
-  /* ---------- start menu ---------- */
-  #startmenu{
-    position:fixed;
-    left:2px; bottom:32px;
-    width:230px;
-    background:var(--chrome);
-    padding:2px;
-    z-index:60;
+  /* ---------- the wheel ---------- */
+  #wheel{
+    position:absolute; left:50%; bottom:8vh;
+    width:1px; height:1px;
+    z-index:3;
+  }
+  .node{
+    position:absolute; left:0; top:0;
+    width:180px; margin-left:-90px; margin-top:-26px;
+    padding:12px 16px;
+    background:var(--panel);
+    border:1px solid var(--panel-edge);
+    border-radius:10px;
+    text-align:center;
+    cursor:pointer;
+    transition:transform .18s ease, border-color .18s, box-shadow .18s, background .18s;
+    -webkit-user-select:none; user-select:none;
+  }
+  .node .label{
+    font-size:14px; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
+  }
+  .node .sub{
+    font-size:11px; color:var(--text-dim); margin-top:3px; letter-spacing:.02em;
+  }
+  .node:hover, .node:focus-visible{
+    border-color:var(--accent2);
+    box-shadow:0 0 22px var(--accent2-glow);
+    background:rgba(170,26,177,.08);
+    transform:scale(1.04);
+    outline:none;
+  }
+  .node.locked .label::before{ content:'🔒 '; }
+  .node.loading{ opacity:.5; pointer-events:none; }
+
+  #back{
+    position:absolute; top:9vh; left:8vw;
     display:none;
+    align-items:center; gap:6px;
+    font-size:12px; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--text-dim); cursor:pointer;
+    z-index:6;
   }
-  #startmenu.open{display:flex;}
-  #startmenu .rail{
-    width:26px;
-    background:linear-gradient(180deg,#000080,#1084d0);
-    display:flex;align-items:flex-end;
-    padding-bottom:10px;
-  }
-  #startmenu .rail span{
-    writing-mode:vertical-rl;
-    transform:rotate(180deg);
-    color:#fff;font-weight:bold;font-size:15px;
-    letter-spacing:1px;
-    padding:6px 0;
-    font-family:Tahoma,sans-serif;
-    text-shadow:1px 1px 1px #000;
-  }
-  #startmenu .items{flex:1;padding:3px 2px;}
-  .smitem{
-    display:flex;align-items:center;gap:8px;
-    padding:4px 8px;
-    cursor:pointer;
-    white-space:nowrap;
-  }
-  .smitem:hover{background:var(--title-a);color:#fff;}
-  .smitem .ico{width:22px;height:22px;flex:none;}
-  .smhr{height:1px;background:var(--chrome-sh);border-bottom:1px solid var(--chrome-hi);margin:3px 4px;}
-  .smsub{padding-left:30px;font-size:10.5px;}
+  #back:hover{ color:var(--accent2); }
+  #back.show{ display:flex; }
 
-  /* ---------- windows ---------- */
-  .win{
-    position:fixed;
-    top:70px;left:50%;
-    transform:translateX(-50%);
-    width:560px;
-    max-width:92vw;
-    background:var(--chrome);
-    padding:3px;
-    z-index:40;
+  /* ---------- centered panel (PIN / messages) ---------- */
+  #panel{
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:min(360px,86vw);
+    background:var(--panel);
+    border:1px solid var(--panel-edge);
+    border-radius:14px;
+    padding:28px 26px;
+    text-align:center;
+    z-index:20;
     display:none;
-    flex-direction:column;
+    box-shadow:0 0 60px rgba(0,0,0,.5);
   }
-  .win.open{display:flex;}
-  .win.top{z-index:70;}
-  .titlebar{
-    height:20px;
-    background:linear-gradient(90deg,var(--title-a),var(--title-b));
-    color:#fff;font-weight:bold;font-size:12px;
-    display:flex;align-items:center;
-    padding:2px 3px 2px 5px;
-    -webkit-user-select:none;user-select:none;
-    cursor:default;
+  #panel.show{ display:block; }
+  #panel h2{
+    margin:0 0 6px; font-size:16px; letter-spacing:.14em; text-transform:uppercase; font-weight:600;
   }
-  .titlebar .ttext{flex:1;display:flex;align-items:center;gap:5px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
-  .titlebar .ticon{width:14px;height:14px;flex:none;}
-  .winbtn{
-    width:16px;height:14px;
-    background:var(--chrome);
-    color:#000;font-size:10px;font-weight:bold;
-    display:flex;align-items:center;justify-content:center;
-    margin-left:2px;
+  #panel p.hint{ margin:0 0 18px; font-size:12px; color:var(--text-dim); }
+
+  .dots{ display:flex; justify-content:center; gap:14px; margin-bottom:20px; }
+  .dot{
+    width:16px; height:16px; border-radius:50%;
+    border:1px solid var(--panel-edge);
+    transition:background .12s, border-color .12s, box-shadow .12s;
+  }
+  .dot.filled{ background:var(--accent); border-color:var(--accent); box-shadow:0 0 10px var(--accent-glow); }
+  .dot.err{ background:var(--danger); border-color:var(--danger); box-shadow:0 0 10px rgba(255,93,108,.6); }
+
+  .keypad{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .key{
+    padding:14px 0;
+    background:rgba(255,255,255,.03);
+    border:1px solid var(--panel-edge);
+    border-radius:8px;
+    font-size:16px; color:var(--text);
     cursor:pointer;
-    line-height:0;
+    transition:border-color .12s, color .12s, background .12s;
   }
-  .menubar{
-    display:flex;gap:12px;
-    padding:2px 6px;
-    background:var(--chrome);
-    font-size:11px;
-  }
-  .winbody{
-    background:#fff;
-    margin:2px;
-    padding:0;
-    min-height:120px;
-    max-height:56vh;
-    overflow-y:auto;
-  }
-  .winbody.pad{padding:10px 12px;}
-  .statusbar{
-    display:flex;justify-content:space-between;
-    padding:2px 6px;font-size:10.5px;
-    margin:0 2px 2px;
-  }
-  .statusbar span{
-    padding:1px 6px;
-  }
+  .key:hover{ border-color:var(--accent2); color:var(--accent2); background:rgba(170,26,177,.1); }
+  .key.wide{ grid-column:span 1; font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--text-dim); }
 
-  /* explorer rows */
-  .row{
-    display:flex;align-items:center;gap:8px;
-    padding:3px 8px;
-    text-decoration:none;color:#000;
-    cursor:pointer;
-  }
-  .row:hover{background:var(--title-a);color:#fff;}
-  .row .ico{width:20px;height:16px;flex:none;}
-  .row .name{flex:1;}
-  .row .kind{width:110px;color:inherit;opacity:.75;font-size:10.5px;}
-  .crumb{
-    display:flex;align-items:center;gap:4px;
-    padding:3px 6px;
-    background:#fff;
-    border-bottom:1px solid var(--chrome-sh);
-    font-size:10.5px;
-    flex-wrap:wrap;
-  }
-  .crumb b{cursor:pointer;color:var(--link);}
-  .crumb b:hover{text-decoration:underline;}
+  #panel .status{ margin-top:14px; font-size:12px; letter-spacing:.05em; min-height:16px; }
+  #panel .status.err{ color:var(--danger); }
+  #panel .status.ok{ color:var(--success); }
 
-  a.plain{color:var(--link);}
-  a.plain:visited{color:var(--link-visited);}
-
-  code.mono{
-    font-family:"Courier New",monospace;
-    background:#f0f0f0;
-    border:1px solid var(--chrome-sh);
-    padding:1px 4px;
+  #panel .close-panel{
+    margin-top:16px; font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--text-dim); cursor:pointer;
   }
-  ul.steps{margin:6px 0 6px 18px;padding:0;}
-  ul.steps li{margin-bottom:6px;}
+  #panel .close-panel:hover{ color:var(--accent2); }
+
+  #toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+    background:var(--panel); border:1px solid var(--panel-edge); border-radius:8px;
+    padding:10px 18px; font-size:12px; color:var(--text-dim);
+    opacity:0; pointer-events:none; transition:opacity .25s;
+    z-index:100; max-width:80vw; text-align:center;
+  }
+  #toast.show{ opacity:1; }
 </style>
 
-<div id="desktop">
-  <div id="icons"></div>
-</div>
-
-<!-- START MENU -->
-<div id="startmenu" class="raised">
-  <div class="rail"><span>CEREBRO 98</span></div>
-  <div class="items" id="smitems"></div>
-</div>
-
-<!-- TASKBAR -->
-<div id="taskbar">
-  <div id="startbtn" class="raised">
-    <svg class="logo" viewBox="0 0 16 16"><rect width="7" height="7" x="0" y="0" fill="#ff0000"/><rect width="7" height="7" x="8" y="0" fill="#00aa00"/><rect width="7" height="7" x="0" y="8" fill="#0000ff"/><rect width="7" height="7" x="8" y="8" fill="#ffcc00"/></svg>
-    Start
+<div id="brand">CEREBR<b>O</b></div>
+<div id="chrome">
+  <div class="chrome-btn" id="btn-fullscreen" title="Pełny ekran">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/></svg>
   </div>
-  <div id="tasksep"></div>
-  <div id="taskitems"></div>
-  <div id="clock" class="sunken"></div>
+  <div class="chrome-btn" id="btn-minimize" title="Minimalizuj">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="18" x2="20" y2="18"/></svg>
+  </div>
+  <div class="chrome-btn" id="btn-close" title="Zamknij">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>
+  </div>
 </div>
+<div id="minitab">▾ CEREBRO</div>
+<a id="applink" href="?view=app">Aplikacja Cerebro →</a>
+
+<div id="stage">
+  <div id="back">‹ Wstecz</div>
+  <div id="crumb">
+    <div class="path" id="crumb-path"></div>
+    <div class="headline" id="crumb-title">Cerebro</div>
+  </div>
+  <div id="core"><span>Cerebro</span></div>
+  <div id="wheel"></div>
+</div>
+
+<div id="panel">
+  <h2 id="panel-title">BatCave</h2>
+  <p class="hint" id="panel-hint">Podaj PIN właściciela RCP.</p>
+  <div id="panel-body"></div>
+  <div class="close-panel" id="panel-close">‹ Wstecz</div>
+</div>
+
+<div id="toast"></div>
 
 <script>
-/* =========================================================================
-   CEREBRO 98 — konfiguracja menu
-   Żeby dodać nową pozycję (nowy projekt / folder / narzędzie) wystarczy
-   dopisać kolejny obiekt do drzewa HUB niżej — reszta interfejsu (ikony
-   pulpitu, menu Start, okna Explorera) generuje się z tego automatycznie.
-   Struktura odzwierciedla realny folder "Cerebro core" na Dysku Google.
+/* ==========================================================================
+   CEREBRO — Hub
+   Menu inspirowane kołem dialogowym z gier (np. Mass Effect): centralny
+   rdzeń, opcje rozłożone łukiem, wejście w opcję = nowy łuk potomny.
+
+   RCP: lista widoków NIE jest wpisana na sztywno — Hub woła serwer
+   (google.script.run.getRcpViews) który czyta na żywo dokument
+   "RCP linki" na Dysku Google i wyciąga z niego aktualne linki. Zmiana
+   linku w dokumencie na Dysku pojawia się w Hubie od razu, bez edycji kodu.
+
+   BatCave: na razie tylko brama PIN-em właściciela RCP, weryfikowanym
+   po stronie serwera (google.script.run.verifyRcpOwnerPin) — PIN nigdy
+   nie trafia do przeglądarki, tylko wynik prawda/fałsz.
    ========================================================================= */
-const HUB = {
-  name: "Cerebro core",
-  url: "https://drive.google.com/drive/folders/1a8P6BZOAt9z9Pc6L4NsYAOneGau9AY2t",
-  kind: "Folder główny",
-  children: [
-    {
-      name: "Cerebro (aplikacja)",
-      url: "?view=app",
-      kind: "Otwórz aplikację",
-      desktop: true,
-      color: "app",
-      app: true
-    },
-    {
-      name: "Wayne Enterprises",
-      url: "https://drive.google.com/drive/folders/1_jwtJF6LoD5r-puMxybTsioZJkLOBpjA",
-      kind: "Gałąź: biznes",
-      desktop: true,
-      color: "gold",
-      children: [
-        { name:"HR", url:"https://drive.google.com/drive/folders/1CF7A-24zjXVUmpQvZ1q2rN4_gXmOgH27", kind:"Folder", children:[
-          { name:"RCP", url:"https://drive.google.com/drive/folders/1CyKUFdw4l6KvqPDSHNY4pqf2qs5zNxWp", kind:"Folder" }
-        ]},
-        { name:"Projekty", url:"https://drive.google.com/drive/folders/1CKS5M8TY8H8I8JqEjnpBQa_wKw1Ju13M", kind:"Folder", children:[
-          { name:"Zużycie per procedura", url:"https://drive.google.com/drive/folders/1E9qBiZIiC6SCQgRDEeWWQKe45JFwPVfK", kind:"Folder" },
-          { name:"22-05-2026 RCP", url:"https://drive.google.com/drive/folders/16EHuDH0PmNNVHuauleNQkE8kgPQzn7-7", kind:"Folder" }
-        ]},
-        { name:"Marketing", url:"https://drive.google.com/drive/folders/1XF3Wj2C5x_lpwnaxPRqmlnVlNL7xqUnn", kind:"Folder", children:[
-          { name:"07-2026", url:"https://drive.google.com/drive/folders/1Tb0Q-v3X1J2nrg3oqMkEJvQ3h-4wHZ7x", kind:"Folder" }
-        ]},
-        { name:"Compliance", url:"https://drive.google.com/drive/folders/1NGYlvPbsKSvAxJBV_W5QOP9XVQpWmXb9", kind:"Folder", children:[
-          { name:"Kontrola zewnętrzna", url:"https://drive.google.com/drive/folders/1b5-57Mz7_iZUjCYDR4EtoQaSBUw9pSoC", kind:"Folder" },
-          { name:"Matryca dokumentacji", url:"https://drive.google.com/drive/folders/1jNORyGtbN7CjRLToW396-mpwGDiz3exe", kind:"Folder" },
-          { name:"Procedury", url:"https://drive.google.com/drive/folders/1rSD0IF8kfEe8ifA49S3ssqr7Ho5K8qWk", kind:"Folder" }
-        ]},
-        { name:"Techniczne", url:"https://drive.google.com/drive/folders/19GSzI4eFc2ocBtZzOGzDGFyLD3Q4hB-x", kind:"Folder", children:[
-          { name:"Usterki", url:"https://drive.google.com/drive/folders/1gVywVu6zYX9yr6OdftEzjCTZ2vjov5D_", kind:"Folder" }
-        ]},
-        { name:"Grafiki", url:"https://drive.google.com/drive/folders/1SQykSNd44zInPuj3TOkZ-yOnJ6z0PJaZ", kind:"Folder", children:[
-          { name:"Grafiki pracy", url:"https://drive.google.com/drive/folders/1AlAgxRa_HrMRGbBfaluLmZsApK1zoDY2", kind:"Folder" },
-          { name:"Wizytówka Google", url:"https://drive.google.com/drive/folders/1vtyxav9AQgtk_d4Nuq3xK6K-AZxWt-Zh", kind:"Folder" }
-        ]},
-        { name:"Baza wiedzy", url:"https://drive.google.com/drive/folders/1kKxkf4Z2k84zGGv_P8_tGYQIbPB2IlIo", kind:"Folder", children:[
-          { name:"Dla pacjentów", url:"https://drive.google.com/drive/folders/1y1lNOcyFoyittWIJstdMzpnv9GQPGx7X", kind:"Folder" },
-          { name:"Leki", url:"https://drive.google.com/drive/folders/1y5rNz6i5-W-gKf2ovXQEOwifcQOw_dBT", kind:"Folder" },
-          { name:"Dla pracowników", url:"https://drive.google.com/drive/folders/1C_XAX7mmZXEeBKn50HrD9MdjOj8kM0Ii", kind:"Folder" },
-          { name:"Macierz zużycia", url:"https://drive.google.com/drive/folders/10Fsrckj7J7V5boss7eCUWvx-h4ylFpNP", kind:"Folder" },
-          { name:"Cenniki", url:"https://drive.google.com/drive/folders/14IP_wBgCxUxTFB3wj6FDTm_M16eU0dyD", kind:"Folder" }
-        ]}
-      ]
-    },
-    {
-      name: "BatCave",
-      url: "https://drive.google.com/drive/folders/1isF5JFll5tddxWgR8ExuFZQbyHJOdJGT",
-      kind: "Gałąź: prywatne",
-      desktop: true,
-      color: "bat",
-      children: [
-        { name:"Pamięciomaksymalizator", url:"https://drive.google.com/drive/folders/1iCyX76u5efsk-6N9rXNo0QHmhrESET_Y", kind:"Folder", children:[
-          { name:"Służbowe", url:"https://drive.google.com/drive/folders/1XmbXfDi5pmf0UamYtsx-_VlcTRpEVjeC", kind:"Folder" },
-          { name:"Prywatne", url:"https://drive.google.com/drive/folders/1xNfnt7iSYYBDx_N641xWXJOzQpm5Iovu", kind:"Folder" }
-        ]}
-      ]
-    },
-    {
-      name: "+ Nowa ścieżka",
-      kind: "Miejsce na przyszły projekt",
-      desktop: true,
-      color: "placeholder",
-      placeholder: true
-    }
-  ]
-};
 
-/* ---------- ikony (proste SVG, w stylu 32-bit era) ---------- */
-function folderIcon(fill){
-  return `<svg class="glyph" viewBox="0 0 32 32">
-    <path d="M2 8 L2 26 L30 26 L30 11 L15 11 L12 8 Z" fill="${fill}" stroke="#402d00" stroke-width="1"/>
-    <path d="M2 8 L12 8 L15 11 L2 11 Z" fill="#ffe066" stroke="#402d00" stroke-width="1"/>
-  </svg>`;
-}
-function batIcon(){
-  return `<svg class="glyph" viewBox="0 0 32 32">
-    <circle cx="16" cy="16" r="14" fill="#1a1a1a"/>
-    <path d="M16 9 L20 14 L27 9 L22 18 L26 24 L18 21 L16 26 L14 21 L6 24 L10 18 L5 9 L12 14 Z" fill="#ffd400"/>
-  </svg>`;
-}
-function computerIcon(){
-  return `<svg class="glyph" viewBox="0 0 32 32">
-    <rect x="3" y="4" width="26" height="17" fill="#c0c0c0" stroke="#000" stroke-width="1"/>
-    <rect x="6" y="7" width="20" height="11" fill="#1084d0"/>
-    <rect x="12" y="23" width="8" height="3" fill="#c0c0c0" stroke="#000" stroke-width="1"/>
-    <rect x="8" y="26" width="16" height="2" fill="#808080"/>
-  </svg>`;
-}
-function binIcon(){
-  return `<svg class="glyph" viewBox="0 0 32 32">
-    <path d="M7 9 H25 L23 27 H9 Z" fill="#e8e8e8" stroke="#000" stroke-width="1"/>
-    <rect x="5" y="6" width="22" height="3" fill="#c0c0c0" stroke="#000" stroke-width="1"/>
-    <rect x="12" y="3" width="8" height="3" fill="#c0c0c0" stroke="#000" stroke-width="1"/>
-  </svg>`;
-}
-function plusIcon(){
-  return `<svg class="glyph" viewBox="0 0 32 32">
-    <rect x="3" y="3" width="26" height="26" fill="none" stroke="#ffffff" stroke-width="2" stroke-dasharray="4 3"/>
-    <line x1="16" y1="9" x2="16" y2="23" stroke="#fff" stroke-width="3"/>
-    <line x1="9" y1="16" x2="23" y2="16" stroke="#fff" stroke-width="3"/>
-  </svg>`;
-}
-function iconFor(node){
-  if(node.placeholder) return plusIcon();
-  if(node.app) return computerIcon();
-  if(node.color==="bat") return batIcon();
-  if(node.color==="gold") return folderIcon("#e0a800");
-  return folderIcon("#f5d76e");
+const ROOT = [
+  { id:'rcp',     label:'RCP',      sub:'Ewidencja czasu pracy', kind:'live' },
+  { id:'batcave', label:'BatCave',  sub:'Strefa prywatna',       kind:'pin', locked:true }
+];
+
+let stack = [{ title:'Cerebro', nodes: ROOT }];
+
+const wheelEl   = document.getElementById('wheel');
+const crumbPath = document.getElementById('crumb-path');
+const crumbTitle= document.getElementById('crumb-title');
+const backEl    = document.getElementById('back');
+const panelEl   = document.getElementById('panel');
+
+function currentLevel(){ return stack[stack.length-1]; }
+
+function render(){
+  const level = currentLevel();
+  crumbTitle.textContent = level.title;
+  crumbPath.textContent = stack.map(s=>s.title).join(' › ');
+  backEl.classList.toggle('show', stack.length > 1);
+  layoutNodes(level.nodes);
 }
 
-/* ---------- render pulpitu ---------- */
-const iconsEl = document.getElementById('icons');
-HUB.children.filter(n=>n.desktop).forEach((node,i)=>{
+function layoutNodes(nodes){
+  wheelEl.innerHTML = '';
+  const n = nodes.length;
+  const span = Math.min(150, 34 * Math.max(n-1, 1));      // całkowity rozstaw łuku (stopnie)
+  const start = -span/2;
+  const step = n > 1 ? span/(n-1) : 0;
+  const radius = Math.min(300, 34 * window.innerHeight/100); // promień łuku
+
+  nodes.forEach((node, i)=>{
+    const angleDeg = start + step*i;
+    const rad = angleDeg * Math.PI/180;
+    const x = Math.sin(rad) * radius;
+    const y = -Math.cos(rad) * radius;
+
+    const el = document.createElement('div');
+    el.className = 'node' + (node.locked ? ' locked' : '');
+    el.style.transform = `translate(${x}px, ${y}px)`;
+    el.tabIndex = 0;
+    el.innerHTML = `<div class="label">${escapeHtml(node.label)}</div>` +
+      (node.sub ? `<div class="sub">${escapeHtml(node.sub)}</div>` : '');
+    el.addEventListener('click', ()=> activate(node, el));
+    el.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' ') activate(node, el); });
+    wheelEl.appendChild(el);
+  });
+}
+
+function activate(node, el){
+  if (node.kind === 'link') {
+    window.open(node.url, '_blank', 'noopener');
+    return;
+  }
+  if (node.kind === 'pin') {
+    openPinGate(node);
+    return;
+  }
+  if (node.kind === 'live') {
+    el.classList.add('loading');
+    google.script.run
+      .withSuccessHandler(function(result){
+        el.classList.remove('loading');
+        if (!result.success) { showToast('Nie udało się pobrać widoków RCP: ' + result.error); return; }
+        if (!result.data.length) { showToast('Brak linków w dokumencie "RCP linki".'); return; }
+        const children = result.data.map(v => ({ label: v.name, sub:'Otwiera się w nowej karcie', kind:'link', url: v.url }));
+        stack.push({ title: node.label, nodes: children });
+        render();
+      })
+      .withFailureHandler(function(err){
+        el.classList.remove('loading');
+        showToast('Błąd połączenia z Dyskiem: ' + err.message);
+      })
+      .getRcpViews();
+  }
+}
+
+document.getElementById('back').addEventListener('click', ()=>{
+  if (stack.length > 1) { stack.pop(); render(); }
+});
+document.addEventListener('keydown', (e)=>{
+  if (e.key === 'Escape') {
+    if (panelEl.classList.contains('show')) closePanel();
+    else if (stack.length > 1) { stack.pop(); render(); }
+  }
+});
+
+/* ---------------------------- PIN gate (BatCave) ------------------------- */
+let pinBuffer = '';
+function openPinGate(node){
+  pinBuffer = '';
+  document.getElementById('panel-title').textContent = node.label;
+  document.getElementById('panel-hint').textContent = 'Podaj PIN właściciela RCP.';
+  renderPinBody();
+  panelEl.classList.add('show');
+}
+function renderPinBody(status, statusType){
+  const body = document.getElementById('panel-body');
+  const dots = Array.from({length:4}).map((_,i)=>
+    `<div class="dot${i < pinBuffer.length ? ' filled':''}${statusType==='err'?' err':''}"></div>`
+  ).join('');
+  const keys = [1,2,3,4,5,6,7,8,9].map(d=>`<div class="key" data-k="${d}">${d}</div>`).join('')
+    + `<div class="key wide" data-k="clear">Wyczyść</div><div class="key" data-k="0">0</div><div class="key wide" data-k="back">‹</div>`;
+  body.innerHTML = `
+    <div class="dots">${dots}</div>
+    <div class="keypad">${keys}</div>
+    <div class="status ${statusType||''}">${status||''}</div>
+  `;
+  body.querySelectorAll('.key').forEach(k=>{
+    k.addEventListener('click', ()=>{
+      const v = k.dataset.k;
+      if (v === 'clear') { pinBuffer=''; renderPinBody(); return; }
+      if (v === 'back') { pinBuffer = pinBuffer.slice(0,-1); renderPinBody(); return; }
+      if (pinBuffer.length >= 4) return;
+      pinBuffer += v;
+      if (pinBuffer.length === 4) {
+        renderPinBody('Weryfikacja…');
+        google.script.run
+          .withSuccessHandler(function(result){
+            if (!result.success) { renderPinBody(result.error, 'err'); return; }
+            if (result.valid) {
+              renderPinBody('Dostęp przyznany.', 'ok');
+              setTimeout(()=> showBatCavePlaceholder(), 500);
+            } else {
+              renderPinBody('Nieprawidłowy PIN.', 'err');
+              setTimeout(()=>{ pinBuffer=''; renderPinBody(); }, 700);
+            }
+          })
+          .withFailureHandler(function(err){ renderPinBody('Błąd: ' + err.message, 'err'); })
+          .verifyRcpOwnerPin(pinBuffer);
+      } else {
+        renderPinBody();
+      }
+    });
+  });
+}
+function showBatCavePlaceholder(){
+  document.getElementById('panel-title').textContent = 'BatCave';
+  document.getElementById('panel-hint').textContent = '';
+  document.getElementById('panel-body').innerHTML =
+    `<p style="color:var(--text-dim); font-size:13px; line-height:1.6; margin:0 0 4px;">
+      Strefa odblokowana. Zawartość BatCave jest w budowie — kolejne
+      funkcje pojawią się tutaj, gdy będą gotowe.
+    </p>`;
+}
+function closePanel(){
+  panelEl.classList.remove('show');
+}
+document.getElementById('panel-close').addEventListener('click', closePanel);
+
+/* ------------------------------- chrome ---------------------------------- */
+document.getElementById('btn-fullscreen').addEventListener('click', ()=>{
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{});
+  else document.exitFullscreen().catch(()=>{});
+});
+document.addEventListener('fullscreenchange', ()=>{
+  document.getElementById('btn-fullscreen').title = document.fullscreenElement ? 'Wyjdź z pełnego ekranu' : 'Pełny ekran';
+});
+
+document.getElementById('btn-minimize').addEventListener('click', ()=>{
+  document.body.classList.add('minimized');
+});
+document.getElementById('minitab').addEventListener('click', ()=>{
+  document.body.classList.remove('minimized');
+});
+
+document.getElementById('btn-close').addEventListener('click', ()=>{
+  window.close();
+  // window.close() działa tylko dla kart otwartych skryptem — przeglądarka
+  // z założeń bezpieczeństwa ignoruje je dla zwykłych kart, więc dajemy
+  // uczciwą informację zamiast udawać, że coś się stało.
+  setTimeout(()=> showToast('Ta karta nie może zamknąć się sama — zamknij ją ręcznie (Ctrl/Cmd+W).'), 200);
+});
+
+/* ------------------------------- helpers --------------------------------- */
+let toastTimer = null;
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> t.classList.remove('show'), 4000);
+}
+function escapeHtml(s){
   const d = document.createElement('div');
-  d.className = 'dicon';
-  d.innerHTML = iconFor(node) + `<span>${node.name}</span>`;
-  d.addEventListener('click', (e)=>{
-    document.querySelectorAll('.dicon').forEach(x=>x.classList.remove('selected'));
-    d.classList.add('selected');
-  });
-  d.addEventListener('dblclick', ()=> node.app ? (window.location.href = node.url) : (node.placeholder ? openAbout() : openExplorer(node)));
-  iconsEl.appendChild(d);
-});
-
-/* ---------- okna Explorera (generowane dynamicznie) ---------- */
-let winCount = 0;
-const winsRoot = document.body;
-const openWindows = [];
-
-function buildRow(node){
-  const row = document.createElement(node.url ? 'a' : 'div');
-  row.className='row';
-  if(node.url){ row.href = node.url; if(!node.app){ row.target='_blank'; row.rel='noopener'; } }
-  row.innerHTML = `${folderSvgInline(node)}<span class="name">${node.name}</span><span class="kind">${node.kind||'Folder'}</span>`;
-  if(node.children && node.children.length){
-    row.addEventListener('click', (e)=>{
-      if(e.target.closest('a')===row && node.url && e.metaKey) return;
-    });
-    row.style.cursor='pointer';
-    row.addEventListener('dblclick', (e)=>{ e.preventDefault(); pushCrumb(row.closest('.win'), node); });
-  }
-  return row;
-}
-function folderSvgInline(node){
-  return `<span class="ico">${iconSmallFor(node)}</span>`;
-}
-function folderIconSmall(){return `<svg width="20" height="16" viewBox="0 0 32 26"><path d="M1 4 L1 22 L30 22 L30 8 L14 8 L11 4 Z" fill="#f5d76e" stroke="#402d00" stroke-width="1"/></svg>`;}
-function batIconSmall(){return `<svg width="20" height="16" viewBox="0 0 32 26"><circle cx="16" cy="13" r="11" fill="#1a1a1a"/></svg>`;}
-function plusIconSmall(){return `<svg width="20" height="16" viewBox="0 0 32 26"><rect x="2" y="2" width="28" height="22" fill="none" stroke="#808080" stroke-dasharray="3 2"/></svg>`;}
-function computerIconSmall(){return `<svg width="20" height="16" viewBox="0 0 32 26"><rect x="2" y="2" width="28" height="16" fill="#c0c0c0" stroke="#000" stroke-width="1"/><rect x="5" y="4.5" width="22" height="11" fill="#1084d0"/></svg>`;}
-function iconSmallFor(node){
-  if(node.placeholder) return plusIconSmall();
-  if(node.app) return computerIconSmall();
-  if(node.color==='bat') return batIconSmall();
-  return folderIconSmall();
+  d.textContent = s == null ? '' : String(s);
+  return d.innerHTML;
 }
 
-function renderExplorerBody(win, node){
-  const body = win.querySelector('.winbody');
-  const crumbEl = win.querySelector('.crumb');
-  body.innerHTML='';
-  const list = node.children && node.children.length ? node.children : null;
-  if(!list){
-    body.innerHTML = `<div style="padding:14px;">To jest ostatni poziom tej gałęzi w hubie — otwórz link, żeby zobaczyć pełną zawartość na Dysku Google.</div>`;
-  } else {
-    list.forEach(c=> body.appendChild(buildRow(c)));
-  }
-  win.querySelector('.statuscount').textContent = list ? list.length+' obiekt(y)' : '0 obiektów';
-  win.querySelector('.ttext .label').textContent = node.name;
-  // breadcrumb
-  crumbEl.innerHTML='';
-  win._path.forEach((p,idx)=>{
-    const b = document.createElement('b');
-    b.textContent = p.name;
-    b.addEventListener('click', ()=>{ win._path = win._path.slice(0, idx+1); renderExplorerBody(win, p); });
-    crumbEl.appendChild(b);
-    if(idx < win._path.length-1){
-      const sep = document.createElement('span'); sep.textContent=' › '; crumbEl.appendChild(sep);
-    }
-  });
-}
-function pushCrumb(win, node){
-  win._path.push(node);
-  renderExplorerBody(win, node);
-}
-
-function openExplorer(node){
-  winCount++;
-  const id = 'win'+winCount;
-  const win = document.createElement('div');
-  win.className='win open raised';
-  win.id = id;
-  win.innerHTML = `
-    <div class="titlebar">
-      <div class="ttext"><span class="ico" style="display:inline-flex">${node.color==='bat'?batIconSmall():folderIconSmall()}</span><span class="label">${node.name}</span></div>
-      <div class="winbtn">_</div><div class="winbtn">▢</div><div class="winbtn close">×</div>
-    </div>
-    <div class="menubar"><span>Plik</span><span>Widok</span><span>Przejdź</span><span>Pomoc</span></div>
-    <div class="crumb"></div>
-    <div class="winbody"></div>
-    <div class="statusbar raised"><span class="statuscount"></span><span>Cerebro Hub</span></div>
-  `;
-  document.body.appendChild(win);
-  win._path = [node];
-  renderExplorerBody(win, node);
-  win.addEventListener('mousedown', ()=> focusWin(win));
-  win.querySelector('.close').addEventListener('click', ()=> closeWin(win, taskBtn));
-  const taskBtn = addTaskItem(node.name, win);
-  openWindows.push(win);
-  focusWin(win);
-  makeDraggable(win, win.querySelector('.titlebar'));
-}
-
-function closeWin(win, taskBtn){
-  win.remove();
-  if(taskBtn) taskBtn.remove();
-  const idx = openWindows.indexOf(win);
-  if(idx>-1) openWindows.splice(idx,1);
-}
-function focusWin(win){
-  openWindows.forEach(w=>w.classList.remove('top'));
-  win.classList.add('top');
-  document.body.appendChild(win);
-}
-function addTaskItem(name, win){
-  const t = document.createElement('div');
-  t.className='taskitem raised';
-  t.textContent = name;
-  t.addEventListener('click', ()=>{
-    win.style.display = win.style.display==='none' ? 'flex' : 'none';
-    if(win.style.display==='flex') focusWin(win);
-  });
-  document.getElementById('taskitems').appendChild(t);
-  return t;
-}
-function makeDraggable(win, handle){
-  let sx,sy,ox,oy,dragging=false;
-  handle.addEventListener('mousedown', (e)=>{
-    dragging=true;
-    const r = win.getBoundingClientRect();
-    win.style.left = r.left+'px'; win.style.transform='none';
-    sx=e.clientX; sy=e.clientY; ox=r.left; oy=r.top;
-    focusWin(win);
-  });
-  window.addEventListener('mousemove', (e)=>{
-    if(!dragging) return;
-    win.style.left = (ox + (e.clientX-sx))+'px';
-    win.style.top = Math.max(0, oy + (e.clientY-sy))+'px';
-  });
-  window.addEventListener('mouseup', ()=> dragging=false);
-}
-
-/* ---------- okno "O hubie / backup" ---------- */
-function openAbout(){
-  winCount++;
-  const win = document.createElement('div');
-  win.className='win open raised';
-  win.style.width='480px';
-  win.innerHTML = `
-    <div class="titlebar">
-      <div class="ttext"><span class="label">Właściwości: Cerebro</span></div>
-      <div class="winbtn">_</div><div class="winbtn">▢</div><div class="winbtn close">×</div>
-    </div>
-    <div class="winbody pad">
-      <b>Jak dodać nową ścieżkę do huba</b>
-      <ul class="steps">
-        <li>Otwórz plik <code class="mono">Hub.html</code> w edytorze Apps Script (ten sam projekt co Code.gs) w edytorze tekstu.</li>
-        <li>Znajdź obiekt <code class="mono">HUB</code> na początku sekcji <code class="mono">&lt;script&gt;</code>.</li>
-        <li>Dopisz kolejny wpis <code class="mono">{ name, url, kind, children }</code> — hub jest z założenia nieskończenie rozwijalny.</li>
-        <li>Zapisz w edytorze Apps Script — zmiana jest widoczna od razu przy odświeżeniu strony.</li>
-      </ul>
-      <b>Backup</b>
-      <ul class="steps">
-        <li><b>Codziennie</b> — kopia lustrzana <i>Daily</i> nadpisywana w miejscu (bez mnożenia danych).</li>
-        <li><b>Raz w miesiącu</b> — osobny, datowany snapshot <i>Cerebro_Backup_YYYY-MM-DD</i>, zachowywany jako wersja historyczna.</li>
-      </ul>
-    </div>
-    <div class="statusbar raised"><span>Cerebro 98</span><span>v1.0</span></div>
-  `;
-  document.body.appendChild(win);
-  win.addEventListener('mousedown', ()=>focusWin(win));
-  win.querySelector('.close').addEventListener('click', ()=>closeWin(win,null));
-  makeDraggable(win, win.querySelector('.titlebar'));
-  focusWin(win);
-}
-
-/* ---------- Start menu ---------- */
-const smitems = document.getElementById('smitems');
-function buildStartTree(children, depth){
-  children.forEach(node=>{
-    const it = document.createElement('div');
-    it.className='smitem' + (depth>0?' smsub':'');
-    it.innerHTML = `<span class="ico">${iconSmallFor(node)}</span><span>${node.name}</span>`;
-    it.addEventListener('click', ()=>{
-      document.getElementById('startmenu').classList.remove('open');
-      node.app ? (window.location.href = node.url) : (node.placeholder ? openAbout() : openExplorer(node));
-    });
-    smitems.appendChild(it);
-  });
-}
-buildStartTree(HUB.children, 0);
-const hr = document.createElement('div'); hr.className='smhr'; smitems.appendChild(hr);
-const aboutItem = document.createElement('div');
-aboutItem.className='smitem';
-aboutItem.innerHTML = `<span class="ico">${plusIconSmall()}</span><span>O hubie / Backup...</span>`;
-aboutItem.addEventListener('click', ()=>{ document.getElementById('startmenu').classList.remove('open'); openAbout(); });
-smitems.appendChild(aboutItem);
-
-document.getElementById('startbtn').addEventListener('click', (e)=>{
-  const sm = document.getElementById('startmenu');
-  sm.classList.toggle('open');
-  document.getElementById('startbtn').classList.toggle('down', sm.classList.contains('open'));
-  e.stopPropagation();
-});
-document.addEventListener('click', (e)=>{
-  const sm = document.getElementById('startmenu');
-  if(!sm.contains(e.target) && e.target.id!=='startbtn' && !e.target.closest('#startbtn')){
-    sm.classList.remove('open');
-    document.getElementById('startbtn').classList.remove('down');
-  }
-  if(!e.target.closest('.dicon')) document.querySelectorAll('.dicon').forEach(x=>x.classList.remove('selected'));
-});
-
-/* ---------- zegar ---------- */
-function tick(){
-  const d = new Date();
-  document.getElementById('clock').textContent =
-    d.toLocaleTimeString('pl-PL', {hour:'2-digit', minute:'2-digit'});
-}
-tick(); setInterval(tick, 1000*20);
-
-/* domyślnie otwórz "Cerebro core" jak przy starcie systemu */
-openExplorer(HUB);
+window.addEventListener('resize', render);
+render();
 </script>
+</body>
 </html>
