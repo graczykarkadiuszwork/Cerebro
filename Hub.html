@@ -339,21 +339,27 @@
    zmienia kolor z limonki na orchid — i dopiero PO tym rozbłysku
    następuje właściwe przejście (otwarcie linku / wejście głębiej / PIN).
 
-   RCP: lista widoków NIE jest wpisana na sztywno — Hub woła serwer
-   (google.script.run.getRcpViews), który czyta na żywo dokument
-   "RCP linki" na Dysku Google. Zmiana linku w dokumencie na Dysku
-   pojawia się w Hubie od razu, bez edycji kodu. Pozycje-linki są
-   prawdziwymi znacznikami <a href target="_blank"> (nie window.open
-   wywoływanym z JS) — to działa niezawodnie nawet w piaskownicy, w
-   jakiej Apps Script uruchamia aplikacje webowe.
+   RCP: lista widoków (RCP_VIEWS niżej) jest zwykłą, zaszytą w kodzie
+   tablicą linków — żadnego wywołania serwera, więc żadnych uprawnień
+   Apps Script do pilnowania. Żeby dodać/zmienić link, edytuj tablicę
+   RCP_VIEWS. Pozycje-linki to prawdziwe znaczniki <a href
+   target="_blank"> (nie window.open wywoływany z JS) — działa
+   niezawodnie nawet w piaskownicy, w jakiej Apps Script uruchamia
+   aplikacje webowe.
 
    BatCave: na razie tylko brama PIN-em właściciela RCP, weryfikowanym
    po stronie serwera (google.script.run.verifyRcpOwnerPin) — PIN nigdy
    nie trafia do przeglądarki, tylko wynik prawda/fałsz.
    ========================================================================= */
 
+const RCP_VIEWS = [
+  { label:'Edytor czasu pracy',   sub:'Właściciel',   kind:'link', url:'https://script.google.com/macros/s/AKfycbzD3ghXljQqiIP12nQHOAP_mV9bOLjkLaZlwYtbzRU/exec?page=owner' },
+  { label:'Wejście / wyjście',    sub:'Pracownik',    kind:'link', url:'https://script.google.com/macros/s/AKfycbzD3ghXljQqiIP12nQHOAP_mV9bOLjkLaZlwYtbzRU/dev' },
+  { label:'Panel raportowy',      sub:'Admin',        kind:'link', url:'https://script.google.com/macros/s/AKfycbzD3ghXljQqiIP12nQHOAP_mV9bOLjkLaZlwYtbzRU/exec?page=dashboard' }
+];
+
 const ROOT = [
-  { id:'rcp',     label:'RCP',      sub:'Ewidencja czasu pracy', kind:'live' },
+  { id:'rcp',     label:'RCP',      sub:'Ewidencja czasu pracy', kind:'branch', children:RCP_VIEWS },
   { id:'batcave', label:'BatCave',  sub:'Strefa prywatna',       kind:'pin', locked:true }
 ];
 
@@ -484,26 +490,9 @@ function activate(node, el){
       openPinGate(node);
       return;
     }
-    if (node.kind === 'live') {
-      if (!hasServerBridge()) {
-        showToast('Ta strona działa tylko przez wdrożenie Apps Script (adres kończący się na /exec) — otwarcie samego pliku nie wystarczy.');
-        return; // nigdy nie wchodzimy w stan "loading", więc przycisk nie może się zablokować
-      }
-      el.classList.add('loading');
-      google.script.run
-        .withSuccessHandler(function(result){
-          el.classList.remove('loading');
-          if (!result || !result.success) { showToast('Nie udało się pobrać widoków RCP: ' + (result && result.error || 'nieznany błąd')); return; }
-          if (!result.data.length) { showToast('Brak linków w dokumencie "RCP linki".'); return; }
-          const children = result.data.map(v => ({ label: v.name, sub:'Otwiera się w nowej karcie', kind:'link', url: v.url }));
-          stack.push({ title: node.label, nodes: children });
-          render();
-        })
-        .withFailureHandler(function(err){
-          el.classList.remove('loading');
-          showToast('Błąd połączenia z Dyskiem: ' + (err && err.message || err));
-        })
-        .getRcpViews();
+    if (node.kind === 'branch') {
+      stack.push({ title: node.label, nodes: node.children });
+      render();
     }
   });
 }

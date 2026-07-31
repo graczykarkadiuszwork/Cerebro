@@ -388,54 +388,13 @@ function exportCSV(sheetName) {
 }
 
 // ============================================================
-// CEREBRO — Hub: dane RCP/BatCave czytane NA ŻYWO z Dysku Google.
-// (Wcześniej w osobnym pliku HubData.gs — scalone tutaj, żeby wdrożenie
-// wymagało pilnowania jednego pliku serwerowego, nie dwóch.)
+// CEREBRO — Hub: weryfikacja PIN-u dla BatCave.
 // ============================================================
-
-// Dokument "RCP linki" (folder HR/RCP) — lista linków do wdrożeń RCP,
-// każdy jako osobny akapit z hiperłączem na tekście.
-const RCP_LINKS_DOC_ID = '1_WRadAW5SgMYuQxHfgU9oqAs98QW6oUNt6kFkS6A1P4';
 
 // Arkusz "WS ewidencja czasu pracy", zakładka "Pracownicy" — tu jest PIN
 // właściciela/admina RCP (wiersz z kolumną Rola = "Admin").
 const RCP_STAFF_SHEET_ID = '1wI3ysrolzGea5nNi7GYBo09t38y8oUgPoqGG3wn-ZsA';
 const RCP_STAFF_SHEET_TAB = 'Pracownicy';
-
-// ---------------------------------------------------------------------------
-// RCP — lista widoków, czytana live z treści dokumentu "RCP linki".
-// ---------------------------------------------------------------------------
-function getRcpViews() {
-  try {
-    const doc = DocumentApp.openById(RCP_LINKS_DOC_ID);
-    const data = extractLinksFromBody(doc.getBody());
-    return { success: true, data: data };
-  } catch (e) {
-    return { success: false, error: e.toString() };
-  }
-}
-
-// Przechodzi po akapitach dokumentu i wyciąga te, których tekst ma
-// przypięty hiperłącz (getLinkUrl na dowolnym znaku akapitu).
-function extractLinksFromBody(body) {
-  const results = [];
-  const numChildren = body.getNumChildren();
-  for (let i = 0; i < numChildren; i++) {
-    const el = body.getChild(i);
-    if (el.getType() !== DocumentApp.ElementType.PARAGRAPH) continue;
-    const text = el.asParagraph().editAsText();
-    const content = text.getText().trim();
-    if (!content) continue;
-
-    let url = null;
-    for (let c = 0; c < content.length; c++) {
-      const linkUrl = text.getLinkUrl(c);
-      if (linkUrl) { url = linkUrl; break; }
-    }
-    if (url) results.push({ name: content, url: url });
-  }
-  return results;
-}
 
 // ---------------------------------------------------------------------------
 // BatCave — brama PIN-em właściciela RCP. Zwraca WYŁĄCZNIE prawda/fałsz,
@@ -466,9 +425,8 @@ function verifyRcpOwnerPin(pin) {
   }
 }
 
-// Prosta funkcja diagnostyczna — wywołaj ją z Huba (patrz przycisk debug),
-// żeby sprawdzić, czy ta wersja Code.gs w ogóle jest tą, która odpowiada
-// na żywym wdrożeniu (pomaga wykryć "zapomniałem zrobić nowej wersji").
+// Prosta funkcja diagnostyczna — uruchom ją ręcznie z edytora Apps Script,
+// żeby sprawdzić, czy dane wdrożenie w ogóle odpowiada tym kodem.
 function pingHub() {
-  return { success: true, message: 'Code.gs odpowiada, wersja z getRcpViews/verifyRcpOwnerPin obecna.' };
+  return { success: true, message: 'Code.gs odpowiada, wersja z verifyRcpOwnerPin obecna.' };
 }
