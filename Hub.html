@@ -10,18 +10,18 @@
   /* ==========================================================================
      PALETA — Alabaster Grey / Lime Yellow / Royal Orchid.
      Szary = kolor dominujący (tła, obramowania, tekst).
-     Limonka = wyłącznie linie/dekoracja (pierścienie, źrenica-oko, kropki PIN),
-     nigdy stan interakcji.
-     Orchid = jedyny kolor podkreślający funkcję — najechanie/fokus.
+     Limonka = wyłącznie linie/dekoracja i spoczynkowy stan oka.
+     Orchid = jedyny kolor podkreślający funkcję — najechanie/fokus na
+     belkach ORAZ chwilowy rozbłysk oka w momencie wyboru pozycji w menu.
      ========================================================================== */
   :root{
     --void:        #060508;
     --void-2:      #100b16;
     --panel:       rgba(24,20,28,.82);
     --panel-edge:  rgba(220,220,220,.22);   /* Alabaster Grey */
-    --accent:      #dcff2a;                 /* Lime Yellow — linie/dekoracja */
+    --accent:      #dcff2a;                 /* Lime Yellow */
     --accent-glow: rgba(220,255,42,.45);
-    --accent2:      #aa1ab1;                /* Royal Orchid — hover/fokus */
+    --accent2:      #aa1ab1;                /* Royal Orchid */
     --accent2-glow: rgba(170,26,177,.5);
     --text:        #dcdcdc;                 /* Alabaster Grey */
     --text-dim:    #8c8c90;
@@ -55,7 +55,7 @@
     display:flex; gap:8px; z-index:80;
   }
   .chrome-btn{
-    width:34px; height:34px;
+    width:40px; height:40px;
     display:flex; align-items:center; justify-content:center;
     background:var(--panel);
     border:1px solid var(--panel-edge);
@@ -89,13 +89,9 @@
   body.minimized #minitab{ display:flex; }
 
   /* ---------- stage / breadcrumb ---------- */
-  #stage{
-    position:fixed; inset:0;
-    display:flex; flex-direction:column; align-items:center; justify-content:flex-end;
-    padding-bottom:9vh;
-  }
+  #stage{ position:fixed; inset:0; }
   #back{
-    position:absolute; top:8vh; left:8vw;
+    position:fixed; top:8vh; left:8vw;
     display:none; align-items:center; gap:6px;
     font-size:12px; letter-spacing:.1em; text-transform:uppercase;
     color:var(--text-dim); cursor:pointer;
@@ -104,37 +100,36 @@
   #back:hover{ color:var(--accent2); }
   #back.show{ display:flex; }
 
+  /* Gałka (#core) jest zakotwiczona na sztywno na środku ekranu i NIGDY się
+     nie przesuwa — menu (#rows) i etykieta (#crumb-title) dokładają się
+     poniżej niej, nie wpływając na jej pozycję. */
   #crumb-title{
+    position:fixed; top:calc(50% + 78px); left:50%; transform:translateX(-50%);
     min-height:1.4em;
-    margin-bottom:22px;
     font-size:13px; font-weight:600; letter-spacing:.3em; text-transform:uppercase;
     color:var(--text-dim);
+    z-index:5;
   }
 
-  /* ---------- eye (core emblem, reused small in the minimized tab) ---------- */
+  /* ---------- eye (core emblem) ---------- */
   .eye{ overflow:visible; display:block; }
   .eye .eye-socket{ fill:var(--void-2); stroke:var(--panel-edge); stroke-width:1; }
-  .eye .eye-iris{ fill:var(--accent); }
-  .eye .eye-pupil{ fill:var(--void); }
-  .eye .eye-ring{ fill:none; stroke:var(--panel-edge); stroke-width:.6; opacity:.7; }
-  .eye .eye-membrane{
-    fill:var(--accent);
-    opacity:.32;
-    transform-box:fill-box;
-    transform-origin:0% 50%;
-    transform:scaleX(0);
-    animation:eyeBlink 7s ease-in-out infinite;
+  .eye .eye-iris-base{ fill:var(--accent); transition:fill .3s ease; }
+  .eye .eye-iris-texture{ fill:var(--void); opacity:.55; filter:url(#irisTexture); }
+  .eye .eye-pupil{
+    fill:var(--void);
+    transform-box:fill-box; transform-origin:50% 50%;
+    animation:pupilBreathe 7s ease-in-out infinite;
   }
-  @keyframes eyeBlink{
-    0%,84%{ transform:scaleX(0); }
-    90%{ transform:scaleX(1); }
-    96%{ transform:scaleX(0); }
-    100%{ transform:scaleX(0); }
+  @keyframes pupilBreathe{
+    0%,100%{ transform:scaleX(1); }
+    50%{ transform:scaleX(1.14); }
   }
   #minitab .eye{ width:22px; height:22px; }
+  #minitab .eye-iris-texture{ display:none; } /* zbyt małe, żeby było widać deseń — pomijamy dla czytelności */
 
   #core{
-    position:relative;
+    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
     width:112px; height:112px;
     border-radius:50%;
     display:flex; align-items:center; justify-content:center;
@@ -142,6 +137,7 @@
     border:1px solid var(--panel-edge);
     box-shadow:0 0 40px rgba(220,255,42,.10), inset 0 0 30px rgba(220,255,42,.05);
     cursor:pointer;
+    transition:box-shadow .25s ease, width .3s ease, height .3s ease;
   }
   #core::before{
     content:'';
@@ -150,25 +146,45 @@
     border:1px dashed var(--accent);
     opacity:.7;
     animation:spin 46s linear infinite;
+    transition:animation-duration .3s ease, opacity .3s ease;
   }
   @keyframes spin{ to{ transform:rotate(360deg); } }
-  #core .eye{ width:60px; height:60px; }
-  #core:hover .eye-iris{ filter:brightness(1.15); }
+  #core .eye{ width:64px; height:64px; transition:width .3s ease, height .3s ease; }
+  #core:hover .eye-iris-base{ filter:brightness(1.15); }
+
+  /* mniejsza gałka, gdy menu jest otwarte — więcej miejsca na belki, pozycja bez zmian */
+  #core.open{
+    width:78px; height:78px;
+    box-shadow:0 0 55px rgba(220,255,42,.22), inset 0 0 30px rgba(220,255,42,.10);
+  }
+  #core.open .eye{ width:46px; height:46px; }
+  #core.open::before{ inset:-11px; animation-duration:16s; opacity:1; }
+
+  /* rozbłysk potwierdzenia wyboru: źrenica rozszerza się mocniej,
+     tęczówka na chwilę przechodzi z limonki w orchid */
+  #core.flash .eye-iris-base{ fill:var(--accent2); }
+  #core.flash .eye-pupil{ animation:none; transform:scaleX(1.6); transition:transform .3s ease; }
+  #core.flash{ box-shadow:0 0 60px var(--accent2-glow), inset 0 0 30px rgba(170,26,177,.15); }
+  #core.flash::before{ border-color:var(--accent2); }
 
   /* ---------- rows of chamfered bars (Mass Effect-inspired ring menu) ---------- */
   #rows{
+    position:fixed; top:calc(50% + 100px); left:50%; transform:translateX(-50%);
     display:flex; flex-direction:column; align-items:center; gap:10px;
-    margin-bottom:16px;
+    max-height:calc(50vh - 40px); overflow-y:auto;
+    width:min(92vw, 380px);
+    z-index:5;
   }
-  .row{ display:flex; gap:10px; }
+  .row{ display:flex; flex-wrap:wrap; justify-content:center; gap:10px; width:100%; }
   .bar{
     position:relative;
-    min-width:160px;
-    padding:13px 30px;
+    flex:1 1 160px; min-width:min(160px, 78vw); max-width:240px;
+    padding:13px clamp(18px,6vw,30px);
     background:var(--panel);
     border:1px solid var(--panel-edge);
     clip-path:polygon(16px 0%, calc(100% - 16px) 0%, 100% 50%, calc(100% - 16px) 100%, 16px 100%, 0% 50%);
     text-align:center; cursor:pointer;
+    text-decoration:none; color:inherit;
     transition:border-color .16s, box-shadow .16s, background .16s;
     -webkit-user-select:none; user-select:none;
   }
@@ -232,6 +248,16 @@
   }
   #panel .close-panel:hover{ color:var(--accent2); }
 
+  @media (max-width:480px), (max-height:640px){
+    #core{ width:84px; height:84px; }
+    #core .eye{ width:48px; height:48px; }
+    #core::before{ inset:-10px; }
+    #core.open{ width:60px; height:60px; }
+    #core.open .eye{ width:34px; height:34px; }
+    #rows{ top:calc(50% + 76px); max-height:calc(50vh - 24px); }
+    #crumb-title{ top:calc(50% + 54px); }
+  }
+
   #toast{
     position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
     background:var(--panel); border:1px solid var(--panel-edge); border-radius:8px;
@@ -242,12 +268,22 @@
   #toast.show{ opacity:1; }
 </style>
 
-<!-- clipPath dzielony przez wszystkie instancje oka -->
+<!-- Definicje dzielone przez wszystkie instancje oka: okrągły clip i
+     filtr generujący organiczny, cętkowany deseń tęczówki (feTurbulence). -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
     <clipPath id="eyeClip" clipPathUnits="objectBoundingBox">
       <circle cx="0.5" cy="0.5" r="0.5"/>
     </clipPath>
+    <filter id="irisTexture" x="-30%" y="-30%" width="160%" height="160%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" seed="4" result="n"/>
+      <feColorMatrix in="n" type="matrix"
+        values="0 0 0 0 0
+                0 0 0 0 0
+                0 0 0 0 0
+                0.7 0.7 0.7 0 -0.55" result="speckleAlpha"/>
+      <feComposite in="speckleAlpha" in2="SourceGraphic" operator="in"/>
+    </filter>
   </defs>
 </svg>
 
@@ -267,9 +303,9 @@
   <svg class="eye" viewBox="0 0 24 24" aria-hidden="true">
     <g clip-path="url(#eyeClip)">
       <circle class="eye-socket" cx="12" cy="12" r="12"/>
-      <circle class="eye-iris" cx="12" cy="12" r="8"/>
-      <rect class="eye-pupil" x="10.6" y="4" width="2.8" height="16" rx="1.4"/>
-      <rect class="eye-membrane" x="0" y="0" width="24" height="24"/>
+      <circle class="eye-iris-base" cx="12" cy="12" r="8"/>
+      <circle class="eye-iris-texture" cx="12" cy="12" r="8"/>
+      <rect class="eye-pupil" x="10.7" y="6" width="2.6" height="12" rx="1.3"/>
     </g>
   </svg>
 </div>
@@ -280,14 +316,15 @@
   <div id="back">‹ Wstecz</div>
   <div id="crumb-title"></div>
   <div id="rows"></div>
-  <div id="core" title="Cerebro — wróć na start">
+  <div id="core" title="Menu">
     <svg class="eye" viewBox="0 0 24 24" aria-hidden="true">
-      <circle class="eye-ring" cx="12" cy="12" r="11.3"/>
       <g clip-path="url(#eyeClip)">
         <circle class="eye-socket" cx="12" cy="12" r="12"/>
-        <circle class="eye-iris" cx="12" cy="12" r="8"/>
-        <rect class="eye-pupil" x="10.6" y="4" width="2.8" height="16" rx="1.4"/>
-        <rect class="eye-membrane" x="0" y="0" width="24" height="24"/>
+        <circle class="eye-iris-base" cx="12" cy="12" r="8"/>
+        <circle class="eye-iris-texture" cx="12" cy="12" r="8"/>
+        <g class="eye-pupil-track">
+          <rect class="eye-pupil" x="10.7" y="6" width="2.6" height="12" rx="1.3"/>
+        </g>
       </g>
     </svg>
   </div>
@@ -305,15 +342,21 @@
 <script>
 /* ==========================================================================
    CEREBRO — Hub
-   Menu inspirowane kołem dialogowym z gier (Mass Effect): łamane belki
-   ("bar") ułożone w rzędach nad centralnym rdzeniem-okiem, wejście w opcję
-   = nowy rząd potomny. Minimalizm: brak powtarzanej nazwy w interfejsie,
-   sam rdzeń (mrugające cybernetyczne oko) pełni rolę logo.
+   Oko jest jedynym stałym elementem interfejsu i wyrazem tego, co się dzieje:
+   spoczynek = powolne, lekkie rozszerzanie źrenicy (limonka). Menu (rzędy
+   ściętych belek, jak w kole dialogowym z Mass Effect) jest ukryte, dopóki
+   nie klikniesz oka — dopiero wtedy się pojawia. Wybór pozycji w menu
+   wywołuje rozbłysk: źrenica rozszerza się mocniej, a tęczówka na chwilę
+   zmienia kolor z limonki na orchid — i dopiero PO tym rozbłysku
+   następuje właściwe przejście (otwarcie linku / wejście głębiej / PIN).
 
    RCP: lista widoków NIE jest wpisana na sztywno — Hub woła serwer
-   (google.script.run.getRcpViews) który czyta na żywo dokument
+   (google.script.run.getRcpViews), który czyta na żywo dokument
    "RCP linki" na Dysku Google. Zmiana linku w dokumencie na Dysku
-   pojawia się w Hubie od razu, bez edycji kodu.
+   pojawia się w Hubie od razu, bez edycji kodu. Pozycje-linki są
+   prawdziwymi znacznikami <a href target="_blank"> (nie window.open
+   wywoływanym z JS) — to działa niezawodnie nawet w piaskownicy, w
+   jakiej Apps Script uruchamia aplikacje webowe.
 
    BatCave: na razie tylko brama PIN-em właściciela RCP, weryfikowanym
    po stronie serwera (google.script.run.verifyRcpOwnerPin) — PIN nigdy
@@ -326,11 +369,13 @@ const ROOT = [
 ];
 
 let stack = [{ title:'', nodes: ROOT }];
+let menuOpen = false;
 
 const rowsEl  = document.getElementById('rows');
 const crumbEl = document.getElementById('crumb-title');
 const backEl  = document.getElementById('back');
 const panelEl = document.getElementById('panel');
+const coreEl  = document.getElementById('core');
 
 function hasServerBridge(){
   return typeof google !== 'undefined' && google.script && typeof google.script.run === 'object';
@@ -343,6 +388,60 @@ function render(){
   crumbEl.textContent = stack.length > 1 ? level.title : '';
   backEl.classList.toggle('show', stack.length > 1);
   layoutRows(level.nodes);
+}
+
+function openMenu(){
+  menuOpen = true;
+  stack = [{ title:'', nodes: ROOT }];
+  coreEl.classList.add('open');
+  render();
+}
+function closeMenu(){
+  menuOpen = false;
+  coreEl.classList.remove('open');
+  rowsEl.innerHTML = '';
+  backEl.classList.remove('show');
+  crumbEl.textContent = '';
+}
+coreEl.addEventListener('click', ()=>{ menuOpen ? closeMenu() : openMenu(); });
+
+// Źrenica podąża za kursorem (gałka/oko zostaje na sztywno na środku ekranu —
+// rusza się tylko źrenica, w jego kierunku, w niewielkim zakresie).
+(function initEyeTracking(){
+  const track = coreEl.querySelector('.eye-pupil-track');
+  if (!track) return;
+  const MAX = 1.8; // maks. wychylenie w jednostkach viewBox (0–24)
+  let targetX = 0, targetY = 0, curX = 0, curY = 0;
+
+  document.addEventListener('mousemove', (e)=>{
+    const r = coreEl.getBoundingClientRect();
+    const cx = r.left + r.width/2;
+    const cy = r.top + r.height/2;
+    const dx = e.clientX - cx;
+    const dy = e.clientY - cy;
+    const dist = Math.hypot(dx, dy) || 1;
+    const reach = Math.min(1, dist/160); // pełny wychył dopiero z dalszej odległości
+    targetX = (dx/dist) * MAX * reach;
+    targetY = (dy/dist) * MAX * reach;
+  }, { passive:true });
+
+  function tick(){
+    curX += (targetX - curX) * 0.18;
+    curY += (targetY - curY) * 0.18;
+    track.setAttribute('transform', `translate(${curX.toFixed(2)},${curY.toFixed(2)})`);
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+})();
+
+// Rozbłysk-potwierdzenie na oku, a dopiero potem właściwa akcja.
+function flashEye(action, duration){
+  duration = duration || 420;
+  coreEl.classList.add('flash');
+  setTimeout(()=>{
+    coreEl.classList.remove('flash');
+    action();
+  }, duration);
 }
 
 // Dzieli węzły na rzędy po maks. 2 (jak w menu Mass Effect) — jeśli liczba
@@ -365,13 +464,20 @@ function layoutRows(nodes){
     const rowEl = document.createElement('div');
     rowEl.className = 'row';
     rowNodes.forEach(node=>{
-      const el = document.createElement('div');
+      const isLink = node.kind === 'link';
+      // Linki to prawdziwe <a href target="_blank"> — bardziej niezawodne
+      // niż window.open() wywoływany z JS wewnątrz piaskownicy Apps Script.
+      const el = document.createElement(isLink ? 'a' : 'div');
       el.className = 'bar';
       el.tabIndex = 0;
+      if (isLink) { el.href = node.url; el.target = '_blank'; el.rel = 'noopener'; }
       el.innerHTML =
         `<div class="label">${node.locked ? lockIcon() : ''}${escapeHtml(node.label)}</div>` +
         (node.sub ? `<div class="sub">${escapeHtml(node.sub)}</div>` : '');
-      el.addEventListener('click', ()=> activate(node, el));
+      el.addEventListener('click', (e)=>{
+        if (isLink) e.preventDefault(); // sami sterujemy momentem otwarcia (po rozbłysku)
+        activate(node, el);
+      });
       el.addEventListener('keydown', (e)=>{ if (e.key==='Enter' || e.key===' ') { e.preventDefault(); activate(node, el); } });
       rowEl.appendChild(el);
     });
@@ -380,49 +486,48 @@ function layoutRows(nodes){
 }
 
 function activate(node, el){
-  if (node.kind === 'link') {
-    window.open(node.url, '_blank', 'noopener');
-    return;
-  }
-  if (node.kind === 'pin') {
-    openPinGate(node);
-    return;
-  }
-  if (node.kind === 'live') {
-    if (!hasServerBridge()) {
-      showToast('Ta strona działa tylko przez wdrożenie Apps Script (adres kończący się na /exec) — otwarcie samego pliku nie wystarczy.');
-      return; // nigdy nie wchodzimy w stan "loading", więc przycisk nie może się zablokować
+  flashEye(()=>{
+    if (node.kind === 'link') {
+      window.open(node.url, '_blank', 'noopener');
+      return;
     }
-    el.classList.add('loading');
-    google.script.run
-      .withSuccessHandler(function(result){
-        el.classList.remove('loading');
-        if (!result || !result.success) { showToast('Nie udało się pobrać widoków RCP: ' + (result && result.error || 'nieznany błąd')); return; }
-        if (!result.data.length) { showToast('Brak linków w dokumencie "RCP linki".'); return; }
-        const children = result.data.map(v => ({ label: v.name, sub:'Otwiera się w nowej karcie', kind:'link', url: v.url }));
-        stack.push({ title: node.label, nodes: children });
-        render();
-      })
-      .withFailureHandler(function(err){
-        el.classList.remove('loading');
-        showToast('Błąd połączenia z Dyskiem: ' + (err && err.message || err));
-      })
-      .getRcpViews();
-  }
+    if (node.kind === 'pin') {
+      openPinGate(node);
+      return;
+    }
+    if (node.kind === 'live') {
+      if (!hasServerBridge()) {
+        showToast('Ta strona działa tylko przez wdrożenie Apps Script (adres kończący się na /exec) — otwarcie samego pliku nie wystarczy.');
+        return; // nigdy nie wchodzimy w stan "loading", więc przycisk nie może się zablokować
+      }
+      el.classList.add('loading');
+      google.script.run
+        .withSuccessHandler(function(result){
+          el.classList.remove('loading');
+          if (!result || !result.success) { showToast('Nie udało się pobrać widoków RCP: ' + (result && result.error || 'nieznany błąd')); return; }
+          if (!result.data.length) { showToast('Brak linków w dokumencie "RCP linki".'); return; }
+          const children = result.data.map(v => ({ label: v.name, sub:'Otwiera się w nowej karcie', kind:'link', url: v.url }));
+          stack.push({ title: node.label, nodes: children });
+          render();
+        })
+        .withFailureHandler(function(err){
+          el.classList.remove('loading');
+          showToast('Błąd połączenia z Dyskiem: ' + (err && err.message || err));
+        })
+        .getRcpViews();
+    }
+  });
 }
 
 backEl.addEventListener('click', ()=>{
   if (stack.length > 1) { stack.pop(); render(); }
 });
-document.getElementById('core').addEventListener('click', ()=>{
-  stack = [{ title:'', nodes: ROOT }];
-  render();
-});
 document.addEventListener('keydown', (e)=>{
-  if (e.key === 'Escape') {
-    if (panelEl.classList.contains('show')) closePanel();
-    else if (stack.length > 1) { stack.pop(); render(); }
-  }
+  if (e.key !== 'Escape') return;
+  if (panelEl.classList.contains('show')) { closePanel(); return; }
+  if (!menuOpen) return;
+  if (stack.length > 1) { stack.pop(); render(); }
+  else closeMenu();
 });
 
 /* ---------------------------- PIN gate (BatCave) ------------------------- */
@@ -536,7 +641,11 @@ function escapeHtml(s){
   return d.innerHTML;
 }
 
-render();
+// Widoczne zgłaszanie błędów zamiast cichego "nic się nie dzieje" —
+// pomaga zdiagnozować realną przyczynę, jeśli jakiś przycisk faktycznie
+// nie zadziała (np. brak mostka Apps Script, zablokowane API przeglądarki).
+window.addEventListener('error', (e)=> showToast('Błąd interfejsu: ' + e.message));
+window.addEventListener('unhandledrejection', (e)=> showToast('Błąd interfejsu: ' + (e.reason && e.reason.message || e.reason)));
 </script>
 </body>
 </html>
