@@ -1,13 +1,17 @@
 /**
  * CEREBRO — BACKUP AUTOMATYCZNY (Dysk Google)
  * ============================================================================
- * To jest ODRĘBNY, samodzielny projekt Google Apps Script — niezależny od
- * Code.gs / aplikacji Cerebro. Działa bezpośrednio na plikach Dysku Google
- * (folder "Cerebro core"), nie na arkuszu bazy danych.
+ * Ten plik żyje w TYM SAMYM projekcie Apps Script co Code.gs i DriveSync
+ * (nie jest osobnym projektem). Działa bezpośrednio na plikach Dysku Google
+ * (folder "Cerebro core"), niezależnie od arkusza bazy danych aplikacji —
+ * dlatego `setupTriggers()` poniżej kasuje wyłącznie SWOJE dwa triggery,
+ * nie ruszając triggera `syncDriveFiles` z DriveSync.
  *
- * Instalacja (jednorazowo):
- *  1) https://script.google.com/  -> Nowy projekt (osobny od projektu Cerebro).
- *  2) Wklej całą zawartość tego pliku (zastąp domyślny kod).
+ * Instalacja (jednorazowo, w istniejącym projekcie Cerebro):
+ *  1) Extensions/Rozszerzenia -> Apps Script (albo bezpośrednio na
+ *     script.google.com, jeśli projekt jest samodzielny) -> otwórz projekt
+ *     Cerebro, w którym jest już Code.gs.
+ *  2) Dodaj nowy plik skryptu o nazwie "Backup" i wklej tu całą zawartość.
  *  3) Po lewej stronie kliknij "Usługi" (Services) -> "+" -> dodaj
  *     "Drive API" (Advanced Google Services). Bez tego kroku aktualizacja
  *     treści zmienionych plików w dziennym mirrorze nie zadziała.
@@ -43,7 +47,7 @@
  *  - Dysk zapyta o pliki o tych samych nazwach -> wybierz "Zamień"
  *    ("Replace"), NIE "Zachowaj obie" ("Keep both"). "Zamień" nadpisuje
  *    istniejący plik jako nową wersję pod tym samym ID -> wszystkie linki
- *    (np. w CerebroHub.html) nadal działają.
+ *    (np. w Hub.html) nadal działają.
  *  - Jeśli po przywróceniu coś nadal nie działa - to znaczy, że problem nie
  *    leży w nadpisanych plikach, tylko gdzie indziej (np. w uprawnieniach,
  *    w innej integracji) - szukaj dalej tam.
@@ -62,7 +66,12 @@ const MONTHLY_RETENTION = 12; // ile ostatnich miesięcznych snapshotów trzyma�
 // --------------------------------------------------------------------------
 
 function setupTriggers() {
-  ScriptApp.getProjectTriggers().forEach(t => ScriptApp.deleteTrigger(t));
+  // Usuwa TYLKO triggery tego pliku — zostawia w spokoju np. syncDriveFiles
+  // z DriveSync, które żyje w tym samym projekcie.
+  const ownHandlers = ['runDailyMirror', 'runMonthlySnapshot'];
+  ScriptApp.getProjectTriggers().forEach(t => {
+    if (ownHandlers.includes(t.getHandlerFunction())) ScriptApp.deleteTrigger(t);
+  });
 
   ScriptApp.newTrigger('runDailyMirror')
     .timeBased().everyDays(1).atHour(3).create();

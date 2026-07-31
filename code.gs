@@ -6,11 +6,22 @@
 const FOLDER_NAME = 'Cerebro';
 
 // Główny handler HTTP
+// ?view=app  -> właściwa aplikacja Cerebro (Index / moduły)
+// (brak parametru, cokolwiek innego) -> Hub — pulpit-rozdroże w stylu Windows 98
 function doGet(e) {
-  const page = e.parameter.page || 'index';
+  const view = (e.parameter.view || 'hub').toLowerCase();
+
+  if (view === 'app') {
+    return HtmlService
+      .createTemplateFromFile('Index')
+      .evaluate()
+      .setTitle('Cerebro')
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
   return HtmlService
-    .createTemplateFromFile('Index')
-    .evaluate()
+    .createHtmlOutputFromFile('Hub')
     .setTitle('Cerebro')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);

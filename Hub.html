@@ -303,6 +303,14 @@ const HUB = {
   kind: "Folder główny",
   children: [
     {
+      name: "Cerebro (aplikacja)",
+      url: "?view=app",
+      kind: "Otwórz aplikację",
+      desktop: true,
+      color: "app",
+      app: true
+    },
+    {
       name: "Wayne Enterprises",
       url: "https://drive.google.com/drive/folders/1_jwtJF6LoD5r-puMxybTsioZJkLOBpjA",
       kind: "Gałąź: biznes",
@@ -400,6 +408,7 @@ function plusIcon(){
 }
 function iconFor(node){
   if(node.placeholder) return plusIcon();
+  if(node.app) return computerIcon();
   if(node.color==="bat") return batIcon();
   if(node.color==="gold") return folderIcon("#e0a800");
   return folderIcon("#f5d76e");
@@ -415,7 +424,7 @@ HUB.children.filter(n=>n.desktop).forEach((node,i)=>{
     document.querySelectorAll('.dicon').forEach(x=>x.classList.remove('selected'));
     d.classList.add('selected');
   });
-  d.addEventListener('dblclick', ()=> node.placeholder ? openAbout() : openExplorer(node));
+  d.addEventListener('dblclick', ()=> node.app ? (window.location.href = node.url) : (node.placeholder ? openAbout() : openExplorer(node)));
   iconsEl.appendChild(d);
 });
 
@@ -427,7 +436,7 @@ const openWindows = [];
 function buildRow(node){
   const row = document.createElement(node.url ? 'a' : 'div');
   row.className='row';
-  if(node.url){ row.href = node.url; row.target='_blank'; row.rel='noopener'; }
+  if(node.url){ row.href = node.url; if(!node.app){ row.target='_blank'; row.rel='noopener'; } }
   row.innerHTML = `${folderSvgInline(node)}<span class="name">${node.name}</span><span class="kind">${node.kind||'Folder'}</span>`;
   if(node.children && node.children.length){
     row.addEventListener('click', (e)=>{
@@ -439,11 +448,18 @@ function buildRow(node){
   return row;
 }
 function folderSvgInline(node){
-  return `<span class="ico">${node.placeholder?plusIconSmall():(node.color==='bat'?batIconSmall():folderIconSmall())}</span>`;
+  return `<span class="ico">${iconSmallFor(node)}</span>`;
 }
 function folderIconSmall(){return `<svg width="20" height="16" viewBox="0 0 32 26"><path d="M1 4 L1 22 L30 22 L30 8 L14 8 L11 4 Z" fill="#f5d76e" stroke="#402d00" stroke-width="1"/></svg>`;}
 function batIconSmall(){return `<svg width="20" height="16" viewBox="0 0 32 26"><circle cx="16" cy="13" r="11" fill="#1a1a1a"/></svg>`;}
 function plusIconSmall(){return `<svg width="20" height="16" viewBox="0 0 32 26"><rect x="2" y="2" width="28" height="22" fill="none" stroke="#808080" stroke-dasharray="3 2"/></svg>`;}
+function computerIconSmall(){return `<svg width="20" height="16" viewBox="0 0 32 26"><rect x="2" y="2" width="28" height="16" fill="#c0c0c0" stroke="#000" stroke-width="1"/><rect x="5" y="4.5" width="22" height="11" fill="#1084d0"/></svg>`;}
+function iconSmallFor(node){
+  if(node.placeholder) return plusIconSmall();
+  if(node.app) return computerIconSmall();
+  if(node.color==='bat') return batIconSmall();
+  return folderIconSmall();
+}
 
 function renderExplorerBody(win, node){
   const body = win.querySelector('.winbody');
@@ -554,10 +570,10 @@ function openAbout(){
     <div class="winbody pad">
       <b>Jak dodać nową ścieżkę do huba</b>
       <ul class="steps">
-        <li>Otwórz plik <code class="mono">CerebroHub.html</code> (repo GitHub) w edytorze tekstu.</li>
+        <li>Otwórz plik <code class="mono">Hub.html</code> w edytorze Apps Script (ten sam projekt co Code.gs) w edytorze tekstu.</li>
         <li>Znajdź obiekt <code class="mono">HUB</code> na początku sekcji <code class="mono">&lt;script&gt;</code>.</li>
         <li>Dopisz kolejny wpis <code class="mono">{ name, url, kind, children }</code> — hub jest z założenia nieskończenie rozwijalny.</li>
-        <li>Zapisz, zacommituj i wypchnij zmianę — plik jest statyczny, nie wymaga żadnej instalacji.</li>
+        <li>Zapisz w edytorze Apps Script — zmiana jest widoczna od razu przy odświeżeniu strony.</li>
       </ul>
       <b>Backup</b>
       <ul class="steps">
@@ -580,10 +596,10 @@ function buildStartTree(children, depth){
   children.forEach(node=>{
     const it = document.createElement('div');
     it.className='smitem' + (depth>0?' smsub':'');
-    it.innerHTML = `<span class="ico">${node.placeholder?plusIconSmall():(node.color==='bat'?batIconSmall():folderIconSmall())}</span><span>${node.name}</span>`;
+    it.innerHTML = `<span class="ico">${iconSmallFor(node)}</span><span>${node.name}</span>`;
     it.addEventListener('click', ()=>{
       document.getElementById('startmenu').classList.remove('open');
-      node.placeholder ? openAbout() : openExplorer(node);
+      node.app ? (window.location.href = node.url) : (node.placeholder ? openAbout() : openExplorer(node));
     });
     smitems.appendChild(it);
   });
