@@ -460,12 +460,13 @@ function layoutRows(nodes){
     rowEl.className = 'row';
     rowNodes.forEach(node=>{
       const isLink = node.kind === 'link';
-      // Linki to prawdziwe <a href target="_blank"> — bardziej niezawodne
-      // niż window.open() wywoływany z JS wewnątrz piaskownicy Apps Script.
+      // Linki to prawdziwe <a href> (nie window.open() wywoływany z JS) —
+      // bardziej niezawodne w piaskownicy Apps Script; otwierają się w tej
+      // samej karcie.
       const el = document.createElement(isLink ? 'a' : 'div');
       el.className = 'bar';
       el.tabIndex = 0;
-      if (isLink) { el.href = node.url; el.target = '_blank'; el.rel = 'noopener'; }
+      if (isLink) { el.href = node.url; }
       el.innerHTML =
         `<div class="label">${node.locked ? lockIcon() : ''}${escapeHtml(node.label)}</div>` +
         (node.sub ? `<div class="sub">${escapeHtml(node.sub)}</div>` : '');
@@ -483,7 +484,7 @@ function layoutRows(nodes){
 function activate(node, el){
   flashEye(()=>{
     if (node.kind === 'link') {
-      window.open(node.url, '_blank', 'noopener');
+      window.location.href = node.url;
       return;
     }
     if (node.kind === 'pin') {
