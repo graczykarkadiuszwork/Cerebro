@@ -23,9 +23,48 @@
 
 // ── Odczyt danych ────────────────────────────────────────────
 
+// Gabinety muszą istnieć zawsze — grafik bez nich nie ma się o co oprzeć.
+// Tworzymy je przy pierwszym odczycie, zamiast wymagać pamiętania
+// o ponownym uruchomieniu setupRCP() po aktualizacji.
+function _zapewnijGabinety() {
+  const ss = _ss();
+  let sh = ss.getSheetByName('Gabinety');
+  if (!sh) {
+    sh = ss.insertSheet('Gabinety');
+    sh.appendRow(['ID', 'Nazwa', 'Kolejnosc', 'Aktywny']);
+  }
+  if (sh.getLastRow() < 2) {
+    [['G1', 'Gabinet 1', 1, 'TAK'],
+     ['G2', 'Gabinet 2', 2, 'TAK'],
+     ['G3', 'Gabinet 3', 3, 'TAK']].forEach(r => sh.appendRow(r));
+  }
+  return sh;
+}
+
+// Arkusze grafiku — tworzone leniwie z tego samego powodu.
+function _zapewnijArkusz(nazwa, naglowki) {
+  const ss = _ss();
+  let sh = ss.getSheetByName(nazwa);
+  if (!sh) {
+    sh = ss.insertSheet(nazwa);
+    sh.appendRow(naglowki);
+  } else if (sh.getLastRow() === 0) {
+    sh.appendRow(naglowki);
+  }
+  return sh;
+}
+
+function _shGrafik() {
+  return _zapewnijArkusz('Grafik', ['ID','GabinetID','DzienTygodnia','Typ','OsobaID',
+    'Od','Do','AsystaWymagana','AsystaUwaga','Zmodyfikowano']);
+}
+function _shAsysta() {
+  return _zapewnijArkusz('GrafikAsysta', ['ID','BlokID','OsobaID','Od','Do','Zmodyfikowano']);
+}
+
 function _gabinetyAll(includeInactive) {
-  const sh = _ss().getSheetByName('Gabinety');
-  if (!sh || sh.getLastRow() < 2) return [];
+  const sh = _zapewnijGabinety();
+  if (sh.getLastRow() < 2) return [];
   return sh.getDataRange().getValues().slice(1)
     .map(r => ({
       id: String(r[0]),
@@ -38,8 +77,8 @@ function _gabinetyAll(includeInactive) {
 }
 
 function _grafikBlokiAll() {
-  const sh = _ss().getSheetByName('Grafik');
-  if (!sh || sh.getLastRow() < 2) return [];
+  const sh = _shGrafik();
+  if (sh.getLastRow() < 2) return [];
   return sh.getDataRange().getValues().slice(1)
     .map(r => ({
       id: String(r[0]),
@@ -56,8 +95,8 @@ function _grafikBlokiAll() {
 }
 
 function _grafikAsystaAll() {
-  const sh = _ss().getSheetByName('GrafikAsysta');
-  if (!sh || sh.getLastRow() < 2) return [];
+  const sh = _shAsysta();
+  if (sh.getLastRow() < 2) return [];
   return sh.getDataRange().getValues().slice(1)
     .map(r => ({
       id: String(r[0]),
@@ -81,6 +120,13 @@ function _grafikPersonel() {
 
 function _validTime(t) {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(String(t || '').trim());
+}
+
+// Oś czasu grafiku dzieli się co 5 minut — pilnujemy tego przy zapisie,
+// żeby siatka nie rozjechała się na przypadkowych minutach.
+function _naSiatce(t) {
+  if (!_validTime(t)) return false;
+  return (_t2m(t) % GRAFIK_KROK_MIN) === 0;
 }
 
 // Godzina zegarowa z minut, ZAWSZE dwucyfrowa (09:00, nie 9:00).
@@ -133,10 +179,18 @@ function _grafikPayload() {
 
   const godziny = {};
   GRAFIK_DAYS.forEach(d => {
+    const rano = _zmianaGodziny(d, ZMIANA_RANO);
+    const popo = _zmianaGodziny(d, ZMIANA_POPO);
     godziny[d] = {
       open: _hhmm(GRAFIK_HOURS[d].open),
       close: _hhmm(GRAFIK_HOURS[d].close),
-      nazwa: GRAFIK_DAY_NAMES[d]
+      nazwa: GRAFIK_DAY_NAMES[d],
+      // Gotowe warianty pory pracy — punkt wyjścia, każdy do zmiany.
+      zmiany: {
+        rano: { od: _hhmm(rano.open), do: _hhmm(rano.close) },
+        popo: { od: _hhmm(popo.open), do: _hhmm(popo.close) },
+        caly: { od: _hhmm(GRAFIK_HOURS[d].open), do: _hhmm(GRAFIK_HOURS[d].close) }
+      }
     };
   });
 
@@ -150,6 +204,9 @@ function _grafikPayload() {
     godziny,
     dni: GRAFIK_DAYS,
     tagiDostepne: DOCTOR_SPECIALIZATION_TAGS,
+    krokMin: GRAFIK_KROK_MIN,
+    asystaZew: ASYSTA_ZEW,
+    uwagaBrakAsysty: UWAGA_BRAK_ASYSTY,
     rekomendacje
   };
 }
@@ -161,7 +218,7 @@ function masterSaveGabinet(token, gabinetId, nazwa, aktywny) {
   nazwa = String(nazwa || '').trim();
   if (!nazwa) return { ok: false, msg: 'Podaj nazwę gabinetu.' };
 
-  const sh = _ss().getSheetByName('Gabinety');
+  const sh = _zapewnijGabinety();
   const rows = sh.getDataRange().getValues();
 
   if (gabinetId) {
@@ -212,6 +269,9 @@ function masterSaveGrafikBlok(token, blok) {
   if (GRAFIK_DAYS.indexOf(dzien) === -1) return { ok: false, msg: 'Nieprawidłowy dzień tygodnia.' };
   if (BLOK_TYPES.indexOf(typ) === -1) return { ok: false, msg: 'Nieprawidłowy typ bloku.' };
   if (!_validTime(od) || !_validTime(do_)) return { ok: false, msg: 'Godziny w formacie HH:MM.' };
+  if (!_naSiatce(od) || !_naSiatce(do_)) {
+    return { ok: false, msg: 'Godziny muszą być wielokrotnością ' + GRAFIK_KROK_MIN + ' minut.' };
+  }
   if (_t2m(od) >= _t2m(do_)) return { ok: false, msg: 'Godzina „do" musi być późniejsza niż „od".' };
 
   const gabinet = _gabinetyAll(false).find(g => g.id === gabinetId);
@@ -252,7 +312,7 @@ function masterSaveGrafikBlok(token, blok) {
     return { ok: false, msg: 'Odstępstwo od standardu asysty wymaga adnotacji (dlaczego).' };
   }
 
-  const sh = _ss().getSheetByName('Grafik');
+  const sh = _shGrafik();
   const rows = sh.getDataRange().getValues();
   const wszystkie = _grafikBlokiAll();
   const blokId = String(blok.id || '');
@@ -304,7 +364,7 @@ function masterDeleteGrafikBlok(token, blokId) {
   blokId = String(blokId || '');
   if (!blokId) return { ok: false, msg: 'Brak bloku.' };
 
-  const sh = _ss().getSheetByName('Grafik');
+  const sh = _shGrafik();
   const rows = sh.getDataRange().getValues();
   for (let i = rows.length - 1; i >= 1; i--) {
     if (String(rows[i][0]) === blokId) {
@@ -318,8 +378,8 @@ function masterDeleteGrafikBlok(token, blokId) {
 }
 
 function _usunAsysteBloku(blokId) {
-  const sh = _ss().getSheetByName('GrafikAsysta');
-  if (!sh || sh.getLastRow() < 2) return;
+  const sh = _shAsysta();
+  if (sh.getLastRow() < 2) return;
   const rows = sh.getDataRange().getValues();
   for (let i = rows.length - 1; i >= 1; i--) {
     if (String(rows[i][1]) === String(blokId)) sh.deleteRow(i + 1);
@@ -344,19 +404,24 @@ function masterSetGrafikAsysta(token, blokId, lista) {
   for (let i = 0; i < lista.length; i++) {
     const poz = lista[i] || {};
     const osobaId = String(poz.osobaId || '');
-    const osoba = personel.find(p => p.id === osobaId);
-    if (!osoba) return { ok: false, msg: 'Wybierz asystę z listy.' };
-    if (osoba.grupa !== GRUPA_ASYSTENTKA) {
+    const zew = _czyAsystaZew(osobaId);
+    const osoba = zew ? null : personel.find(p => p.id === osobaId);
+    if (!zew && !osoba) return { ok: false, msg: 'Wybierz asystę z listy.' };
+    if (osoba && osoba.grupa !== GRUPA_ASYSTENTKA) {
       return { ok: false, msg: osoba.imie + ' ' + osoba.nazwisko + ' nie jest asystentką.' };
     }
     if (uzyte.indexOf(osobaId) !== -1) {
       return { ok: false, msg: 'Ta sama osoba dwa razy w tym samym bloku.' };
     }
     uzyte.push(osobaId);
+    const etykieta = zew ? _labelAsystaZew(osobaId) : (osoba.imie + ' ' + osoba.nazwisko);
 
     const od = String(poz.od || blok.od).trim();
     const do_ = String(poz.do || blok.do).trim();
     if (!_validTime(od) || !_validTime(do_)) return { ok: false, msg: 'Godziny asysty w formacie HH:MM.' };
+    if (!_naSiatce(od) || !_naSiatce(do_)) {
+      return { ok: false, msg: 'Godziny asysty muszą być wielokrotnością ' + GRAFIK_KROK_MIN + ' minut.' };
+    }
     if (_t2m(od) >= _t2m(do_)) return { ok: false, msg: 'Godzina „do" musi być późniejsza niż „od".' };
 
     // Asysta nie może wystawać poza blok, który obsługuje.
@@ -374,7 +439,7 @@ function masterSetGrafikAsysta(token, blokId, lista) {
       return b && b.dzien === blok.dzien && _zakresyNachodza(od, do_, a.od, a.do);
     });
     if (konflikt) {
-      return { ok: false, msg: osoba.imie + ' ' + osoba.nazwisko +
+      return { ok: false, msg: etykieta +
         ' asystuje już w tym czasie w innym gabinecie (' + konflikt.od + '–' + konflikt.do + ').' };
     }
 
@@ -382,7 +447,7 @@ function masterSetGrafikAsysta(token, blokId, lista) {
   }
 
   _usunAsysteBloku(blokId);
-  const sh = _ss().getSheetByName('GrafikAsysta');
+  const sh = _shAsysta();
   const teraz = new Date().toISOString();
   let seed = _grafikAsystaAll();
   wynik.forEach(w => {
@@ -1464,4 +1529,157 @@ function _grafikRekomendacje(ctx) {
 
   out.forEach((r, i) => { r.id = 'R' + (i + 1); });
   return out;
+}
+
+// ── Kreator grafiku ──────────────────────────────────────────
+// Ścieżka: wybierz dni → ustaw godziny → dobierz asystę → zatwierdź.
+// Celem jest wpisanie całego tygodnia lekarza za jednym razem, zamiast
+// klikania bloku po bloku.
+
+/**
+ * Kto jest wolny w danym oknie czasu. Asystentka zajęta gdzie indziej
+ * NIE trafia na listę — użytkownik nie powinien móc wybrać kogoś,
+ * kogo i tak odrzuci walidacja przy zapisie.
+ *
+ * `zajete` to opcjonalne rezerwacje z trwającego kreatora (jeszcze
+ * niezapisane) — bez nich ta sama osoba dałaby się wybrać dwa razy.
+ */
+function masterGrafikWolneAsysty(token, dzien, od, do_, zajete) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  dzien = parseInt(dzien, 10);
+  if (GRAFIK_DAYS.indexOf(dzien) === -1) return { ok: false, msg: 'Nieprawidłowy dzień.' };
+  if (!_validTime(od) || !_validTime(do_)) return { ok: false, msg: 'Nieprawidłowe godziny.' };
+
+  const bloki = _grafikBlokiAll();
+  const asysta = _grafikAsystaAll();
+  const blokiMap = {};
+  bloki.forEach(b => { blokiMap[b.id] = b; });
+
+  const rezerwacje = Array.isArray(zajete) ? zajete : [];
+
+  function wolna(id) {
+    // zajęta w już zapisanym grafiku
+    const kolizja = asysta.some(a => {
+      if (String(a.osobaId) !== String(id)) return false;
+      const b = blokiMap[a.blokId];
+      return b && b.dzien === dzien && _zakresyNachodza(od, do_, a.od, a.do);
+    });
+    if (kolizja) return false;
+    // zajęta w bieżącym kreatorze
+    return !rezerwacje.some(r =>
+      String(r.osobaId) === String(id) && parseInt(r.dzien, 10) === dzien &&
+      _validTime(r.od) && _validTime(r.do) && _zakresyNachodza(od, do_, r.od, r.do));
+  }
+
+  const wolne = _grafikPersonel()
+    .filter(p => p.grupa === GRUPA_ASYSTENTKA)
+    .map(p => ({ id: p.id, label: p.imie + ' ' + p.nazwisko, zew: false, wolna: wolna(p.id) }));
+
+  const zewnetrzne = ASYSTA_ZEW.map(a => ({
+    id: a.id, label: a.label, zew: true, wolna: wolna(a.id)
+  }));
+
+  return {
+    ok: true,
+    dostepne: wolne.filter(x => x.wolna),
+    zajete: wolne.filter(x => !x.wolna).map(x => x.label),
+    zewnetrzne: zewnetrzne.filter(x => x.wolna)
+  };
+}
+
+/**
+ * Zbiorczy zapis z kreatora: jeden lekarz, wiele dni naraz.
+ *
+ * pozycje: [{ dzien, od, do, gabinetId?, asysta:[{osobaId,od?,do?}],
+ *             brakAsysty?:bool, uwaga?:string }]
+ *
+ * Gabinet dobierany automatycznie (pierwszy wolny w tych godzinach),
+ * chyba że podano wprost. Zapis jest atomowy „na pozycję”: jeśli któraś
+ * się nie uda, pozostałe i tak przechodzą, a lista błędów wraca do
+ * użytkownika — to lepsze niż wywalenie całego tygodnia przez jeden konflikt.
+ */
+function masterGrafikKreatorZapisz(token, osobaId, pozycje) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  osobaId = String(osobaId || '');
+  if (!osobaId) return { ok: false, msg: 'Wybierz lekarza.' };
+  if (!Array.isArray(pozycje) || !pozycje.length) return { ok: false, msg: 'Nie wybrano żadnego dnia.' };
+
+  const personel = _grafikPersonel();
+  const osoba = personel.find(p => p.id === osobaId);
+  if (!osoba) return { ok: false, msg: 'Nie znaleziono tej osoby.' };
+  if (osoba.grupa !== GRUPA_LEKARZ) return { ok: false, msg: 'Kreator obsadza bloki lekarskie.' };
+
+  const gabinety = _gabinetyAll(false);
+  if (!gabinety.length) return { ok: false, msg: 'Brak aktywnych gabinetów.' };
+
+  const dodane = [];
+  const bledy = [];
+
+  pozycje.forEach(poz => {
+    const dzien = parseInt(poz.dzien, 10);
+    const od = String(poz.od || '').trim();
+    const do_ = String(poz.do || '').trim();
+    const etykietaDnia = (GRAFIK_DAY_NAMES[dzien] || dzien) + ' ' + od + '–' + do_;
+
+    if (GRAFIK_DAYS.indexOf(dzien) === -1) { bledy.push(etykietaDnia + ': nieprawidłowy dzień.'); return; }
+
+    // Gabinet: wskazany albo pierwszy wolny w tych godzinach.
+    let gabinetId = String(poz.gabinetId || '');
+    if (!gabinetId) {
+      const biezace = _grafikBlokiAll().filter(b => b.dzien === dzien);
+      const wolny = gabinety.find(g =>
+        !biezace.some(b => b.gabinetId === g.id && _zakresyNachodza(od, do_, b.od, b.do)));
+      if (!wolny) {
+        bledy.push(etykietaDnia + ': wszystkie gabinety zajęte w tych godzinach.');
+        return;
+      }
+      gabinetId = wolny.id;
+    }
+
+    const brakAsysty = !!poz.brakAsysty;
+    const lista = Array.isArray(poz.asysta) ? poz.asysta : [];
+
+    // Świadomy brak asysty musi zostawić ślad w grafiku — inaczej po tygodniu
+    // nikt nie odróżni decyzji od przeoczenia.
+    const uwaga = brakAsysty
+      ? (String(poz.uwaga || '').trim()
+          ? UWAGA_BRAK_ASYSTY + ': ' + String(poz.uwaga).trim().slice(0, 300)
+          : UWAGA_BRAK_ASYSTY)
+      : String(poz.uwaga || '').trim().slice(0, 300);
+
+    const res = masterSaveGrafikBlok(token, {
+      id: '',
+      gabinetId: gabinetId,
+      dzien: dzien,
+      typ: BLOK_LEKARZ,
+      osobaId: osobaId,
+      od: od,
+      do: do_,
+      asystaWymagana: brakAsysty ? 0 : (lista.length || 1),
+      asystaUwaga: uwaga
+    });
+
+    if (!res || !res.ok) {
+      bledy.push(etykietaDnia + ': ' + ((res && res.msg) || 'nie udało się zapisać.'));
+      return;
+    }
+
+    if (!brakAsysty && lista.length) {
+      const asystaDoZapisu = lista.map(a => ({
+        osobaId: a.osobaId,
+        od: a.od || od,
+        do: a.do || do_
+      }));
+      const r2 = masterSetGrafikAsysta(token, res.id, asystaDoZapisu);
+      if (!r2 || !r2.ok) bledy.push(etykietaDnia + ' (asysta): ' + ((r2 && r2.msg) || 'błąd.'));
+    }
+
+    dodane.push({ id: res.id, dzien: dzien, od: od, do: do_, gabinetId: gabinetId });
+  });
+
+  _logAdmin('KreatorGrafiku', osobaId,
+    osoba.imie + ' ' + osoba.nazwisko + ' — dodano ' + dodane.length +
+    (bledy.length ? (', błędów ' + bledy.length) : ''));
+
+  return { ok: true, dodane: dodane.length, bledy: bledy.slice(0, 20) };
 }

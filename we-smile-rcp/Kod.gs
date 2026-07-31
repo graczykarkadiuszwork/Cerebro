@@ -91,6 +91,46 @@ const BLOK_LEKARZ = 'Lekarz';
 const BLOK_HIGIENA = 'Higienizacja';
 const BLOK_TYPES = [BLOK_LEKARZ, BLOK_HIGIENA];
 
+// Najmniejsza jednostka osi czasu grafiku. Bloki nie muszą pokrywać się
+// ze zmianami — mogą zaczynać się i kończyć co 5 minut.
+const GRAFIK_KROK_MIN = 5;
+
+// Godzina podziału doby na zmianę poranną i popołudniową. To tylko punkt
+// wyjścia dla gotowych wariantów — każdy blok da się potem dowolnie zmienić.
+const GRAFIK_PODZIAL = { 1: 14*60, 2: 14*60, 3: 14*60, 4: 14*60, 5: 14*60, 6: 12*60 + 30 };
+
+const ZMIANA_RANO = 'rano', ZMIANA_POPO = 'popo', ZMIANA_CALY = 'caly';
+
+// Gotowe warianty pory pracy dla danego dnia, liczone z godzin otwarcia.
+function _zmianaGodziny(dzien, wariant) {
+  const h = GRAFIK_HOURS[dzien];
+  if (!h) return null;
+  const podzial = GRAFIK_PODZIAL[dzien] || Math.round((h.open + h.close) / 2);
+  if (wariant === ZMIANA_RANO) return { open: h.open, close: podzial };
+  if (wariant === ZMIANA_POPO) return { open: podzial, close: h.close };
+  return { open: h.open, close: h.close };
+}
+
+// ── Asysta zewnętrzna ────────────────────────────────────────
+// Miejsca na osoby spoza zespołu (agencja, zastępstwo). Świadomie NIE są
+// pracownikami — nie mają PIN-u, nie liczą się w RCP i na grafiku są
+// wyraźnie oznaczone, żeby nikt nie pomylił ich ze stałą obsadą.
+
+const ASYSTA_ZEW = [
+  { id: 'ZEW1', label: 'Asysta zewnętrzna 1' },
+  { id: 'ZEW2', label: 'Asysta zewnętrzna 2' }
+];
+function _czyAsystaZew(id) {
+  return ASYSTA_ZEW.some(a => a.id === String(id));
+}
+function _labelAsystaZew(id) {
+  const a = ASYSTA_ZEW.find(x => x.id === String(id));
+  return a ? a.label : String(id);
+}
+
+// Adnotacja wstawiana, gdy właściciel świadomie zatwierdzi blok bez asysty.
+const UWAGA_BRAK_ASYSTY = 'BRAK ASYSTY — zatwierdzone świadomie';
+
 // ── Grupy zawodowe ───────────────────────────────────────────
 // Rola w arkuszu Pracownicy jest polem tekstowym (historycznie wpisywana
 // swobodnie: „higienistka stomatologiczna", „asystentka stomatologiczna"…).
@@ -306,6 +346,10 @@ function callRCP(action, argsJson) {
       case 'masterSaveGrafikBlok':  return masterSaveGrafikBlok(args[0], args[1]);
       case 'masterDeleteGrafikBlok': return masterDeleteGrafikBlok(args[0], args[1]);
       case 'masterSetGrafikAsysta': return masterSetGrafikAsysta(args[0], args[1], args[2]);
+      case 'masterGrafikWolneAsysty': return masterGrafikWolneAsysty(args[0], args[1], args[2], args[3], args[4]);
+      case 'masterGrafikKreatorZapisz': return masterGrafikKreatorZapisz(args[0], args[1], args[2]);
+      case 'masterGrafikImportPodglad': return masterGrafikImportPodglad(args[0], args[1]);
+      case 'masterGrafikImportZastosuj': return masterGrafikImportZastosuj(args[0], args[1], args[2]);
       case 'masterRemoveEmployee':  return masterRemoveEmployee(args[0], args[1]);
       case 'masterRestoreEmployee': return masterRestoreEmployee(args[0], args[1]);
       case 'masterAddEmployee':     return masterAddEmployee(args[0], args[1], args[2], args[3], args[4]);

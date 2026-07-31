@@ -35,6 +35,34 @@
 .m-luka-c{font-family:ui-monospace,monospace;font-size:12.5px;font-weight:800;
   color:var(--c-muted);flex-shrink:0;min-width:82px}
 .m-luka-l{flex:1;font-size:13px;color:var(--c-muted);font-weight:600}
+.m-brak-tag{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.4px;
+  padding:3px 8px;border-radius:999px;background:var(--c-accent);color:#fff;margin-top:5px}
+
+/* ── Kreator grafiku (mobile) ── */
+.mk-steps{display:flex;gap:5px;margin-bottom:14px}
+.mk-step{flex:1;height:4px;border-radius:2px;background:var(--c-border)}
+.mk-step.on{background:var(--grad-brand)}
+.mk-tile{border:1.5px solid var(--c-border);border-radius:14px;padding:13px;background:var(--c-white);
+  margin-bottom:10px;cursor:pointer;font-family:inherit;text-align:left;width:100%}
+.mk-tile.on{border-color:var(--c-primary);background:var(--c-primary-tint)}
+.mk-tile-h{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.mk-tile-d{font-size:15px;font-weight:700;color:var(--c-ink)}
+.mk-tile-s{font-size:12px;color:var(--c-muted);font-weight:600;margin-top:2px}
+.mk-check{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--c-border-strong);
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;color:transparent}
+.mk-tile.on .mk-check{background:var(--c-primary);border-color:var(--c-primary);color:#fff}
+.mk-vars{display:flex;gap:6px;margin-top:11px}
+.mk-var{flex:1;min-height:42px;border-radius:11px;border:1px solid var(--c-border);
+  background:var(--c-white);color:var(--c-muted);font-size:12.5px;font-weight:700;
+  font-family:inherit;cursor:pointer;padding:0 4px}
+.mk-var.on{background:var(--c-primary);border-color:var(--c-primary);color:#fff}
+.mk-as{min-height:44px;padding:0 15px;border-radius:999px;border:1px solid var(--c-border);
+  background:var(--c-white);color:var(--c-ink);font-size:13.5px;font-weight:600;
+  font-family:inherit;cursor:pointer;margin:0 6px 6px 0}
+.mk-as.on{background:var(--c-primary);border-color:var(--c-primary);color:#fff}
+.mk-as.zew{border-style:dashed}
+.mk-as.zew.on{background:var(--c-navy);border-color:var(--c-navy)}
+.mk-as.brak.on{background:var(--c-accent);border-color:var(--c-accent)}
 
 .m-rek-ic{flex-shrink:0;width:24px;height:24px;border-radius:50%;border:none;
   display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;
@@ -144,6 +172,10 @@
     <!-- ── GRAFIK ── -->
     <section id="v-grafik" class="m-view">
       <div id="m-gr-chips" class="m-chips"></div>
+      <button id="m-gr-kreator" class="m-btn m-btn-p">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        Ułóż grafik lekarza
+      </button>
       <button id="m-gr-rek" class="m-btn m-btn-g" style="margin-bottom:14px">
         <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0-3.5 10.9V17h7v-3.1A6 6 0 0 0 12 3z"/><path d="M10 20h4"/></svg>
         <span>Rekomendacje</span><span id="m-gr-cnt" class="m-chip-b">0</span>
@@ -426,6 +458,7 @@ function onView(v) {
 // ── Arkusz pełnoekranowy ──────────────────────────────────────
 
 var _sheetSave = null;
+var _sheetCancel = null;
 
 function sheet(title, html, onSave, opts) {
   opts = opts || {};
@@ -436,6 +469,10 @@ function sheet(title, html, onSave, opts) {
   ok.style.display = onSave ? 'block' : 'none';
   document.getElementById('m-sheet-cancel').textContent = opts.cancelLabel || 'Anuluj';
   _sheetSave = onSave || null;
+  // Lewy przycisk domyślnie zamyka arkusz, ale w kreatorze cofa o krok.
+  // Podmieniamy zachowanie tutaj, a nie przez drugi listener — inaczej
+  // oba zadziałałyby naraz i arkusz cofałby krok i od razu się zamykał.
+  _sheetCancel = opts.onCancel || null;
   document.getElementById('m-sheet').classList.add('on');
   if (opts.after) opts.after();
 }
@@ -443,9 +480,13 @@ function sheet(title, html, onSave, opts) {
 function closeSheet() {
   document.getElementById('m-sheet').classList.remove('on');
   _sheetSave = null;
+  _sheetCancel = null;
 }
 
-document.getElementById('m-sheet-cancel').addEventListener('click', closeSheet);
+document.getElementById('m-sheet-cancel').addEventListener('click', function() {
+  if (_sheetCancel) { var f = _sheetCancel; _sheetCancel = null; f(); }
+  else closeSheet();
+});
 document.getElementById('m-sheet-ok').addEventListener('click', function() {
   if (_sheetSave) _sheetSave();
 });
@@ -918,16 +959,25 @@ function grLuka(gabId, od, do_) {
 function grBlok(b) {
   var rek = (S.gr.rekomendacje || []).filter(function(r){ return r.blokId === b.id; });
   var as = b.asysta || [], meta, cls = 'm-blok-m';
+  // Świadomy brak asysty musi być widoczny na pierwszy rzut oka.
+  var swiadomyBrak = /BRAK ASYSTY/.test(b.asystaUwaga || '');
+
   if (b.typ === 'Higienizacja') meta = 'Higienizacja';
-  else if (!as.length) { meta = 'Brak asysty'; cls += ' warn'; }
+  else if (!as.length) {
+    meta = swiadomyBrak ? esc(String(b.asystaUwaga).replace(/^BRAK ASYSTY[^:]*:?\s*/, '')) : 'Brak asysty';
+    cls += ' warn';
+  }
   else meta = 'Asysta: ' + as.map(function(a){ return esc(empName(a.osobaId)); }).join(', ');
-  if (b.asystaUwaga) meta += ' · ' + esc(b.asystaUwaga);
+  if (b.asystaUwaga && !swiadomyBrak) meta += ' · ' + esc(b.asystaUwaga);
+
+  var plakietka = (b.typ !== 'Higienizacja' && !as.length)
+    ? '<span class="m-brak-tag">BRAK ASYSTY</span>' : '';
 
   return '<button class="m-blok' + (b.typ === 'Higienizacja' ? ' hig' : '') +
     '" data-blok="' + esc(b.id) + '">' +
     '<span class="m-blok-c">' + esc(b.od) + '<br>' + esc(b.do) + '</span>' +
     '<span class="m-blok-b"><span class="m-blok-o">' + esc(empName(b.osobaId)) + '</span>' +
-    '<span class="' + cls + '">' + meta + '</span></span>' + grIkona(rek) + '</button>';
+    '<span class="' + cls + '">' + meta + '</span>' + plakietka + '</span>' + grIkona(rek) + '</button>';
 }
 
 function grSheet(blokId, gabId, od, do_) {
@@ -1149,6 +1199,213 @@ document.getElementById('m-gr-print').addEventListener('click', function() {
     '</tr></thead><tbody>' + tr + '</tbody></table>';
   window.print();
 });
+
+// ── Kreator grafiku (mobile) ──────────────────────────────────
+// Ten sam przepływ co na desktopie, ale każdy krok to pełny ekran:
+// dni → godziny → asysta.
+
+var MK = { krok: 1, lekarz: null, dni: {}, pozycje: [] };
+var MK_WAR = [{ id:'rano', l:'Rano' }, { id:'popo', l:'Popoł.' }, { id:'caly', l:'Cały dzień' }];
+
+document.getElementById('m-gr-kreator').addEventListener('click', function() {
+  if (!S.gr) { toast('Poczekaj na wczytanie grafiku.', false); return; }
+  if (!(S.gr.personel || []).some(function(p){ return p.grupa === 'lekarz'; })) {
+    toast('Brak lekarzy w zespole.', false); return;
+  }
+  MK = { krok: 1, lekarz: null, dni: {}, pozycje: [] };
+  mkRender();
+});
+
+function mkPasek() {
+  return '<div class="mk-steps">' + [1,2,3].map(function(n) {
+    return '<div class="mk-step' + (n <= MK.krok ? ' on' : '') + '"></div>';
+  }).join('') + '</div>';
+}
+
+function mkRender() {
+  if (MK.krok === 1) mkKrok1();
+  else if (MK.krok === 2) mkKrok2();
+  else mkKrok3();
+}
+
+function mkKrok1() {
+  var lekarze = (S.gr.personel || []).filter(function(p){ return p.grupa === 'lekarz'; });
+  var html = mkPasek() +
+    '<div class="m-field"><span class="m-lbl">Lekarz</span>' +
+    '<select id="mk-lek" class="m-sel"><option value="">— wybierz —</option>' +
+    lekarze.map(function(p) {
+      return '<option value="' + esc(p.id) + '"' + (MK.lekarz === p.id ? ' selected' : '') + '>' +
+        esc(p.imie + ' ' + p.nazwisko) + '</option>';
+    }).join('') + '</select></div>' +
+    '<div class="m-note">Dotknij dni, w które lekarz pracuje, i wybierz porę. Godziny doprecyzujesz dalej.</div>' +
+    S.gr.dni.map(function(nr) {
+      var g = S.gr.godziny[nr], w = MK.dni[nr];
+      return '<div class="mk-tile' + (w ? ' on' : '') + '" data-d="' + nr + '">' +
+        '<div class="mk-tile-h"><div><div class="mk-tile-d">' + esc(g.nazwa) + '</div>' +
+        '<div class="mk-tile-s">klinika ' + esc(g.open) + '–' + esc(g.close) + '</div></div>' +
+        '<span class="mk-check"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span></div>' +
+        (w ? '<div class="mk-vars">' + MK_WAR.map(function(v) {
+          return '<button type="button" class="mk-var' + (w.wariant === v.id ? ' on' : '') +
+            '" data-w="' + nr + '|' + v.id + '">' + v.l + '</button>';
+        }).join('') + '</div>' : '') + '</div>';
+    }).join('');
+
+  sheet('Krok 1 z 3 — dni pracy', html, function() {
+    if (!MK.lekarz) { toast('Wybierz lekarza.', false); return; }
+    var wyb = Object.keys(MK.dni).map(Number).sort(function(a,b){ return a-b; });
+    if (!wyb.length) { toast('Zaznacz przynajmniej jeden dzień.', false); return; }
+    MK.pozycje = wyb.map(function(nr) {
+      var st = MK.pozycje.find(function(p){ return p.dzien === nr; });
+      return { dzien: nr, od: MK.dni[nr].od, do: MK.dni[nr].do,
+        asysta: st ? (st.asysta||[]) : [], brakAsysty: st ? !!st.brakAsysty : false,
+        uwaga: st ? (st.uwaga||'') : '' };
+    });
+    MK.krok = 2; mkRender();
+  }, { okLabel: 'Dalej', after: function() {
+    document.getElementById('mk-lek').addEventListener('change', function(){ MK.lekarz = this.value || null; });
+    document.querySelectorAll('#m-sheet-body [data-d]').forEach(function(el) {
+      el.addEventListener('click', function(e) {
+        if (e.target.closest('[data-w]')) return;
+        var nr = parseInt(this.getAttribute('data-d'), 10);
+        if (MK.dni[nr]) delete MK.dni[nr];
+        else { var z = S.gr.godziny[nr].zmiany.caly; MK.dni[nr] = { wariant:'caly', od:z.od, do:z.do }; }
+        mkKrok1();
+      });
+    });
+    document.querySelectorAll('#m-sheet-body [data-w]').forEach(function(b) {
+      b.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var p = this.getAttribute('data-w').split('|');
+        var nr = parseInt(p[0],10), z = S.gr.godziny[nr].zmiany[p[1]];
+        MK.dni[nr] = { wariant: p[1], od: z.od, do: z.do };
+        mkKrok1();
+      });
+    });
+  }});
+}
+
+function mkKrok2() {
+  var krok = (S.gr.krokMin || 5) * 60;
+  var html = mkPasek() +
+    '<div class="m-note">Godziny ustawisz dowolnie, co ' + (S.gr.krokMin || 5) + ' minut.</div>' +
+    MK.pozycje.map(function(p, i) {
+      var g = S.gr.godziny[p.dzien];
+      return '<div class="m-card" data-i="' + i + '">' +
+        '<div class="m-card-t">' + esc(g.nazwa) + ' · klinika ' + esc(g.open) + '–' + esc(g.close) + '</div>' +
+        '<div class="m-row2">' +
+        '<input type="time" class="m-inp mk-od" step="' + krok + '" value="' + esc(p.od) + '">' +
+        '<input type="time" class="m-inp mk-do" step="' + krok + '" value="' + esc(p.do) + '">' +
+        '</div></div>';
+    }).join('');
+
+  sheet('Krok 2 z 3 — godziny', html, function() {
+    var km = S.gr.krokMin || 5;
+    for (var i = 0; i < MK.pozycje.length; i++) {
+      var p = MK.pozycje[i], g = S.gr.godziny[p.dzien];
+      if (!p.od || !p.do) { toast(g.nazwa + ': uzupełnij godziny.', false); return; }
+      if (t2m(p.od) >= t2m(p.do)) { toast(g.nazwa + ': „do" musi być późniejsze.', false); return; }
+      if (t2m(p.od) % km || t2m(p.do) % km) { toast(g.nazwa + ': godziny co ' + km + ' min.', false); return; }
+      if (t2m(p.od) < t2m(g.open) || t2m(p.do) > t2m(g.close)) {
+        toast(g.nazwa + ': poza godzinami otwarcia.', false); return;
+      }
+    }
+    MK.krok = 3; mkRender();
+  }, { okLabel: 'Dalej', cancelLabel: 'Wstecz',
+       onCancel: function() { MK.krok = 1; mkRender(); },
+       after: function() {
+    document.querySelectorAll('#m-sheet-body [data-i]').forEach(function(row) {
+      var i = parseInt(row.getAttribute('data-i'), 10);
+      row.querySelector('.mk-od').addEventListener('change', function(){ MK.pozycje[i].od = this.value; });
+      row.querySelector('.mk-do').addEventListener('change', function(){ MK.pozycje[i].do = this.value; });
+    });
+  }});
+}
+
+function mkKrok3() {
+  var html = mkPasek() +
+    '<div class="m-note">Do każdego dnia dobierz asystę. Osoby zajęte w tych godzinach nie pojawiają się na liście.</div>' +
+    MK.pozycje.map(function(p, i) {
+      var g = S.gr.godziny[p.dzien];
+      return '<div class="m-card" data-a="' + i + '">' +
+        '<div class="m-card-t">' + esc(g.nazwa) + ' · ' + esc(p.od) + '–' + esc(p.do) + '</div>' +
+        '<div class="mk-box"><div class="m-note" style="margin:0">Sprawdzam dostępność…</div></div></div>';
+    }).join('');
+
+  sheet('Krok 3 z 3 — asysta', html, function() {
+    var brak = MK.pozycje.filter(function(p){ return !p.brakAsysty && !(p.asysta||[]).length; });
+    if (brak.length) { toast('Wybierz asystę albo zaznacz „Bez asysty”.', false); return; }
+    gas('masterGrafikKreatorZapisz', [S.token, MK.lekarz, MK.pozycje], function(res) {
+      if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+      if (!res || !res.ok) { toast((res && res.msg) || 'Nie udało się zapisać.', false); return; }
+      closeSheet();
+      if (res.bledy && res.bledy.length) wsShowError('Zapisano ' + res.dodane + ' dni. Nie udało się: ' + res.bledy.join(' · '));
+      else wsConfirmPopup('Dodano ' + res.dodane + ' dni do grafiku.');
+      grLoad();
+    });
+  }, { okLabel: 'Zapisz', cancelLabel: 'Wstecz',
+       onCancel: function() { MK.krok = 2; mkRender(); },
+       after: function() {
+    MK.pozycje.forEach(function(_, i) { mkAsysta(i); });
+  }});
+}
+
+function mkRezerwacje(pomij) {
+  var out = [];
+  MK.pozycje.forEach(function(p, i) {
+    if (i === pomij) return;
+    (p.asysta || []).forEach(function(id) {
+      out.push({ osobaId: id, dzien: p.dzien, od: p.od, do: p.do });
+    });
+  });
+  return out;
+}
+
+function mkAsysta(i) {
+  var poz = MK.pozycje[i];
+  gas('masterGrafikWolneAsysty', [S.token, poz.dzien, poz.od, poz.do, mkRezerwacje(i)], function(res) {
+    var box = document.querySelector('#m-sheet-body [data-a="' + i + '"] .mk-box');
+    if (!box) return;
+    if (!res || !res.ok) { box.innerHTML = '<div class="m-note">Nie udało się sprawdzić dostępności.</div>'; return; }
+    poz.asysta = poz.asysta || [];
+
+    var html = '<div>' + res.dostepne.concat(res.zewnetrzne).map(function(o) {
+      var on = poz.asysta.indexOf(o.id) !== -1;
+      return '<button type="button" class="mk-as' + (o.zew ? ' zew' : '') + (on ? ' on' : '') +
+        '" data-p="' + i + '|' + esc(o.id) + '">' + esc(o.label) + '</button>';
+    }).join('') +
+    '<button type="button" class="mk-as brak' + (poz.brakAsysty ? ' on' : '') +
+      '" data-b="' + i + '">Bez asysty</button></div>';
+
+    if (res.zajete.length) html += '<div class="m-note" style="margin:8px 0 0">Zajęte: ' + esc(res.zajete.join(', ')) + '</div>';
+    if (poz.brakAsysty) {
+      html += '<input type="text" class="m-inp mk-uw" style="margin-top:10px" ' +
+        'placeholder="Dlaczego bez asysty?" value="' + esc(poz.uwaga || '') + '">';
+    }
+    box.innerHTML = html;
+
+    box.querySelectorAll('[data-p]').forEach(function(b) {
+      b.addEventListener('click', function() {
+        var p = this.getAttribute('data-p').split('|');
+        var idx = parseInt(p[0],10), id = p[1];
+        var l = MK.pozycje[idx].asysta || [];
+        var k = l.indexOf(id);
+        if (k === -1) l.push(id); else l.splice(k, 1);
+        MK.pozycje[idx].asysta = l;
+        if (l.length) MK.pozycje[idx].brakAsysty = false;
+        MK.pozycje.forEach(function(_, j) { mkAsysta(j); });
+      });
+    });
+    var bb = box.querySelector('[data-b]');
+    if (bb) bb.addEventListener('click', function() {
+      var idx = parseInt(this.getAttribute('data-b'), 10);
+      MK.pozycje[idx].brakAsysty = !MK.pozycje[idx].brakAsysty;
+      if (MK.pozycje[idx].brakAsysty) MK.pozycje[idx].asysta = [];
+      MK.pozycje.forEach(function(_, j) { mkAsysta(j); });
+    });
+    var uw = box.querySelector('.mk-uw');
+    if (uw) uw.addEventListener('input', function(){ MK.pozycje[i].uwaga = this.value; });
+  });
+}
 
 // ── RAPORTY ───────────────────────────────────────────────────
 

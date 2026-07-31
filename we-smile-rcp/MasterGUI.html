@@ -102,6 +102,61 @@
 .gr-rek-akcja{font-size:13px;color:var(--c-ink);line-height:1.5;margin-top:6px;font-weight:600}
 .gr-rek-kat{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--c-muted);margin-top:6px}
 
+/* ── Kreator grafiku (kafelki dni → godziny → asysta) ── */
+.kr-steps{display:flex;gap:6px;margin-bottom:16px}
+.kr-step{flex:1;height:4px;border-radius:2px;background:var(--c-border)}
+.kr-step.on{background:var(--grad-brand)}
+.kr-stepname{font-size:12px;font-weight:700;color:var(--c-muted);text-transform:uppercase;
+  letter-spacing:.6px;margin-bottom:12px}
+
+.kr-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:8px}
+.kr-tile{border:1.5px solid var(--c-border);border-radius:var(--radius-m);padding:12px;
+  background:var(--c-white);cursor:pointer;text-align:left;font-family:inherit;transition:.15s}
+.kr-tile.on{border-color:var(--c-primary);background:var(--c-primary-tint)}
+.kr-tile-d{font-size:14px;font-weight:700;color:var(--c-ink);display:flex;
+  align-items:center;justify-content:space-between;gap:8px}
+.kr-tile-h{font-size:11.5px;color:var(--c-muted);margin-top:3px;font-weight:600}
+.kr-tile-check{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--c-border-strong);
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;color:transparent}
+.kr-tile.on .kr-tile-check{background:var(--c-primary);border-color:var(--c-primary);color:#fff}
+.kr-vars{display:flex;gap:5px;margin-top:9px}
+.kr-var{flex:1;min-height:34px;border-radius:9px;border:1px solid var(--c-border);
+  background:var(--c-white);color:var(--c-muted);font-size:11.5px;font-weight:700;
+  cursor:pointer;font-family:inherit;padding:0 4px}
+.kr-var.on{background:var(--c-primary);border-color:var(--c-primary);color:#fff}
+
+.kr-row{border:1px solid var(--c-border);border-radius:var(--radius-m);padding:12px;
+  margin-bottom:10px;background:var(--c-white)}
+.kr-row-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.kr-row-d{font-size:14px;font-weight:700;color:var(--c-ink)}
+.kr-row-hint{font-size:11.5px;color:var(--c-muted);font-weight:600}
+.kr-times{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kr-times input{width:100%;min-height:44px;border-radius:10px;border:1.5px solid var(--c-border-strong);
+  background:var(--c-white);color:var(--c-ink);padding:9px 11px;font-size:15px;
+  font-family:ui-monospace,monospace}
+.kr-times input:focus{outline:none;border-color:var(--c-primary)}
+
+.kr-as-opts{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.kr-as{min-height:38px;padding:0 13px;border-radius:999px;border:1px solid var(--c-border);
+  background:var(--c-white);color:var(--c-ink);font-size:12.5px;font-weight:600;
+  cursor:pointer;font-family:inherit}
+.kr-as.on{background:var(--c-primary);border-color:var(--c-primary);color:#fff}
+.kr-as.zew{border-style:dashed}
+.kr-as.zew.on{background:var(--c-navy);border-color:var(--c-navy)}
+.kr-as.brak.on{background:var(--c-accent);border-color:var(--c-accent)}
+.kr-as-zajete{font-size:11.5px;color:var(--c-muted);margin-top:7px;line-height:1.45}
+.kr-brak-uwaga{margin-top:9px}
+.kr-brak-uwaga .inp{min-height:44px}
+
+.kr-nav{display:flex;gap:10px;margin-top:16px}
+.kr-nav .btn{margin-top:0}
+
+/* Blok bez asysty musi rzucać się w oczy — inaczej świadoma decyzja
+   i przeoczenie wyglądają tak samo. */
+.brak-asysty-tag{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:800;
+  letter-spacing:.4px;padding:3px 9px;border-radius:999px;background:var(--c-accent);color:#fff;
+  margin-top:5px}
+
 /* ── Wydruk grafiku ── */
 #gr-print-area{display:none}
 @media print{
@@ -394,6 +449,10 @@
         <button id="gr-print" class="btn btn-ghost" type="button">
           <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="7" rx="2"/><path d="M6 16h12v5H6z"/></svg>
           Wydruk
+        </button>
+        <button id="gr-kreator" class="btn btn-primary" type="button">
+          <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          Ułóż grafik lekarza
         </button>
         <button id="gr-gabinety-toggle" class="btn btn-ghost" type="button">Gabinety</button>
       </div>
@@ -756,6 +815,29 @@
     </div>
     <div class="faq-cats" id="gr-rek-filtry"></div>
     <div class="faq-results" id="gr-rek-lista"></div>
+  </div>
+</div>
+
+<!-- ═══════ MODAL — kreator grafiku ═══════ -->
+<div id="kr-modal" class="modal-overlay" style="display:none">
+  <div class="modal-card">
+    <div class="modal-head">
+      <span id="kr-title">Ułóż grafik lekarza</span>
+      <button id="kr-close" class="btn-icon" aria-label="Zamknij">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="kr-steps">
+      <div class="kr-step on" id="kr-s1"></div>
+      <div class="kr-step" id="kr-s2"></div>
+      <div class="kr-step" id="kr-s3"></div>
+    </div>
+    <div class="kr-stepname" id="kr-stepname">Krok 1 z 3 — dni pracy</div>
+    <div id="kr-body"></div>
+    <div class="kr-nav">
+      <button id="kr-back" class="btn btn-ghost" type="button" style="display:none">Wstecz</button>
+      <button id="kr-next" class="btn btn-primary" type="button">Dalej</button>
+    </div>
   </div>
 </div>
 
@@ -1558,10 +1640,14 @@ function grBlokHtml(b, gab) {
   var asysta = b.asysta || [];
   var meta, klasaMeta = 'gr-blok-meta';
 
+  // Świadomie zatwierdzony brak asysty dostaje osobną, jaskrawą plakietkę —
+  // decyzja nie może wyglądać tak samo jak przeoczenie.
+  var swiadomyBrak = /BRAK ASYSTY/.test(b.asystaUwaga || '');
+
   if (b.typ === 'Higienizacja') {
     meta = 'Higienizacja';
   } else if (asysta.length === 0) {
-    meta = 'Brak asysty';
+    meta = swiadomyBrak ? esc(String(b.asystaUwaga).replace(/^BRAK ASYSTY[^:]*:?\s*/, '')) : 'Brak asysty';
     klasaMeta += ' brak';
   } else {
     meta = 'Asysta: ' + asysta.map(function(a) {
@@ -1569,14 +1655,20 @@ function grBlokHtml(b, gab) {
       return esc(grOsobaNazwa(a.osobaId)) + (sameGodz ? '' : ' (' + esc(a.od) + '–' + esc(a.do) + ')');
     }).join(', ');
   }
-  if (b.asystaUwaga) meta += ' · ' + esc(b.asystaUwaga);
+  if (b.asystaUwaga && !swiadomyBrak) meta += ' · ' + esc(b.asystaUwaga);
+
+  var plakietka = (b.typ !== 'Higienizacja' && asysta.length === 0)
+    ? '<span class="brak-asysty-tag">' +
+      '<svg class="ic-sm" style="width:12px;height:12px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>' +
+      'BRAK ASYSTY</span>'
+    : '';
 
   return '<button type="button" class="gr-blok' + (b.typ === 'Higienizacja' ? ' higiena' : '') +
     '" data-blok="' + esc(b.id) + '">' +
     '<span class="gr-blok-czas">' + esc(b.od) + '–' + esc(b.do) + '</span>' +
     '<span class="gr-blok-body">' +
       '<span class="gr-blok-osoba">' + esc(grOsobaNazwa(b.osobaId)) + '</span>' +
-      '<span class="' + klasaMeta + '">' + meta + '</span>' +
+      '<span class="' + klasaMeta + '">' + meta + '</span>' + plakietka +
     '</span>' +
     grIkonaRek(rek, gab.nazwa + ' ' + b.od + '–' + b.do) +
     '</button>';
@@ -1979,6 +2071,300 @@ document.getElementById('gr-print').addEventListener('click', function() {
 
   window.print();
 });
+
+// ════════════════════════════════════════════════════════════
+// ── Kreator grafiku ─────────────────────────────────────────
+// Trzy kroki: które dni → jakie godziny → jaka asysta.
+// Sens: wpisać cały tydzień lekarza za jednym razem, zamiast
+// otwierać osobno każdy blok.
+// ════════════════════════════════════════════════════════════
+
+var KR = { krok: 1, lekarz: null, dni: {}, pozycje: [] };
+
+var KR_WARIANTY = [
+  { id: 'rano', label: 'Rano' },
+  { id: 'popo', label: 'Popołudnie' },
+  { id: 'caly', label: 'Cały dzień' }
+];
+
+document.getElementById('gr-kreator').addEventListener('click', function() {
+  if (!GR.dane) { toast('Poczekaj na wczytanie grafiku.', false); return; }
+  var lekarze = (GR.dane.personel || []).filter(function(p) { return p.grupa === 'lekarz'; });
+  if (!lekarze.length) {
+    toast('Brak lekarzy w zespole — dodaj ich w zakładce Zespół.', false);
+    return;
+  }
+  KR = { krok: 1, lekarz: null, dni: {}, pozycje: [] };
+  krRender();
+  document.getElementById('kr-modal').style.display = 'flex';
+});
+
+document.getElementById('kr-close').addEventListener('click', function() {
+  document.getElementById('kr-modal').style.display = 'none';
+});
+document.getElementById('kr-modal').addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
+
+function krRender() {
+  ['kr-s1','kr-s2','kr-s3'].forEach(function(id, i) {
+    document.getElementById(id).className = 'kr-step' + (i < KR.krok ? ' on' : '');
+  });
+  var nazwy = ['Krok 1 z 3 — dni pracy', 'Krok 2 z 3 — godziny', 'Krok 3 z 3 — asysta'];
+  document.getElementById('kr-stepname').textContent = nazwy[KR.krok - 1];
+  document.getElementById('kr-back').style.display = KR.krok > 1 ? 'inline-flex' : 'none';
+  document.getElementById('kr-next').textContent = KR.krok === 3 ? 'Zapisz grafik' : 'Dalej';
+
+  if (KR.krok === 1) krKrok1();
+  else if (KR.krok === 2) krKrok2();
+  else krKrok3();
+}
+
+// ── Krok 1: lekarz + kafelki dni ──────────────────────────────
+
+function krKrok1() {
+  var lekarze = (GR.dane.personel || []).filter(function(p) { return p.grupa === 'lekarz'; });
+  var html =
+    '<div class="field"><span class="field-lbl">Lekarz</span>' +
+    '<select id="kr-lekarz" class="sel"><option value="">— wybierz —</option>' +
+    lekarze.map(function(p) {
+      var tg = (p.tagi || []).length ? ' — ' + p.tagi.slice(0, 2).join(', ') : '';
+      return '<option value="' + esc(p.id) + '"' + (KR.lekarz === p.id ? ' selected' : '') + '>' +
+        esc(p.imie + ' ' + p.nazwisko + tg) + '</option>';
+    }).join('') + '</select></div>' +
+    '<div class="hint" style="padding:0 0 12px">Zaznacz dni, w które ten lekarz pracuje, i wybierz porę. ' +
+    'Godziny doprecyzujesz w następnym kroku.</div>' +
+    '<div class="kr-tiles">' + GR.dane.dni.map(function(nr) {
+      var g = GR.dane.godziny[nr];
+      var wyb = KR.dni[nr];
+      return '<div class="kr-tile' + (wyb ? ' on' : '') + '" data-dzien="' + nr + '">' +
+        '<div class="kr-tile-d"><span>' + esc(g.nazwa) + '</span>' +
+        '<span class="kr-tile-check"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span></div>' +
+        '<div class="kr-tile-h">klinika ' + esc(g.open) + '–' + esc(g.close) + '</div>' +
+        (wyb ? '<div class="kr-vars">' + KR_WARIANTY.map(function(w) {
+          return '<button type="button" class="kr-var' + (wyb.wariant === w.id ? ' on' : '') +
+            '" data-war="' + nr + '|' + w.id + '">' + w.label + '</button>';
+        }).join('') + '</div>' : '') +
+        '</div>';
+    }).join('') + '</div>';
+
+  document.getElementById('kr-body').innerHTML = html;
+
+  document.getElementById('kr-lekarz').addEventListener('change', function() {
+    KR.lekarz = this.value || null;
+  });
+
+  document.querySelectorAll('#kr-body [data-dzien]').forEach(function(el) {
+    el.addEventListener('click', function(e) {
+      if (e.target.closest('[data-war]')) return;
+      var nr = parseInt(this.getAttribute('data-dzien'), 10);
+      if (KR.dni[nr]) delete KR.dni[nr];
+      else {
+        var z = GR.dane.godziny[nr].zmiany.caly;
+        KR.dni[nr] = { wariant: 'caly', od: z.od, do: z.do };
+      }
+      krKrok1();
+    });
+  });
+
+  document.querySelectorAll('#kr-body [data-war]').forEach(function(b) {
+    b.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var p = this.getAttribute('data-war').split('|');
+      var nr = parseInt(p[0], 10), war = p[1];
+      var z = GR.dane.godziny[nr].zmiany[war];
+      KR.dni[nr] = { wariant: war, od: z.od, do: z.do };
+      krKrok1();
+    });
+  });
+}
+
+// ── Krok 2: godziny (dowolne, co 5 minut) ─────────────────────
+
+function krKrok2() {
+  var krok = (GR.dane.krokMin || 5) * 60;
+  var html = '<div class="hint" style="padding:0 0 12px">Godziny możesz ustawić dowolnie, co ' +
+    (GR.dane.krokMin || 5) + ' minut — wybrana wcześniej pora to tylko punkt wyjścia.</div>';
+
+  html += KR.pozycje.map(function(poz, i) {
+    var g = GR.dane.godziny[poz.dzien];
+    return '<div class="kr-row" data-i="' + i + '">' +
+      '<div class="kr-row-h"><span class="kr-row-d">' + esc(g.nazwa) + '</span>' +
+      '<span class="kr-row-hint">klinika ' + esc(g.open) + '–' + esc(g.close) + '</span></div>' +
+      '<div class="kr-times">' +
+      '<input type="time" class="kr-od" step="' + krok + '" value="' + esc(poz.od) + '">' +
+      '<input type="time" class="kr-do" step="' + krok + '" value="' + esc(poz.do) + '">' +
+      '</div></div>';
+  }).join('');
+
+  document.getElementById('kr-body').innerHTML = html;
+
+  document.querySelectorAll('#kr-body [data-i]').forEach(function(row) {
+    var i = parseInt(row.getAttribute('data-i'), 10);
+    row.querySelector('.kr-od').addEventListener('change', function() { KR.pozycje[i].od = this.value; });
+    row.querySelector('.kr-do').addEventListener('change', function() { KR.pozycje[i].do = this.value; });
+  });
+}
+
+// ── Krok 3: asysta ────────────────────────────────────────────
+
+function krKrok3() {
+  document.getElementById('kr-body').innerHTML =
+    '<div class="hint" style="padding:0 0 12px">Do każdego dnia dobierz asystę. ' +
+    'Osoby zajęte w tych godzinach nie pojawiają się na liście. ' +
+    'Możesz też wskazać asystę zewnętrzną albo świadomie zatwierdzić dzień bez asysty.</div>' +
+    KR.pozycje.map(function(poz, i) {
+      var g = GR.dane.godziny[poz.dzien];
+      return '<div class="kr-row" data-a="' + i + '">' +
+        '<div class="kr-row-h"><span class="kr-row-d">' + esc(g.nazwa) + '</span>' +
+        '<span class="kr-row-hint">' + esc(poz.od) + '–' + esc(poz.do) + '</span></div>' +
+        '<div class="kr-as-box"><div class="hint" style="padding:4px 0">Sprawdzam dostępność…</div></div>' +
+        '</div>';
+    }).join('');
+
+  KR.pozycje.forEach(function(poz, i) { krWczytajAsyste(i); });
+}
+
+// Rezerwacje z innych dni tego samego kreatora — bez nich ta sama osoba
+// dałaby się wybrać dwa razy w nakładających się godzinach.
+function krRezerwacje(pomijIndex) {
+  var out = [];
+  KR.pozycje.forEach(function(p, i) {
+    if (i === pomijIndex) return;
+    (p.asysta || []).forEach(function(id) {
+      out.push({ osobaId: id, dzien: p.dzien, od: p.od, do: p.do });
+    });
+  });
+  return out;
+}
+
+function krWczytajAsyste(i) {
+  var poz = KR.pozycje[i];
+  gas('masterGrafikWolneAsysty', [M.token, poz.dzien, poz.od, poz.do, krRezerwacje(i)], function(res) {
+    var box = document.querySelector('#kr-body [data-a="' + i + '"] .kr-as-box');
+    if (!box) return;
+    if (!res || !res.ok) { box.innerHTML = '<div class="hint">Nie udało się sprawdzić dostępności.</div>'; return; }
+
+    poz.asysta = poz.asysta || [];
+    var opcje = res.dostepne.concat(res.zewnetrzne);
+
+    var html = '<div class="kr-as-opts">' + opcje.map(function(o) {
+      var on = poz.asysta.indexOf(o.id) !== -1;
+      return '<button type="button" class="kr-as' + (o.zew ? ' zew' : '') + (on ? ' on' : '') +
+        '" data-pick="' + i + '|' + esc(o.id) + '">' + esc(o.label) + '</button>';
+    }).join('') +
+    '<button type="button" class="kr-as brak' + (poz.brakAsysty ? ' on' : '') +
+      '" data-brak="' + i + '">Bez asysty</button></div>';
+
+    if (res.zajete.length) {
+      html += '<div class="kr-as-zajete">Zajęte w tych godzinach: ' + esc(res.zajete.join(', ')) + '</div>';
+    }
+    if (poz.brakAsysty) {
+      html += '<div class="kr-brak-uwaga"><input type="text" class="inp kr-uwaga" ' +
+        'placeholder="Dlaczego bez asysty? (trafi do grafiku)" value="' + esc(poz.uwaga || '') + '"></div>';
+    }
+    box.innerHTML = html;
+
+    box.querySelectorAll('[data-pick]').forEach(function(b) {
+      b.addEventListener('click', function() {
+        var p = this.getAttribute('data-pick').split('|');
+        var idx = parseInt(p[0], 10), id = p[1];
+        var lista = KR.pozycje[idx].asysta || [];
+        var k = lista.indexOf(id);
+        if (k === -1) lista.push(id); else lista.splice(k, 1);
+        KR.pozycje[idx].asysta = lista;
+        if (lista.length) KR.pozycje[idx].brakAsysty = false;
+        // Zmiana obsady jednego dnia zmienia dostępność w pozostałych.
+        KR.pozycje.forEach(function(_, j) { krWczytajAsyste(j); });
+      });
+    });
+
+    var brak = box.querySelector('[data-brak]');
+    if (brak) brak.addEventListener('click', function() {
+      var idx = parseInt(this.getAttribute('data-brak'), 10);
+      KR.pozycje[idx].brakAsysty = !KR.pozycje[idx].brakAsysty;
+      if (KR.pozycje[idx].brakAsysty) KR.pozycje[idx].asysta = [];
+      KR.pozycje.forEach(function(_, j) { krWczytajAsyste(j); });
+    });
+
+    var uw = box.querySelector('.kr-uwaga');
+    if (uw) uw.addEventListener('input', function() { KR.pozycje[i].uwaga = this.value; });
+  });
+}
+
+// ── Nawigacja kreatora ────────────────────────────────────────
+
+document.getElementById('kr-back').addEventListener('click', function() {
+  if (KR.krok > 1) { KR.krok--; krRender(); }
+});
+
+document.getElementById('kr-next').addEventListener('click', function() {
+  if (KR.krok === 1) {
+    if (!KR.lekarz) { toast('Wybierz lekarza.', false); return; }
+    var wybrane = Object.keys(KR.dni).map(Number).sort(function(a, b) { return a - b; });
+    if (!wybrane.length) { toast('Zaznacz przynajmniej jeden dzień.', false); return; }
+    KR.pozycje = wybrane.map(function(nr) {
+      var stara = KR.pozycje.find(function(p) { return p.dzien === nr; });
+      return {
+        dzien: nr,
+        od: KR.dni[nr].od,
+        do: KR.dni[nr].do,
+        asysta: stara ? (stara.asysta || []) : [],
+        brakAsysty: stara ? !!stara.brakAsysty : false,
+        uwaga: stara ? (stara.uwaga || '') : ''
+      };
+    });
+    KR.krok = 2; krRender(); return;
+  }
+
+  if (KR.krok === 2) {
+    var krokMin = GR.dane.krokMin || 5;
+    for (var i = 0; i < KR.pozycje.length; i++) {
+      var p = KR.pozycje[i];
+      var nazwa = GR.dane.godziny[p.dzien].nazwa;
+      if (!p.od || !p.do) { toast(nazwa + ': uzupełnij godziny.', false); return; }
+      if (krT2M(p.od) >= krT2M(p.do)) { toast(nazwa + ': godzina „do" musi być późniejsza.', false); return; }
+      if (krT2M(p.od) % krokMin || krT2M(p.do) % krokMin) {
+        toast(nazwa + ': godziny co ' + krokMin + ' minut.', false); return;
+      }
+      var g = GR.dane.godziny[p.dzien];
+      if (krT2M(p.od) < krT2M(g.open) || krT2M(p.do) > krT2M(g.close)) {
+        toast(nazwa + ': poza godzinami otwarcia (' + g.open + '–' + g.close + ').', false); return;
+      }
+    }
+    KR.krok = 3; krRender(); return;
+  }
+
+  // Krok 3 — zapis
+  var bezDecyzji = KR.pozycje.filter(function(p) {
+    return !p.brakAsysty && !(p.asysta || []).length;
+  });
+  if (bezDecyzji.length) {
+    toast('Do każdego dnia wybierz asystę albo zaznacz „Bez asysty”.', false);
+    return;
+  }
+
+  var btn = this;
+  btn.disabled = true;
+  gas('masterGrafikKreatorZapisz', [M.token, KR.lekarz, KR.pozycje], function(res) {
+    btn.disabled = false;
+    if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+    if (!res || !res.ok) { toast((res && res.msg) || 'Nie udało się zapisać.', false); return; }
+
+    document.getElementById('kr-modal').style.display = 'none';
+    if (res.bledy && res.bledy.length) {
+      wsShowError('Zapisano ' + res.dodane + ' dni. Nie udało się: ' + res.bledy.join(' · '));
+    } else {
+      wsConfirmPopup('Dodano ' + res.dodane + ' dni do grafiku.');
+    }
+    grLoad();
+  });
+});
+
+function krT2M(t) {
+  var p = String(t).split(':');
+  return parseInt(p[0], 10) * 60 + parseInt(p[1], 10);
+}
 
 // ── Widok: Pracownicy (forma zatrudnienia) ────────
 

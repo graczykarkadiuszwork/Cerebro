@@ -431,6 +431,13 @@ body.nav-open .nav-backdrop{display:block}
 .modal-card{background:var(--c-white);border-radius:var(--radius-l) var(--radius-l) 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom));max-width:520px;width:100%;max-height:84vh;overflow-y:auto;box-shadow:var(--shadow-l)}
 .modal-head{display:flex;align-items:center;justify-content:space-between;font-weight:700;font-size:17px;margin-bottom:14px;color:var(--c-ink)}
 .modal-empty{color:var(--c-muted);font-size:14px;padding:16px 0;text-align:center}
+/* Wiersze list w modalach — używane i przez Panel Raportowy, i przez
+   Panel Właściciela (obecność, dni poza godzinami). Muszą być wspólne. */
+.modal-sec{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--c-muted);font-weight:700;margin:12px 0 6px}
+.modal-sec:first-child{margin-top:0}
+.modal-row{display:flex;align-items:center;justify-content:space-between;background:var(--c-offwhite);border-radius:12px;padding:12px 14px;font-size:14px;margin-bottom:8px}
+.modal-row.done{opacity:.6}
+.modal-row-name{display:flex;align-items:center;gap:8px}
 @media(min-width:600px){
   .modal-overlay{align-items:center;padding:16px}
   .modal-card{border-radius:var(--radius-l)}
