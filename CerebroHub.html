@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CEREBRO 98</title></head><body>
+<style>
+  :root{
+    --desktop:#008080;
+    --chrome:#c0c0c0;
+    --chrome-light:#dfdfdf;
+    --chrome-hi:#ffffff;
+    --chrome-sh:#808080;
+    --chrome-dsh:#0a0a0a;
+    --title-a:#000080;
+    --title-b:#1084d0;
+    --text:#000000;
+    --link:#0000ee;
+    --link-visited:#551a8b;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--desktop);
+    font-family:Tahoma,"MS Sans Serif","Segoe UI",Verdana,sans-serif;
+    font-size:11px;
+    color:var(--text);
+    overflow:hidden;
+    -webkit-font-smoothing:none;
+  }
+
+  /* ---------- bevel utility ---------- */
+  .raised{
+    border-top:1px solid var(--chrome-hi);
+    border-left:1px solid var(--chrome-hi);
+    border-right:1px solid var(--chrome-dsh);
+    border-bottom:1px solid var(--chrome-dsh);
+    box-shadow: inset 1px 1px 0 var(--chrome-light), inset -1px -1px 0 var(--chrome-sh);
+  }
+  .sunken{
+    border-top:1px solid var(--chrome-sh);
+    border-left:1px solid var(--chrome-sh);
+    border-right:1px solid var(--chrome-hi);
+    border-bottom:1px solid var(--chrome-hi);
+    box-shadow: inset 1px 1px 0 var(--chrome-dsh);
+  }
+
+  /* ---------- desktop ---------- */
+  #desktop{
+    position:relative;
+    width:100%;
+    height:100vh;
+    padding:14px 0 0 0;
+  }
+  #icons{
+    position:absolute;
+    top:14px; left:10px;
+    display:grid;
+    grid-template-columns:76px;
+    gap:6px;
+    z-index:2;
+  }
+  .dicon{
+    width:76px;
+    padding:6px 2px 4px;
+    text-align:center;
+    color:#fff;
+    cursor:pointer;
+    -webkit-user-select:none;user-select:none;
+    border:1px solid transparent;
+  }
+  .dicon.selected{
+    background:rgba(0,0,128,.55);
+    border:1px dotted #fff;
+  }
+  .dicon .glyph{
+    width:32px;height:32px;
+    margin:0 auto 4px;
+    display:block;
+  }
+  .dicon span{
+    display:block;
+    line-height:1.25;
+    text-shadow:1px 1px 1px rgba(0,0,0,.9);
+    word-wrap:break-word;
+  }
+
+  /* ---------- taskbar ---------- */
+  #taskbar{
+    position:fixed;
+    left:0;right:0;bottom:0;
+    height:30px;
+    background:var(--chrome);
+    border-top:1px solid var(--chrome-hi);
+    display:flex;
+    align-items:center;
+    padding:3px 3px;
+    gap:4px;
+    z-index:50;
+  }
+  #startbtn{
+    display:flex;align-items:center;gap:4px;
+    height:22px;padding:0 8px 0 4px;
+    background:var(--chrome);
+    font-weight:bold;
+    cursor:pointer;
+  }
+  #startbtn.down{
+    border-top:1px solid var(--chrome-dsh)!important;
+    border-left:1px solid var(--chrome-dsh)!important;
+    border-right:1px solid var(--chrome-hi)!important;
+    border-bottom:1px solid var(--chrome-hi)!important;
+    box-shadow:inset 1px 1px 0 var(--chrome-sh);
+    padding-top:1px;
+  }
+  #startbtn .logo{width:16px;height:16px;flex:none;}
+  #tasksep{width:1px;align-self:stretch;background:var(--chrome-sh);border-right:1px solid var(--chrome-hi);margin:2px 2px;}
+  #taskitems{flex:1;display:flex;gap:4px;overflow:hidden;}
+  .taskitem{
+    height:22px;min-width:140px;max-width:200px;
+    display:flex;align-items:center;gap:5px;
+    padding:0 6px;
+    font-size:11px;
+    cursor:pointer;
+    border-top:1px solid var(--chrome-sh);
+    border-left:1px solid var(--chrome-sh);
+    border-right:1px solid var(--chrome-hi);
+    border-bottom:1px solid var(--chrome-hi);
+    box-shadow:inset 1px 1px 0 var(--chrome-dsh);
+    overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+  }
+  #clock{
+    height:22px;padding:0 8px;
+    display:flex;align-items:center;
+    font-variant-numeric:tabular-nums;
+  }
+
+  /* ---------- start menu ---------- */
+  #startmenu{
+    position:fixed;
+    left:2px; bottom:32px;
+    width:230px;
+    background:var(--chrome);
+    padding:2px;
+    z-index:60;
+    display:none;
+  }
+  #startmenu.open{display:flex;}
+  #startmenu .rail{
+    width:26px;
+    background:linear-gradient(180deg,#000080,#1084d0);
+    display:flex;align-items:flex-end;
+    padding-bottom:10px;
+  }
+  #startmenu .rail span{
+    writing-mode:vertical-rl;
+    transform:rotate(180deg);
+    color:#fff;font-weight:bold;font-size:15px;
+    letter-spacing:1px;
+    padding:6px 0;
+    font-family:Tahoma,sans-serif;
+    text-shadow:1px 1px 1px #000;
+  }
+  #startmenu .items{flex:1;padding:3px 2px;}
+  .smitem{
+    display:flex;align-items:center;gap:8px;
+    padding:4px 8px;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .smitem:hover{background:var(--title-a);color:#fff;}
+  .smitem .ico{width:22px;height:22px;flex:none;}
+  .smhr{height:1px;background:var(--chrome-sh);border-bottom:1px solid var(--chrome-hi);margin:3px 4px;}
+  .smsub{padding-left:30px;font-size:10.5px;}
+
+  /* ---------- windows ---------- */
+  .win{
+    position:fixed;
+    top:70px;left:50%;
+    transform:translateX(-50%);
+    width:560px;
+    max-width:92vw;
+    background:var(--chrome);
+    padding:3px;
+    z-index:40;
+    display:none;
+    flex-direction:column;
+  }
+  .win.open{display:flex;}
+  .win.top{z-index:70;}
+  .titlebar{
+    height:20px;
+    background:linear-gradient(90deg,var(--title-a),var(--title-b));
+    color:#fff;font-weight:bold;font-size:12px;
+    display:flex;align-items:center;
+    padding:2px 3px 2px 5px;
+    -webkit-user-select:none;user-select:none;
+    cursor:default;
+  }
+  .titlebar .ttext{flex:1;display:flex;align-items:center;gap:5px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+  .titlebar .ticon{width:14px;height:14px;flex:none;}
+  .winbtn{
+    width:16px;height:14px;
+    background:var(--chrome);
+    color:#000;font-size:10px;font-weight:bold;
+    display:flex;align-items:center;justify-content:center;
+    margin-left:2px;
+    cursor:pointer;
+    line-height:0;
+  }
+  .menubar{
+    display:flex;gap:12px;
+    padding:2px 6px;
+    background:var(--chrome);
+    font-size:11px;
+  }
+  .winbody{
+    background:#fff;
+    margin:2px;
+    padding:0;
+    min-height:120px;
+    max-height:56vh;
+    overflow-y:auto;
+  }
+  .winbody.pad{padding:10px 12px;}
+  .statusbar{
+    display:flex;justify-content:space-between;
+    padding:2px 6px;font-size:10.5px;
+    margin:0 2px 2px;
+  }
+  .statusbar span{
+    padding:1px 6px;
+  }
+
+  /* explorer rows */
+  .row{
+    display:flex;align-items:center;gap:8px;
+    padding:3px 8px;
+    text-decoration:none;color:#000;
+    cursor:pointer;
+  }
+  .row:hover{background:var(--title-a);color:#fff;}
+  .row .ico{width:20px;height:16px;flex:none;}
+  .row .name{flex:1;}
+  .row .kind{width:110px;color:inherit;opacity:.75;font-size:10.5px;}
+  .crumb{
+    display:flex;align-items:center;gap:4px;
+    padding:3px 6px;
+    background:#fff;
+    border-bottom:1px solid var(--chrome-sh);
+    font-size:10.5px;
+    flex-wrap:wrap;
+  }
+  .crumb b{cursor:pointer;color:var(--link);}
+  .crumb b:hover{text-decoration:underline;}
+
+  a.plain{color:var(--link);}
+  a.plain:visited{color:var(--link-visited);}
+
+  code.mono{
+    font-family:"Courier New",monospace;
+    background:#f0f0f0;
+    border:1px solid var(--chrome-sh);
+    padding:1px 4px;
+  }
+  ul.steps{margin:6px 0 6px 18px;padding:0;}
+  ul.steps li{margin-bottom:6px;}
+</style>
+
+<div id="desktop">
+  <div id="icons"></div>
+</div>
+
+<!-- START MENU -->
+<div id="startmenu" class="raised">
+  <div class="rail"><span>CEREBRO 98</span></div>
+  <div class="items" id="smitems"></div>
+</div>
+
+<!-- TASKBAR -->
+<div id="taskbar">
+  <div id="startbtn" class="raised">
+    <svg class="logo" viewBox="0 0 16 16"><rect width="7" height="7" x="0" y="0" fill="#ff0000"/><rect width="7" height="7" x="8" y="0" fill="#00aa00"/><rect width="7" height="7" x="0" y="8" fill="#0000ff"/><rect width="7" height="7" x="8" y="8" fill="#ffcc00"/></svg>
+    Start
+  </div>
+  <div id="tasksep"></div>
+  <div id="taskitems"></div>
+  <div id="clock" class="sunken"></div>
+</div>
+
+<script>
+/* =========================================================================
+   CEREBRO 98 — konfiguracja menu
+   Żeby dodać nową pozycję (nowy projekt / folder / narzędzie) wystarczy
+   dopisać kolejny obiekt do drzewa HUB niżej — reszta interfejsu (ikony
+   pulpitu, menu Start, okna Explorera) generuje się z tego automatycznie.
+   Struktura odzwierciedla realny folder "Cerebro core" na Dysku Google.
+   ========================================================================= */
+const HUB = {
+  name: "Cerebro core",
+  url: "https://drive.google.com/drive/folders/1a8P6BZOAt9z9Pc6L4NsYAOneGau9AY2t",
+  kind: "Folder główny",
+  children: [
+    {
+      name: "Wayne Enterprises",
+      url: "https://drive.google.com/drive/folders/1_jwtJF6LoD5r-puMxybTsioZJkLOBpjA",
+      kind: "Gałąź: biznes",
+      desktop: true,
+      color: "gold",
+      children: [
+        { name:"HR", url:"https://drive.google.com/drive/folders/1CF7A-24zjXVUmpQvZ1q2rN4_gXmOgH27", kind:"Folder", children:[
+          { name:"RCP", url:"https://drive.google.com/drive/folders/1CyKUFdw4l6KvqPDSHNY4pqf2qs5zNxWp", kind:"Folder" }
+        ]},
+        { name:"Projekty", url:"https://drive.google.com/drive/folders/1CKS5M8TY8H8I8JqEjnpBQa_wKw1Ju13M", kind:"Folder", children:[
+          { name:"Zużycie per procedura", url:"https://drive.google.com/drive/folders/1E9qBiZIiC6SCQgRDEeWWQKe45JFwPVfK", kind:"Folder" },
+          { name:"22-05-2026 RCP", url:"https://drive.google.com/drive/folders/16EHuDH0PmNNVHuauleNQkE8kgPQzn7-7", kind:"Folder" }
+        ]},
+        { name:"Marketing", url:"https://drive.google.com/drive/folders/1XF3Wj2C5x_lpwnaxPRqmlnVlNL7xqUnn", kind:"Folder", children:[
+          { name:"07-2026", url:"https://drive.google.com/drive/folders/1Tb0Q-v3X1J2nrg3oqMkEJvQ3h-4wHZ7x", kind:"Folder" }
+        ]},
+        { name:"Compliance", url:"https://drive.google.com/drive/folders/1NGYlvPbsKSvAxJBV_W5QOP9XVQpWmXb9", kind:"Folder", children:[
+          { name:"Kontrola zewnętrzna", url:"https://drive.google.com/drive/folders/1b5-57Mz7_iZUjCYDR4EtoQaSBUw9pSoC", kind:"Folder" },
+          { name:"Matryca dokumentacji", url:"https://drive.google.com/drive/folders/1jNORyGtbN7CjRLToW396-mpwGDiz3exe", kind:"Folder" },
+          { name:"Procedury", url:"https://drive.google.com/drive/folders/1rSD0IF8kfEe8ifA49S3ssqr7Ho5K8qWk", kind:"Folder" }
+        ]},
+        { name:"Techniczne", url:"https://drive.google.com/drive/folders/19GSzI4eFc2ocBtZzOGzDGFyLD3Q4hB-x", kind:"Folder", children:[
+          { name:"Usterki", url:"https://drive.google.com/drive/folders/1gVywVu6zYX9yr6OdftEzjCTZ2vjov5D_", kind:"Folder" }
+        ]},
+        { name:"Grafiki", url:"https://drive.google.com/drive/folders/1SQykSNd44zInPuj3TOkZ-yOnJ6z0PJaZ", kind:"Folder", children:[
+          { name:"Grafiki pracy", url:"https://drive.google.com/drive/folders/1AlAgxRa_HrMRGbBfaluLmZsApK1zoDY2", kind:"Folder" },
+          { name:"Wizytówka Google", url:"https://drive.google.com/drive/folders/1vtyxav9AQgtk_d4Nuq3xK6K-AZxWt-Zh", kind:"Folder" }
+        ]},
+        { name:"Baza wiedzy", url:"https://drive.google.com/drive/folders/1kKxkf4Z2k84zGGv_P8_tGYQIbPB2IlIo", kind:"Folder", children:[
+          { name:"Dla pacjentów", url:"https://drive.google.com/drive/folders/1y1lNOcyFoyittWIJstdMzpnv9GQPGx7X", kind:"Folder" },
+          { name:"Leki", url:"https://drive.google.com/drive/folders/1y5rNz6i5-W-gKf2ovXQEOwifcQOw_dBT", kind:"Folder" },
+          { name:"Dla pracowników", url:"https://drive.google.com/drive/folders/1C_XAX7mmZXEeBKn50HrD9MdjOj8kM0Ii", kind:"Folder" },
+          { name:"Macierz zużycia", url:"https://drive.google.com/drive/folders/10Fsrckj7J7V5boss7eCUWvx-h4ylFpNP", kind:"Folder" },
+          { name:"Cenniki", url:"https://drive.google.com/drive/folders/14IP_wBgCxUxTFB3wj6FDTm_M16eU0dyD", kind:"Folder" }
+        ]}
+      ]
+    },
+    {
+      name: "BatCave",
+      url: "https://drive.google.com/drive/folders/1isF5JFll5tddxWgR8ExuFZQbyHJOdJGT",
+      kind: "Gałąź: prywatne",
+      desktop: true,
+      color: "bat",
+      children: [
+        { name:"Pamięciomaksymalizator", url:"https://drive.google.com/drive/folders/1iCyX76u5efsk-6N9rXNo0QHmhrESET_Y", kind:"Folder", children:[
+          { name:"Służbowe", url:"https://drive.google.com/drive/folders/1XmbXfDi5pmf0UamYtsx-_VlcTRpEVjeC", kind:"Folder" },
+          { name:"Prywatne", url:"https://drive.google.com/drive/folders/1xNfnt7iSYYBDx_N641xWXJOzQpm5Iovu", kind:"Folder" }
+        ]}
+      ]
+    },
+    {
+      name: "+ Nowa ścieżka",
+      kind: "Miejsce na przyszły projekt",
+      desktop: true,
+      color: "placeholder",
+      placeholder: true
+    }
+  ]
+};
+
+/* ---------- ikony (proste SVG, w stylu 32-bit era) ---------- */
+function folderIcon(fill){
+  return `<svg class="glyph" viewBox="0 0 32 32">
+    <path d="M2 8 L2 26 L30 26 L30 11 L15 11 L12 8 Z" fill="${fill}" stroke="#402d00" stroke-width="1"/>
+    <path d="M2 8 L12 8 L15 11 L2 11 Z" fill="#ffe066" stroke="#402d00" stroke-width="1"/>
+  </svg>`;
+}
+function batIcon(){
+  return `<svg class="glyph" viewBox="0 0 32 32">
+    <circle cx="16" cy="16" r="14" fill="#1a1a1a"/>
+    <path d="M16 9 L20 14 L27 9 L22 18 L26 24 L18 21 L16 26 L14 21 L6 24 L10 18 L5 9 L12 14 Z" fill="#ffd400"/>
+  </svg>`;
+}
+function computerIcon(){
+  return `<svg class="glyph" viewBox="0 0 32 32">
+    <rect x="3" y="4" width="26" height="17" fill="#c0c0c0" stroke="#000" stroke-width="1"/>
+    <rect x="6" y="7" width="20" height="11" fill="#1084d0"/>
+    <rect x="12" y="23" width="8" height="3" fill="#c0c0c0" stroke="#000" stroke-width="1"/>
+    <rect x="8" y="26" width="16" height="2" fill="#808080"/>
+  </svg>`;
+}
+function binIcon(){
+  return `<svg class="glyph" viewBox="0 0 32 32">
+    <path d="M7 9 H25 L23 27 H9 Z" fill="#e8e8e8" stroke="#000" stroke-width="1"/>
+    <rect x="5" y="6" width="22" height="3" fill="#c0c0c0" stroke="#000" stroke-width="1"/>
+    <rect x="12" y="3" width="8" height="3" fill="#c0c0c0" stroke="#000" stroke-width="1"/>
+  </svg>`;
+}
+function plusIcon(){
+  return `<svg class="glyph" viewBox="0 0 32 32">
+    <rect x="3" y="3" width="26" height="26" fill="none" stroke="#ffffff" stroke-width="2" stroke-dasharray="4 3"/>
+    <line x1="16" y1="9" x2="16" y2="23" stroke="#fff" stroke-width="3"/>
+    <line x1="9" y1="16" x2="23" y2="16" stroke="#fff" stroke-width="3"/>
+  </svg>`;
+}
+function iconFor(node){
+  if(node.placeholder) return plusIcon();
+  if(node.color==="bat") return batIcon();
+  if(node.color==="gold") return folderIcon("#e0a800");
+  return folderIcon("#f5d76e");
+}
+
+/* ---------- render pulpitu ---------- */
+const iconsEl = document.getElementById('icons');
+HUB.children.filter(n=>n.desktop).forEach((node,i)=>{
+  const d = document.createElement('div');
+  d.className = 'dicon';
+  d.innerHTML = iconFor(node) + `<span>${node.name}</span>`;
+  d.addEventListener('click', (e)=>{
+    document.querySelectorAll('.dicon').forEach(x=>x.classList.remove('selected'));
+    d.classList.add('selected');
+  });
+  d.addEventListener('dblclick', ()=> node.placeholder ? openAbout() : openExplorer(node));
+  iconsEl.appendChild(d);
+});
+
+/* ---------- okna Explorera (generowane dynamicznie) ---------- */
+let winCount = 0;
+const winsRoot = document.body;
+const openWindows = [];
+
+function buildRow(node){
+  const row = document.createElement(node.url ? 'a' : 'div');
+  row.className='row';
+  if(node.url){ row.href = node.url; row.target='_blank'; row.rel='noopener'; }
+  row.innerHTML = `${folderSvgInline(node)}<span class="name">${node.name}</span><span class="kind">${node.kind||'Folder'}</span>`;
+  if(node.children && node.children.length){
+    row.addEventListener('click', (e)=>{
+      if(e.target.closest('a')===row && node.url && e.metaKey) return;
+    });
+    row.style.cursor='pointer';
+    row.addEventListener('dblclick', (e)=>{ e.preventDefault(); pushCrumb(row.closest('.win'), node); });
+  }
+  return row;
+}
+function folderSvgInline(node){
+  return `<span class="ico">${node.placeholder?plusIconSmall():(node.color==='bat'?batIconSmall():folderIconSmall())}</span>`;
+}
+function folderIconSmall(){return `<svg width="20" height="16" viewBox="0 0 32 26"><path d="M1 4 L1 22 L30 22 L30 8 L14 8 L11 4 Z" fill="#f5d76e" stroke="#402d00" stroke-width="1"/></svg>`;}
+function batIconSmall(){return `<svg width="20" height="16" viewBox="0 0 32 26"><circle cx="16" cy="13" r="11" fill="#1a1a1a"/></svg>`;}
+function plusIconSmall(){return `<svg width="20" height="16" viewBox="0 0 32 26"><rect x="2" y="2" width="28" height="22" fill="none" stroke="#808080" stroke-dasharray="3 2"/></svg>`;}
+
+function renderExplorerBody(win, node){
+  const body = win.querySelector('.winbody');
+  const crumbEl = win.querySelector('.crumb');
+  body.innerHTML='';
+  const list = node.children && node.children.length ? node.children : null;
+  if(!list){
+    body.innerHTML = `<div style="padding:14px;">To jest ostatni poziom tej gałęzi w hubie — otwórz link, żeby zobaczyć pełną zawartość na Dysku Google.</div>`;
+  } else {
+    list.forEach(c=> body.appendChild(buildRow(c)));
+  }
+  win.querySelector('.statuscount').textContent = list ? list.length+' obiekt(y)' : '0 obiektów';
+  win.querySelector('.ttext .label').textContent = node.name;
+  // breadcrumb
+  crumbEl.innerHTML='';
+  win._path.forEach((p,idx)=>{
+    const b = document.createElement('b');
+    b.textContent = p.name;
+    b.addEventListener('click', ()=>{ win._path = win._path.slice(0, idx+1); renderExplorerBody(win, p); });
+    crumbEl.appendChild(b);
+    if(idx < win._path.length-1){
+      const sep = document.createElement('span'); sep.textContent=' › '; crumbEl.appendChild(sep);
+    }
+  });
+}
+function pushCrumb(win, node){
+  win._path.push(node);
+  renderExplorerBody(win, node);
+}
+
+function openExplorer(node){
+  winCount++;
+  const id = 'win'+winCount;
+  const win = document.createElement('div');
+  win.className='win open raised';
+  win.id = id;
+  win.innerHTML = `
+    <div class="titlebar">
+      <div class="ttext"><span class="ico" style="display:inline-flex">${node.color==='bat'?batIconSmall():folderIconSmall()}</span><span class="label">${node.name}</span></div>
+      <div class="winbtn">_</div><div class="winbtn">▢</div><div class="winbtn close">×</div>
+    </div>
+    <div class="menubar"><span>Plik</span><span>Widok</span><span>Przejdź</span><span>Pomoc</span></div>
+    <div class="crumb"></div>
+    <div class="winbody"></div>
+    <div class="statusbar raised"><span class="statuscount"></span><span>Cerebro Hub</span></div>
+  `;
+  document.body.appendChild(win);
+  win._path = [node];
+  renderExplorerBody(win, node);
+  win.addEventListener('mousedown', ()=> focusWin(win));
+  win.querySelector('.close').addEventListener('click', ()=> closeWin(win, taskBtn));
+  const taskBtn = addTaskItem(node.name, win);
+  openWindows.push(win);
+  focusWin(win);
+  makeDraggable(win, win.querySelector('.titlebar'));
+}
+
+function closeWin(win, taskBtn){
+  win.remove();
+  if(taskBtn) taskBtn.remove();
+  const idx = openWindows.indexOf(win);
+  if(idx>-1) openWindows.splice(idx,1);
+}
+function focusWin(win){
+  openWindows.forEach(w=>w.classList.remove('top'));
+  win.classList.add('top');
+  document.body.appendChild(win);
+}
+function addTaskItem(name, win){
+  const t = document.createElement('div');
+  t.className='taskitem raised';
+  t.textContent = name;
+  t.addEventListener('click', ()=>{
+    win.style.display = win.style.display==='none' ? 'flex' : 'none';
+    if(win.style.display==='flex') focusWin(win);
+  });
+  document.getElementById('taskitems').appendChild(t);
+  return t;
+}
+function makeDraggable(win, handle){
+  let sx,sy,ox,oy,dragging=false;
+  handle.addEventListener('mousedown', (e)=>{
+    dragging=true;
+    const r = win.getBoundingClientRect();
+    win.style.left = r.left+'px'; win.style.transform='none';
+    sx=e.clientX; sy=e.clientY; ox=r.left; oy=r.top;
+    focusWin(win);
+  });
+  window.addEventListener('mousemove', (e)=>{
+    if(!dragging) return;
+    win.style.left = (ox + (e.clientX-sx))+'px';
+    win.style.top = Math.max(0, oy + (e.clientY-sy))+'px';
+  });
+  window.addEventListener('mouseup', ()=> dragging=false);
+}
+
+/* ---------- okno "O hubie / backup" ---------- */
+function openAbout(){
+  winCount++;
+  const win = document.createElement('div');
+  win.className='win open raised';
+  win.style.width='480px';
+  win.innerHTML = `
+    <div class="titlebar">
+      <div class="ttext"><span class="label">Właściwości: Cerebro</span></div>
+      <div class="winbtn">_</div><div class="winbtn">▢</div><div class="winbtn close">×</div>
+    </div>
+    <div class="winbody pad">
+      <b>Jak dodać nową ścieżkę do huba</b>
+      <ul class="steps">
+        <li>Otwórz plik <code class="mono">CerebroHub.html</code> (repo GitHub) w edytorze tekstu.</li>
+        <li>Znajdź obiekt <code class="mono">HUB</code> na początku sekcji <code class="mono">&lt;script&gt;</code>.</li>
+        <li>Dopisz kolejny wpis <code class="mono">{ name, url, kind, children }</code> — hub jest z założenia nieskończenie rozwijalny.</li>
+        <li>Zapisz, zacommituj i wypchnij zmianę — plik jest statyczny, nie wymaga żadnej instalacji.</li>
+      </ul>
+      <b>Backup</b>
+      <ul class="steps">
+        <li><b>Codziennie</b> — kopia lustrzana <i>Daily</i> nadpisywana w miejscu (bez mnożenia danych).</li>
+        <li><b>Raz w miesiącu</b> — osobny, datowany snapshot <i>Cerebro_Backup_YYYY-MM-DD</i>, zachowywany jako wersja historyczna.</li>
+      </ul>
+    </div>
+    <div class="statusbar raised"><span>Cerebro 98</span><span>v1.0</span></div>
+  `;
+  document.body.appendChild(win);
+  win.addEventListener('mousedown', ()=>focusWin(win));
+  win.querySelector('.close').addEventListener('click', ()=>closeWin(win,null));
+  makeDraggable(win, win.querySelector('.titlebar'));
+  focusWin(win);
+}
+
+/* ---------- Start menu ---------- */
+const smitems = document.getElementById('smitems');
+function buildStartTree(children, depth){
+  children.forEach(node=>{
+    const it = document.createElement('div');
+    it.className='smitem' + (depth>0?' smsub':'');
+    it.innerHTML = `<span class="ico">${node.placeholder?plusIconSmall():(node.color==='bat'?batIconSmall():folderIconSmall())}</span><span>${node.name}</span>`;
+    it.addEventListener('click', ()=>{
+      document.getElementById('startmenu').classList.remove('open');
+      node.placeholder ? openAbout() : openExplorer(node);
+    });
+    smitems.appendChild(it);
+  });
+}
+buildStartTree(HUB.children, 0);
+const hr = document.createElement('div'); hr.className='smhr'; smitems.appendChild(hr);
+const aboutItem = document.createElement('div');
+aboutItem.className='smitem';
+aboutItem.innerHTML = `<span class="ico">${plusIconSmall()}</span><span>O hubie / Backup...</span>`;
+aboutItem.addEventListener('click', ()=>{ document.getElementById('startmenu').classList.remove('open'); openAbout(); });
+smitems.appendChild(aboutItem);
+
+document.getElementById('startbtn').addEventListener('click', (e)=>{
+  const sm = document.getElementById('startmenu');
+  sm.classList.toggle('open');
+  document.getElementById('startbtn').classList.toggle('down', sm.classList.contains('open'));
+  e.stopPropagation();
+});
+document.addEventListener('click', (e)=>{
+  const sm = document.getElementById('startmenu');
+  if(!sm.contains(e.target) && e.target.id!=='startbtn' && !e.target.closest('#startbtn')){
+    sm.classList.remove('open');
+    document.getElementById('startbtn').classList.remove('down');
+  }
+  if(!e.target.closest('.dicon')) document.querySelectorAll('.dicon').forEach(x=>x.classList.remove('selected'));
+});
+
+/* ---------- zegar ---------- */
+function tick(){
+  const d = new Date();
+  document.getElementById('clock').textContent =
+    d.toLocaleTimeString('pl-PL', {hour:'2-digit', minute:'2-digit'});
+}
+tick(); setInterval(tick, 1000*20);
+
+/* domyślnie otwórz "Cerebro core" jak przy starcie systemu */
+openExplorer(HUB);
+</script>
+</html>
