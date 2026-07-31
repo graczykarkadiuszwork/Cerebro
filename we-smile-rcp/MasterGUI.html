@@ -102,6 +102,18 @@
 .gr-rek-akcja{font-size:13px;color:var(--c-ink);line-height:1.5;margin-top:6px;font-weight:600}
 .gr-rek-kat{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--c-muted);margin-top:6px}
 
+/* ── Adnotacje niestandardowe ── */
+.ad-strip{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.ad-item{display:flex;gap:9px;align-items:flex-start;border-radius:var(--radius-s);
+  padding:9px 12px;font-size:12.5px;line-height:1.45;border-left:3px solid var(--c-primary);
+  background:var(--c-primary-tint);color:var(--c-ink)}
+.ad-item.uwaga{border-left-color:#B8860B;background:rgba(184,134,11,.10)}
+.ad-item.wazne{border-left-color:var(--c-accent);background:var(--c-accent-tint)}
+.ad-item.wolne{border-left-color:var(--c-muted);background:var(--c-field)}
+.ad-item-b{flex:1;min-width:0}
+.ad-zakres{font-size:11px;font-weight:700;color:var(--c-muted);text-transform:uppercase;letter-spacing:.4px}
+.ad-x{background:none;border:none;cursor:pointer;color:var(--c-muted);padding:0;flex-shrink:0}
+
 /* ── Kreator grafiku (kafelki dni → godziny → asysta) ── */
 .kr-steps{display:flex;gap:6px;margin-bottom:16px}
 .kr-step{flex:1;height:4px;border-radius:2px;background:var(--c-border)}
@@ -175,6 +187,8 @@
   .pr-czas{font-weight:700;font-family:ui-monospace,monospace}
   .pr-as{color:#444}
   .pr-pusto{color:#999;font-style:italic}
+  .pr-brak{color:#7B1E3B;font-weight:700}
+  .pr-adn{margin-top:4px;padding:3px 6px;background:#f0f0f0;border-left:2px solid #666;font-size:9.5px}
 }
 </style>
 </head>
@@ -446,6 +460,14 @@
           <span>Rekomendacje</span>
           <span id="gr-rek-count" class="gr-badge">0</span>
         </button>
+        <button id="gr-adnot" class="btn btn-ghost" type="button">
+          <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Adnotacje
+        </button>
+        <button id="gr-import" class="btn btn-ghost" type="button">
+          <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>
+          Import z kalendarza
+        </button>
         <button id="gr-print" class="btn btn-ghost" type="button">
           <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="7" rx="2"/><path d="M6 16h12v5H6z"/></svg>
           Wydruk
@@ -474,6 +496,7 @@
 
       <div class="seg seg-scroll" id="gr-days" style="margin-bottom:14px"></div>
 
+      <div id="gr-adnot-strip"></div>
       <div id="gr-day-head" class="gr-day-head"></div>
       <div id="gr-grid"><div class="hint">Ładowanie…</div></div>
     </div>
@@ -815,6 +838,97 @@
     </div>
     <div class="faq-cats" id="gr-rek-filtry"></div>
     <div class="faq-results" id="gr-rek-lista"></div>
+  </div>
+</div>
+
+<!-- ═══════ MODAL — adnotacje ═══════ -->
+<div id="ad-modal" class="modal-overlay" style="display:none">
+  <div class="modal-card">
+    <div class="modal-head">
+      <span>Adnotacje do grafiku</span>
+      <button id="ad-close" class="btn-icon" aria-label="Zamknij">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="section" style="margin-top:0">
+      <div class="section-title">Nowa adnotacja</div>
+      <div class="field">
+        <span class="field-lbl">Zakres</span>
+        <select id="ad-zakres" class="sel">
+          <option value="dzien">Jeden dzień</option>
+          <option value="tydzien">Tydzień</option>
+          <option value="miesiac">Miesiąc</option>
+          <option value="okres">Dowolny okres</option>
+        </select>
+      </div>
+      <div class="field-row2">
+        <div class="field"><span class="field-lbl">Od</span><input type="date" id="ad-od" class="inp"></div>
+        <div class="field"><span class="field-lbl">Do</span><input type="date" id="ad-do" class="inp"></div>
+      </div>
+      <div class="field-row2">
+        <div class="field"><span class="field-lbl">Typ</span><select id="ad-typ" class="sel"></select></div>
+        <div class="field"><span class="field-lbl">Gabinet (opcjonalnie)</span><select id="ad-gab" class="sel"></select></div>
+      </div>
+      <div class="field"><span class="field-lbl">Osoba (opcjonalnie)</span><select id="ad-osoba" class="sel"></select></div>
+      <div class="field" style="margin-bottom:0">
+        <span class="field-lbl">Treść</span>
+        <textarea id="ad-tresc" class="ta" placeholder="np. Remont sterylizatorni — jeden gabinet nieczynny"></textarea>
+      </div>
+      <button id="ad-save" class="btn btn-primary" style="margin-top:12px" type="button">Dodaj adnotację</button>
+    </div>
+    <div class="section-title" style="margin-top:16px">Istniejące</div>
+    <div id="ad-lista"></div>
+  </div>
+</div>
+
+<!-- ═══════ MODAL — wydruk grafiku ═══════ -->
+<div id="pr-modal" class="modal-overlay" style="display:none">
+  <div class="modal-card">
+    <div class="modal-head">
+      <span>Wydruk grafiku</span>
+      <button id="pr-close" class="btn-icon" aria-label="Zamknij">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="hint" style="padding:0 0 12px">Wydruk obejmuje zakres dat (domyślnie bieżący miesiąc).
+      Możesz zawęzić go do wybranych gabinetów, osób i godzin.</div>
+    <div class="field-row2">
+      <div class="field"><span class="field-lbl">Od</span><input type="date" id="pr-od" class="inp"></div>
+      <div class="field"><span class="field-lbl">Do</span><input type="date" id="pr-do" class="inp"></div>
+    </div>
+    <div class="field-row2">
+      <div class="field"><span class="field-lbl">Godziny od (opcjonalnie)</span><input type="time" id="pr-god" class="inp" step="300"></div>
+      <div class="field"><span class="field-lbl">Godziny do</span><input type="time" id="pr-gdo" class="inp" step="300"></div>
+    </div>
+    <div class="section">
+      <div class="section-title">Gabinety — puste = wszystkie</div>
+      <div id="pr-gab"></div>
+    </div>
+    <div class="section">
+      <div class="section-title">Osoby — puste = wszystkie</div>
+      <div id="pr-osoby" style="max-height:220px;overflow-y:auto"></div>
+    </div>
+    <button id="pr-go" class="btn btn-accent" style="margin-top:14px" type="button">Generuj wydruk</button>
+  </div>
+</div>
+
+<!-- ═══════ MODAL — import z kalendarza ═══════ -->
+<div id="im-modal" class="modal-overlay" style="display:none">
+  <div class="modal-card">
+    <div class="modal-head">
+      <span>Import grafiku z kalendarza</span>
+      <button id="im-close" class="btn-icon" aria-label="Zamknij">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="hint" style="padding:0 0 12px">Wklej publiczny adres kalendarza lekarzy. System sam rozpozna
+      format, dopasuje nazwiska do zespołu i pokaże <b>podgląd</b> — nic nie zapisze bez Twojej zgody.</div>
+    <div class="field">
+      <span class="field-lbl">Adres kalendarza</span>
+      <input type="url" id="im-url" class="inp" placeholder="https://…" autocomplete="off">
+    </div>
+    <button id="im-podglad" class="btn btn-primary" type="button">Pobierz podgląd</button>
+    <div id="im-wynik" style="margin-top:14px"></div>
   </div>
 </div>
 
@@ -1569,6 +1683,7 @@ function grRenderDzien() {
   var nr = GR.dzien;
   var g = d.godziny[nr];
 
+  adStrip();
   document.getElementById('gr-day-head').innerHTML =
     '<span class="gr-day-name">' + esc(g.nazwa) + '</span>' +
     '<span class="gr-day-okno">klinika czynna ' + esc(g.open) + '–' + esc(g.close) + '</span>' +
@@ -2030,47 +2145,7 @@ document.getElementById('gr-gab-add').addEventListener('click', function() {
 // Buduje osobny, prosty układ tabelaryczny (cały tydzień na jednej
 // kartce A4 poziomo) i oddaje go przeglądarce do druku.
 
-document.getElementById('gr-print').addEventListener('click', function() {
-  if (!GR.dane) return;
-  var d = GR.dane;
 
-  var naglowki = d.dni.map(function(nr) {
-    return '<th>' + esc(d.godziny[nr].nazwa) + '<br><span style="font-weight:400">' +
-      esc(d.godziny[nr].open) + '–' + esc(d.godziny[nr].close) + '</span></th>';
-  }).join('');
-
-  var wiersze = d.gabinety.map(function(gab) {
-    var kom = d.dni.map(function(nr) {
-      var bloki = (d.bloki || []).filter(function(b) {
-        return b.dzien === nr && b.gabinetId === gab.id;
-      }).sort(function(a, b) { return grT2M(a.od) - grT2M(b.od); });
-
-      if (!bloki.length) return '<td><span class="pr-pusto">—</span></td>';
-
-      return '<td>' + bloki.map(function(b) {
-        var as = (b.asysta || []).map(function(a) { return grOsobaNazwa(a.osobaId); }).join(', ');
-        return '<div class="pr-blok">' +
-          '<span class="pr-czas">' + esc(b.od) + '–' + esc(b.do) + '</span><br>' +
-          esc(grOsobaNazwa(b.osobaId)) +
-          (b.typ === 'Higienizacja' ? ' <i>(higienizacja)</i>' : '') +
-          (as ? '<br><span class="pr-as">as. ' + esc(as) + '</span>' : '') +
-          '</div>';
-      }).join('') + '</td>';
-    }).join('');
-    return '<tr><td class="pr-gab">' + esc(gab.nazwa) + '</td>' + kom + '</tr>';
-  }).join('');
-
-  var dzis = new Date();
-  document.getElementById('gr-print-area').innerHTML =
-    '<div class="pr-h1">Grafik obsady gabinetów — We Smile</div>' +
-    '<div class="pr-sub">Szablon tygodniowy · wydruk ' +
-      dzis.getFullYear() + '-' + String(dzis.getMonth() + 1).padStart(2, '0') + '-' +
-      String(dzis.getDate()).padStart(2, '0') + '</div>' +
-    '<table class="pr-table"><thead><tr><th class="pr-gab">Gabinet</th>' + naglowki +
-    '</tr></thead><tbody>' + wiersze + '</tbody></table>';
-
-  window.print();
-});
 
 // ════════════════════════════════════════════════════════════
 // ── Kreator grafiku ─────────────────────────────────────────
@@ -2364,6 +2439,323 @@ document.getElementById('kr-next').addEventListener('click', function() {
 function krT2M(t) {
   var p = String(t).split(':');
   return parseInt(p[0], 10) * 60 + parseInt(p[1], 10);
+}
+
+// ── Adnotacje niestandardowe ──────────────────────────────────
+// Grafik jest szablonem tygodniowym, więc rzeczy przypisane do konkretnych
+// dat (remont, święto, zastępstwo) mieszkają tutaj.
+
+function adDaty() {
+  var z = document.getElementById('ad-zakres').value;
+  var od = document.getElementById('ad-od');
+  var doP = document.getElementById('ad-do');
+  if (!od.value) od.value = todayStr();
+  var d = new Date(od.value + 'T12:00:00');
+
+  if (z === 'dzien') doP.value = od.value;
+  else if (z === 'tydzien') {
+    var pon = new Date(d); pon.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    var nd = new Date(pon); nd.setDate(pon.getDate() + 6);
+    od.value = pon.toISOString().slice(0, 10);
+    doP.value = nd.toISOString().slice(0, 10);
+  } else if (z === 'miesiac') {
+    var y = d.getFullYear(), m = d.getMonth();
+    od.value = new Date(Date.UTC(y, m, 1)).toISOString().slice(0, 10);
+    doP.value = new Date(Date.UTC(y, m + 1, 0)).toISOString().slice(0, 10);
+  }
+  doP.disabled = (z !== 'okres');
+}
+
+document.getElementById('gr-adnot').addEventListener('click', function() {
+  if (!GR.dane) { toast('Poczekaj na wczytanie grafiku.', false); return; }
+  document.getElementById('ad-typ').innerHTML = (GR.dane.adnotacjeTypy || []).map(function(t) {
+    return '<option value="' + esc(t.id) + '">' + esc(t.label) + '</option>';
+  }).join('');
+  document.getElementById('ad-gab').innerHTML = '<option value="">— wszystkie —</option>' +
+    (GR.dane.gabinety || []).map(function(g) {
+      return '<option value="' + esc(g.id) + '">' + esc(g.nazwa) + '</option>';
+    }).join('');
+  document.getElementById('ad-osoba').innerHTML = '<option value="">— wszyscy —</option>' +
+    (GR.dane.personel || []).map(function(p) {
+      return '<option value="' + esc(p.id) + '">' + esc(p.imie + ' ' + p.nazwisko) + '</option>';
+    }).join('');
+  document.getElementById('ad-od').value = todayStr();
+  adDaty();
+  adLista();
+  document.getElementById('ad-modal').style.display = 'flex';
+});
+
+document.getElementById('ad-zakres').addEventListener('change', adDaty);
+document.getElementById('ad-od').addEventListener('change', adDaty);
+document.getElementById('ad-close').addEventListener('click', function() {
+  document.getElementById('ad-modal').style.display = 'none';
+});
+document.getElementById('ad-modal').addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
+
+document.getElementById('ad-save').addEventListener('click', function() {
+  var a = {
+    od: document.getElementById('ad-od').value,
+    do: document.getElementById('ad-do').value,
+    typ: document.getElementById('ad-typ').value,
+    tresc: document.getElementById('ad-tresc').value,
+    gabinetId: document.getElementById('ad-gab').value,
+    osobaId: document.getElementById('ad-osoba').value
+  };
+  gas('masterSaveAdnotacja', [M.token, a], function(res) {
+    if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+    if (!res || !res.ok) { toast((res && res.msg) || 'Błąd zapisu.', false); return; }
+    document.getElementById('ad-tresc').value = '';
+    wsConfirmPopup('Dodano adnotację.');
+    grLoad(function() { adLista(); });
+  });
+});
+
+function adLista() {
+  var lista = (GR.dane && GR.dane.adnotacje) || [];
+  var wrap = document.getElementById('ad-lista');
+  if (!lista.length) { wrap.innerHTML = '<div class="hint">Brak adnotacji.</div>'; return; }
+  wrap.innerHTML = '<div class="ad-strip">' + lista.slice().sort(function(a, b) {
+    return a.od.localeCompare(b.od);
+  }).map(function(a) {
+    return '<div class="ad-item ' + esc(a.typ) + '">' +
+      '<div class="ad-item-b"><div class="ad-zakres">' + esc(a.od) +
+      (a.do !== a.od ? ' – ' + esc(a.do) : '') + adKontekst(a) + '</div>' +
+      esc(a.tresc) + '</div>' +
+      '<button type="button" class="ad-x" data-del="' + esc(a.id) + '" aria-label="Usuń">' +
+      '<svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>';
+  }).join('') + '</div>';
+
+  wrap.querySelectorAll('[data-del]').forEach(function(b) {
+    b.addEventListener('click', function() {
+      gas('masterDeleteAdnotacja', [M.token, this.getAttribute('data-del')], function(res) {
+        if (!res || !res.ok) { toast((res && res.msg) || 'Błąd.', false); return; }
+        wsConfirmPopup('Usunięto adnotację.');
+        grLoad(function() { adLista(); });
+      });
+    });
+  });
+}
+
+function adKontekst(a) {
+  var cz = [];
+  if (a.gabinetId) {
+    var g = (GR.dane.gabinety || []).find(function(x) { return x.id === a.gabinetId; });
+    cz.push(g ? g.nazwa : a.gabinetId);
+  }
+  if (a.osobaId) cz.push(grOsobaNazwa(a.osobaId));
+  return cz.length ? ' · ' + esc(cz.join(' · ')) : '';
+}
+
+// Pasek adnotacji obowiązujących w najbliższym wystąpieniu wybranego dnia.
+function adStrip() {
+  var wrap = document.getElementById('gr-adnot-strip');
+  if (!wrap || !GR.dane) return;
+  var lista = GR.dane.adnotacje || [];
+  if (!lista.length) { wrap.innerHTML = ''; return; }
+
+  // Najbliższa data odpowiadająca wybranemu dniowi tygodnia.
+  var d = new Date();
+  for (var i = 0; i < 7; i++) {
+    if (d.getDay() === GR.dzien) break;
+    d.setDate(d.getDate() + 1);
+  }
+  var ds = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') +
+           '-' + String(d.getDate()).padStart(2, '0');
+
+  var akt = lista.filter(function(a) { return a.od <= ds && ds <= a.do; });
+  if (!akt.length) { wrap.innerHTML = ''; return; }
+
+  wrap.innerHTML = '<div class="ad-strip">' + akt.map(function(a) {
+    return '<div class="ad-item ' + esc(a.typ) + '"><div class="ad-item-b">' +
+      '<div class="ad-zakres">' + esc(ds) + adKontekst(a) + '</div>' + esc(a.tresc) + '</div></div>';
+  }).join('') + '</div>';
+}
+
+// ── Wydruk: zakres dat + filtry ───────────────────────────────
+
+document.getElementById('gr-print').addEventListener('click', function() {
+  if (!GR.dane) { toast('Poczekaj na wczytanie grafiku.', false); return; }
+  var d = new Date();
+  var y = d.getFullYear(), m = d.getMonth();
+  document.getElementById('pr-od').value = new Date(Date.UTC(y, m, 1)).toISOString().slice(0, 10);
+  document.getElementById('pr-do').value = new Date(Date.UTC(y, m + 1, 0)).toISOString().slice(0, 10);
+  document.getElementById('pr-god').value = '';
+  document.getElementById('pr-gdo').value = '';
+
+  document.getElementById('pr-gab').innerHTML = (GR.dane.gabinety || []).map(function(g) {
+    return '<label style="display:flex;align-items:center;gap:10px;padding:8px 4px;font-size:14px;cursor:pointer">' +
+      '<input type="checkbox" class="pr-gab-cb" value="' + esc(g.id) + '" style="width:19px;height:19px;accent-color:var(--c-primary)"> ' +
+      esc(g.nazwa) + '</label>';
+  }).join('');
+
+  document.getElementById('pr-osoby').innerHTML = (GR.dane.personel || [])
+    .filter(function(p) { return p.grupa === 'lekarz' || p.grupa === 'higienistka' || p.grupa === 'asystentka'; })
+    .map(function(p) {
+      return '<label style="display:flex;align-items:center;gap:10px;padding:8px 4px;font-size:14px;cursor:pointer">' +
+        '<input type="checkbox" class="pr-os-cb" value="' + esc(p.id) + '" style="width:19px;height:19px;accent-color:var(--c-primary)"> ' +
+        esc(p.imie + ' ' + p.nazwisko) + '</label>';
+    }).join('');
+
+  document.getElementById('pr-modal').style.display = 'flex';
+});
+
+document.getElementById('pr-close').addEventListener('click', function() {
+  document.getElementById('pr-modal').style.display = 'none';
+});
+document.getElementById('pr-modal').addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
+
+document.getElementById('pr-go').addEventListener('click', function() {
+  var opts = {
+    od: document.getElementById('pr-od').value,
+    do: document.getElementById('pr-do').value,
+    godzOd: document.getElementById('pr-god').value,
+    godzDo: document.getElementById('pr-gdo').value,
+    gabinetIds: Array.prototype.map.call(document.querySelectorAll('.pr-gab-cb:checked'), function(c) { return c.value; }),
+    osobaIds: Array.prototype.map.call(document.querySelectorAll('.pr-os-cb:checked'), function(c) { return c.value; })
+  };
+  toast('Przygotowuję wydruk…', true);
+  gas('masterGrafikWydruk', [M.token, opts], function(res) {
+    if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+    if (!res || !res.ok) { toast((res && res.msg) || 'Błąd wydruku.', false); return; }
+    document.getElementById('pr-modal').style.display = 'none';
+    prRenderuj(res);
+    window.print();
+  });
+});
+
+function prRenderuj(d) {
+  var TYPY = { info:'Informacja', uwaga:'Uwaga', wazne:'Ważne', wolne:'Nieczynne' };
+  var html =
+    '<div class="pr-h1">Grafik obsady gabinetów — We Smile</div>' +
+    '<div class="pr-sub">' + esc(d.od) + ' – ' + esc(d.do) +
+      (d.filtr ? ' · ' + esc(d.filtr) : '') + ' · wydruk ' + todayStr() + '</div>';
+
+  if (!d.dni.length) {
+    html += '<div class="pr-pusto">Brak obsady w wybranym zakresie.</div>';
+    document.getElementById('gr-print-area').innerHTML = html;
+    return;
+  }
+
+  html += '<table class="pr-table"><thead><tr>' +
+    '<th style="width:92px">Data</th><th style="width:70px">Dzień</th><th>Obsada</th>' +
+    '</tr></thead><tbody>' +
+    d.dni.map(function(dz) {
+      var tresc = dz.bloki.map(function(b) {
+        return '<div class="pr-blok"><span class="pr-czas">' + esc(b.od) + '–' + esc(b.do) + '</span> · ' +
+          esc(b.gabinet) + ' · ' + esc(b.osoba) +
+          (b.typ === 'Higienizacja' ? ' <i>(higienizacja)</i>' : '') +
+          (b.asysta.length ? '<br><span class="pr-as">as. ' + esc(b.asysta.join(', ')) + '</span>' : '') +
+          (b.brakAsysty ? '<br><span class="pr-brak">BRAK ASYSTY</span>' : '') +
+          '</div>';
+      }).join('');
+      var adn = dz.adnotacje.map(function(a) {
+        return '<div class="pr-adn">' + esc(TYPY[a.typ] || a.typ) + ': ' + esc(a.tresc) +
+          (a.gabinet ? ' (' + esc(a.gabinet) + ')' : '') +
+          (a.osoba ? ' (' + esc(a.osoba) + ')' : '') + '</div>';
+      }).join('');
+      return '<tr><td class="pr-czas">' + esc(dz.data) + '</td><td>' + esc(dz.dzien) + '</td>' +
+        '<td>' + (tresc || '<span class="pr-pusto">—</span>') + adn + '</td></tr>';
+    }).join('') +
+    '</tbody></table>';
+
+  document.getElementById('gr-print-area').innerHTML = html;
+}
+
+// ── Import z kalendarza zewnętrznego ──────────────────────────
+
+document.getElementById('gr-import').addEventListener('click', function() {
+  document.getElementById('im-wynik').innerHTML = '';
+  document.getElementById('im-modal').style.display = 'flex';
+});
+document.getElementById('im-close').addEventListener('click', function() {
+  document.getElementById('im-modal').style.display = 'none';
+});
+document.getElementById('im-modal').addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
+
+document.getElementById('im-podglad').addEventListener('click', function() {
+  var url = document.getElementById('im-url').value.trim();
+  if (!url) { toast('Wklej adres kalendarza.', false); return; }
+  var btn = this;
+  btn.disabled = true;
+  document.getElementById('im-wynik').innerHTML = '<div class="hint">Pobieram i analizuję…</div>';
+
+  gas('masterGrafikImportPodglad', [M.token, url], function(res) {
+    btn.disabled = false;
+    if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+    if (!res || !res.ok) {
+      document.getElementById('im-wynik').innerHTML =
+        '<div class="ovr-flag on" style="display:flex">' + ICO.warn +
+        '<span>' + esc((res && res.msg) || 'Nie udało się pobrać kalendarza.') + '</span></div>';
+      return;
+    }
+    imPodglad(res);
+  });
+});
+
+function imPodglad(res) {
+  var doUtw = (res.propozycje || []).filter(function(p) { return p.status === 'do-utworzenia'; });
+  var problemy = (res.propozycje || []).filter(function(p) { return p.status !== 'do-utworzenia'; });
+
+  var html = '<div class="info-box" style="margin-bottom:12px"><span>Format: <b>' + esc(res.format) +
+    '</b> · wydarzeń w kalendarzu: <b>' + res.znalezionychWydarzen + '</b> · do utworzenia: <b>' +
+    doUtw.length + '</b></span></div>';
+
+  if (doUtw.length) {
+    html += '<div class="section" style="margin-top:0"><div class="section-title">Powstanie w grafiku</div>' +
+      doUtw.map(function(p) {
+        return '<div class="staff-row"><div><span class="staff-name">' + esc(p.osoba) + '</span>' +
+          '<span class="staff-role">' + esc(p.dzienNazwa) + ' ' + esc(p.od) + '–' + esc(p.do) +
+          ' · ' + esc(p.gabinet) + '</span>' +
+          (p.uwaga ? '<span class="staff-warn-lbl" style="color:var(--c-muted)">' + esc(p.uwaga) + '</span>' : '') +
+          '</div></div>';
+      }).join('') + '</div>';
+  }
+
+  if (problemy.length) {
+    html += '<div class="section"><div class="section-title">Pominięte</div>' +
+      problemy.map(function(p) {
+        return '<div class="staff-row warn"><div><span class="staff-name">' + esc(p.osoba) + '</span>' +
+          '<span class="staff-role">' + esc(p.dzienNazwa) + ' ' + esc(p.od) + '–' + esc(p.do) + '</span>' +
+          '<span class="staff-warn-lbl">' + esc(p.uwaga) + '</span></div></div>';
+      }).join('') + '</div>';
+  }
+
+  if ((res.nierozpoznane || []).length) {
+    html += '<div class="section"><div class="section-title">Nierozpoznane wpisy — sprawdź nazwiska w zakładce Zespół</div>' +
+      res.nierozpoznane.map(function(n) {
+        return '<div class="hint" style="padding:5px 0">„' + esc(n.tytul) + '" — ' + n.ile + '×</div>';
+      }).join('') + '</div>';
+  }
+
+  if (doUtw.length) {
+    html += '<label style="display:flex;align-items:center;gap:10px;margin-top:14px;font-size:14px;cursor:pointer">' +
+      '<input type="checkbox" id="im-czysc" style="width:19px;height:19px;accent-color:var(--c-accent)"> ' +
+      'Najpierw usuń istniejące bloki lekarskie (' + res.istniejacychBlokow + ' bloków w grafiku). ' +
+      'Higienizacje i asysta zostaną nietknięte.</label>' +
+      '<button id="im-zapisz" class="btn btn-accent" style="margin-top:12px" type="button">' +
+      'Zapisz ' + doUtw.length + ' bloków do grafiku</button>';
+  }
+
+  document.getElementById('im-wynik').innerHTML = html;
+
+  var zapisz = document.getElementById('im-zapisz');
+  if (zapisz) zapisz.addEventListener('click', function() {
+    var czysc = document.getElementById('im-czysc').checked;
+    this.disabled = true;
+    gas('masterGrafikImportZastosuj', [M.token, doUtw, czysc], function(r) {
+      if (!r || !r.ok) { toast((r && r.msg) || 'Błąd importu.', false); return; }
+      document.getElementById('im-modal').style.display = 'none';
+      if (r.bledy && r.bledy.length) wsShowError('Dodano ' + r.dodane + '. Nie udało się: ' + r.bledy.join(' · '));
+      else wsConfirmPopup('Zaimportowano ' + r.dodane + ' bloków.');
+      grLoad();
+    });
+  });
 }
 
 // ── Widok: Pracownicy (forma zatrudnienia) ────────

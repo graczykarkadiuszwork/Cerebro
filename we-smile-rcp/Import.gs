@@ -592,7 +592,7 @@ function masterGrafikImportZastosuj(token, propozycje, czyscicPrzed) {
   // i asysta to praca właściciela, której import nie ma prawa kasować.
   let usuniete = 0;
   if (czyscicPrzed) {
-    const sh = _ss().getSheetByName('Grafik');
+    const sh = _shGrafik();
     const rows = sh.getDataRange().getValues();
     for (let i = rows.length - 1; i >= 1; i--) {
       if (String(rows[i][3]) === BLOK_LEKARZ) {

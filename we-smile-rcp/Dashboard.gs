@@ -622,7 +622,7 @@ function masterRemoveEmployee(token, empId) {
   if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
   if (!empId) return { ok: false, msg: 'Brak pracownika.' };
 
-  const sh = _ss().getSheetByName('Pracownicy');
+  const sh = _arkusz('Pracownicy', NAGLOWKI_PRACOWNICY);
   const rows = sh.getDataRange().getValues();
   for (let i = 1; i < rows.length; i++) {
     if (String(rows[i][0]) === String(empId)) {
@@ -641,7 +641,7 @@ function masterRestoreEmployee(token, empId) {
   if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
   if (!empId) return { ok: false, msg: 'Brak pracownika.' };
 
-  const sh = _ss().getSheetByName('Pracownicy');
+  const sh = _arkusz('Pracownicy', NAGLOWKI_PRACOWNICY);
   const rows = sh.getDataRange().getValues();
   for (let i = 1; i < rows.length; i++) {
     if (String(rows[i][0]) === String(empId)) {
@@ -675,7 +675,7 @@ function masterAddEmployee(token, imie, nazwisko, rola, pin) {
     return { ok: false, msg: 'PIN musi mieć dokładnie 4 cyfry.' };
   }
 
-  const sh = _ss().getSheetByName('Pracownicy');
+  const sh = _arkusz('Pracownicy', NAGLOWKI_PRACOWNICY);
   const rows = sh.getDataRange().getValues().slice(1);
   if (pin && rows.some(r => _pinMatch(r[5], pin))) {
     return { ok: false, msg: 'Ten PIN jest już używany przez innego pracownika.' };
@@ -714,7 +714,7 @@ function masterSetDoctorTags(token, empId, tags) {
   const unique = [];
   list.forEach(t => { if (unique.indexOf(t) === -1) unique.push(t); });
 
-  const sh = _ss().getSheetByName('Pracownicy');
+  const sh = _arkusz('Pracownicy', NAGLOWKI_PRACOWNICY);
   const rows = sh.getDataRange().getValues();
   for (let i = 1; i < rows.length; i++) {
     if (String(rows[i][0]) === String(empId)) {
@@ -738,7 +738,7 @@ function masterSetEmploymentForm(token, empId, forma) {
     return { ok: false, msg: 'Nieprawidłowa forma zatrudnienia.' };
   }
 
-  const sh = _ss().getSheetByName('Pracownicy');
+  const sh = _arkusz('Pracownicy', NAGLOWKI_PRACOWNICY);
   const rows = sh.getDataRange().getValues();
   for (let i = 1; i < rows.length; i++) {
     if (String(rows[i][0]) === String(empId)) {

@@ -26,18 +26,31 @@
 // Gabinety muszą istnieć zawsze — grafik bez nich nie ma się o co oprzeć.
 // Tworzymy je przy pierwszym odczycie, zamiast wymagać pamiętania
 // o ponownym uruchomieniu setupRCP() po aktualizacji.
+// Trzy gabinety kliniki są stałe — istnieją zawsze i zawsze są dostępne
+// przez całe godziny otwarcia. Brakujący gabinet jest odtwarzany, a nie
+// tylko zakładany przy pustym arkuszu: dzięki temu żadna wcześniejsza
+// pomyłka w danych nie zostawia grafiku bez podstawy.
+const GABINETY_STALE = [
+  { id: 'G1', nazwa: 'Gabinet 1', kolejnosc: 1 },
+  { id: 'G2', nazwa: 'Gabinet 2', kolejnosc: 2 },
+  { id: 'G3', nazwa: 'Gabinet 3', kolejnosc: 3 }
+];
+
 function _zapewnijGabinety() {
-  const ss = _ss();
-  let sh = ss.getSheetByName('Gabinety');
-  if (!sh) {
-    sh = ss.insertSheet('Gabinety');
-    sh.appendRow(['ID', 'Nazwa', 'Kolejnosc', 'Aktywny']);
-  }
-  if (sh.getLastRow() < 2) {
-    [['G1', 'Gabinet 1', 1, 'TAK'],
-     ['G2', 'Gabinet 2', 2, 'TAK'],
-     ['G3', 'Gabinet 3', 3, 'TAK']].forEach(r => sh.appendRow(r));
-  }
+  const sh = _arkusz('Gabinety', ['ID', 'Nazwa', 'Kolejnosc', 'Aktywny']);
+  const rows = sh.getLastRow() >= 2 ? sh.getDataRange().getValues().slice(1) : [];
+  const maID = {};
+  rows.forEach((r, i) => { maID[String(r[0])] = i + 2; });
+
+  GABINETY_STALE.forEach(g => {
+    const wiersz = maID[g.id];
+    if (!wiersz) {
+      sh.appendRow([g.id, g.nazwa, g.kolejnosc, 'TAK']);
+    } else if (String(sh.getRange(wiersz, 4).getValue()).toUpperCase() === 'NIE') {
+      // Stałego gabinetu nie da się trwale wycofać — przywracamy go.
+      sh.getRange(wiersz, 4).setValue('TAK');
+    }
+  });
   return sh;
 }
 
@@ -205,6 +218,8 @@ function _grafikPayload() {
     dni: GRAFIK_DAYS,
     tagiDostepne: DOCTOR_SPECIALIZATION_TAGS,
     krokMin: GRAFIK_KROK_MIN,
+    adnotacje: _adnotacjeAll(),
+    adnotacjeTypy: ADNOTACJA_TYPY,
     asystaZew: ASYSTA_ZEW,
     uwagaBrakAsysty: UWAGA_BRAK_ASYSTY,
     rekomendacje
@@ -245,6 +260,10 @@ function masterSaveGabinet(token, gabinetId, nazwa, aktywny) {
 // w całości. Blokujemy tylko wtedy, gdy zostałby ostatni aktywny gabinet.
 function masterRemoveGabinet(token, gabinetId) {
   if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  if (GABINETY_STALE.some(g => g.id === String(gabinetId))) {
+    return { ok: false, msg: 'To jeden z trzech stałych gabinetów kliniki — nie można go wycofać. ' +
+      'Możesz zmienić jego nazwę.' };
+  }
   const aktywne = _gabinetyAll(false);
   if (aktywne.length <= 1) {
     return { ok: false, msg: 'Musi zostać co najmniej jeden aktywny gabinet.' };
@@ -1682,4 +1701,215 @@ function masterGrafikKreatorZapisz(token, osobaId, pozycje) {
     (bledy.length ? (', błędów ' + bledy.length) : ''));
 
   return { ok: true, dodane: dodane.length, bledy: bledy.slice(0, 20) };
+}
+
+// ── Adnotacje niestandardowe ─────────────────────────────────
+// Notatka przypięta do konkretnego zakresu dat (dzień / tydzień /
+// miesiąc / dowolny okres), opcjonalnie zawężona do gabinetu lub osoby.
+// Grafik jest szablonem tygodniowym, więc to jedyne miejsce, w którym
+// zapisujemy rzeczy dziejące się w konkretnych datach.
+
+const ADNOTACJA_TYPY = [
+  { id: 'info',   label: 'Informacja' },
+  { id: 'uwaga',  label: 'Uwaga' },
+  { id: 'wazne',  label: 'Ważne' },
+  { id: 'wolne',  label: 'Nieczynne / wolne' }
+];
+
+function _shAdnotacje() {
+  return _arkusz('GrafikAdnotacje',
+    ['ID','Od','Do','Typ','Tresc','GabinetID','OsobaID','Zmodyfikowano']);
+}
+
+function _adnotacjeAll() {
+  const sh = _shAdnotacje();
+  if (sh.getLastRow() < 2) return [];
+  return sh.getDataRange().getValues().slice(1)
+    .map(r => ({
+      id: String(r[0]),
+      od: _sheetDate(r[1]),
+      do: _sheetDate(r[2]),
+      typ: String(r[3] || 'info'),
+      tresc: String(r[4] || ''),
+      gabinetId: String(r[5] || ''),
+      osobaId: String(r[6] || '')
+    }))
+    .filter(a => a.id && /^\d{4}-\d{2}-\d{2}$/.test(a.od));
+}
+
+function _dataOk(s) { return /^\d{4}-\d{2}-\d{2}$/.test(String(s || '').trim()); }
+
+function masterGetAdnotacje(token) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  return { ok: true, adnotacje: _adnotacjeAll(), typy: ADNOTACJA_TYPY };
+}
+
+function masterSaveAdnotacja(token, a) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  a = a || {};
+  const od = String(a.od || '').trim();
+  const do_ = String(a.do || od).trim();
+  const tresc = String(a.tresc || '').trim().slice(0, 500);
+  const typ = ADNOTACJA_TYPY.some(x => x.id === a.typ) ? a.typ : 'info';
+
+  if (!_dataOk(od) || !_dataOk(do_)) return { ok: false, msg: 'Podaj poprawny zakres dat.' };
+  if (od > do_) return { ok: false, msg: 'Data „od" nie może być późniejsza niż „do".' };
+  if (!tresc) return { ok: false, msg: 'Wpisz treść adnotacji.' };
+
+  const sh = _shAdnotacje();
+  const wartosci = [od, do_, typ, tresc,
+                    String(a.gabinetId || ''), String(a.osobaId || ''), new Date().toISOString()];
+  const id = String(a.id || '');
+
+  if (id) {
+    const rows = sh.getDataRange().getValues();
+    for (let i = 1; i < rows.length; i++) {
+      if (String(rows[i][0]) === id) {
+        sh.getRange(i + 1, 2, 1, wartosci.length).setValues([wartosci]);
+        _logAdmin('EdycjaAdnotacji', id, od + '–' + do_ + ': ' + tresc.slice(0, 60));
+        return { ok: true, id };
+      }
+    }
+    return { ok: false, msg: 'Adnotacja nie istnieje.' };
+  }
+
+  const nowe = _nextId(_adnotacjeAll(), 'AD');
+  sh.appendRow([nowe].concat(wartosci));
+  _logAdmin('DodanieAdnotacji', nowe, od + '–' + do_ + ': ' + tresc.slice(0, 60));
+  return { ok: true, id: nowe };
+}
+
+function masterDeleteAdnotacja(token, id) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  id = String(id || '');
+  const sh = _shAdnotacje();
+  const rows = sh.getDataRange().getValues();
+  for (let i = rows.length - 1; i >= 1; i--) {
+    if (String(rows[i][0]) === id) {
+      sh.deleteRow(i + 1);
+      _logAdmin('UsuniecieAdnotacji', id, '');
+      return { ok: true };
+    }
+  }
+  return { ok: false, msg: 'Adnotacja nie istnieje.' };
+}
+
+// ── Dane do wydruku ──────────────────────────────────────────
+// Wydruk obejmuje zakres DAT (domyślnie cały miesiąc), a nie sam szablon
+// tygodnia: szablon jest rzutowany na kolejne dni, dzięki czemu można
+// wydrukować np. jednego pracownika w miesiącu albo jeden gabinet
+// między dwiema datami w wybranych godzinach.
+
+function masterGrafikWydruk(token, opts) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  opts = opts || {};
+
+  let od = String(opts.od || '').trim();
+  let do_ = String(opts.do || '').trim();
+
+  // Domyślnie bieżący miesiąc.
+  if (!_dataOk(od) || !_dataOk(do_)) {
+    const dzis = _todayPL();
+    const y = parseInt(dzis.slice(0, 4), 10), m = parseInt(dzis.slice(5, 7), 10);
+    od = y + '-' + String(m).padStart(2, '0') + '-01';
+    do_ = y + '-' + String(m).padStart(2, '0') + '-' + String(new Date(y, m, 0).getDate()).padStart(2, '0');
+  }
+  if (od > do_) return { ok: false, msg: 'Nieprawidłowy zakres dat.' };
+
+  const godzOd = _validTime(opts.godzOd) ? opts.godzOd : null;
+  const godzDo = _validTime(opts.godzDo) ? opts.godzDo : null;
+  if (godzOd && godzDo && _t2m(godzOd) >= _t2m(godzDo)) {
+    return { ok: false, msg: 'Nieprawidłowy zakres godzin.' };
+  }
+
+  const filtrGab = Array.isArray(opts.gabinetIds) && opts.gabinetIds.length
+    ? opts.gabinetIds.map(String) : null;
+  const filtrOsob = Array.isArray(opts.osobaIds) && opts.osobaIds.length
+    ? opts.osobaIds.map(String) : null;
+
+  const gabinety = _gabinetyAll(true);
+  const gabMap = {};
+  gabinety.forEach(g => { gabMap[g.id] = g.nazwa; });
+
+  const personel = _grafikPersonel();
+  const osobaMap = {};
+  personel.forEach(p => { osobaMap[p.id] = p.imie + ' ' + p.nazwisko; });
+  const nazwaOsoby = id => osobaMap[id] || (_czyAsystaZew(id) ? _labelAsystaZew(id) : id);
+
+  const bloki = _grafikBlokiAll();
+  const asysta = _grafikAsystaAll();
+  const asystaWg = {};
+  asysta.forEach(a => {
+    if (!asystaWg[a.blokId]) asystaWg[a.blokId] = [];
+    asystaWg[a.blokId].push(a);
+  });
+
+  const adnotacje = _adnotacjeAll();
+
+  // Rzutowanie szablonu tygodniowego na kolejne daty zakresu.
+  const dni = [];
+  const kursor = new Date(od + 'T12:00:00');
+  const koniec = new Date(do_ + 'T12:00:00');
+  let strażnik = 0;
+
+  while (kursor <= koniec && strażnik < 400) {
+    strażnik++;
+    const ds = Utilities.formatDate(kursor, 'Europe/Warsaw', 'yyyy-MM-dd');
+    const dow = kursor.getDay();
+    kursor.setDate(kursor.getDate() + 1);
+    if (GRAFIK_DAYS.indexOf(dow) === -1) continue; // niedziela — klinika nieczynna
+
+    const wDniu = bloki
+      .filter(b => b.dzien === dow)
+      .filter(b => !filtrGab || filtrGab.indexOf(b.gabinetId) !== -1)
+      .filter(b => !filtrOsob || filtrOsob.indexOf(b.osobaId) !== -1)
+      .filter(b => !godzOd || !godzDo || _zakresyNachodza(b.od, b.do, godzOd, godzDo))
+      .sort((a, b) => _t2m(a.od) - _t2m(b.od) ||
+                      String(gabMap[a.gabinetId] || '').localeCompare(String(gabMap[b.gabinetId] || '')))
+      .map(b => ({
+        gabinet: gabMap[b.gabinetId] || b.gabinetId,
+        gabinetId: b.gabinetId,
+        osoba: nazwaOsoby(b.osobaId),
+        osobaId: b.osobaId,
+        typ: b.typ,
+        od: b.od, do: b.do,
+        asysta: (asystaWg[b.id] || []).map(a => nazwaOsoby(a.osobaId)),
+        brakAsysty: b.typ === BLOK_LEKARZ && !(asystaWg[b.id] || []).length,
+        uwaga: b.asystaUwaga || ''
+      }));
+
+    const adnDnia = adnotacje
+      .filter(a => a.od <= ds && ds <= a.do)
+      .filter(a => !a.gabinetId || !filtrGab || filtrGab.indexOf(a.gabinetId) !== -1)
+      .filter(a => !a.osobaId || !filtrOsob || filtrOsob.indexOf(a.osobaId) !== -1)
+      .map(a => ({
+        typ: a.typ, tresc: a.tresc,
+        gabinet: a.gabinetId ? (gabMap[a.gabinetId] || a.gabinetId) : '',
+        osoba: a.osobaId ? nazwaOsoby(a.osobaId) : ''
+      }));
+
+    // Dzień bez obsady i bez adnotacji nie wnosi nic do wydruku.
+    if (!wDniu.length && !adnDnia.length) continue;
+
+    dni.push({
+      data: ds,
+      dzien: GRAFIK_DAY_NAMES[dow],
+      bloki: wDniu,
+      adnotacje: adnDnia
+    });
+  }
+
+  const opisFiltra = [];
+  if (filtrGab)  opisFiltra.push('gabinety: ' + filtrGab.map(id => gabMap[id] || id).join(', '));
+  if (filtrOsob) opisFiltra.push('osoby: ' + filtrOsob.map(nazwaOsoby).join(', '));
+  if (godzOd && godzDo) opisFiltra.push('godziny: ' + godzOd + '–' + godzDo);
+
+  return {
+    ok: true,
+    od, do: do_,
+    filtr: opisFiltra.join(' · '),
+    dni,
+    gabinety: gabinety.map(g => ({ id: g.id, nazwa: g.nazwa })),
+    personel: personel.map(p => ({ id: p.id, nazwa: p.imie + ' ' + p.nazwisko, grupa: p.grupa }))
+  };
 }

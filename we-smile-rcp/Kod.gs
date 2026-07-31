@@ -348,6 +348,10 @@ function callRCP(action, argsJson) {
       case 'masterSetGrafikAsysta': return masterSetGrafikAsysta(args[0], args[1], args[2]);
       case 'masterGrafikWolneAsysty': return masterGrafikWolneAsysty(args[0], args[1], args[2], args[3], args[4]);
       case 'masterGrafikKreatorZapisz': return masterGrafikKreatorZapisz(args[0], args[1], args[2]);
+      case 'masterGetAdnotacje':    return masterGetAdnotacje(args[0]);
+      case 'masterSaveAdnotacja':   return masterSaveAdnotacja(args[0], args[1]);
+      case 'masterDeleteAdnotacja': return masterDeleteAdnotacja(args[0], args[1]);
+      case 'masterGrafikWydruk':    return masterGrafikWydruk(args[0], args[1]);
       case 'masterGrafikImportPodglad': return masterGrafikImportPodglad(args[0], args[1]);
       case 'masterGrafikImportZastosuj': return masterGrafikImportZastosuj(args[0], args[1], args[2]);
       case 'masterRemoveEmployee':  return masterRemoveEmployee(args[0], args[1]);
@@ -413,6 +417,24 @@ function _ss()     { return SpreadsheetApp.openById(SS_ID); }
 function _cache()  { return CacheService.getScriptCache(); }
 function _nowPL()  { return Utilities.formatDate(new Date(), 'Europe/Warsaw', 'HH:mm'); }
 function _todayPL(){ return Utilities.formatDate(new Date(), 'Europe/Warsaw', 'yyyy-MM-dd'); }
+
+// Pobiera arkusz, tworząc go z nagłówkami, jeśli nie istnieje.
+// Bez tego każde odwołanie do brakującego arkusza kończyło się wyjątkiem
+// i gołym „Błąd serwera." w interfejsie — użytkownik nie miał szans
+// zgadnąć, że trzeba uruchomić setupRCP().
+function _arkusz(nazwa, naglowki) {
+  const ss = _ss();
+  let sh = ss.getSheetByName(nazwa);
+  if (!sh) {
+    sh = ss.insertSheet(nazwa);
+    if (naglowki && naglowki.length) sh.appendRow(naglowki);
+  } else if (sh.getLastRow() === 0 && naglowki && naglowki.length) {
+    sh.appendRow(naglowki);
+  }
+  return sh;
+}
+
+const NAGLOWKI_PRACOWNICY = ['ID','Imię','Nazwisko','Rola','Status','PIN','FormaZatrudnienia','TagiSpecjalizacji'];
 
 function _getWorkers() {
   const sh = _ss().getSheetByName('Pracownicy');
@@ -524,7 +546,7 @@ function clock(pin, tokenCode, action) {
   if (todayEmp.length > 0) {
     const lastAction = String(todayEmp[todayEmp.length - 1][4]);
     if (lastAction === action) {
-      _ss().getSheetByName('Anomalie').appendRow([
+      _arkusz('Anomalie', ['Timestamp', 'EmpID', 'Opis']).appendRow([
         new Date().toISOString(), empId,
         'Duplikacja ' + action + ': ' + worker[1] + ' ' + worker[2]
       ]);
