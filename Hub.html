@@ -9,22 +9,19 @@
 <style>
   /* ==========================================================================
      PALETA — Alabaster Grey / Lime Yellow / Royal Orchid.
-     Szary = kolor dominujący (tło paneli, obramowania, tekst).
-     Limonka = wyłącznie linie/dekoracja (pierścień rdzenia, akcenty tekstu),
+     Szary = kolor dominujący (tła, obramowania, tekst).
+     Limonka = wyłącznie linie/dekoracja (pierścienie, źrenica-oko, kropki PIN),
      nigdy stan interakcji.
-     Orchid = jedyny kolor podkreślający funkcję — najechanie/fokus na
-     przyciskach i węzłach koła.
+     Orchid = jedyny kolor podkreślający funkcję — najechanie/fokus.
      ========================================================================== */
   :root{
     --void:        #060508;
     --void-2:      #100b16;
     --panel:       rgba(24,20,28,.82);
     --panel-edge:  rgba(220,220,220,.22);   /* Alabaster Grey */
-    --accent:      #dcff2a;                 /* Lime Yellow — RCP / primär */
-    --accent-dim:  #626e10;
+    --accent:      #dcff2a;                 /* Lime Yellow — linie/dekoracja */
     --accent-glow: rgba(220,255,42,.45);
-    --accent2:      #aa1ab1;                /* Royal Orchid — BatCave / gated */
-    --accent2-dim:  #4a0c4e;
+    --accent2:      #aa1ab1;                /* Royal Orchid — hover/fokus */
     --accent2-glow: rgba(170,26,177,.5);
     --text:        #dcdcdc;                 /* Alabaster Grey */
     --text-dim:    #8c8c90;
@@ -35,8 +32,7 @@
   html,body{height:100%;}
   body{
     margin:0;
-    background:
-      radial-gradient(120% 90% at 50% 115%, var(--void-2), var(--void) 60%);
+    background:radial-gradient(120% 90% at 50% 115%, var(--void-2), var(--void) 60%);
     color:var(--text);
     font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
     overflow:hidden;
@@ -46,21 +42,14 @@
     *{animation-duration:.001ms !important; transition-duration:.001ms !important;}
   }
 
-  /* ---------- ambient backdrop ---------- */
-  #stage{
-    position:fixed; inset:0;
-    display:flex; flex-direction:column; align-items:center; justify-content:flex-end;
-    padding-bottom:8vh;
-  }
   #stage::before{
     content:'';
-    position:absolute; inset:0;
-    background:
-      repeating-linear-gradient(0deg, rgba(255,255,255,.015) 0 1px, transparent 1px 3px);
+    position:fixed; inset:0;
+    background:repeating-linear-gradient(0deg, rgba(255,255,255,.015) 0 1px, transparent 1px 3px);
     pointer-events:none;
   }
 
-  /* ---------- top chrome (fullscreen / minimize / close) ---------- */
+  /* ---------- top chrome ---------- */
   #chrome{
     position:fixed; top:16px; right:18px;
     display:flex; gap:8px; z-index:80;
@@ -78,13 +67,6 @@
   .chrome-btn:hover{ color:var(--accent2); border-color:var(--accent2); box-shadow:0 0 12px var(--accent2-glow); }
   .chrome-btn svg{ width:16px; height:16px; }
 
-  #brand{
-    position:fixed; top:18px; left:20px; z-index:80;
-    font-weight:700; letter-spacing:.14em; font-size:13px;
-    color:var(--text-dim);
-    text-transform:uppercase;
-  }
-  #brand b{ color:var(--accent); }
   #applink{
     position:fixed; bottom:18px; left:20px; z-index:80;
     font-size:12px; color:var(--text-dim); text-decoration:none;
@@ -94,100 +76,112 @@
   }
   #applink:hover{ color:var(--accent2); border-color:var(--accent2); }
 
-  /* ---------- minimized tab ---------- */
+  /* ---------- minimized state ---------- */
   #minitab{
     position:fixed; top:16px; left:50%; transform:translateX(-50%);
-    display:none; align-items:center; gap:8px;
-    padding:8px 16px;
-    background:var(--panel); border:1px solid var(--panel-edge); border-radius:999px;
-    color:var(--text-dim); font-size:12px; letter-spacing:.08em; text-transform:uppercase;
+    display:none; align-items:center; justify-content:center;
+    width:42px; height:42px; padding:0;
+    background:var(--panel); border:1px solid var(--panel-edge); border-radius:50%;
     cursor:pointer; z-index:90;
   }
-  #minitab:hover{ color:var(--accent2); border-color:var(--accent2); }
-  body.minimized #stage, body.minimized #chrome, body.minimized #brand, body.minimized #applink{ display:none; }
+  #minitab:hover{ border-color:var(--accent2); box-shadow:0 0 12px var(--accent2-glow); }
+  body.minimized #stage, body.minimized #chrome, body.minimized #applink{ display:none; }
   body.minimized #minitab{ display:flex; }
 
-  /* ---------- breadcrumb / title ---------- */
-  #crumb{
-    position:absolute; top:9vh; left:50%; transform:translateX(-50%);
-    text-align:center;
-    z-index:5;
+  /* ---------- stage / breadcrumb ---------- */
+  #stage{
+    position:fixed; inset:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:flex-end;
+    padding-bottom:9vh;
   }
-  #crumb .path{
-    font-size:12px; letter-spacing:.25em; text-transform:uppercase;
-    color:var(--text-dim); margin-bottom:8px;
-  }
-  #crumb .path b{ color:var(--accent); }
-  #crumb .headline{
-    font-size:clamp(22px,4vw,34px); font-weight:300; letter-spacing:.08em;
-    text-shadow:0 0 24px var(--accent-glow);
-  }
-
-  /* ---------- core emblem ---------- */
-  #core{
-    position:relative;
-    width:118px; height:118px;
-    border-radius:50%;
-    display:flex; align-items:center; justify-content:center;
-    background:radial-gradient(circle at 50% 35%, rgba(220,255,42,.14), transparent 70%);
-    border:1px solid var(--panel-edge);
-    box-shadow:0 0 40px rgba(220,255,42,.12), inset 0 0 30px rgba(220,255,42,.06);
-    z-index:4;
-  }
-  #core::before{
-    content:'';
-    position:absolute; inset:-14px;
-    border-radius:50%;
-    border:1px dashed var(--accent);
-    animation:spin 40s linear infinite;
-  }
-  @keyframes spin{ to{ transform:rotate(360deg); } }
-  #core span{ font-size:11px; letter-spacing:.2em; color:var(--accent); text-transform:uppercase; }
-
-  /* ---------- the wheel ---------- */
-  #wheel{
-    position:absolute; left:50%; bottom:8vh;
-    width:1px; height:1px;
-    z-index:3;
-  }
-  .node{
-    position:absolute; left:0; top:0;
-    width:180px; margin-left:-90px; margin-top:-26px;
-    padding:12px 16px;
-    background:var(--panel);
-    border:1px solid var(--panel-edge);
-    border-radius:10px;
-    text-align:center;
-    cursor:pointer;
-    transition:transform .18s ease, border-color .18s, box-shadow .18s, background .18s;
-    -webkit-user-select:none; user-select:none;
-  }
-  .node .label{
-    font-size:14px; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
-  }
-  .node .sub{
-    font-size:11px; color:var(--text-dim); margin-top:3px; letter-spacing:.02em;
-  }
-  .node:hover, .node:focus-visible{
-    border-color:var(--accent2);
-    box-shadow:0 0 22px var(--accent2-glow);
-    background:rgba(170,26,177,.08);
-    transform:scale(1.04);
-    outline:none;
-  }
-  .node.locked .label::before{ content:'🔒 '; }
-  .node.loading{ opacity:.5; pointer-events:none; }
-
   #back{
-    position:absolute; top:9vh; left:8vw;
-    display:none;
-    align-items:center; gap:6px;
+    position:absolute; top:8vh; left:8vw;
+    display:none; align-items:center; gap:6px;
     font-size:12px; letter-spacing:.1em; text-transform:uppercase;
     color:var(--text-dim); cursor:pointer;
     z-index:6;
   }
   #back:hover{ color:var(--accent2); }
   #back.show{ display:flex; }
+
+  #crumb-title{
+    min-height:1.4em;
+    margin-bottom:22px;
+    font-size:13px; font-weight:600; letter-spacing:.3em; text-transform:uppercase;
+    color:var(--text-dim);
+  }
+
+  /* ---------- eye (core emblem, reused small in the minimized tab) ---------- */
+  .eye{ overflow:visible; display:block; }
+  .eye .eye-socket{ fill:var(--void-2); stroke:var(--panel-edge); stroke-width:1; }
+  .eye .eye-iris{ fill:var(--accent); }
+  .eye .eye-pupil{ fill:var(--void); }
+  .eye .eye-ring{ fill:none; stroke:var(--panel-edge); stroke-width:.6; opacity:.7; }
+  .eye .eye-membrane{
+    fill:var(--accent);
+    opacity:.32;
+    transform-box:fill-box;
+    transform-origin:0% 50%;
+    transform:scaleX(0);
+    animation:eyeBlink 7s ease-in-out infinite;
+  }
+  @keyframes eyeBlink{
+    0%,84%{ transform:scaleX(0); }
+    90%{ transform:scaleX(1); }
+    96%{ transform:scaleX(0); }
+    100%{ transform:scaleX(0); }
+  }
+  #minitab .eye{ width:22px; height:22px; }
+
+  #core{
+    position:relative;
+    width:112px; height:112px;
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(circle at 50% 35%, rgba(220,255,42,.12), transparent 70%);
+    border:1px solid var(--panel-edge);
+    box-shadow:0 0 40px rgba(220,255,42,.10), inset 0 0 30px rgba(220,255,42,.05);
+    cursor:pointer;
+  }
+  #core::before{
+    content:'';
+    position:absolute; inset:-16px;
+    border-radius:50%;
+    border:1px dashed var(--accent);
+    opacity:.7;
+    animation:spin 46s linear infinite;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  #core .eye{ width:60px; height:60px; }
+  #core:hover .eye-iris{ filter:brightness(1.15); }
+
+  /* ---------- rows of chamfered bars (Mass Effect-inspired ring menu) ---------- */
+  #rows{
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+    margin-bottom:16px;
+  }
+  .row{ display:flex; gap:10px; }
+  .bar{
+    position:relative;
+    min-width:160px;
+    padding:13px 30px;
+    background:var(--panel);
+    border:1px solid var(--panel-edge);
+    clip-path:polygon(16px 0%, calc(100% - 16px) 0%, 100% 50%, calc(100% - 16px) 100%, 16px 100%, 0% 50%);
+    text-align:center; cursor:pointer;
+    transition:border-color .16s, box-shadow .16s, background .16s;
+    -webkit-user-select:none; user-select:none;
+  }
+  .bar .label{ font-size:13px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; }
+  .bar .sub{ font-size:10.5px; color:var(--text-dim); margin-top:3px; letter-spacing:.02em; }
+  .bar:hover, .bar:focus-visible{
+    border-color:var(--accent2);
+    box-shadow:0 0 18px var(--accent2-glow);
+    background:rgba(170,26,177,.08);
+    outline:none;
+  }
+  .bar .lock-icon{ color:var(--text-dim); vertical-align:-2px; margin-right:5px; }
+  .bar.loading{ opacity:.45; pointer-events:none; }
 
   /* ---------- centered panel (PIN / messages) ---------- */
   #panel{
@@ -203,9 +197,7 @@
     box-shadow:0 0 60px rgba(0,0,0,.5);
   }
   #panel.show{ display:block; }
-  #panel h2{
-    margin:0 0 6px; font-size:16px; letter-spacing:.14em; text-transform:uppercase; font-weight:600;
-  }
+  #panel h2{ margin:0 0 6px; font-size:16px; letter-spacing:.14em; text-transform:uppercase; font-weight:600; }
   #panel p.hint{ margin:0 0 18px; font-size:12px; color:var(--text-dim); }
 
   .dots{ display:flex; justify-content:center; gap:14px; margin-bottom:20px; }
@@ -228,7 +220,7 @@
     transition:border-color .12s, color .12s, background .12s;
   }
   .key:hover{ border-color:var(--accent2); color:var(--accent2); background:rgba(170,26,177,.1); }
-  .key.wide{ grid-column:span 1; font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--text-dim); }
+  .key.wide{ font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--text-dim); }
 
   #panel .status{ margin-top:14px; font-size:12px; letter-spacing:.05em; min-height:16px; }
   #panel .status.err{ color:var(--danger); }
@@ -250,7 +242,15 @@
   #toast.show{ opacity:1; }
 </style>
 
-<div id="brand">CEREBR<b>O</b></div>
+<!-- clipPath dzielony przez wszystkie instancje oka -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <clipPath id="eyeClip" clipPathUnits="objectBoundingBox">
+      <circle cx="0.5" cy="0.5" r="0.5"/>
+    </clipPath>
+  </defs>
+</svg>
+
 <div id="chrome">
   <div class="chrome-btn" id="btn-fullscreen" title="Pełny ekran">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/></svg>
@@ -262,17 +262,35 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>
   </div>
 </div>
-<div id="minitab">▾ CEREBRO</div>
-<a id="applink" href="?view=app">Aplikacja Cerebro →</a>
+
+<div id="minitab" title="Przywróć">
+  <svg class="eye" viewBox="0 0 24 24" aria-hidden="true">
+    <g clip-path="url(#eyeClip)">
+      <circle class="eye-socket" cx="12" cy="12" r="12"/>
+      <circle class="eye-iris" cx="12" cy="12" r="8"/>
+      <rect class="eye-pupil" x="10.6" y="4" width="2.8" height="16" rx="1.4"/>
+      <rect class="eye-membrane" x="0" y="0" width="24" height="24"/>
+    </g>
+  </svg>
+</div>
+
+<a id="applink" href="?view=app">Aplikacja →</a>
 
 <div id="stage">
   <div id="back">‹ Wstecz</div>
-  <div id="crumb">
-    <div class="path" id="crumb-path"></div>
-    <div class="headline" id="crumb-title">Cerebro</div>
+  <div id="crumb-title"></div>
+  <div id="rows"></div>
+  <div id="core" title="Cerebro — wróć na start">
+    <svg class="eye" viewBox="0 0 24 24" aria-hidden="true">
+      <circle class="eye-ring" cx="12" cy="12" r="11.3"/>
+      <g clip-path="url(#eyeClip)">
+        <circle class="eye-socket" cx="12" cy="12" r="12"/>
+        <circle class="eye-iris" cx="12" cy="12" r="8"/>
+        <rect class="eye-pupil" x="10.6" y="4" width="2.8" height="16" rx="1.4"/>
+        <rect class="eye-membrane" x="0" y="0" width="24" height="24"/>
+      </g>
+    </svg>
   </div>
-  <div id="core"><span>Cerebro</span></div>
-  <div id="wheel"></div>
 </div>
 
 <div id="panel">
@@ -287,13 +305,15 @@
 <script>
 /* ==========================================================================
    CEREBRO — Hub
-   Menu inspirowane kołem dialogowym z gier (np. Mass Effect): centralny
-   rdzeń, opcje rozłożone łukiem, wejście w opcję = nowy łuk potomny.
+   Menu inspirowane kołem dialogowym z gier (Mass Effect): łamane belki
+   ("bar") ułożone w rzędach nad centralnym rdzeniem-okiem, wejście w opcję
+   = nowy rząd potomny. Minimalizm: brak powtarzanej nazwy w interfejsie,
+   sam rdzeń (mrugające cybernetyczne oko) pełni rolę logo.
 
    RCP: lista widoków NIE jest wpisana na sztywno — Hub woła serwer
    (google.script.run.getRcpViews) który czyta na żywo dokument
-   "RCP linki" na Dysku Google i wyciąga z niego aktualne linki. Zmiana
-   linku w dokumencie na Dysku pojawia się w Hubie od razu, bez edycji kodu.
+   "RCP linki" na Dysku Google. Zmiana linku w dokumencie na Dysku
+   pojawia się w Hubie od razu, bez edycji kodu.
 
    BatCave: na razie tylko brama PIN-em właściciela RCP, weryfikowanym
    po stronie serwera (google.script.run.verifyRcpOwnerPin) — PIN nigdy
@@ -305,47 +325,57 @@ const ROOT = [
   { id:'batcave', label:'BatCave',  sub:'Strefa prywatna',       kind:'pin', locked:true }
 ];
 
-let stack = [{ title:'Cerebro', nodes: ROOT }];
+let stack = [{ title:'', nodes: ROOT }];
 
-const wheelEl   = document.getElementById('wheel');
-const crumbPath = document.getElementById('crumb-path');
-const crumbTitle= document.getElementById('crumb-title');
-const backEl    = document.getElementById('back');
-const panelEl   = document.getElementById('panel');
+const rowsEl  = document.getElementById('rows');
+const crumbEl = document.getElementById('crumb-title');
+const backEl  = document.getElementById('back');
+const panelEl = document.getElementById('panel');
+
+function hasServerBridge(){
+  return typeof google !== 'undefined' && google.script && typeof google.script.run === 'object';
+}
 
 function currentLevel(){ return stack[stack.length-1]; }
 
 function render(){
   const level = currentLevel();
-  crumbTitle.textContent = level.title;
-  crumbPath.textContent = stack.map(s=>s.title).join(' › ');
+  crumbEl.textContent = stack.length > 1 ? level.title : '';
   backEl.classList.toggle('show', stack.length > 1);
-  layoutNodes(level.nodes);
+  layoutRows(level.nodes);
 }
 
-function layoutNodes(nodes){
-  wheelEl.innerHTML = '';
-  const n = nodes.length;
-  const span = Math.min(150, 34 * Math.max(n-1, 1));      // całkowity rozstaw łuku (stopnie)
-  const start = -span/2;
-  const step = n > 1 ? span/(n-1) : 0;
-  const radius = Math.min(300, 34 * window.innerHeight/100); // promień łuku
+// Dzieli węzły na rzędy po maks. 2 (jak w menu Mass Effect) — jeśli liczba
+// jest nieparzysta, pierwszy element dostaje osobny rząd na górze.
+function chunkRows(nodes){
+  const items = nodes.slice();
+  const rows = [];
+  if (items.length % 2 === 1) rows.push([items.shift()]);
+  while (items.length) rows.push(items.splice(0, 2));
+  return rows;
+}
 
-  nodes.forEach((node, i)=>{
-    const angleDeg = start + step*i;
-    const rad = angleDeg * Math.PI/180;
-    const x = Math.sin(rad) * radius;
-    const y = -Math.cos(rad) * radius;
+function lockIcon(){
+  return '<svg class="lock-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+}
 
-    const el = document.createElement('div');
-    el.className = 'node' + (node.locked ? ' locked' : '');
-    el.style.transform = `translate(${x}px, ${y}px)`;
-    el.tabIndex = 0;
-    el.innerHTML = `<div class="label">${escapeHtml(node.label)}</div>` +
-      (node.sub ? `<div class="sub">${escapeHtml(node.sub)}</div>` : '');
-    el.addEventListener('click', ()=> activate(node, el));
-    el.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' ') activate(node, el); });
-    wheelEl.appendChild(el);
+function layoutRows(nodes){
+  rowsEl.innerHTML = '';
+  chunkRows(nodes).forEach(rowNodes=>{
+    const rowEl = document.createElement('div');
+    rowEl.className = 'row';
+    rowNodes.forEach(node=>{
+      const el = document.createElement('div');
+      el.className = 'bar';
+      el.tabIndex = 0;
+      el.innerHTML =
+        `<div class="label">${node.locked ? lockIcon() : ''}${escapeHtml(node.label)}</div>` +
+        (node.sub ? `<div class="sub">${escapeHtml(node.sub)}</div>` : '');
+      el.addEventListener('click', ()=> activate(node, el));
+      el.addEventListener('keydown', (e)=>{ if (e.key==='Enter' || e.key===' ') { e.preventDefault(); activate(node, el); } });
+      rowEl.appendChild(el);
+    });
+    rowsEl.appendChild(rowEl);
   });
 }
 
@@ -359,11 +389,15 @@ function activate(node, el){
     return;
   }
   if (node.kind === 'live') {
+    if (!hasServerBridge()) {
+      showToast('Ta strona działa tylko przez wdrożenie Apps Script (adres kończący się na /exec) — otwarcie samego pliku nie wystarczy.');
+      return; // nigdy nie wchodzimy w stan "loading", więc przycisk nie może się zablokować
+    }
     el.classList.add('loading');
     google.script.run
       .withSuccessHandler(function(result){
         el.classList.remove('loading');
-        if (!result.success) { showToast('Nie udało się pobrać widoków RCP: ' + result.error); return; }
+        if (!result || !result.success) { showToast('Nie udało się pobrać widoków RCP: ' + (result && result.error || 'nieznany błąd')); return; }
         if (!result.data.length) { showToast('Brak linków w dokumencie "RCP linki".'); return; }
         const children = result.data.map(v => ({ label: v.name, sub:'Otwiera się w nowej karcie', kind:'link', url: v.url }));
         stack.push({ title: node.label, nodes: children });
@@ -371,14 +405,18 @@ function activate(node, el){
       })
       .withFailureHandler(function(err){
         el.classList.remove('loading');
-        showToast('Błąd połączenia z Dyskiem: ' + err.message);
+        showToast('Błąd połączenia z Dyskiem: ' + (err && err.message || err));
       })
       .getRcpViews();
   }
 }
 
-document.getElementById('back').addEventListener('click', ()=>{
+backEl.addEventListener('click', ()=>{
   if (stack.length > 1) { stack.pop(); render(); }
+});
+document.getElementById('core').addEventListener('click', ()=>{
+  stack = [{ title:'', nodes: ROOT }];
+  render();
 });
 document.addEventListener('keydown', (e)=>{
   if (e.key === 'Escape') {
@@ -415,24 +453,30 @@ function renderPinBody(status, statusType){
       if (v === 'back') { pinBuffer = pinBuffer.slice(0,-1); renderPinBody(); return; }
       if (pinBuffer.length >= 4) return;
       pinBuffer += v;
-      if (pinBuffer.length === 4) {
-        renderPinBody('Weryfikacja…');
-        google.script.run
-          .withSuccessHandler(function(result){
-            if (!result.success) { renderPinBody(result.error, 'err'); return; }
-            if (result.valid) {
-              renderPinBody('Dostęp przyznany.', 'ok');
-              setTimeout(()=> showBatCavePlaceholder(), 500);
-            } else {
-              renderPinBody('Nieprawidłowy PIN.', 'err');
-              setTimeout(()=>{ pinBuffer=''; renderPinBody(); }, 700);
-            }
-          })
-          .withFailureHandler(function(err){ renderPinBody('Błąd: ' + err.message, 'err'); })
-          .verifyRcpOwnerPin(pinBuffer);
-      } else {
-        renderPinBody();
+      if (pinBuffer.length !== 4) { renderPinBody(); return; }
+
+      if (!hasServerBridge()) {
+        renderPinBody('Ta strona działa tylko przez wdrożenie Apps Script.', 'err');
+        setTimeout(()=>{ pinBuffer=''; renderPinBody(); }, 1200);
+        return;
       }
+      renderPinBody('Weryfikacja…');
+      google.script.run
+        .withSuccessHandler(function(result){
+          if (!result || !result.success) { renderPinBody((result && result.error) || 'Błąd weryfikacji.', 'err'); return; }
+          if (result.valid) {
+            renderPinBody('Dostęp przyznany.', 'ok');
+            setTimeout(showBatCavePlaceholder, 500);
+          } else {
+            renderPinBody('Nieprawidłowy PIN.', 'err');
+            setTimeout(()=>{ pinBuffer=''; renderPinBody(); }, 700);
+          }
+        })
+        .withFailureHandler(function(err){
+          renderPinBody('Błąd: ' + (err && err.message || err), 'err');
+          setTimeout(()=>{ pinBuffer=''; renderPinBody(); }, 1200);
+        })
+        .verifyRcpOwnerPin(pinBuffer);
     });
   });
 }
@@ -440,31 +484,34 @@ function showBatCavePlaceholder(){
   document.getElementById('panel-title').textContent = 'BatCave';
   document.getElementById('panel-hint').textContent = '';
   document.getElementById('panel-body').innerHTML =
-    `<p style="color:var(--text-dim); font-size:13px; line-height:1.6; margin:0 0 4px;">
+    `<p style="color:var(--text-dim); font-size:13px; line-height:1.6; margin:0;">
       Strefa odblokowana. Zawartość BatCave jest w budowie — kolejne
       funkcje pojawią się tutaj, gdy będą gotowe.
     </p>`;
 }
-function closePanel(){
-  panelEl.classList.remove('show');
-}
+function closePanel(){ panelEl.classList.remove('show'); }
 document.getElementById('panel-close').addEventListener('click', closePanel);
 
 /* ------------------------------- chrome ---------------------------------- */
-document.getElementById('btn-fullscreen').addEventListener('click', ()=>{
-  if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{});
-  else document.exitFullscreen().catch(()=>{});
-});
-document.addEventListener('fullscreenchange', ()=>{
-  document.getElementById('btn-fullscreen').title = document.fullscreenElement ? 'Wyjdź z pełnego ekranu' : 'Pełny ekran';
-});
+// Pełny ekran: jeśli przeglądarka/piaskownica (np. iframe Apps Script) go
+// blokuje, przycisk w ogóle się nie pokazuje — zamiast udawać, że działa.
+const fsBtn = document.getElementById('btn-fullscreen');
+if (!document.fullscreenEnabled) {
+  fsBtn.remove();
+} else {
+  fsBtn.addEventListener('click', ()=>{
+    const action = document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+    if (action && typeof action.catch === 'function') {
+      action.catch(()=> showToast('Przeglądarka zablokowała tryb pełnoekranowy.'));
+    }
+  });
+  document.addEventListener('fullscreenchange', ()=>{
+    fsBtn.title = document.fullscreenElement ? 'Wyjdź z pełnego ekranu' : 'Pełny ekran';
+  });
+}
 
-document.getElementById('btn-minimize').addEventListener('click', ()=>{
-  document.body.classList.add('minimized');
-});
-document.getElementById('minitab').addEventListener('click', ()=>{
-  document.body.classList.remove('minimized');
-});
+document.getElementById('btn-minimize').addEventListener('click', ()=> document.body.classList.add('minimized'));
+document.getElementById('minitab').addEventListener('click', ()=> document.body.classList.remove('minimized'));
 
 document.getElementById('btn-close').addEventListener('click', ()=>{
   window.close();
@@ -481,7 +528,7 @@ function showToast(msg){
   t.textContent = msg;
   t.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(()=> t.classList.remove('show'), 4000);
+  toastTimer = setTimeout(()=> t.classList.remove('show'), 4500);
 }
 function escapeHtml(s){
   const d = document.createElement('div');
@@ -489,7 +536,6 @@ function escapeHtml(s){
   return d.innerHTML;
 }
 
-window.addEventListener('resize', render);
 render();
 </script>
 </body>
