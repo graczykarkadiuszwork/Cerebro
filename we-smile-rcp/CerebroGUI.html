@@ -1,0 +1,1493 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Cerebro · We SMILE">
+<title>Cerebro · We SMILE</title>
+<?!= include('CerebroStyles'); ?>
+<?!= include('Glossary'); ?>
+<style>
+/* Ekran logowania — jedyny element spoza katalogu Cerebro Hub,
+   bo Hub nie ma logowania PIN-em. Trzyma się jego tokenów. */
+.cb-login{min-height:100vh;min-height:100dvh;display:flex;align-items:center;
+  justify-content:center;padding:24px;background:var(--cb-bg)}
+.cb-login-card{background:var(--cb-card);border-radius:16px;box-shadow:var(--cb-shadow);
+  padding:28px 24px;width:100%;max-width:340px;text-align:center}
+.cb-login-mark{width:46px;height:46px;color:var(--cb-purple);margin:0 auto 10px}
+.cb-login-t{font-size:22px;font-weight:700;color:var(--cb-blue)}
+.cb-login-s{font-size:14px;color:var(--cb-gray);margin:2px 0 22px}
+.cb-dots{display:flex;gap:12px;justify-content:center;margin-bottom:22px}
+.cb-dot{width:13px;height:13px;border-radius:50%;background:var(--cb-fill);transition:.2s}
+.cb-dot.on{background:var(--cb-blue);transform:scale(1.12)}
+.cb-kp{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
+.cb-key{aspect-ratio:1;border:none;border-radius:50%;background:var(--cb-fill-soft);
+  color:var(--cb-ink);font-size:24px;font-weight:500;cursor:pointer;font-family:inherit;
+  display:flex;align-items:center;justify-content:center;transition:background .12s}
+.cb-key:active{background:var(--cb-fill)}
+.cb-key.fn{font-size:14px;font-weight:600;color:var(--cb-blue);background:transparent}
+
+/* Siatka grafiku — Hub nie ma odpowiednika, więc budujemy ją z jego
+   klocków: ios-card jako gabinet, ios-row jako blok. */
+.cb-gab{margin-bottom:16px}
+.cb-gab-h{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:12px 16px;border-bottom:.5px solid var(--cb-sep)}
+.cb-gab-n{font-size:15px;font-weight:600;color:var(--cb-ink)}
+.cb-blok-t{font-family:ui-monospace,SFMono-Regular,monospace;font-size:13px;font-weight:600;
+  color:var(--cb-blue);flex-shrink:0;min-width:96px}
+.cb-blok-t.hig{color:var(--cb-green)}
+.cb-luka{border-bottom:.5px solid var(--cb-sep);padding:12px 16px;display:flex;gap:12px;
+  align-items:center;cursor:pointer;width:100%;background:none;border-left:none;
+  border-right:none;border-top:none;font-family:inherit;text-align:left}
+.cb-luka:last-child{border-bottom:none}
+.cb-luka:active{background:var(--cb-fill-soft)}
+.cb-luka-t{font-family:ui-monospace,monospace;font-size:13px;font-weight:600;
+  color:var(--cb-gray);min-width:96px;flex-shrink:0}
+.cb-luka-l{font-size:14px;color:var(--cb-gray)}
+.cb-dot-live{width:8px;height:8px;border-radius:50%;background:var(--cb-green);flex-shrink:0}
+.cb-dot-live.done{background:var(--cb-gray)}
+.cb-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.cb-tag{font-size:12px;font-weight:600;padding:4px 10px;border-radius:9999px;
+  background:rgba(0,122,255,.12);color:var(--cb-blue);border:none;cursor:pointer;font-family:inherit}
+.cb-tag.off{background:var(--cb-fill-soft);color:var(--cb-gray)}
+.cb-rek{border-left:3px solid var(--cb-blue);padding:12px 14px;background:var(--cb-card);
+  border-radius:8px;margin-bottom:8px}
+.cb-rek.krytyczna{border-left-color:var(--cb-red)}
+.cb-rek.wazna{border-left-color:var(--cb-orange)}
+.cb-rek.info{border-left-color:var(--cb-green)}
+.cb-rek-t{font-size:14px;font-weight:600;color:var(--cb-ink);margin-bottom:3px}
+.cb-rek-d{font-size:13px;color:var(--cb-gray);line-height:1.5}
+.cb-rek-a{font-size:13px;color:var(--cb-ink);font-weight:500;margin-top:6px;line-height:1.5}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ LOGOWANIE ═══════════ -->
+<div id="cb-login" class="cb-login">
+  <div class="cb-login-card">
+    <svg class="cb-login-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M1.6 12S5.5 5 12 5s10.4 7 10.4 7-3.9 7-10.4 7S1.6 12 1.6 12z"/>
+      <circle cx="12" cy="12" r="3.4"/><circle cx="12" cy="12" r="1.1" fill="currentColor"/>
+    </svg>
+    <div class="cb-login-t">Cerebro</div>
+    <div class="cb-login-s">We SMILE · panel właściciela</div>
+    <div class="cb-dots">
+      <div class="cb-dot" id="cd0"></div><div class="cb-dot" id="cd1"></div>
+      <div class="cb-dot" id="cd2"></div><div class="cb-dot" id="cd3"></div>
+    </div>
+    <div class="cb-kp" id="cb-kp">
+      <button class="cb-key" data-v="1">1</button><button class="cb-key" data-v="2">2</button><button class="cb-key" data-v="3">3</button>
+      <button class="cb-key" data-v="4">4</button><button class="cb-key" data-v="5">5</button><button class="cb-key" data-v="6">6</button>
+      <button class="cb-key" data-v="7">7</button><button class="cb-key" data-v="8">8</button><button class="cb-key" data-v="9">9</button>
+      <button class="cb-key fn" data-v="C">Wyczyść</button>
+      <button class="cb-key" data-v="0">0</button>
+      <button class="cb-key fn" data-v="X">Cofnij</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ APLIKACJA ═══════════ -->
+<div id="cb-app" class="cb-shell" style="display:none">
+  <div class="cb-overlay" id="cb-overlay"></div>
+
+  <aside class="cb-side" id="cb-side">
+    <div class="cb-side-logo">
+      <svg class="cb-side-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M1.6 12S5.5 5 12 5s10.4 7 10.4 7-3.9 7-10.4 7S1.6 12 1.6 12z"/>
+        <circle cx="12" cy="12" r="3.4"/><circle cx="12" cy="12" r="1.1" fill="currentColor"/>
+      </svg>
+      <div>
+        <div class="cb-side-name">Cerebro</div>
+        <div class="cb-side-org">We SMILE Sp. z o.o.</div>
+      </div>
+    </div>
+    <nav class="cb-nav" id="cb-nav"></nav>
+    <div class="cb-side-foot">
+      <button class="cb-nav-item" id="cb-theme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg>
+        <span>Tryb wyświetlania</span>
+      </button>
+      <button class="cb-nav-item" id="cb-classic">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>
+        <span>Wróć do klasycznego</span>
+      </button>
+      <button class="cb-nav-item" id="cb-logout">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"/><path d="M21 12H8"/><path d="M15 16l4-4-4-4"/></svg>
+        <span>Wyloguj</span>
+      </button>
+      <div class="cb-conn"><span class="cb-conn-dot" id="cb-dot"></span><span id="cb-conn-txt">Połączono</span></div>
+    </div>
+  </aside>
+
+  <div class="cb-main">
+    <div class="cb-mhead">
+      <button class="cb-burger" id="cb-burger" aria-label="Menu">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <span class="cb-mhead-t" id="cb-mtitle">Cerebro</span>
+    </div>
+    <div class="cb-content" id="cb-content"></div>
+  </div>
+</div>
+
+<div class="cb-modal" id="cb-modal"><div class="modal-sheet" id="cb-modal-body"></div></div>
+<div class="cb-toasts" id="cb-toasts"></div>
+
+<script>
+/* global google */
+var BASE_URL = "<?= BASE_URL ?>";
+
+/* ════════════════════════════════════════════════════════════
+   Interfejs Cerebro Hub dla We SMILE RCP.
+
+   Wierne przedłużenie logiki Huba: router navigateTo(moduł),
+   pojedynczy kontener #content, showModal / showToast / skeleton,
+   listy .ios-row z chevronem, kafelki statystyk na pulpicie.
+
+   Dane i akcje serwera są dokładnie te same co w panelu klasycznym
+   (callRCP) — to inna skóra, nie inna aplikacja. Dzięki temu obie
+   wersje nie mogą się rozjechać w tym, co faktycznie robią.
+   ════════════════════════════════════════════════════════════ */
+
+var S = {
+  token:null, modul:'pulpit', emps:[], tagi:[], absTypy:[], gr:null, grDzien:1,
+  rpYear:new Date().getFullYear(), rpMonth:new Date().getMonth()+1, rpEmp:null,
+  mmYear:new Date().getFullYear(), mmMonth:new Date().getMonth()+1, mmEmp:null
+};
+
+var MIESIACE = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec',
+                'Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
+
+var IKONY = {
+  pulpit:'<path d="M3 3h7v9H3z"/><path d="M14 3h7v5h-7z"/><path d="M14 12h7v9h-7z"/><path d="M3 16h7v5H3z"/>',
+  grafik:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M9 9v12M15 9v12"/><path d="M8 2v4M16 2v4"/>',
+  zespol:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17.5" cy="9.5" r="2.6"/><path d="M15.5 14.6a5 5 0 0 1 6 4.9"/>',
+  raporty:'<path d="M3 3v18h18"/><path d="M7 15l4-6 4 3 5-8"/>',
+  dzien:'<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18"/><path d="M8 3v4M16 3v4"/><path d="M12 14v4M10 16h4"/>',
+  miesiac:'<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18"/><path d="M8 3v4M16 3v4"/><path d="M7.5 14h.01M12 14h.01M16.5 14h.01"/>',
+  urlop:'<path d="M12 3a9 9 0 0 0-9 9h18a9 9 0 0 0-9-9z"/><path d="M12 3v9"/><path d="M12 12v6a2 2 0 0 0 4 0"/>',
+  wolne:'<path d="M3 11l9-7 9 7"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-5h4v5"/>',
+  kod:'<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10v4M11 10v4M15 10v4"/>',
+  pomoc:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.6 2.6 0 0 1 5 1c0 1.7-2.5 2-2.5 4"/><path d="M12 17.5h.01"/>'
+};
+
+var MODULY = [
+  { id:'pulpit',  nazwa:'Pulpit',      opis:'Przegląd dnia' },
+  { id:'grafik',  nazwa:'Grafik',      opis:'Obsada gabinetów' },
+  { id:'zespol',  nazwa:'Zespół',      opis:'Kadra i specjalizacje' },
+  { id:'raporty', nazwa:'Raporty',     opis:'Czas pracy' },
+  { id:'dzien',   nazwa:'Dzień',       opis:'Szybka korekta godzin' },
+  { id:'miesiac', nazwa:'Miesiąc',     opis:'Edycja miesiąca' },
+  { id:'urlop',   nazwa:'Urlop',       opis:'Nieobecność w zakresie' },
+  { id:'wolne',   nazwa:'Dni wolne',   opis:'Cała klinika' },
+  { id:'kod',     nazwa:'Kod',         opis:'Kod autoryzacyjny' },
+  { id:'pomoc',   nazwa:'Pomoc',       opis:'Słownik pojęć' }
+];
+
+// ── Fundament: te same helpery co w Cerebro Hub ───────────────
+
+function esc(s){
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function ikona(id,kl){
+  return '<svg class="'+(kl||'')+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" '+
+    'stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">'+(IKONY[id]||'')+'</svg>';
+}
+function skeleton(n){
+  var o='';
+  for(var i=0;i<(n||3);i++) o+='<div class="skeleton-line" style="width:'+(100-i*12)+'%"></div>';
+  return '<div style="padding:16px">'+o+'</div>';
+}
+function pusto(ikonka,tytul,tekst){
+  return '<div class="empty-state"><div class="empty-state-icon">'+ikonka+'</div>'+
+    '<div class="empty-state-title">'+esc(tytul)+'</div>'+
+    '<div class="empty-state-text">'+esc(tekst||'')+'</div></div>';
+}
+function chev(){
+  return '<svg class="ios-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" '+
+    'stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>';
+}
+function fmtHM(m){
+  var n=parseInt(m,10); if(isNaN(n)) return '—';
+  return Math.floor(n/60)+':'+String(n%60).padStart(2,'0');
+}
+function t2m(t){var p=String(t).split(':');return parseInt(p[0],10)*60+parseInt(p[1],10);}
+function m2t(m){return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');}
+function hm(m){var h=Math.floor(m/60),x=m%60;return h&&x?h+' h '+x+' min':(h?h+' h':x+' min');}
+function dzisStr(){
+  var d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function osobaNazwa(id){
+  var e=S.emps.find(function(x){return x.id===id;});
+  if(e) return e.imie+' '+e.nazwisko;
+  var z=(S.gr&&S.gr.asystaZew||[]).find(function(x){return x.id===id;});
+  return z?z.label:id;
+}
+
+var _toastT;
+function showToast(msg,rodzaj){
+  var box=document.getElementById('cb-toasts');
+  var el=document.createElement('div');
+  el.className='cb-toast'+(rodzaj?' '+rodzaj:'');
+  el.textContent=msg;
+  box.appendChild(el);
+  setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); },2800);
+}
+function showInfo(m){showToast(m);}
+function showOk(m){showToast(m,'ok');}
+function showErr(m){showToast(m,'err');}
+
+function setConn(ok,txt){
+  document.getElementById('cb-dot').className='cb-conn-dot'+(ok?'':' err');
+  document.getElementById('cb-conn-txt').textContent=txt;
+}
+
+function gas(akcja,args,cb){
+  google.script.run
+    .withSuccessHandler(function(res){
+      setConn(true,'Połączono');
+      try{ cb(res); }catch(ex){ showErr('Błąd: '+ex.message); }
+    })
+    .withFailureHandler(function(e){
+      var m=(e&&e.message)||'Błąd połączenia';
+      setConn(false,m);
+      showErr(m);
+    })
+    .callRCP(akcja,JSON.stringify(args||[]));
+}
+
+function showModal(html){
+  document.getElementById('cb-modal-body').innerHTML=
+    '<div class="modal-handle"></div>'+html;
+  document.getElementById('cb-modal').classList.add('on');
+}
+function closeModal(){ document.getElementById('cb-modal').classList.remove('on'); }
+document.getElementById('cb-modal').addEventListener('click',function(e){
+  if(e.target===this) closeModal();
+});
+
+// ── Nawigacja modułów (wzorzec navigateTo z Huba) ─────────────
+
+function budujNav(){
+  document.getElementById('cb-nav').innerHTML=
+    '<div class="cb-nav-lbl">Moduły</div>'+
+    MODULY.map(function(m){
+      return '<button class="cb-nav-item'+(m.id===S.modul?' on':'')+'" data-mod="'+m.id+'">'+
+        ikona(m.id)+'<span>'+esc(m.nazwa)+'</span></button>';
+    }).join('');
+  document.querySelectorAll('#cb-nav [data-mod]').forEach(function(b){
+    b.addEventListener('click',function(){ navigateTo(this.getAttribute('data-mod')); });
+  });
+}
+
+function navigateTo(mod){
+  S.modul=mod;
+  budujNav();
+  var m=MODULY.find(function(x){return x.id===mod;})||MODULY[0];
+  document.getElementById('cb-mtitle').textContent=m.nazwa;
+  document.body.classList.remove('cb-nav-open');
+  var c=document.getElementById('cb-content');
+  c.className='cb-content cb-fade';
+  c.scrollTop=0;
+  ({
+    pulpit:modPulpit, grafik:modGrafik, zespol:modZespol, raporty:modRaporty,
+    dzien:modDzien, miesiac:modMiesiac, urlop:modUrlop, wolne:modWolne,
+    kod:modKod, pomoc:modPomoc
+  }[mod]||modPulpit)();
+}
+
+function naglowek(tytul,opis,akcje){
+  return '<div class="cb-head"><div><h1 class="cb-h1">'+esc(tytul)+'</h1>'+
+    '<p class="cb-sub">'+esc(opis)+'</p></div>'+(akcje||'')+'</div>';
+}
+
+document.getElementById('cb-burger').addEventListener('click',function(){
+  document.body.classList.toggle('cb-nav-open');
+});
+document.getElementById('cb-overlay').addEventListener('click',function(){
+  document.body.classList.remove('cb-nav-open');
+});
+document.getElementById('cb-theme').addEventListener('click',function(){
+  var next=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',next);
+  try{ localStorage.setItem('wesmile_theme',next); }catch(e){}
+});
+document.getElementById('cb-classic').addEventListener('click',function(){
+  try{ localStorage.setItem('wesmile_ui','desktop'); }catch(e){}
+  window.open(BASE_URL+'?page=owner&ui=desktop','_top');
+});
+document.getElementById('cb-logout').addEventListener('click',function(){ location.reload(); });
+
+// ── Logowanie ─────────────────────────────────────────────────
+
+var pin='';
+function rysujDots(){
+  for(var i=0;i<4;i++)
+    document.getElementById('cd'+i).className='cb-dot'+(i<pin.length?' on':'');
+}
+document.getElementById('cb-kp').addEventListener('click',function(e){
+  var b=e.target.closest('[data-v]'); if(!b) return;
+  var v=b.getAttribute('data-v');
+  if(v==='C') pin='';
+  else if(v==='X') pin=pin.slice(0,-1);
+  else if(pin.length<4) pin+=v;
+  rysujDots();
+  if(pin.length!==4) return;
+
+  gas('masterLogin',[pin],function(res){
+    if(!res||!res.ok){ showErr((res&&res.msg)||'Brak dostępu.'); pin=''; rysujDots(); return; }
+    S.token=res.token;
+    document.getElementById('cb-login').style.display='none';
+    document.getElementById('cb-app').style.display='flex';
+    budujNav();
+    wczytajPodstawy(function(){ navigateTo('pulpit'); });
+  });
+});
+
+function wczytajPodstawy(cb){
+  gas('masterGetEmployees',[S.token],function(res){
+    if(res&&res.ok){ S.emps=res.employees||[]; if(res.tagiDostepne) S.tagi=res.tagiDostepne; }
+    gas('getAbsenceTypes',[],function(r2){
+      if(r2&&r2.ok) S.absTypy=r2.types||[];
+      if(cb) cb();
+    });
+  });
+}
+
+// ════════════════════════════════════════════════════════════
+// MODUŁY
+// ════════════════════════════════════════════════════════════
+
+// ── Pulpit ────────────────────────────────────────────────────
+
+function modPulpit(){
+  document.getElementById('cb-content').innerHTML =
+    '<div class="cb-wrap">'+naglowek('Pulpit','Przegląd dnia')+
+    '<div class="cb-stats" id="p-stats">'+skeleton(2)+'</div>'+
+    '<h2 class="cb-h2">Kto jest w pracy</h2>'+
+    '<div class="ios-card" id="p-obecni">'+skeleton(3)+'</div>'+
+    '<h2 class="cb-h2" style="margin-top:24px">Grafik wymaga uwagi</h2>'+
+    '<div class="ios-card" id="p-rek">'+skeleton(3)+'</div></div>';
+
+  gas('masterGetActive',[S.token],function(res){
+    var akt=(res&&res.active)||[], zak=(res&&res.finished)||[];
+    var box=document.getElementById('p-obecni');
+    if(!akt.length&&!zak.length){
+      box.innerHTML=pusto('🌙','Nikt jeszcze nie zaczął','Pierwsze odbicie pojawi się tutaj');
+    } else {
+      box.innerHTML=akt.map(function(p){
+        return '<div class="ios-row"><span class="cb-dot-live"></span>'+
+          '<div class="ios-row-b"><div class="ios-row-t">'+esc(p.imie+' '+p.nazwisko)+'</div>'+
+          '<div class="ios-row-s">od '+esc(p.wejscie)+'</div></div>'+
+          '<span class="badge badge-green">w pracy</span></div>';
+      }).join('')+zak.map(function(p){
+        return '<div class="ios-row"><span class="cb-dot-live done"></span>'+
+          '<div class="ios-row-b"><div class="ios-row-t">'+esc(p.imie+' '+p.nazwisko)+'</div>'+
+          '<div class="ios-row-s">'+esc((p.wejscie||'?')+'–'+(p.wyjscie||'?'))+'</div></div>'+
+          '<span class="badge badge-gray">zakończone</span></div>';
+      }).join('');
+    }
+    document.getElementById('p-stats').innerHTML=
+      kafel('W pracy teraz',akt.length,'green')+
+      kafel('Zakończyli dziś',zak.length,'')+
+      kafel('Zespół',S.emps.length,'orange');
+  });
+
+  gas('masterGetGrafik',[S.token],function(res){
+    if(!res||!res.ok) return;
+    S.gr=res;
+    var rek=(res.rekomendacje||[]).filter(function(r){return r.waga!=='info';});
+    var box=document.getElementById('p-rek');
+    if(!rek.length){
+      box.innerHTML=pusto('✅','Grafik bez zastrzeżeń','Nie ma nic do poprawienia');
+      return;
+    }
+    box.innerHTML=rek.slice(0,6).map(function(r){
+      return '<button class="ios-row tap" data-rek="1"><div class="ios-row-b">'+
+        '<div class="ios-row-t">'+esc(r.tytul)+'</div>'+
+        '<div class="ios-row-s">'+esc(r.tresc)+'</div></div>'+
+        '<span class="badge '+wagaBadge(r.waga)+'">'+esc(r.waga)+'</span></button>';
+    }).join('');
+    box.querySelectorAll('[data-rek]').forEach(function(b){
+      b.addEventListener('click',function(){ navigateTo('grafik'); });
+    });
+    var s=document.getElementById('p-stats');
+    s.innerHTML+=kafel('Do poprawy w grafiku',rek.length,rek.length?'red':'green');
+  });
+}
+
+function kafel(l,v,kl){
+  return '<div class="cb-stat"><div class="cb-stat-l">'+esc(l)+'</div>'+
+    '<div class="cb-stat-v '+(kl||'')+'">'+v+'</div></div>';
+}
+function wagaBadge(w){
+  return w==='krytyczna'?'badge-red':w==='wazna'?'badge-orange':
+         w==='info'?'badge-green':'badge-blue';
+}
+
+// ── Grafik ────────────────────────────────────────────────────
+
+function modGrafik(){
+  document.getElementById('cb-content').innerHTML=
+    '<div class="cb-wrap">'+naglowek('Grafik','Obsada gabinetów — szablon tygodniowy',
+      '<div class="cb-btn-row"><button class="btn-primary btn-small" id="g-kreator">Ułóż grafik lekarza</button>'+
+      '<button class="btn-secondary btn-small" id="g-rek">Rekomendacje</button></div>')+
+    '<div class="segmented" id="g-dni" style="margin-bottom:16px"></div>'+
+    '<div id="g-siatka">'+skeleton(4)+'</div></div>';
+
+  document.getElementById('g-kreator').addEventListener('click',kreatorStart);
+  document.getElementById('g-rek').addEventListener('click',pokazRekomendacje);
+
+  gas('masterGetGrafik',[S.token],function(res){
+    if(!res||!res.ok){
+      document.getElementById('g-siatka').innerHTML=
+        pusto('⚠️','Nie udało się wczytać',(res&&res.msg)||'');
+      return;
+    }
+    S.gr=res;
+    rysujDni(); rysujSiatke();
+  });
+}
+
+function rysujDni(){
+  var w=document.getElementById('g-dni');
+  if(!w) return;
+  w.innerHTML=S.gr.dni.map(function(nr){
+    return '<button class="segmented-btn'+(nr===S.grDzien?' active':'')+'" data-d="'+nr+'">'+
+      esc(S.gr.godziny[nr].nazwa.slice(0,3))+'</button>';
+  }).join('');
+  w.querySelectorAll('[data-d]').forEach(function(b){
+    b.addEventListener('click',function(){
+      S.grDzien=parseInt(this.getAttribute('data-d'),10);
+      rysujDni(); rysujSiatke();
+    });
+  });
+}
+
+function rysujSiatke(){
+  var d=S.gr, nr=S.grDzien, g=d.godziny[nr];
+  var box=document.getElementById('g-siatka');
+  if(!box) return;
+
+  var adn=(d.adnotacje||[]).length
+    ? '<div class="ios-card" style="margin-bottom:16px">'+(d.adnotacje||[]).map(function(a){
+        return '<div class="ios-row"><div class="ios-row-b"><div class="ios-row-t">'+esc(a.tresc)+'</div>'+
+          '<div class="ios-row-s">'+esc(a.od)+(a.do!==a.od?' – '+esc(a.do):'')+'</div></div>'+
+          '<span class="badge badge-purple">adnotacja</span></div>';
+      }).join('')+'</div>' : '';
+
+  box.innerHTML=adn+
+    '<div class="section-title">'+esc(g.nazwa)+' · klinika '+esc(g.open)+'–'+esc(g.close)+'</div>'+
+    (d.gabinety||[]).map(function(gab){
+      var bl=(d.bloki||[]).filter(function(b){return b.dzien===nr&&b.gabinetId===gab.id;})
+        .sort(function(a,b){return t2m(a.od)-t2m(b.od);});
+      var oOd=t2m(g.open),oDo=t2m(g.close),praca=0;
+      bl.forEach(function(b){praca+=t2m(b.do)-t2m(b.od);});
+      var wyk=Math.round(praca/(oDo-oOd)*100);
+
+      var wiersze='',kursor=oOd;
+      bl.forEach(function(b){
+        if(t2m(b.od)>kursor) wiersze+=lukaHtml(gab.id,kursor,t2m(b.od));
+        wiersze+=blokHtml(b);
+        kursor=Math.max(kursor,t2m(b.do));
+      });
+      if(kursor<oDo) wiersze+=lukaHtml(gab.id,kursor,oDo);
+
+      return '<div class="ios-card cb-gab"><div class="cb-gab-h">'+
+        '<span class="cb-gab-n">'+esc(gab.nazwa)+'</span>'+
+        '<span class="badge '+(wyk>=80?'badge-green':wyk>=40?'badge-orange':'badge-gray')+'">'+wyk+'%</span>'+
+        '</div>'+(wiersze||pusto('🪑','Pusty gabinet','Dotknij, żeby obsadzić'))+'</div>';
+    }).join('');
+
+  box.querySelectorAll('[data-blok]').forEach(function(b){
+    b.addEventListener('click',function(){ blokSheet(this.getAttribute('data-blok'),null,null,null); });
+  });
+  box.querySelectorAll('[data-luka]').forEach(function(b){
+    b.addEventListener('click',function(){
+      var p=this.getAttribute('data-luka').split('|');
+      blokSheet(null,p[0],p[1],p[2]);
+    });
+  });
+}
+
+function lukaHtml(gid,od,do_){
+  return '<button class="cb-luka" data-luka="'+esc(gid)+'|'+m2t(od)+'|'+m2t(do_)+'">'+
+    '<span class="cb-luka-t">'+m2t(od)+'–'+m2t(do_)+'</span>'+
+    '<span class="cb-luka-l">wolne · '+hm(do_-od)+'</span>'+chev()+'</button>';
+}
+
+function blokHtml(b){
+  var as=b.asysta||[];
+  var brak=b.typ!=='Higienizacja'&&!as.length;
+  var opis=b.typ==='Higienizacja' ? 'Higienizacja'
+    : (as.length ? 'Asysta: '+as.map(function(a){return esc(osobaNazwa(a.osobaId));}).join(', ')
+                 : 'Bez asysty');
+  return '<button class="ios-row tap" data-blok="'+esc(b.id)+'">'+
+    '<span class="cb-blok-t'+(b.typ==='Higienizacja'?' hig':'')+'">'+esc(b.od)+'–'+esc(b.do)+'</span>'+
+    '<div class="ios-row-b"><div class="ios-row-t">'+esc(osobaNazwa(b.osobaId))+'</div>'+
+    '<div class="ios-row-s">'+opis+'</div></div>'+
+    (brak?'<span class="badge badge-red">brak asysty</span>':'')+chev()+'</button>';
+}
+
+function pokazRekomendacje(){
+  if(!S.gr) return;
+  var lista=S.gr.rekomendacje||[];
+  showModal('<div class="modal-title">Rekomendacje</div>'+
+    (lista.length ? lista.map(function(r){
+      return '<div class="cb-rek '+esc(r.waga)+'"><div class="cb-rek-t">'+esc(r.tytul)+'</div>'+
+        '<div class="cb-rek-d">'+esc(r.tresc)+'</div>'+
+        '<div class="cb-rek-a">→ '+esc(r.akcja)+'</div></div>';
+    }).join('') : pusto('✅','Brak rekomendacji','Grafik nie wymaga korekt')));
+}
+
+// ── Edytor bloku ──────────────────────────────────────────────
+
+function blokSheet(blokId,gabId,od,do_){
+  var d=S.gr;
+  var blok=blokId?(d.bloki||[]).find(function(b){return b.id===blokId;}):null;
+  var gabinetId=blok?blok.gabinetId:gabId;
+  var gab=(d.gabinety||[]).find(function(g){return g.id===gabinetId;});
+  var g=d.godziny[S.grDzien];
+  var typ=blok?blok.typ:'Lekarz';
+  var krok=(d.krokMin||5)*60;
+
+  showModal('<div class="modal-title">'+(blok?'Edytuj blok':'Nowy blok')+'</div>'+
+    '<div class="ios-row" style="border-radius:10px;margin-bottom:16px"><div class="ios-row-b">'+
+    '<div class="ios-row-t">'+esc(gab?gab.nazwa:'—')+'</div>'+
+    '<div class="ios-row-s">'+esc(g.nazwa)+' · klinika '+esc(g.open)+'–'+esc(g.close)+'</div></div></div>'+
+    '<div class="cb-field"><label class="cb-lbl">Typ bloku</label>'+
+    '<select class="ios-select" id="b-typ">'+
+      '<option value="Lekarz"'+(typ==='Lekarz'?' selected':'')+'>Lekarz</option>'+
+      '<option value="Higienizacja"'+(typ==='Higienizacja'?' selected':'')+'>Higienizacja</option>'+
+    '</select></div>'+
+    '<div class="cb-field"><label class="cb-lbl" id="b-os-l">Osoba</label>'+
+    '<select class="ios-select" id="b-osoba"></select></div>'+
+    '<div class="cb-grid2">'+
+      '<div class="cb-field"><label class="cb-lbl">Od</label>'+
+      '<input type="time" class="ios-input" id="b-od" step="'+krok+'" value="'+esc(blok?blok.od:(od||g.open))+'"></div>'+
+      '<div class="cb-field"><label class="cb-lbl">Do</label>'+
+      '<input type="time" class="ios-input" id="b-do" step="'+krok+'" value="'+esc(blok?blok.do:(do_||g.close))+'"></div>'+
+    '</div>'+
+    '<div id="b-as-box"><div class="cb-field"><label class="cb-lbl">Asysta</label>'+
+    '<div id="b-as"></div></div></div>'+
+    '<button class="btn-primary" id="b-zapisz" style="margin-top:8px">Zapisz</button>'+
+    (blok?'<button class="btn-destructive" id="b-usun" style="margin-top:10px">Usuń blok</button>':''));
+
+  var wybrana=blok?(blok.asysta||[]).map(function(a){return a.osobaId;}):[];
+
+  function osoby(){
+    var t=document.getElementById('b-typ').value;
+    var grupa=t==='Higienizacja'?'higienistka':'lekarz';
+    document.getElementById('b-os-l').textContent=t==='Higienizacja'?'Higienistka':'Lekarz';
+    var l=(d.personel||[]).filter(function(p){return p.grupa===grupa;});
+    var sel=document.getElementById('b-osoba');
+    sel.innerHTML=l.length
+      ? '<option value="">— wybierz —</option>'+l.map(function(p){
+          return '<option value="'+esc(p.id)+'">'+esc(p.imie+' '+p.nazwisko)+'</option>';
+        }).join('')
+      : '<option value="">— brak osób z tą rolą —</option>';
+    if(blok) sel.value=blok.osobaId;
+    document.getElementById('b-as-box').style.display=(t==='Higienizacja')?'none':'block';
+  }
+
+  function asysta(){
+    var box=document.getElementById('b-as');
+    if(!box) return;
+    gas('masterGrafikWolneAsysty',
+      [S.token,S.grDzien,document.getElementById('b-od').value,document.getElementById('b-do').value,[]],
+      function(res){
+        if(!res||!res.ok){ box.innerHTML='<div class="ios-row-s">Nie sprawdzono dostępności.</div>'; return; }
+        var opcje=res.dostepne.concat(res.zewnetrzne);
+        // Osoba już przypisana do tego bloku musi zostać na liście, choć
+        // z punktu widzenia zapytania jest „zajęta" — przez ten właśnie blok.
+        wybrana.forEach(function(id){
+          if(!opcje.some(function(o){return o.id===id;}))
+            opcje.push({ id:id, label:osobaNazwa(id), zew:false });
+        });
+        box.innerHTML='<div class="cb-tags">'+opcje.map(function(o){
+          var on=wybrana.indexOf(o.id)!==-1;
+          return '<button type="button" class="cb-tag'+(on?'':' off')+'" data-as="'+esc(o.id)+'">'+
+            esc(o.label)+'</button>';
+        }).join('')+'</div>'+
+        (res.zajete.length?'<div class="ios-row-s" style="margin-top:8px">Zajęte: '+esc(res.zajete.join(', '))+'</div>':'');
+        box.querySelectorAll('[data-as]').forEach(function(b){
+          b.addEventListener('click',function(){
+            var id=this.getAttribute('data-as');
+            var i=wybrana.indexOf(id);
+            if(i===-1) wybrana.push(id); else wybrana.splice(i,1);
+            this.classList.toggle('off',wybrana.indexOf(id)===-1);
+          });
+        });
+      });
+  }
+
+  document.getElementById('b-typ').addEventListener('change',function(){ osoby(); });
+  document.getElementById('b-od').addEventListener('change',asysta);
+  document.getElementById('b-do').addEventListener('change',asysta);
+  osoby(); asysta();
+
+  document.getElementById('b-zapisz').addEventListener('click',function(){
+    var t=document.getElementById('b-typ').value;
+    var osobaId=document.getElementById('b-osoba').value;
+    if(!osobaId){ showErr('Wybierz osobę.'); return; }
+    var payload={
+      id:blok?blok.id:'', gabinetId:gabinetId, dzien:S.grDzien, typ:t, osobaId:osobaId,
+      od:document.getElementById('b-od').value, do:document.getElementById('b-do').value,
+      asystaWymagana:(t==='Higienizacja')?0:(wybrana.length||1), asystaUwaga:''
+    };
+    gas('masterSaveGrafikBlok',[S.token,payload],function(r){
+      if(!r||!r.ok){ showErr((r&&r.msg)||'Nie zapisano.'); return; }
+      var as=(t==='Higienizacja')?[]:wybrana.map(function(id){return {osobaId:id};});
+      gas('masterSetGrafikAsysta',[S.token,r.id,as],function(r2){
+        if(r2&&!r2.ok&&r2.msg) showErr(r2.msg);
+        closeModal(); showOk('Zapisano blok.');
+        gas('masterGetGrafik',[S.token],function(g2){ if(g2&&g2.ok){S.gr=g2;rysujSiatke();} });
+      });
+    });
+  });
+
+  var usun=document.getElementById('b-usun');
+  if(usun) usun.addEventListener('click',function(){
+    var b=this;
+    if(b.getAttribute('data-armed')!=='1'){
+      b.setAttribute('data-armed','1'); b.textContent='Na pewno? Kliknij ponownie';
+      setTimeout(function(){b.removeAttribute('data-armed');b.textContent='Usuń blok';},4000);
+      return;
+    }
+    gas('masterDeleteGrafikBlok',[S.token,blok.id],function(r){
+      if(!r||!r.ok){ showErr((r&&r.msg)||'Błąd.'); return; }
+      closeModal(); showOk('Usunięto blok.');
+      gas('masterGetGrafik',[S.token],function(g2){ if(g2&&g2.ok){S.gr=g2;rysujSiatke();} });
+    });
+  });
+}
+
+// ── Kreator (trzy kroki, jak w panelu klasycznym) ─────────────
+
+var KR={krok:1,lekarz:null,dni:{},pozycje:[]};
+
+function kreatorStart(){
+  if(!S.gr) return;
+  if(!(S.gr.personel||[]).some(function(p){return p.grupa==='lekarz';})){
+    showErr('Brak lekarzy w zespole.'); return;
+  }
+  KR={krok:1,lekarz:null,dni:{},pozycje:[]};
+  kreatorRysuj();
+}
+
+function kreatorRysuj(){
+  if(KR.krok===1) krKrok1();
+  else if(KR.krok===2) krKrok2();
+  else krKrok3();
+}
+
+function krKrok1(){
+  var lek=(S.gr.personel||[]).filter(function(p){return p.grupa==='lekarz';});
+  showModal('<div class="modal-title">Krok 1 z 3 — dni pracy</div>'+
+    '<div class="cb-field"><label class="cb-lbl">Lekarz</label>'+
+    '<select class="ios-select" id="k-lek"><option value="">— wybierz —</option>'+
+    lek.map(function(p){
+      return '<option value="'+esc(p.id)+'"'+(KR.lekarz===p.id?' selected':'')+'>'+
+        esc(p.imie+' '+p.nazwisko)+'</option>';
+    }).join('')+'</select></div>'+
+    '<div class="ios-card" id="k-dni">'+S.gr.dni.map(function(nr){
+      var g=S.gr.godziny[nr],w=KR.dni[nr];
+      return '<div class="ios-row" style="flex-wrap:wrap"><button class="ios-row-b" '+
+        'style="background:none;border:none;text-align:left;font-family:inherit;cursor:pointer;padding:0" '+
+        'data-d="'+nr+'"><div class="ios-row-t">'+esc(g.nazwa)+'</div>'+
+        '<div class="ios-row-s">klinika '+esc(g.open)+'–'+esc(g.close)+'</div></button>'+
+        (w?'<span class="badge badge-blue">wybrany</span>':'<span class="badge badge-gray">—</span>')+
+        (w?'<div class="segmented" style="flex-basis:100%;margin-top:10px">'+
+          [['rano','Rano'],['popo','Popołudnie'],['caly','Cały dzień']].map(function(v){
+            return '<button class="segmented-btn'+(w.wariant===v[0]?' active':'')+
+              '" data-w="'+nr+'|'+v[0]+'">'+v[1]+'</button>';
+          }).join('')+'</div>':'')+'</div>';
+    }).join('')+'</div>'+
+    '<button class="btn-primary" id="k-dalej" style="margin-top:16px">Dalej</button>');
+
+  document.getElementById('k-lek').addEventListener('change',function(){ KR.lekarz=this.value||null; });
+  document.querySelectorAll('#k-dni [data-d]').forEach(function(b){
+    b.addEventListener('click',function(){
+      var nr=parseInt(this.getAttribute('data-d'),10);
+      if(KR.dni[nr]) delete KR.dni[nr];
+      else { var z=S.gr.godziny[nr].zmiany.caly; KR.dni[nr]={wariant:'caly',od:z.od,do:z.do}; }
+      krKrok1();
+    });
+  });
+  document.querySelectorAll('#k-dni [data-w]').forEach(function(b){
+    b.addEventListener('click',function(){
+      var p=this.getAttribute('data-w').split('|');
+      var nr=parseInt(p[0],10),z=S.gr.godziny[nr].zmiany[p[1]];
+      KR.dni[nr]={wariant:p[1],od:z.od,do:z.do};
+      krKrok1();
+    });
+  });
+  document.getElementById('k-dalej').addEventListener('click',function(){
+    if(!KR.lekarz){ showErr('Wybierz lekarza.'); return; }
+    var wyb=Object.keys(KR.dni).map(Number).sort(function(a,b){return a-b;});
+    if(!wyb.length){ showErr('Zaznacz przynajmniej jeden dzień.'); return; }
+    KR.pozycje=wyb.map(function(nr){
+      var st=KR.pozycje.find(function(p){return p.dzien===nr;});
+      return {dzien:nr,od:KR.dni[nr].od,do:KR.dni[nr].do,
+        asysta:st?(st.asysta||[]):[],brakAsysty:st?!!st.brakAsysty:false,uwaga:st?(st.uwaga||''):''};
+    });
+    KR.krok=2; kreatorRysuj();
+  });
+}
+
+function krKrok2(){
+  var krok=(S.gr.krokMin||5)*60;
+  showModal('<div class="modal-title">Krok 2 z 3 — godziny</div>'+
+    '<div class="ios-row-s" style="margin-bottom:14px">Godziny ustawisz dowolnie, co '+
+      (S.gr.krokMin||5)+' minut.</div>'+
+    KR.pozycje.map(function(p,i){
+      var g=S.gr.godziny[p.dzien];
+      return '<div class="cb-field" data-i="'+i+'"><label class="cb-lbl">'+esc(g.nazwa)+
+        ' · klinika '+esc(g.open)+'–'+esc(g.close)+'</label><div class="cb-grid2">'+
+        '<input type="time" class="ios-input k-od" step="'+krok+'" value="'+esc(p.od)+'">'+
+        '<input type="time" class="ios-input k-do" step="'+krok+'" value="'+esc(p.do)+'"></div></div>';
+    }).join('')+
+    '<div class="cb-btn-row" style="margin-top:8px">'+
+    '<button class="btn-secondary btn-small" id="k-wstecz">Wstecz</button>'+
+    '<button class="btn-primary btn-small" id="k-dalej2">Dalej</button></div>');
+
+  document.querySelectorAll('#cb-modal-body [data-i]').forEach(function(row){
+    var i=parseInt(row.getAttribute('data-i'),10);
+    row.querySelector('.k-od').addEventListener('change',function(){ KR.pozycje[i].od=this.value; });
+    row.querySelector('.k-do').addEventListener('change',function(){ KR.pozycje[i].do=this.value; });
+  });
+  document.getElementById('k-wstecz').addEventListener('click',function(){ KR.krok=1; kreatorRysuj(); });
+  document.getElementById('k-dalej2').addEventListener('click',function(){
+    var km=S.gr.krokMin||5;
+    for(var i=0;i<KR.pozycje.length;i++){
+      var p=KR.pozycje[i],g=S.gr.godziny[p.dzien];
+      if(!p.od||!p.do){ showErr(g.nazwa+': uzupełnij godziny.'); return; }
+      if(t2m(p.od)>=t2m(p.do)){ showErr(g.nazwa+': „do" musi być późniejsze.'); return; }
+      if(t2m(p.od)%km||t2m(p.do)%km){ showErr(g.nazwa+': godziny co '+km+' min.'); return; }
+      if(t2m(p.od)<t2m(g.open)||t2m(p.do)>t2m(g.close)){
+        showErr(g.nazwa+': poza godzinami otwarcia.'); return;
+      }
+    }
+    KR.krok=3; kreatorRysuj();
+  });
+}
+
+function krKrok3(){
+  showModal('<div class="modal-title">Krok 3 z 3 — asysta</div>'+
+    '<div class="ios-row-s" style="margin-bottom:14px">Osoby zajęte w tych godzinach nie pojawiają się na liście.</div>'+
+    KR.pozycje.map(function(p,i){
+      var g=S.gr.godziny[p.dzien];
+      return '<div class="cb-field" data-a="'+i+'"><label class="cb-lbl">'+esc(g.nazwa)+
+        ' · '+esc(p.od)+'–'+esc(p.do)+'</label><div class="k-as">'+skeleton(1)+'</div></div>';
+    }).join('')+
+    '<div class="cb-btn-row" style="margin-top:8px">'+
+    '<button class="btn-secondary btn-small" id="k-wstecz2">Wstecz</button>'+
+    '<button class="btn-primary btn-small" id="k-zapisz">Zapisz grafik</button></div>');
+
+  document.getElementById('k-wstecz2').addEventListener('click',function(){ KR.krok=2; kreatorRysuj(); });
+  document.getElementById('k-zapisz').addEventListener('click',function(){
+    var brak=KR.pozycje.filter(function(p){return !p.brakAsysty&&!(p.asysta||[]).length;});
+    if(brak.length){ showErr('Wybierz asystę albo zaznacz „Bez asysty".'); return; }
+    gas('masterGrafikKreatorZapisz',[S.token,KR.lekarz,KR.pozycje],function(res){
+      if(!res||!res.ok){ showErr((res&&res.msg)||'Nie zapisano.'); return; }
+      closeModal();
+      if(res.bledy&&res.bledy.length) showErr('Dodano '+res.dodane+'. Nie udało się: '+res.bledy.join(' · '));
+      else showOk('Dodano '+res.dodane+' dni do grafiku.');
+      gas('masterGetGrafik',[S.token],function(g2){ if(g2&&g2.ok){S.gr=g2;rysujSiatke();} });
+    });
+  });
+
+  KR.pozycje.forEach(function(_,i){ krAsysta(i); });
+}
+
+function krRezerwacje(pomij){
+  var out=[];
+  KR.pozycje.forEach(function(p,i){
+    if(i===pomij) return;
+    (p.asysta||[]).forEach(function(id){ out.push({osobaId:id,dzien:p.dzien,od:p.od,do:p.do}); });
+  });
+  return out;
+}
+
+function krAsysta(i){
+  var poz=KR.pozycje[i];
+  gas('masterGrafikWolneAsysty',[S.token,poz.dzien,poz.od,poz.do,krRezerwacje(i)],function(res){
+    var box=document.querySelector('#cb-modal-body [data-a="'+i+'"] .k-as');
+    if(!box) return;
+    if(!res||!res.ok){ box.innerHTML='<div class="ios-row-s">Nie sprawdzono dostępności.</div>'; return; }
+    poz.asysta=poz.asysta||[];
+    box.innerHTML='<div class="cb-tags">'+res.dostepne.concat(res.zewnetrzne).map(function(o){
+      var on=poz.asysta.indexOf(o.id)!==-1;
+      return '<button type="button" class="cb-tag'+(on?'':' off')+'" data-p="'+i+'|'+esc(o.id)+'">'+
+        esc(o.label)+'</button>';
+    }).join('')+
+    '<button type="button" class="cb-tag'+(poz.brakAsysty?'':' off')+'" data-b="'+i+'" '+
+    'style="background:'+(poz.brakAsysty?'rgba(255,59,48,.14)':'')+';color:'+(poz.brakAsysty?'#ff3b30':'')+'">'+
+    'Bez asysty</button></div>'+
+    (res.zajete.length?'<div class="ios-row-s" style="margin-top:8px">Zajęte: '+esc(res.zajete.join(', '))+'</div>':'');
+
+    box.querySelectorAll('[data-p]').forEach(function(b){
+      b.addEventListener('click',function(){
+        var p=this.getAttribute('data-p').split('|');
+        var idx=parseInt(p[0],10),id=p[1];
+        var l=KR.pozycje[idx].asysta||[];
+        var k=l.indexOf(id);
+        if(k===-1) l.push(id); else l.splice(k,1);
+        KR.pozycje[idx].asysta=l;
+        if(l.length) KR.pozycje[idx].brakAsysty=false;
+        KR.pozycje.forEach(function(_,j){ krAsysta(j); });
+      });
+    });
+    var bb=box.querySelector('[data-b]');
+    if(bb) bb.addEventListener('click',function(){
+      var idx=parseInt(this.getAttribute('data-b'),10);
+      KR.pozycje[idx].brakAsysty=!KR.pozycje[idx].brakAsysty;
+      if(KR.pozycje[idx].brakAsysty) KR.pozycje[idx].asysta=[];
+      KR.pozycje.forEach(function(_,j){ krAsysta(j); });
+    });
+  });
+}
+
+// ── Miesiąc: kalendarz z edycją każdego dnia ──────────────────
+// Szablon tygodniowy to tylko podstawa. Tu widać realny miesiąc i każdy
+// dzień można nadpisać niezależnie — to jest właściwe miejsce do
+// układania grafiku, a nie abstrakcyjny „tydzień wzorcowy".
+
+var MC = { rok:new Date().getFullYear(), mies:new Date().getMonth()+1, dane:null };
+
+function modMiesiac(){
+  document.getElementById('cb-content').innerHTML=
+    '<div class="cb-wrap">'+naglowek('Miesiąc','Realny kalendarz — każdy dzień do edycji',
+      '<div class="cb-btn-row">'+
+      '<button class="btn-secondary btn-small" id="mc-prev">‹</button>'+
+      '<button class="btn-secondary btn-small" id="mc-next">›</button></div>')+
+    '<div class="section-title" id="mc-lbl">—</div>'+
+    '<div id="mc-siatka">'+skeleton(5)+'</div></div>';
+  document.getElementById('mc-prev').addEventListener('click',function(){
+    MC.mies--; if(MC.mies<1){MC.mies=12;MC.rok--;} mcWczytaj();
+  });
+  document.getElementById('mc-next').addEventListener('click',function(){
+    MC.mies++; if(MC.mies>12){MC.mies=1;MC.rok++;} mcWczytaj();
+  });
+  mcWczytaj();
+}
+
+function mcWczytaj(){
+  var l=document.getElementById('mc-lbl');
+  if(l) l.textContent=MIESIACE[MC.mies-1]+' '+MC.rok;
+  gas('masterGrafikMiesiac',[S.token,MC.rok,MC.mies],function(res){
+    if(!res||!res.ok){
+      document.getElementById('mc-siatka').innerHTML=pusto('⚠️','Nie wczytano',(res&&res.msg)||'');
+      return;
+    }
+    MC.dane=res;
+    mcRysuj();
+  });
+}
+
+function mcRysuj(){
+  var box=document.getElementById('mc-siatka');
+  if(!box) return;
+  box.innerHTML='<div class="ios-card">'+MC.dane.dni.map(function(d){
+    if(!d.czynny){
+      return '<div class="ios-row" style="opacity:.45"><span class="cb-blok-t" style="color:var(--cb-gray)">'+
+        esc(d.data.slice(8))+'</span><div class="ios-row-b"><div class="ios-row-t">'+esc(d.nazwaDnia)+
+        '</div><div class="ios-row-s">klinika nieczynna</div></div></div>';
+    }
+    var lekarze=d.bloki.filter(function(b){return b.typ==='Lekarz';}).length;
+    var higien=d.bloki.filter(function(b){return b.typ==='Higienizacja';}).length;
+    var brak=d.bloki.filter(function(b){return b.typ==='Lekarz'&&!(b.asysta||[]).length;}).length;
+    var opis=d.bloki.length
+      ? (lekarze?lekarze+' lekarskich':'')+(lekarze&&higien?' · ':'')+(higien?higien+' higienizacji':'')
+      : 'brak obsady';
+    return '<button class="ios-row tap" data-dzien="'+esc(d.data)+'">'+
+      '<span class="cb-blok-t">'+esc(d.data.slice(8))+'</span>'+
+      '<div class="ios-row-b"><div class="ios-row-t">'+esc(d.nazwaDnia)+'</div>'+
+      '<div class="ios-row-s">'+esc(opis)+'</div></div>'+
+      (d.adnotacje.length?'<span class="badge badge-purple">'+d.adnotacje.length+'</span>':'')+
+      (brak?'<span class="badge badge-red">bez asysty '+brak+'</span>':'')+
+      (!d.zTemplate?'<span class="badge badge-orange">zmieniony</span>':'')+
+      chev()+'</button>';
+  }).join('')+'</div>';
+
+  box.querySelectorAll('[data-dzien]').forEach(function(b){
+    b.addEventListener('click',function(){ mcDzien(this.getAttribute('data-dzien')); });
+  });
+}
+
+function mcDzien(data){
+  var d=MC.dane.dni.find(function(x){return x.data===data;});
+  if(!d) return;
+  var robocze=JSON.parse(JSON.stringify(d.bloki||[]));
+
+  function rysuj(){
+    var html='<div class="modal-title">'+esc(d.nazwaDnia)+' '+esc(data)+'</div>'+
+      '<div class="ios-row-s" style="margin-bottom:12px">Klinika '+esc(d.godziny.open)+'–'+esc(d.godziny.close)+
+      (d.zTemplate?' · dzień z szablonu tygodniowego':' · dzień zmieniony ręcznie')+'</div>'+
+      (d.adnotacje.length?'<div class="ios-card" style="margin-bottom:12px">'+d.adnotacje.map(function(a){
+        return '<div class="ios-row"><div class="ios-row-b"><div class="ios-row-t">'+esc(a.tresc)+'</div></div>'+
+          '<span class="badge badge-purple">adnotacja</span></div>';
+      }).join('')+'</div>':'')+
+      '<div class="ios-card" id="mc-bloki">'+
+      (robocze.length?robocze.map(function(b,i){
+        var gab=(MC.dane.gabinety.find(function(g){return g.id===b.gabinetId;})||{}).nazwa||b.gabinetId;
+        var as=(b.asysta||[]).map(function(a){return osobaNazwa(a.osobaId);}).join(', ');
+        return '<div class="ios-row"><span class="cb-blok-t'+(b.typ==='Higienizacja'?' hig':'')+'">'+
+          esc(b.od)+'–'+esc(b.do)+'</span><div class="ios-row-b">'+
+          '<div class="ios-row-t">'+esc(osobaNazwa(b.osobaId))+'</div>'+
+          '<div class="ios-row-s">'+esc(gab)+(as?' · as. '+esc(as):
+            (b.typ==='Lekarz'?' · <span style="color:var(--cb-red)">bez asysty</span>':''))+'</div></div>'+
+          '<button class="btn-destructive btn-small" data-usun="'+i+'">Usuń</button></div>';
+      }).join(''):pusto('🗓️','Dzień bez obsady','Dodaj blok poniżej'))+'</div>'+
+      '<button class="btn-secondary" id="mc-dodaj" style="margin-top:12px">+ Dodaj blok</button>'+
+      '<button class="btn-primary" id="mc-zapisz" style="margin-top:10px">Zapisz ten dzień</button>'+
+      (d.zTemplate?'':'<button class="btn-secondary" id="mc-reset" style="margin-top:10px">Przywróć szablon tygodniowy</button>')+
+      '<button class="btn-secondary" id="mc-kopiuj" style="margin-top:10px">Kopiuj na inne dni</button>';
+
+    showModal(html);
+
+    document.querySelectorAll('#mc-bloki [data-usun]').forEach(function(b){
+      b.addEventListener('click',function(){
+        robocze.splice(parseInt(this.getAttribute('data-usun'),10),1); rysuj();
+      });
+    });
+    document.getElementById('mc-dodaj').addEventListener('click',function(){ mcNowyBlok(d,robocze,rysuj); });
+    document.getElementById('mc-zapisz').addEventListener('click',function(){
+      gas('masterZapiszDzienGrafiku',[S.token,data,robocze],function(r){
+        if(!r||!r.ok){ showErr((r&&r.msg)||'Nie zapisano.'); return; }
+        closeModal(); showOk('Zapisano '+data+'.'); mcWczytaj();
+      });
+    });
+    var rs=document.getElementById('mc-reset');
+    if(rs) rs.addEventListener('click',function(){
+      gas('masterResetDzienGrafiku',[S.token,data],function(r){
+        if(!r||!r.ok){ showErr((r&&r.msg)||'Błąd.'); return; }
+        closeModal(); showOk('Przywrócono szablon.'); mcWczytaj();
+      });
+    });
+    document.getElementById('mc-kopiuj').addEventListener('click',function(){ mcKopiuj(data,d); });
+  }
+  rysuj();
+}
+
+function mcNowyBlok(d,robocze,potem){
+  var krok=(MC.dane.krokMin||5)*60;
+  showModal('<div class="modal-title">Nowy blok — '+esc(d.data)+'</div>'+
+    '<div class="cb-field"><label class="cb-lbl">Typ</label>'+
+    '<select class="ios-select" id="n-typ"><option value="Lekarz">Lekarz</option>'+
+    '<option value="Higienizacja">Higienizacja</option></select></div>'+
+    '<div class="cb-field"><label class="cb-lbl">Gabinet</label>'+
+    '<select class="ios-select" id="n-gab">'+MC.dane.gabinety.map(function(g){
+      return '<option value="'+esc(g.id)+'">'+esc(g.nazwa)+'</option>';
+    }).join('')+'</select></div>'+
+    '<div class="cb-field"><label class="cb-lbl">Osoba</label>'+
+    '<select class="ios-select" id="n-os"></select></div>'+
+    '<div class="cb-grid2"><div class="cb-field"><label class="cb-lbl">Od</label>'+
+    '<input type="time" class="ios-input" id="n-od" step="'+krok+'" value="'+esc(d.godziny.open)+'"></div>'+
+    '<div class="cb-field"><label class="cb-lbl">Do</label>'+
+    '<input type="time" class="ios-input" id="n-do" step="'+krok+'" value="'+esc(d.godziny.close)+'"></div></div>'+
+    '<div class="cb-field"><label class="cb-lbl">Asysta</label><div id="n-as"></div></div>'+
+    '<button class="btn-primary" id="n-ok">Dodaj do dnia</button>');
+
+  var wyb=[];
+  function osoby(){
+    var t=document.getElementById('n-typ').value;
+    var grupa=t==='Higienizacja'?'higienistka':'lekarz';
+    var l=(MC.dane.personel||[]).filter(function(p){return p.grupa===grupa;});
+    document.getElementById('n-os').innerHTML=l.length
+      ? l.map(function(p){return '<option value="'+esc(p.id)+'">'+esc(p.imie+' '+p.nazwisko)+'</option>';}).join('')
+      : '<option value="">— brak osób z tą rolą —</option>';
+    document.getElementById('n-as').style.display=(t==='Higienizacja')?'none':'block';
+  }
+  function asysta(){
+    var as=(MC.dane.personel||[]).filter(function(p){return p.grupa==='asystentka';})
+      .concat(MC.dane.asystaZew.map(function(z){return {id:z.id,imie:z.label,nazwisko:''};}));
+    document.getElementById('n-as').innerHTML='<div class="cb-tags">'+as.map(function(p){
+      return '<button type="button" class="cb-tag off" data-a="'+esc(p.id)+'">'+
+        esc((p.imie+' '+p.nazwisko).trim())+'</button>';
+    }).join('')+'</div>';
+    document.querySelectorAll('#n-as [data-a]').forEach(function(b){
+      b.addEventListener('click',function(){
+        var id=this.getAttribute('data-a');
+        var i=wyb.indexOf(id);
+        if(i===-1) wyb.push(id); else wyb.splice(i,1);
+        this.classList.toggle('off',wyb.indexOf(id)===-1);
+      });
+    });
+  }
+  document.getElementById('n-typ').addEventListener('change',osoby);
+  osoby(); asysta();
+
+  document.getElementById('n-ok').addEventListener('click',function(){
+    var os=document.getElementById('n-os').value;
+    if(!os){ showErr('Wybierz osobę.'); return; }
+    var typ=document.getElementById('n-typ').value;
+    robocze.push({
+      gabinetId:document.getElementById('n-gab').value, typ:typ, osobaId:os,
+      od:document.getElementById('n-od').value, do:document.getElementById('n-do').value,
+      asystaWymagana:typ==='Higienizacja'?0:(wyb.length||1), asystaUwaga:'',
+      asysta:typ==='Higienizacja'?[]:wyb.map(function(id){return {osobaId:id};})
+    });
+    potem();
+  });
+}
+
+function mcKopiuj(zData,d){
+  var kandydaci=MC.dane.dni.filter(function(x){
+    return x.czynny && x.data!==zData && x.dzienTygodnia===d.dzienTygodnia;
+  });
+  var wyb=[];
+  showModal('<div class="modal-title">Kopiuj obsadę</div>'+
+    '<div class="ios-row-s" style="margin-bottom:12px">Z dnia '+esc(zData)+
+    ' na inne '+esc(d.nazwaDnia.toLowerCase())+'i w tym miesiącu.</div>'+
+    '<div class="cb-tags" id="kp-dni">'+kandydaci.map(function(x){
+      return '<button type="button" class="cb-tag off" data-k="'+esc(x.data)+'">'+esc(x.data.slice(8))+'</button>';
+    }).join('')+'</div>'+
+    '<button class="btn-primary" id="kp-ok" style="margin-top:16px">Kopiuj</button>');
+
+  document.querySelectorAll('#kp-dni [data-k]').forEach(function(b){
+    b.addEventListener('click',function(){
+      var v=this.getAttribute('data-k');
+      var i=wyb.indexOf(v);
+      if(i===-1) wyb.push(v); else wyb.splice(i,1);
+      this.classList.toggle('off',wyb.indexOf(v)===-1);
+    });
+  });
+  document.getElementById('kp-ok').addEventListener('click',function(){
+    if(!wyb.length){ showErr('Zaznacz dni docelowe.'); return; }
+    gas('masterKopiujDzienGrafiku',[S.token,zData,wyb],function(r){
+      if(!r||!r.ok){ showErr((r&&r.msg)||'Błąd.'); return; }
+      closeModal(); showOk('Skopiowano na '+r.skopiowano+' dni.'); mcWczytaj();
+    });
+  });
+}
+
+// ── Zespół ────────────────────────────────────────────────────
+
+function modZespol(){
+  document.getElementById('cb-content').innerHTML=
+    '<div class="cb-wrap">'+naglowek('Zespół','Kadra, formy zatrudnienia i specjalizacje',
+      '<button class="btn-primary btn-small" id="z-dodaj">+ Dodaj osobę</button>')+
+    '<div class="ios-card" id="z-lista">'+skeleton(4)+'</div>'+
+    '<button class="btn-secondary" id="z-arch" style="margin-top:16px">Pokaż archiwum</button>'+
+    '<div id="z-arch-box" style="margin-top:12px"></div></div>';
+
+  document.getElementById('z-dodaj').addEventListener('click',zespolDodaj);
+  document.getElementById('z-arch').addEventListener('click',function(){
+    var box=document.getElementById('z-arch-box');
+    if(box.innerHTML){ box.innerHTML=''; this.textContent='Pokaż archiwum'; return; }
+    this.textContent='Ukryj archiwum';
+    box.innerHTML=skeleton(2);
+    gas('masterGetArchivedEmployees',[S.token],function(r){
+      if(!r||!r.ok){ box.innerHTML=pusto('⚠️','Błąd',''); return; }
+      var l=r.employees||[];
+      box.innerHTML=l.length?'<div class="ios-card">'+l.map(function(e){
+        return '<div class="ios-row"><div class="ios-row-b"><div class="ios-row-t">'+
+          esc(e.imie+' '+e.nazwisko)+'</div><div class="ios-row-s">'+esc(e.rola||'')+'</div></div>'+
+          '<button class="btn-secondary btn-small" data-przywroc="'+esc(e.id)+'">Przywróć</button></div>';
+      }).join('')+'</div>':pusto('📦','Archiwum puste','');
+      box.querySelectorAll('[data-przywroc]').forEach(function(b){
+        b.addEventListener('click',function(){
+          gas('masterRestoreEmployee',[S.token,this.getAttribute('data-przywroc')],function(x){
+            if(!x||!x.ok){ showErr((x&&x.msg)||'Błąd.'); return; }
+            showOk('Przywrócono.'); wczytajPodstawy(function(){ navigateTo('zespol'); });
+          });
+        });
+      });
+    });
+  });
+
+  rysujZespol();
+}
+
+function rysujZespol(){
+  var box=document.getElementById('z-lista');
+  if(!box) return;
+  if(!S.emps.length){ box.innerHTML=pusto('👥','Brak pracowników',''); return; }
+  box.innerHTML=S.emps.map(function(e){
+    var braki=[];
+    if(!e.forma) braki.push('brak formy zatrudnienia');
+    if(e.grupa==='lekarz'&&!(e.tagi||[]).length) braki.push('brak specjalizacji');
+    return '<button class="ios-row tap" data-emp="'+esc(e.id)+'"><div class="ios-row-b">'+
+      '<div class="ios-row-t">'+esc(e.imie+' '+e.nazwisko)+'</div>'+
+      '<div class="ios-row-s">'+esc(e.rola||'')+'</div></div>'+
+      (braki.length?'<span class="badge badge-orange">'+esc(braki[0])+'</span>':
+        '<span class="badge badge-green">'+esc(e.forma)+'</span>')+chev()+'</button>';
+  }).join('');
+  box.querySelectorAll('[data-emp]').forEach(function(b){
+    b.addEventListener('click',function(){ zespolOsoba(this.getAttribute('data-emp')); });
+  });
+}
+
+function zespolOsoba(id){
+  var e=S.emps.find(function(x){return x.id===id;});
+  if(!e) return;
+  var lekarz=e.grupa==='lekarz';
+  var FORMY={UoP:'Umowa o pracę',Zlecenie:'Umowa zlecenie',B2B:'B2B'};
+
+  showModal('<div class="modal-title">'+esc(e.imie+' '+e.nazwisko)+'</div>'+
+    '<div class="ios-row-s" style="margin-bottom:16px">'+esc(e.rola||'')+
+    (lekarz?' · nie odbija się w RCP':'')+'</div>'+
+    '<div class="cb-field"><label class="cb-lbl">Forma zatrudnienia</label>'+
+    '<select class="ios-select" id="e-forma"><option value="">— nieustawiona —</option>'+
+    Object.keys(FORMY).map(function(f){
+      return '<option value="'+f+'"'+(e.forma===f?' selected':'')+'>'+FORMY[f]+'</option>';
+    }).join('')+'</select></div>'+
+    (lekarz?'<div class="cb-field"><label class="cb-lbl">Specjalizacje</label>'+
+      '<div class="cb-tags" id="e-tagi">'+S.tagi.map(function(t){
+        var on=(e.tagi||[]).indexOf(t)!==-1;
+        return '<button type="button" class="cb-tag'+(on?'':' off')+'" data-t="'+esc(t)+'">'+esc(t)+'</button>';
+      }).join('')+'</div></div>':'')+
+    '<button class="btn-primary" id="e-zapisz">Zapisz</button>'+
+    (String(e.rola).toLowerCase()==='admin'?'':
+      '<button class="btn-destructive" id="e-arch" style="margin-top:10px">Przenieś do archiwum</button>'));
+
+  document.querySelectorAll('#e-tagi [data-t]').forEach(function(b){
+    b.addEventListener('click',function(){
+      var t=this.getAttribute('data-t');
+      var l=(e.tagi||[]).slice();
+      var i=l.indexOf(t);
+      if(i===-1) l.push(t); else l.splice(i,1);
+      var self=this;
+      gas('masterSetDoctorTags',[S.token,id,l],function(r){
+        if(!r||!r.ok){ showErr((r&&r.msg)||'Błąd.'); return; }
+        e.tagi=r.tagi||l;
+        self.classList.toggle('off',e.tagi.indexOf(t)===-1);
+      });
+    });
+  });
+  document.getElementById('e-zapisz').addEventListener('click',function(){
+    gas('masterSetEmploymentForm',[S.token,id,document.getElementById('e-forma').value],function(r){
+      if(!r||!r.ok){ showErr((r&&r.msg)||'Błąd.'); return; }
+      e.forma=document.getElementById('e-forma').value;
+      closeModal(); showOk('Zapisano.'); rysujZespol();
+    });
+  });
+  var ar=document.getElementById('e-arch');
+  if(ar) ar.addEventListener('click',function(){
+    var b=this;
+    if(b.getAttribute('data-armed')!=='1'){
+      b.setAttribute('data-armed','1'); b.textContent='Na pewno? Kliknij ponownie';
+      setTimeout(function(){b.removeAttribute('data-armed');b.textContent='Przenieś do archiwum';},4000);
+      return;
+    }
+    gas('masterRemoveEmployee',[S.token,id],function(r){
+      if(!r||!r.ok){ showErr((r&&r.msg)||'Błąd.'); return; }
+      S.emps=S.emps.filter(function(x){return x.id!==id;});
+      closeModal(); showOk('Przeniesiono do archiwum.'); rysujZespol();
+    });
+  });
+}
+
+function zespolDodaj(){
+  showModal('<div class="modal-title">Nowa osoba</div>'+
+    '<div class="cb-grid2"><div class="cb-field"><label class="cb-lbl">Imię</label>'+
+    '<input type="text" class="ios-input" id="n-imie"></div>'+
+    '<div class="cb-field"><label class="cb-lbl">Nazwisko</label>'+
+    '<input type="text" class="ios-input" id="n-nazw"></div></div>'+
+    '<div class="cb-field"><label class="cb-lbl">Rola</label>'+
+    '<select class="ios-select" id="n-rola">'+
+    '<option value="Lekarz">Lekarz</option>'+
+    '<option value="higienistka stomatologiczna">Higienistka stomatologiczna</option>'+
+    '<option value="asystentka stomatologiczna">Asystentka stomatologiczna</option>'+
+    '<option value="rejestratorka medyczna">Rejestratorka medyczna</option>'+
+    '<option value="Admin">Admin</option></select></div>'+
+    '<div class="cb-field"><label class="cb-lbl" id="n-pin-l">PIN (opcjonalny)</label>'+
+    '<input type="text" class="ios-input" id="n-pin" inputmode="numeric" maxlength="4">'+
+    '<div class="ios-row-s" id="n-pin-h" style="margin-top:6px">Lekarze nie odbijają się w RCP.</div></div>'+
+    '<button class="btn-primary" id="n-zapisz">Dodaj</button>');
+
+  function upd(){
+    var lek=document.getElementById('n-rola').value.toLowerCase().indexOf('lekarz')!==-1;
+    document.getElementById('n-pin-l').textContent=lek?'PIN (opcjonalny)':'PIN (4 cyfry)';
+    document.getElementById('n-pin-h').style.display=lek?'block':'none';
+  }
+  document.getElementById('n-rola').addEventListener('change',upd); upd();
+
+  document.getElementById('n-zapisz').addEventListener('click',function(){
+    var imie=document.getElementById('n-imie').value.trim();
+    var nazw=document.getElementById('n-nazw').value.trim();
+    var rola=document.getElementById('n-rola').value;
+    var p=document.getElementById('n-pin').value.trim();
+    if(!imie||!nazw){ showErr('Podaj imię i nazwisko.'); return; }
+    var lek=rola.toLowerCase().indexOf('lekarz')!==-1;
+    if(!p&&!lek){ showErr('PIN musi mieć 4 cyfry.'); return; }
+    if(p&&!/^\d{4}$/.test(p)){ showErr('PIN musi mieć 4 cyfry.'); return; }
+    gas('masterAddEmployee',[S.token,imie,nazw,rola,p],function(r){
+      if(!r||!r.ok){ showErr((r&&r.msg)||'Błąd.'); return; }
+      S.emps.push(r.employee);
+      closeModal(); showOk('Dodano do zespołu.'); rysujZespol();
+    });
+  });
+}
+
+// ── Raporty ───────────────────────────────────────────────────
+
+function modRaporty(){
+  document.getElementById('cb-content').innerHTML=
+    '<div class="cb-wrap">'+naglowek('Raporty','Czas pracy zespołu',
+      '<div class="cb-btn-row"><button class="btn-secondary btn-small" id="r-prev">‹</button>'+
+      '<button class="btn-secondary btn-small" id="r-next">›</button>'+
+      '<button class="btn-primary btn-small" id="r-exp">Eksport Excel</button></div>')+
+    '<div class="section-title" id="r-lbl">—</div>'+
+    '<div id="r-lista">'+skeleton(4)+'</div></div>';
+  document.getElementById('r-prev').addEventListener('click',function(){
+    S.rpMonth--; if(S.rpMonth<1){S.rpMonth=12;S.rpYear--;} rapWczytaj();
+  });
+  document.getElementById('r-next').addEventListener('click',function(){
+    S.rpMonth++; if(S.rpMonth>12){S.rpMonth=1;S.rpYear++;} rapWczytaj();
+  });
+  document.getElementById('r-exp').addEventListener('click',function(){
+    showInfo('Generuję plik…');
+    gas('masterDashExportXlsx',[S.token,{mode:'month',year:S.rpYear,month:S.rpMonth}],function(res){
+      if(!res||!res.ok){ showErr('Błąd eksportu.'); return; }
+      var bc=atob(res.base64),n=new Array(bc.length);
+      for(var i=0;i<bc.length;i++) n[i]=bc.charCodeAt(i);
+      var blob=new Blob([new Uint8Array(n)],
+        {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+      var u=URL.createObjectURL(blob),a=document.createElement('a');
+      a.href=u; a.download=res.filename;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a); URL.revokeObjectURL(u);
+      showOk('Plik pobrany.');
+    });
+  });
+  rapWczytaj();
+}
+
+function rapWczytaj(){
+  var l=document.getElementById('r-lbl');
+  if(l) l.textContent=MIESIACE[S.rpMonth-1]+' '+S.rpYear;
+  gas('masterGetDashboard',[S.token,S.rpYear,S.rpMonth],function(res){
+    var box=document.getElementById('r-lista');
+    if(!box) return;
+    if(!res||!res.ok){ box.innerHTML=pusto('⚠️','Nie wczytano',(res&&res.msg)||''); return; }
+    var emps=res.employees||[];
+    if(!emps.length){ box.innerHTML=pusto('📊','Brak danych','Nikt nie odbijał w tym miesiącu'); return; }
+    box.innerHTML='<div class="ios-card">'+emps.map(function(e){
+      return '<button class="ios-row tap" data-r="'+esc(e.id)+'"><div class="ios-row-b">'+
+        '<div class="ios-row-t">'+esc(e.imie+' '+e.nazwisko)+'</div>'+
+        '<div class="ios-row-s">'+esc(e.rola||'')+'</div></div>'+
+        (e.ovrMinutes?'<span class="badge badge-orange">poza godz. '+fmtHM(e.ovrMinutes)+'</span>':'')+
+        '<span class="badge badge-blue">'+fmtHM(e.totalMinutes)+'</span>'+chev()+'</button>';
+    }).join('')+'</div>';
+    box.querySelectorAll('[data-r]').forEach(function(b){
+      b.addEventListener('click',function(){
+        var e=emps.find(function(x){return x.id===b.getAttribute('data-r');});
+        rapOsoba(e,res.etat);
+      });
+    });
+  });
+}
+
+function rapOsoba(e,etat){
+  var dni=(e.days||[]).filter(function(d){return d.wejscie||d.wyjscie||d.absence||d.overtime;});
+  showModal('<div class="modal-title">'+esc(e.imie+' '+e.nazwisko)+'</div>'+
+    '<div class="cb-stats" style="margin-bottom:16px">'+
+      kafel('Przepracowane',fmtHM(e.totalMinutes),'')+
+      kafel('Nieobecności',e.absDays||0,'orange')+
+      (e.ovrMinutes?kafel('Poza godzinami',fmtHM(e.ovrMinutes),'red'):'')+
+    '</div>'+
+    (dni.length?'<div class="ios-card">'+dni.map(function(d){
+      return '<div class="ios-row"><span class="cb-blok-t">'+esc(d.date.slice(8))+'</span>'+
+        '<div class="ios-row-b"><div class="ios-row-t">'+esc(d.dow)+'</div>'+
+        '<div class="ios-row-s">'+(d.absence?esc(d.absence.typ):
+          esc((d.wejscie||'—')+' → '+(d.wyjscie||'brak wyjścia')))+'</div></div>'+
+        '<span class="badge badge-gray">'+(d.mins!=null?fmtHM(d.mins):'—')+'</span></div>';
+    }).join('')+'</div>':pusto('📅','Brak zdarzeń','')));
+}
+
+// ── Dzień / Urlop / Dni wolne / Kod / Pomoc ───────────────────
+
+function modDzien(){
+  document.getElementById('cb-content').innerHTML=
+    '<div class="cb-wrap">'+naglowek('Dzień','Szybka korekta godzin pracownika')+
+    '<div class="cb-field"><label class="cb-lbl">Pracownik</label>'+
+    '<select class="ios-select" id="d-os">'+S.emps.filter(function(p){return p.grupa!=='lekarz';})
+      .map(function(p){return '<option value="'+esc(p.id)+'">'+esc(p.imie+' '+p.nazwisko)+'</option>';}).join('')+
+    '</select></div>'+
+    '<div class="cb-field"><label class="cb-lbl">Data</label>'+
+    '<input type="date" class="ios-input" id="d-data" value="'+dzisStr()+'"></div>'+
+    '<div class="cb-grid2"><div class="cb-field"><label class="cb-lbl">Wejście</label>'+
+    '<input type="time" class="ios-input" id="d-we"></div>'+
+    '<div class="cb-field"><label class="cb-lbl">Wyjście</label>'+
+    '<input type="time" class="ios-input" id="d-wy"></div></div>'+
+    '<div class="cb-field"><label class="cb-lbl">Nieobecność</label>'+
+    '<select class="ios-select" id="d-abs"><option value="">— brak —</option>'+
+    S.absTypy.map(function(t){return '<option value="'+esc(t.code)+'">'+esc(t.label)+'</option>';}).join('')+
+    '</select></div>'+
+    '<div class="cb-field"><label class="cb-lbl">Adnotacja</label>'+
+    '<textarea class="ios-textarea" id="d-note"></textarea></div>'+
+    '<button class="btn-primary" id="d-zapisz">Zapisz dzień</button></div>';
+
+  function wczytaj(){
+    gas('masterGetDay',[S.token,document.getElementById('d-os').value,
+        document.getElementById('d-data').value],function(r){
+      if(!r||!r.ok) return;
+      document.getElementById('d-we').value=r.wejscie||'';
+      document.getElementById('d-wy').value=r.wyjscie||'';
+      document.getElementById('d-abs').value=r.absence?r.absence.code:'';
+      document.getElementById('d-note').value=r.absence?(r.absence.note||''):'';
+    });
+  }
+  document.getElementById('d-os').addEventListener('change',wczytaj);
+  document.getElementById('d-data').addEventListener('change',wczytaj);
+  wczytaj();
+
+  document.getElementById('d-zapisz').addEventListener('click',function(){
+    var os=document.getElementById('d-os').value,dt=document.getElementById('d-data').value;
+    gas('masterSetDay',[S.token,os,dt,document.getElementById('d-we').value,
+        document.getElementById('d-wy').value],function(r1){
+      if(!r1||!r1.ok){ showErr((r1&&r1.msg)||'Błąd.'); return; }
+      gas('masterSetAbsence',[S.token,os,dt,document.getElementById('d-abs').value,
+          document.getElementById('d-note').value],function(){
+        showOk('Zapisano dzień.');
+      });
+    });
+  });
+}
+
+function modUrlop(){
+  document.getElementById('cb-content').innerHTML=
+    '<div class="cb-wrap">'+naglowek('Urlop','Nieobecność w całym zakresie dat')+
+    '<div class="cb-field"><label class="cb-lbl">Pracownik</label>'+
+    '<select class="ios-select" id="u-os">'+S.emps.map(function(p){
+      return '<option value="'+esc(p.id)+'">'+esc(p.imie+' '+p.nazwisko)+'</option>';}).join('')+'</select></div>'+
+    '<div class="cb-grid2"><div class="cb-field"><label class="cb-lbl">Od</label>'+
+    '<input type="date" class="ios-input" id="u-od" value="'+dzisStr()+'"></div>'+
+    '<div class="cb-field"><label class="cb-lbl">Do</label>'+
+    '<input type="date" class="ios-input" id="u-do" value="'+dzisStr()+'"></div></div>'+
+    '<div class="cb-field"><label class="cb-lbl">Typ</label>'+
+    '<select class="ios-select" id="u-typ"><option value="">— wyczyść —</option>'+
+    S.absTypy.map(function(t){return '<option value="'+esc(t.code)+'">'+esc(t.label)+'</option>';}).join('')+
+    '</select></div>'+
+    '<div class="cb-field"><label class="cb-lbl">Adnotacja</label>'+
+    '<textarea class="ios-textarea" id="u-note"></textarea></div>'+
+    '<button class="btn-primary" id="u-ok">Zapisz dla zakresu</button></div>';
+
+  document.getElementById('u-ok').addEventListener('click',function(){
+    gas('masterSetAbsenceRange',[S.token,document.getElementById('u-os').value,
+        document.getElementById('u-od').value,document.getElementById('u-do').value,
+        document.getElementById('u-typ').value,document.getElementById('u-note').value],function(r){
+      if(!r||!r.ok){ showErr((r&&r.msg)||'Błąd.'); return; }
+      showOk('Zapisano dla '+r.count+' dni.');
+    });
+  });
+}
+
+function modWolne(){
+  document.getElementById('cb-content').innerHTML=
+    '<div class="cb-wrap">'+naglowek('Dni wolne','Dla całego zespołu naraz')+
+    '<div class="ios-card pad" style="margin-bottom:16px;background:rgba(255,149,0,.08)">'+
+    '<div class="ios-row-s" style="color:var(--cb-orange)">Ta operacja dotyczy wszystkich aktywnych pracowników.</div></div>'+
+    '<div class="cb-grid2"><div class="cb-field"><label class="cb-lbl">Od</label>'+
+    '<input type="date" class="ios-input" id="w-od" value="'+dzisStr()+'"></div>'+
+    '<div class="cb-field"><label class="cb-lbl">Do</label>'+
+    '<input type="date" class="ios-input" id="w-do" value="'+dzisStr()+'"></div></div>'+
+    '<div class="cb-field"><label class="cb-lbl">Typ</label>'+
+    '<select class="ios-select" id="w-typ"><option value="">— wyczyść —</option>'+
+    S.absTypy.map(function(t){return '<option value="'+esc(t.code)+'">'+esc(t.label)+'</option>';}).join('')+
+    '</select></div>'+
+    '<div class="cb-field"><label class="cb-lbl">Adnotacja</label>'+
+    '<textarea class="ios-textarea" id="w-note" placeholder="np. Boże Narodzenie"></textarea></div>'+
+    '<button class="btn-destructive" id="w-ok">Zastosuj dla całego zespołu</button></div>';
+
+  document.getElementById('w-ok').addEventListener('click',function(){
+    var b=this;
+    if(b.getAttribute('data-armed')!=='1'){
+      b.setAttribute('data-armed','1'); b.textContent='To dotyczy CAŁEGO zespołu — kliknij ponownie';
+      setTimeout(function(){b.removeAttribute('data-armed');b.textContent='Zastosuj dla całego zespołu';},5000);
+      return;
+    }
+    b.removeAttribute('data-armed'); b.textContent='Zastosuj dla całego zespołu';
+    gas('masterSetClinicDayOff',[S.token,document.getElementById('w-od').value,
+        document.getElementById('w-do').value,document.getElementById('w-typ').value,
+        document.getElementById('w-note').value],function(r){
+      if(!r||!r.ok){ showErr((r&&r.msg)||'Błąd.'); return; }
+      showOk('Zastosowano dla '+r.count+' pracowników.');
+    });
+  });
+}
+
+var KOD={win:30,left:0,laduje:false,timer:null};
+function modKod(){
+  document.getElementById('cb-content').innerHTML=
+    '<div class="cb-wrap">'+naglowek('Kod autoryzacyjny','Kod rotacyjny z tabletu recepcji')+
+    '<div class="ios-card pad" style="text-align:center">'+
+    '<div id="k-kod" style="font-size:56px;font-weight:700;letter-spacing:.1em;'+
+    'font-variant-numeric:tabular-nums;color:var(--cb-blue);margin:12px 0">----</div>'+
+    '<div id="k-st" class="ios-row-s"></div></div>'+
+    '<button class="btn-secondary" id="k-odswiez" style="margin-top:16px">Odśwież kod</button>'+
+    '<a class="btn-secondary" style="margin-top:10px;display:block;text-align:center;text-decoration:none" '+
+    'href="'+esc(BASE_URL)+'?page=admin" target="_blank" rel="noopener">Otwórz pełny ekran</a></div>';
+
+  document.getElementById('k-odswiez').addEventListener('click',function(){ kodPobierz(true); });
+  kodPobierz(false);
+  if(KOD.timer) clearInterval(KOD.timer);
+  KOD.timer=setInterval(function(){
+    if(S.modul!=='kod') return;
+    if(KOD.left>0){ KOD.left--; kodRysuj(); if(KOD.left===0) kodPobierz(false); }
+  },1000);
+}
+function kodPobierz(force){
+  if(KOD.laduje) return;
+  KOD.laduje=true;
+  gas('getToken',[!!force],function(res){
+    KOD.laduje=false;
+    if(!res||!res.ok) return;
+    var el=document.getElementById('k-kod');
+    if(el) el.textContent=res.token;
+    KOD.win=res.winSec||30;
+    KOD.left=Math.max(1,Math.min(KOD.win,parseInt(res.secLeft,10)||KOD.win));
+    kodRysuj();
+  });
+}
+function kodRysuj(){
+  var st=document.getElementById('k-st');
+  if(!st) return;
+  var zielony=(KOD.win-KOD.left)<=20;
+  st.textContent=zielony?('Ważny jeszcze '+KOD.left+' s'):('Kod wkrótce wygaśnie ('+KOD.left+' s)');
+  var el=document.getElementById('k-kod');
+  if(el) el.style.color=zielony?'var(--cb-blue)':'var(--cb-red)';
+}
+
+function modPomoc(){
+  document.getElementById('cb-content').innerHTML=
+    '<div class="cb-wrap">'+naglowek('Pomoc','Słownik pojęć i wyszukiwarka')+
+    '<div class="cb-field"><input type="text" class="ios-input" id="h-szukaj" placeholder="Szukaj…"></div>'+
+    '<div id="h-lista"></div></div>';
+  var dane=(window.WS_GLOSSARY||[]);
+  function rysuj(q){
+    q=(q||'').toLowerCase().trim();
+    var l=dane.filter(function(e){
+      return !q||e.term.toLowerCase().indexOf(q)!==-1||e.def.toLowerCase().indexOf(q)!==-1;
+    });
+    document.getElementById('h-lista').innerHTML=l.length
+      ? '<div class="ios-card">'+l.map(function(e){
+          return '<div class="ios-row"><div class="ios-row-b">'+
+            '<div class="ios-row-t">'+esc(e.term)+'</div>'+
+            '<div class="ios-row-s">'+esc(e.def)+'</div>'+
+            (e.loc?'<div class="ios-row-s" style="color:var(--cb-blue);margin-top:4px">'+esc(e.loc)+'</div>':'')+
+            '</div><span class="badge badge-gray">'+esc(e.cat)+'</span></div>';
+        }).join('')+'</div>'
+      : pusto('🔍','Brak wyników','Spróbuj innego hasła');
+  }
+  document.getElementById('h-szukaj').addEventListener('input',function(){ rysuj(this.value); });
+  rysuj('');
+}
+
+// Motyw przenoszony z panelu klasycznego — użytkownik trafia tu z trybu
+// nocnego, więc zmiana wyglądu nie powinna go z niego wyrzucać.
+(function(){
+  try{
+    var z=localStorage.getItem('wesmile_theme');
+    document.documentElement.setAttribute('data-theme',
+      (z==='light'||z==='dark')?z:'dark');
+  }catch(e){ document.documentElement.setAttribute('data-theme','dark'); }
+})();
+</script>
+</body>
+</html>

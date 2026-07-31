@@ -286,6 +286,16 @@ function doGet(e) {
       .setTitle('We SMILE')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
+  // Interfejs Cerebro Hub — ukryty wariant panelu Właściciela.
+  // Te same dane i te same akcje, inny system projektowy.
+  if (p === 'cerebro') {
+    const tmpl = HtmlService.createTemplateFromFile('CerebroGUI');
+    tmpl.BASE_URL = ScriptApp.getService().getUrl();
+    return tmpl.evaluate()
+      .setTitle('Cerebro · We SMILE')
+      .addMetaTag('viewport', 'width=device-width,initial-scale=1,viewport-fit=cover')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
   // Panel Właściciela w wersji mobilnej — osobny interfejs, nie responsywna
   // wersja desktopu. Apps Script nie udostępnia nagłówka User-Agent w doGet,
   // więc wyboru wersji dokonuje klient (przekierowanie + zapamiętany wybór).
@@ -352,6 +362,10 @@ function callRCP(action, argsJson) {
       case 'masterSaveAdnotacja':   return masterSaveAdnotacja(args[0], args[1]);
       case 'masterDeleteAdnotacja': return masterDeleteAdnotacja(args[0], args[1]);
       case 'masterGrafikWydruk':    return masterGrafikWydruk(args[0], args[1]);
+      case 'masterGrafikMiesiac':      return masterGrafikMiesiac(args[0], args[1], args[2]);
+      case 'masterZapiszDzienGrafiku': return masterZapiszDzienGrafiku(args[0], args[1], args[2]);
+      case 'masterResetDzienGrafiku':  return masterResetDzienGrafiku(args[0], args[1]);
+      case 'masterKopiujDzienGrafiku': return masterKopiujDzienGrafiku(args[0], args[1], args[2]);
       case 'masterGrafikImportPodglad': return masterGrafikImportPodglad(args[0], args[1]);
       case 'masterGrafikImportZastosuj': return masterGrafikImportZastosuj(args[0], args[1], args[2]);
       case 'masterRemoveEmployee':  return masterRemoveEmployee(args[0], args[1]);

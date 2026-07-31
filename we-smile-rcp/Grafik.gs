@@ -1913,3 +1913,258 @@ function masterGrafikWydruk(token, opts) {
     personel: personel.map(p => ({ id: p.id, nazwa: p.imie + ' ' + p.nazwisko, grupa: p.grupa }))
   };
 }
+
+// ── Edycja konkretnych dni miesiąca ──────────────────────────
+// Szablon tygodniowy jest domyślną podstawą, ale realny miesiąc rzadko
+// jest idealnie powtarzalny. Dzień, który raz zostanie zmieniony, zapisuje
+// się TU w całości i od tej pory wygrywa z szablonem.
+//
+// Materializacja całego dnia (a nie różnic) jest celowa: „co jest w tym
+// dniu" da się wtedy odczytać jednym spojrzeniem, bez składania szablonu
+// z listą wyjątków — a to właśnie ta złożoność sprawiała, że budowanie
+// grafiku wydawało się nieintuicyjne.
+
+function _shGrafikDni() {
+  return _arkusz('GrafikDni',
+    ['ID','Data','GabinetID','Typ','OsobaID','Od','Do','AsystaWymagana','AsystaUwaga','Asysta','Zmodyfikowano']);
+}
+
+function _dniNadpisaneAll() {
+  const sh = _shGrafikDni();
+  if (sh.getLastRow() < 2) return {};
+  const map = {};
+  sh.getDataRange().getValues().slice(1).forEach(r => {
+    const data = _sheetDate(r[1]);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return;
+    if (!map[data]) map[data] = [];
+    let asysta = [];
+    try { asysta = JSON.parse(String(r[9] || '[]')); } catch (e) { asysta = []; }
+    map[data].push({
+      id: String(r[0]),
+      gabinetId: String(r[2]),
+      typ: String(r[3]),
+      osobaId: String(r[4]),
+      od: _sheetTime(r[5]),
+      do: _sheetTime(r[6]),
+      asystaWymagana: (r[7] === '' || r[7] == null) ? null : parseInt(r[7], 10),
+      asystaUwaga: String(r[8] || ''),
+      asysta: Array.isArray(asysta) ? asysta : []
+    });
+  });
+  return map;
+}
+
+// Dni oznaczone jako edytowane, ale bez ani jednego bloku (świadomie puste).
+function _dniPusteAll() {
+  const props = PropertiesService.getScriptProperties();
+  try { return JSON.parse(props.getProperty('grafik_dni_puste') || '[]'); }
+  catch (e) { return []; }
+}
+function _zapiszDniPuste(lista) {
+  PropertiesService.getScriptProperties()
+    .setProperty('grafik_dni_puste', JSON.stringify(lista.slice(0, 2000)));
+}
+
+/**
+ * Cały miesiąc dzień po dniu: co realnie obowiązuje w każdej dacie.
+ * `zTemplate` mówi, czy dzień pochodzi z szablonu, czy został nadpisany —
+ * dzięki temu interfejs może pokazać, gdzie ktoś świadomie odszedł od normy.
+ */
+function masterGrafikMiesiac(token, rok, mies) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  const y = parseInt(rok, 10), m = parseInt(mies, 10);
+  if (isNaN(y) || isNaN(m) || m < 1 || m > 12) return { ok: false, msg: 'Nieprawidłowy miesiąc.' };
+
+  const gabinety = _gabinetyAll(false);
+  const personel = _grafikPersonel();
+  const szablon = _grafikBlokiAll();
+  const asystaSz = _grafikAsystaAll();
+  const asystaWg = {};
+  asystaSz.forEach(a => {
+    if (!asystaWg[a.blokId]) asystaWg[a.blokId] = [];
+    asystaWg[a.blokId].push({ osobaId: a.osobaId, od: a.od, do: a.do });
+  });
+
+  const nadpisane = _dniNadpisaneAll();
+  const puste = _dniPusteAll();
+  const adnotacje = _adnotacjeAll();
+
+  const ile = new Date(y, m, 0).getDate();
+  const pfx = y + '-' + String(m).padStart(2, '0') + '-';
+  const dni = [];
+
+  for (let d = 1; d <= ile; d++) {
+    const ds = pfx + String(d).padStart(2, '0');
+    const dow = new Date(ds + 'T12:00:00').getDay();
+    const czynny = GRAFIK_DAYS.indexOf(dow) !== -1;
+
+    let bloki = [];
+    let zTemplate = true;
+
+    if (nadpisane[ds]) {
+      bloki = nadpisane[ds];
+      zTemplate = false;
+    } else if (puste.indexOf(ds) !== -1) {
+      bloki = [];
+      zTemplate = false;
+    } else if (czynny) {
+      bloki = szablon.filter(b => b.dzien === dow).map(b => ({
+        id: b.id, gabinetId: b.gabinetId, typ: b.typ, osobaId: b.osobaId,
+        od: b.od, do: b.do, asystaWymagana: b.asystaWymagana,
+        asystaUwaga: b.asystaUwaga, asysta: asystaWg[b.id] || []
+      }));
+    }
+
+    bloki.sort((a, b) => _t2m(a.od) - _t2m(b.od));
+
+    dni.push({
+      data: ds,
+      dzienTygodnia: dow,
+      nazwaDnia: czynny ? GRAFIK_DAY_NAMES[dow] : 'Niedziela',
+      czynny: czynny,
+      zTemplate: zTemplate,
+      godziny: czynny ? { open: _hhmm(GRAFIK_HOURS[dow].open), close: _hhmm(GRAFIK_HOURS[dow].close) } : null,
+      bloki: bloki,
+      adnotacje: adnotacje.filter(a => a.od <= ds && ds <= a.do)
+    });
+  }
+
+  return {
+    ok: true, rok: y, mies: m, dni,
+    gabinety, personel,
+    krokMin: GRAFIK_KROK_MIN,
+    asystaZew: ASYSTA_ZEW
+  };
+}
+
+/**
+ * Zapisuje komplet bloków dla JEDNEJ daty. Od tej chwili ta data nie
+ * podlega już szablonowi — aż do jawnego przywrócenia.
+ */
+function masterZapiszDzienGrafiku(token, data, bloki) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  data = String(data || '').trim();
+  if (!_dataOk(data)) return { ok: false, msg: 'Nieprawidłowa data.' };
+
+  const dow = new Date(data + 'T12:00:00').getDay();
+  if (GRAFIK_DAYS.indexOf(dow) === -1) return { ok: false, msg: 'Klinika jest w tym dniu nieczynna.' };
+  const h = GRAFIK_HOURS[dow];
+
+  bloki = Array.isArray(bloki) ? bloki : [];
+  const personel = _grafikPersonel();
+  const gabinety = _gabinetyAll(false);
+  const czyste = [];
+
+  for (let i = 0; i < bloki.length; i++) {
+    const b = bloki[i] || {};
+    const od = String(b.od || '').trim(), do_ = String(b.do || '').trim();
+    const etykieta = (b.od || '?') + '–' + (b.do || '?');
+
+    if (!_naSiatce(od) || !_naSiatce(do_)) {
+      return { ok: false, msg: etykieta + ': godziny co ' + GRAFIK_KROK_MIN + ' minut.' };
+    }
+    if (_t2m(od) >= _t2m(do_)) return { ok: false, msg: etykieta + ': „do" musi być późniejsze.' };
+    if (_t2m(od) < h.open || _t2m(do_) > h.close) {
+      return { ok: false, msg: etykieta + ': poza godzinami otwarcia (' +
+        _hhmm(h.open) + '–' + _hhmm(h.close) + ').' };
+    }
+    if (!gabinety.some(g => g.id === String(b.gabinetId))) {
+      return { ok: false, msg: etykieta + ': nieznany gabinet.' };
+    }
+    const osoba = personel.find(p => p.id === String(b.osobaId));
+    if (!osoba) return { ok: false, msg: etykieta + ': wybierz osobę.' };
+    const typ = BLOK_TYPES.indexOf(b.typ) !== -1 ? b.typ : BLOK_LEKARZ;
+    if (typ === BLOK_HIGIENA && osoba.grupa !== GRUPA_HIGIENISTKA) {
+      return { ok: false, msg: etykieta + ': higienizację prowadzi higienistka.' };
+    }
+    if (typ === BLOK_LEKARZ && osoba.grupa !== GRUPA_LEKARZ) {
+      return { ok: false, msg: etykieta + ': blok lekarski obsadza lekarz.' };
+    }
+
+    // Kolizje wewnątrz tego samego dnia.
+    for (let j = 0; j < czyste.length; j++) {
+      const c = czyste[j];
+      if (c.gabinetId === String(b.gabinetId) && _zakresyNachodza(od, do_, c.od, c.do)) {
+        return { ok: false, msg: etykieta + ': ten gabinet jest już zajęty w tych godzinach.' };
+      }
+      if (c.osobaId === String(b.osobaId) && _zakresyNachodza(od, do_, c.od, c.do)) {
+        return { ok: false, msg: osoba.imie + ' ' + osoba.nazwisko + ' jest w tym czasie w innym gabinecie.' };
+      }
+    }
+
+    const asysta = (Array.isArray(b.asysta) ? b.asysta : [])
+      .map(a => ({ osobaId: String(a.osobaId || a), od: a.od || od, do: a.do || do_ }))
+      .filter(a => a.osobaId && (_czyAsystaZew(a.osobaId) ||
+        (personel.find(p => p.id === a.osobaId) || {}).grupa === GRUPA_ASYSTENTKA));
+
+    czyste.push({
+      gabinetId: String(b.gabinetId), typ, osobaId: String(b.osobaId), od, do: do_,
+      asystaWymagana: (b.asystaWymagana === '' || b.asystaWymagana == null)
+        ? (typ === BLOK_LEKARZ ? 1 : 0) : parseInt(b.asystaWymagana, 10),
+      asystaUwaga: String(b.asystaUwaga || '').trim().slice(0, 300),
+      asysta
+    });
+  }
+
+  _usunDzienGrafiku(data);
+
+  const sh = _shGrafikDni();
+  const teraz = new Date().toISOString();
+  let seed = [];
+  czyste.forEach(b => {
+    const id = _nextId(seed, 'D');
+    seed = seed.concat([{ id }]);
+    sh.appendRow([id, data, b.gabinetId, b.typ, b.osobaId, b.od, b.do,
+                  b.asystaWymagana, b.asystaUwaga, JSON.stringify(b.asysta), teraz]);
+  });
+
+  // Świadomie pusty dzień też jest decyzją — musimy ją zapamiętać,
+  // inaczej szablon wróciłby przy najbliższym odświeżeniu.
+  const puste = _dniPusteAll().filter(d => d !== data);
+  if (!czyste.length) puste.push(data);
+  _zapiszDniPuste(puste);
+
+  _logAdmin('EdycjaDniaGrafiku', data, czyste.length + ' bloków');
+  return { ok: true, bloki: czyste.length };
+}
+
+function _usunDzienGrafiku(data) {
+  const sh = _shGrafikDni();
+  if (sh.getLastRow() < 2) return;
+  const rows = sh.getDataRange().getValues();
+  for (let i = rows.length - 1; i >= 1; i--) {
+    if (_sheetDate(rows[i][1]) === data) sh.deleteRow(i + 1);
+  }
+}
+
+/** Przywraca dzień do szablonu tygodniowego. */
+function masterResetDzienGrafiku(token, data) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  data = String(data || '').trim();
+  if (!_dataOk(data)) return { ok: false, msg: 'Nieprawidłowa data.' };
+  _usunDzienGrafiku(data);
+  _zapiszDniPuste(_dniPusteAll().filter(d => d !== data));
+  _logAdmin('ResetDniaGrafiku', data, 'przywrócono szablon');
+  return { ok: true };
+}
+
+/** Kopiuje obsadę z jednej daty na wskazane inne daty. */
+function masterKopiujDzienGrafiku(token, zData, naDaty) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  if (!_dataOk(zData)) return { ok: false, msg: 'Nieprawidłowa data źródłowa.' };
+  naDaty = Array.isArray(naDaty) ? naDaty.filter(_dataOk) : [];
+  if (!naDaty.length) return { ok: false, msg: 'Nie wskazano dat docelowych.' };
+
+  const y = parseInt(zData.slice(0, 4), 10), m = parseInt(zData.slice(5, 7), 10);
+  const mies = masterGrafikMiesiac(token, y, m);
+  if (!mies.ok) return mies;
+  const zrodlo = (mies.dni.find(d => d.data === zData) || {}).bloki || [];
+
+  let ok = 0;
+  const bledy = [];
+  naDaty.forEach(d => {
+    const r = masterZapiszDzienGrafiku(token, d, zrodlo);
+    if (r && r.ok) ok++; else bledy.push(d + ': ' + ((r && r.msg) || 'błąd'));
+  });
+  return { ok: true, skopiowano: ok, bledy: bledy.slice(0, 15) };
+}

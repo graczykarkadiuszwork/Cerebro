@@ -257,6 +257,65 @@ button,input,select,textarea{font-family:inherit}
 .ws-confirm-icon{width:44px;height:44px;border-radius:50%;background:var(--c-primary-tint);color:var(--c-primary);display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .ws-confirm-msg{font-size:15px;font-weight:700;color:var(--c-ink);line-height:1.4}
 
+/* ── Ukryte wejście do Cerebro Hub ────────────────────────────
+   Sekwencja: tryb nocny → kliknięcie słowa „Admin" w zakładce Zespół
+   → ikona trybu wyświetlania płonie fioletowym płomieniem 3 s
+   → zamienia się w oko Cerebro → kliknięcie otwiera interfejs Hub.
+   Świadomie ukryte, ale nieniszczące: to tylko inny wygląd tych
+   samych danych, więc nawet przypadkowe odkrycie niczego nie psuje. */
+
+@keyframes wsFlame{
+  0%{transform:translateY(6px) scaleY(.55) scaleX(.85);opacity:0}
+  12%{opacity:1}
+  35%{transform:translateY(-4px) scaleY(1.15) scaleX(1.05)}
+  55%{transform:translateY(-9px) scaleY(.92) scaleX(.9)}
+  78%{transform:translateY(-5px) scaleY(1.08) scaleX(1)}
+  100%{transform:translateY(-14px) scaleY(.5) scaleX(.7);opacity:0}
+}
+@keyframes wsFlameGlow{
+  0%,100%{box-shadow:0 0 0 0 rgba(168,85,247,0)}
+  30%{box-shadow:0 0 22px 6px rgba(168,85,247,.55)}
+  70%{box-shadow:0 0 30px 10px rgba(124,58,237,.45)}
+}
+@keyframes wsIconBurn{
+  0%{opacity:1;transform:scale(1);filter:none}
+  45%{opacity:.55;transform:scale(.86);filter:hue-rotate(70deg) brightness(1.5)}
+  100%{opacity:0;transform:scale(.5)}
+}
+@keyframes wsEyeIn{
+  0%{opacity:0;transform:scale(.35) rotate(-25deg)}
+  60%{opacity:1;transform:scale(1.22) rotate(6deg)}
+  100%{opacity:1;transform:scale(1) rotate(0)}
+}
+@keyframes wsEyePulse{
+  0%,100%{filter:drop-shadow(0 0 3px rgba(168,85,247,.75))}
+  50%{filter:drop-shadow(0 0 11px rgba(168,85,247,1))}
+}
+
+.ws-burning{position:relative;overflow:visible;animation:wsFlameGlow 3s ease-in-out}
+.ws-burning>svg{animation:wsIconBurn 1.1s ease-in forwards}
+.ws-burning::after{
+  content:'';position:absolute;left:50%;bottom:2px;width:26px;height:34px;
+  margin-left:-13px;pointer-events:none;border-radius:50% 50% 46% 46% / 62% 62% 38% 38%;
+  background:radial-gradient(ellipse at 50% 78%,#f0abfc 0%,#c084fc 28%,#a855f7 52%,#7c3aed 74%,rgba(88,28,135,0) 100%);
+  animation:wsFlame .62s ease-in-out infinite;
+  mix-blend-mode:screen;
+}
+.ws-burning::before{
+  content:'';position:absolute;left:50%;bottom:0;width:16px;height:22px;
+  margin-left:-8px;pointer-events:none;border-radius:50% 50% 46% 46% / 60% 60% 40% 40%;
+  background:radial-gradient(ellipse at 50% 80%,#fff 0%,#f5d0fe 30%,#d8b4fe 60%,rgba(168,85,247,0) 100%);
+  animation:wsFlame .44s ease-in-out infinite .12s;
+  mix-blend-mode:screen;
+}
+
+.ws-eye{animation:wsEyeIn .6s cubic-bezier(.34,1.56,.64,1),wsEyePulse 2.4s ease-in-out .6s infinite}
+.ws-eye-btn{color:#c084fc !important;border-color:rgba(168,85,247,.55) !important}
+
+/* Słowo „Admin" w zakładce Zespół — klikalne, ale bez żadnej wskazówki,
+   że coś się za nim kryje. */
+.ws-admin-key{cursor:pointer;-webkit-tap-highlight-color:transparent}
+
 /* ── Popup błędu — samodzielnie zamykany, u góry ekranu ── */
 .ws-error-popup{
   position:fixed;top:18px;left:50%;transform:translateX(-50%) translateY(-14px);
@@ -655,76 +714,8 @@ window.wsSetConnStatus = function (ok, msg) {
 /* ── Baza pojęć RCP — wspólna dla zakładki Pomoc i FAQ ──────────
    Jedno źródło prawdy: te same definicje widać w zakładce
    "Pomoc" i w wyszukiwarce widgetu FAQ, w każdym widoku. */
-window.WS_GLOSSARY = [
-  { cat: 'Logowanie i dostęp', term: 'PIN', def: '4-cyfrowy kod osobisty pracownika — służy do zalogowania się na kiosku, w Panelu Raportowym i (dla Admina) w Panelu Właściciela.', loc: 'Ekran logowania (PIN) — kiosk, Panel Raportowy, Panel Właściciela' },
-  { cat: 'Logowanie i dostęp', term: 'Kod autoryzacyjny (kod rotacyjny)', def: '4-cyfrowy kod wyświetlany na tablecie recepcji, zmieniający się co 30 sekund — dowód fizycznej obecności przy tablecie, wymagany przy każdym odbiciu.', loc: 'Ekran logowania (PIN) — kiosk, Panel Raportowy, Panel Właściciela' },
-  { cat: 'Logowanie i dostęp', term: 'Sesja', def: 'Czas, przez jaki Panel Raportowy lub Panel Właściciela pamięta, że jesteś zalogowany (do 1 godziny nieaktywności) — potem trzeba zalogować się ponownie.', loc: 'Ekran logowania (PIN) — kiosk, Panel Raportowy, Panel Właściciela' },
-  { cat: 'Logowanie i dostęp', term: 'Tryb nocny', def: 'Przełącznik ciemnych kolorów interfejsu, zapamiętywany w przeglądarce niezależnie na każdym urządzeniu.', loc: 'Ekran logowania (PIN) — kiosk, Panel Raportowy, Panel Właściciela' },
-  { cat: 'Logowanie i dostęp', term: 'Zmień użytkownika', def: 'Powrót do ekranu wpisywania PIN-u, żeby zalogować się jako inny pracownik na tym samym urządzeniu — nie zmienia niczyjego PIN-u.', loc: 'Ekran logowania (PIN) — kiosk, Panel Raportowy, Panel Właściciela' },
-  { cat: 'Odbicia i czas pracy', term: 'Odbicie', def: 'Zarejestrowanie Wejścia lub Wyjścia na kiosku — wymaga PIN-u pracownika i aktualnego kodu autoryzacyjnego z tabletu.', loc: 'Kiosk (ekran pracownika) i zakładka „Odbicia” w Panelu Właściciela' },
-  { cat: 'Odbicia i czas pracy', term: 'Godziny Kliniki', def: 'Regularne godziny otwarcia: Pn–Pt 8:00–21:00, Sb 9:00–16:00, Nd — Klinika zamknięta.', loc: 'Kiosk (ekran pracownika) i zakładka „Odbicia” w Panelu Właściciela' },
-  { cat: 'Odbicia i czas pracy', term: 'Praca poza godzinami Kliniki', def: 'Odbicie zarejestrowane przed otwarciem, po zamknięciu lub w niedzielę — system prosi o krótkie uzasadnienie konieczności.', loc: 'Kiosk (ekran pracownika) i zakładka „Odbicia” w Panelu Właściciela' },
-  { cat: 'Odbicia i czas pracy', term: 'Norma godzin', def: 'Docelowa liczba godzin pracy w miesiącu, ustawiana w Panelu Raportowym — służy tylko do porównania z faktycznie przepracowanymi godzinami.', loc: 'Kiosk (ekran pracownika) i zakładka „Odbicia” w Panelu Właściciela' },
-  { cat: 'Nieobecności', term: 'Zgłoś nieobecność', def: 'Samodzielne zgłoszenie nieobecności przez pracownika (np. L4, urlop) — bez potrzeby kodu z tabletu, dla dowolnego zakresu dat.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
-  { cat: 'Nieobecności', term: 'Adnotacja', def: 'Krótka notatka dołączona do nieobecności lub przekroczenia godzin — widoczna dla administratora i właściciela.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
-  { cat: 'Nieobecności', term: 'DW — Dzień wolny (Klinika zamknięta)', def: 'Zbiorowa nieobecność ustawiana wyłącznie przez właściciela dla całego zespołu, np. święto.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
-  { cat: 'Nieobecności', term: 'L4 — Zwolnienie lekarskie', def: 'Nieobecność chorobowa. Dostępna dla każdej formy zatrudnienia.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
-  { cat: 'Nieobecności', term: 'UW — Urlop wypoczynkowy', def: 'Standardowy płatny urlop — tylko dla umowy o pracę.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
-  { cat: 'Nieobecności', term: 'UZ — Urlop na żądanie', def: 'Urlop wypoczynkowy zgłaszany bez wcześniejszego planu — tylko dla umowy o pracę.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
-  { cat: 'Nieobecności', term: 'UB — Urlop bezpłatny', def: 'Nieobecność bez wynagrodzenia, za zgodą pracodawcy — tylko dla umowy o pracę.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
-  { cat: 'Nieobecności', term: 'UOK — Urlop okolicznościowy', def: 'Krótki płatny urlop z powodu wydarzenia rodzinnego (np. ślub, pogrzeb) — tylko dla umowy o pracę.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
-  { cat: 'Nieobecności', term: 'UMR — Urlop macierzyński / rodzicielski', def: 'Urlop związany z narodzinami lub opieką nad dzieckiem — tylko dla umowy o pracę.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
-  { cat: 'Nieobecności', term: 'UOJ — Urlop ojcowski', def: 'Urlop przysługujący ojcu w związku z narodzinami dziecka — tylko dla umowy o pracę.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
-  { cat: 'Nieobecności', term: 'UWY — Urlop wychowawczy', def: 'Dłuższa nieobecność związana z wychowaniem dziecka — tylko dla umowy o pracę.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
-  { cat: 'Nieobecności', term: 'OPD — Opieka nad dzieckiem (art. 188 KP)', def: 'Dodatkowe dni wolne na opiekę nad dzieckiem do lat 14 — tylko dla umowy o pracę.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
-  { cat: 'Nieobecności', term: 'ZOP — Zasiłek opiekuńczy', def: 'Nieobecność z powodu opieki nad chorym członkiem rodziny — tylko dla umowy o pracę.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
-  { cat: 'Nieobecności', term: 'SW — Siła wyższa (art. 148¹ KP)', def: 'Krótkie, pilne zwolnienie z powodu siły wyższej w sprawach rodzinnych — tylko dla umowy o pracę.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
-  { cat: 'Nieobecności', term: 'HK — Honorowe krwiodawstwo', def: 'Dzień wolny na oddanie krwi i dojazd — tylko dla umowy o pracę.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
-  { cat: 'Nieobecności', term: 'ODB — Odbiór nadgodzin', def: 'Dzień wolny w zamian za wcześniej przepracowane nadgodziny — tylko dla umowy o pracę.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
-  { cat: 'Nieobecności', term: 'NUN — Nieobecność usprawiedliwiona niepłatna', def: 'Nieobecność uznana za usprawiedliwioną, ale bez wynagrodzenia. Dostępna dla każdej formy zatrudnienia.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
-  { cat: 'Nieobecności', term: 'NN — Nieobecność nieusprawiedliwiona', def: 'Nieobecność bez podanego lub zaakceptowanego powodu. Dostępna dla każdej formy zatrudnienia.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
-  { cat: 'Nieobecności', term: 'PZL — Przerwa w realizacji zlecenia', def: 'Przerwa w świadczeniu usług dla osób na umowie zlecenie.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
-  { cat: 'Nieobecności', term: 'B2B — Przerwa w świadczeniu usług', def: 'Przerwa w świadczeniu usług dla osób współpracujących w modelu B2B.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
-  { cat: 'Nieobecności', term: 'DEL — Delegacja / szkolenie', def: 'Nieobecność związana z wyjazdem służbowym lub szkoleniem. Dostępna dla każdej formy zatrudnienia.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
-  { cat: 'Nieobecności', term: 'INNE — Inne', def: 'Nieobecność, która nie pasuje do żadnej innej kategorii — wymaga wpisania adnotacji z powodem.', loc: '„Zgłoś nieobecność” (kiosk) oraz zakładki „Dzień” / „Miesiąc” / „Urlop” w Panelu Właściciela' },
-  { cat: 'Forma zatrudnienia', term: 'UoP — Umowa o pracę', def: 'Pełny katalog nieobecności kodeksowych; płatny urlop (10 wybranych kodów) dolicza 8h/dzień do miesięcznej sumy godzin.', loc: 'Panel Właściciela → Zespół' },
-  { cat: 'Forma zatrudnienia', term: 'Umowa zlecenie', def: 'Pracownik widzi kod PZL zamiast kodeksowych urlopów; nieobecności nie doliczają automatycznie godzin.', loc: 'Panel Właściciela → Zespół' },
-  { cat: 'Forma zatrudnienia', term: 'B2B', def: 'Współpracownik widzi kod B2B zamiast kodeksowych urlopów; nieobecności nie doliczają automatycznie godzin.', loc: 'Panel Właściciela → Zespół' },
-  { cat: 'Forma zatrudnienia', term: 'Forma nieustawiona', def: 'Dopóki właściciel nie ustawi formy zatrudnienia w zakładce „Zespół", pracownik widzi pełną listę nieobecności, a jego urlopy nie doliczają godzin automatycznie — bezpieczny stan domyślny.', loc: 'Panel Właściciela → Zespół' },
-  { cat: 'Panele', term: 'Panel Raportowy', def: 'Widok z podglądem godzin, nieobecności i eksportem do Excela — dostępny dla każdego zalogowanego PIN-em pracownika.', loc: 'Panel Raportowy (?page=dashboard) — „otwórz osobno” z Panelu Właściciela' },
-  { cat: 'Panele', term: 'Panel Właściciela', def: 'Widok z pełną edycją godzin, nieobecności, urlopów i zespołu — dostępny wyłącznie dla PIN-u z rolą Admin.', loc: 'Panel Właściciela (?page=owner)' },
-  { cat: 'Panele', term: 'Płatny urlop (8h/dzień)', def: 'Dzień urlopu z odpowiedniego kodu, dla pracownika na UoP, automatycznie liczy się jako 8h w sumie miesięcznej — widoczne w Panelu Raportowym i eksporcie Excel.', loc: 'Panel Raportowy i Panel Właściciela → Raporty' },
-  { cat: 'Panele', term: 'Dni wolne (Klinika)', def: 'Narzędzie właściciela do jednorazowego oznaczenia tej samej nieobecności (np. święta) wszystkim aktywnym pracownikom naraz.', loc: 'Panel Właściciela → Dni wolne' },
-  { cat: 'Panele', term: 'Urlop (zakres dat)', def: 'Narzędzie właściciela do oznaczenia nieobecności jednego pracownika na cały zakres dat jednym zapisem, bez klikania dzień po dniu.', loc: 'Panel Właściciela → Urlop' },
-  { cat: 'Panele', term: 'Zespół', def: 'Zakładka właściciela do ustawiania formy zatrudnienia każdego pracownika.', loc: 'Panel Właściciela → Zespół' },
-  { cat: 'Panele', term: 'Eksport Excel', def: 'Pobranie raportu godzin i nieobecności do pliku .xlsx, dla wybranego miesiąca lub zakresu dat i wybranych pracowników.', loc: 'Panel Raportowy i Panel Właściciela → Raporty' },
-  { cat: 'Panele', term: 'Mój miesiąc', def: 'Widok pracownika z podsumowaniem własnych godzin (bez możliwości ich zmiany) i możliwością dopisania adnotacji do nieobecności lub uzasadnienia.', loc: 'Panel Raportowy' },
-  { cat: 'Panele', term: 'Wskazówka — zakładka Dzień (Panel Właściciela)', def: 'Puste pole godziny = brak zdarzenia tego typu w tym dniu. Pusty typ nieobecności = usuwa nieobecność dnia; puste uzasadnienie = usuwa uzasadnienie. Zapis nadpisuje istniejące dane wybranego dnia. Każda zmiana jest logowana.', loc: 'Panel Właściciela → Dzień' },
-  { cat: 'Panele', term: 'Wskazówka — zakładka Miesiąc (Panel Właściciela)', def: 'Zmiana godziny zapisuje się automatycznie po opuszczeniu pola (żółte obramowanie = zapisuję, niebieskie = zapisano). Puste pole = usuwa dane zdarzenie tego dnia. Fioletowa plakietka = nieobecność, trójkąt = dzień poza godzinami Kliniki — dotknij numeru dnia, aby przejść do szybkiej edycji.', loc: 'Panel Właściciela → Miesiąc' },
-  { cat: 'Grafik', term: 'Grafik obsady gabinetów', def: 'Stały szablon tygodniowy (Pn–Sb) mówiący, kto obsadza który gabinet i w jakich godzinach. Nie jest powiązany z konkretnymi datami — jednorazowe odstępstwa (urlop, L4) obsługuje moduł Nieobecności.', loc: 'Panel Właściciela → Grafik' },
-  { cat: 'Grafik', term: 'Blok', def: 'Jedna osoba w jednym gabinecie, w jednym dniu, w dowolnych godzinach. Godziny nie są sztywnymi zmianami — każdy blok ustawiasz od-do tak, jak faktycznie pracuje dany lekarz.', loc: 'Panel Właściciela → Grafik → kliknij blok lub wolne miejsce' },
-  { cat: 'Grafik', term: 'Blok lekarski', def: 'Blok obsadzony przez lekarza. Domyślnie wymaga jednej asystentki — odstępstwo (0 lub 2+) trzeba uzasadnić adnotacją.', loc: 'Panel Właściciela → Grafik' },
-  { cat: 'Grafik', term: 'Blok higienizacji', def: 'Blok obsadzony przez higienistkę, zajmujący gabinet tak samo jak blok lekarski. Domyślnie bez asysty. Najprostszy sposób na zagospodarowanie pustego gabinetu.', loc: 'Panel Właściciela → Grafik' },
-  { cat: 'Grafik', term: 'Wolne miejsce (luka)', def: 'Czas, w którym gabinet jest otwarty, ale nikogo w nim nie ma. Widoczny jako przerywana ramka — kliknij, żeby od razu obsadzić ten dokładny przedział.', loc: 'Panel Właściciela → Grafik' },
-  { cat: 'Grafik', term: 'Rekomendacje', def: 'Automatyczne podpowiedzi, co zrobić z grafikiem: gdzie brakuje asysty, którą lukę wypełnić higienizacją, kogo poprosić o wydłużenie godzin. Ikona przy dniu lub bloku otwiera listę; przycisk „Rekomendacje" pokazuje wszystkie.', loc: 'Panel Właściciela → Grafik → ikona ! lub przycisk Rekomendacje' },
-  { cat: 'Grafik', term: 'Waga rekomendacji', def: 'Krytyczna = dziura w obsłudze pacjenta. Ważna = realna strata możliwości. Sugestia = optymalizacja. Info = potwierdzenie, że w tym miejscu jest dobrze.', loc: 'Panel Właściciela → Grafik → Rekomendacje' },
-  { cat: 'Grafik', term: 'Tagi specjalizacji', def: 'Lista kompetencji lekarza (np. Endodoncja, Protetyka). Ustawiane w zakładce Zespół. Zasilają dopasowywanie obsady i rekomendacje — bez nich system nie potrafi wskazać, kto najlepiej pasuje do wolnego miejsca.', loc: 'Panel Właściciela → Zespół → przy lekarzu, przycisk „zmień"' },
-  { cat: 'Grafik', term: 'Lekarz a RCP', def: 'Lekarze są w tej samej liście Pracownicy co reszta zespołu (spójna struktura kadry), ale nie odbijają się na kiosku i nie mają PIN-u. Dlatego nie pojawiają się w raportach czasu pracy — pokazywaliby stałe 0 h.', loc: 'Panel Właściciela → Zespół' },
-  { cat: 'Grafik', term: 'Gabinety', def: 'Lista gabinetów, na której opiera się grafik. Można dodawać, zmieniać nazwy i wycofywać. Wycofanie nie kasuje bloków — po przywróceniu grafik wraca w całości.', loc: 'Panel Właściciela → Grafik → przycisk „Gabinety"' },
-  { cat: 'Grafik', term: 'Wydruk grafiku', def: 'Prosty układ tabelaryczny całego tygodnia (gabinety × dni) na jednej kartce A4 poziomo — do powieszenia lub rozdania zespołowi.', loc: 'Panel Właściciela → Grafik → przycisk „Wydruk"' },
-  { cat: 'Grafik', term: 'Godziny obsady a godziny RCP', def: 'Grafik używa godzin otwarcia Pn–Pt 9:00–20:00 i Sb 10:00–15:00 (jedna zmiana). To celowo węższe okno niż tolerancja RCP (Pn–Pt 8–21, Sb 9–16), która ma zapas na wejście przed otwarciem i wyjście po zamknięciu.', loc: 'Panel Właściciela → Grafik' },
-  { cat: 'Wersja mobilna', term: 'Wersja mobilna', def: 'Osobny interfejs zbudowany pod telefon — nie pomniejszony desktop. Nawigacja jest na dole (w zasięgu kciuka), edycja otwiera się jako pełnoekranowy arkusz, a dane pokazane są jako karty zamiast tabel.', loc: 'Automatycznie na telefonie; adresy ?page=owner-mobile i ?page=dashboard-mobile' },
-  { cat: 'Wersja mobilna', term: 'Przełączanie wersji', def: 'Telefon jest przekierowywany na wersję mobilną automatycznie, ale wybór zawsze należy do Ciebie: „Wersja desktopowa" w zakładce Więcej i „Wersja mobilna" na dole menu desktopu. Raz podjęty wybór jest zapamiętywany w przeglądarce.', loc: 'Więcej → Wersja desktopowa · menu desktopu → Wersja mobilna' },
-  { cat: 'Wersja mobilna', term: 'Arkusz (pełny ekran)', def: 'Na telefonie edycja nie otwiera się w małym okienku, tylko jako pełnoekranowy panel wjeżdżający od dołu, z przyciskami Anuluj i Zapisz w nagłówku.', loc: 'Wersja mobilna — wszędzie, gdzie coś edytujesz' },
-  { cat: 'Wersja mobilna', term: 'Czego nie ma na mobile', def: 'Ekran odbić i ekran kodu na tablecie recepcji otwierają się w pełnoekranowej wersji kioskowej — są dotykowe z założenia i nie wymagały osobnego wariantu mobilnego.', loc: 'Więcej → Ekran odbić' }
-];
+// Dane słownika: patrz Glossary.html (dołączany osobno w <head>).
 
-// Kategorie w kolejności pierwszego wystąpienia w danych.
-window.wsGlossaryCategories = function () {
-  var seen = [], out = [];
-  window.WS_GLOSSARY.forEach(function (e) { if (seen.indexOf(e.cat) === -1) { seen.push(e.cat); out.push(e.cat); } });
-  return out;
-};
 
 /* ── Widget FAQ — pływający przycisk + popup z wyszukiwarką ────
    Wywołać raz na stronie: wsMountFaq(). Bezpieczny do wywołania

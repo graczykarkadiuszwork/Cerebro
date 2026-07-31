@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>We SMILE</title>
 <?!= include('Styles'); ?>
+<?!= include('Glossary'); ?>
 <style>
 .month-nav{display:flex;align-items:center;gap:10px;margin-bottom:16px}
 .month-label{font-size:15px;font-weight:700;flex:1;text-align:center;color:var(--c-ink)}
@@ -2758,6 +2759,58 @@ function imPodglad(res) {
   });
 }
 
+// ════════════════════════════════════════════════════════════
+// ── Ukryte wejście do interfejsu Cerebro Hub ────────────────
+// Sekwencja: tryb nocny → kliknięcie słowa „Admin" w zakładce
+// Zespół → ikona trybu wyświetlania płonie 3 s fioletowym
+// płomieniem → zmienia się w oko Cerebro → kliknięcie otwiera
+// pełny interfejs w stylu Hub.
+//
+// To wyłącznie inna skóra na tych samych danych i tych samych
+// akcjach serwera — nic tu nie jest destrukcyjne, więc ukrycie
+// jest zabawą, a nie zabezpieczeniem.
+// ════════════════════════════════════════════════════════════
+
+var CEREBRO_OKO =
+  '<svg class="ic-sm ws-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+  'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' +
+  '<path d="M1.6 12S5.5 5 12 5s10.4 7 10.4 7-3.9 7-10.4 7S1.6 12 1.6 12z"/>' +
+  '<circle cx="12" cy="12" r="3.4"/><circle cx="12" cy="12" r="1.1" fill="currentColor"/>' +
+  '</svg>';
+
+var _cerebroStan = 'uspiony';
+
+function cerebroProbuj() {
+  // Warunek wstępny: tryb nocny. Bez niego sekwencja się nie uruchamia.
+  if (document.documentElement.getAttribute('data-theme') !== 'dark') return;
+  if (_cerebroStan !== 'uspiony') return;
+
+  _cerebroStan = 'plonie';
+  var btn = document.getElementById('m-theme');
+  if (!btn) { _cerebroStan = 'uspiony'; return; }
+
+  btn.classList.add('ws-burning');
+  btn.setAttribute('aria-label', 'Cerebro');
+
+  setTimeout(function () {
+    btn.classList.remove('ws-burning');
+    btn.classList.add('ws-eye-btn');
+    btn.innerHTML = CEREBRO_OKO;
+    btn.title = 'Cerebro Hub';
+    _cerebroStan = 'oko';
+  }, 3000);
+}
+
+// Kliknięcie oka przenosi do interfejsu Hub; dopóki oko się nie pojawi,
+// przycisk działa normalnie jako przełącznik trybu nocnego.
+document.getElementById('m-theme').addEventListener('click', function (e) {
+  if (_cerebroStan !== 'oko') return;
+  e.preventDefault();
+  e.stopImmediatePropagation();
+  try { localStorage.setItem('wesmile_ui', 'cerebro'); } catch (err) {}
+  window.open(BASE_URL + '?page=cerebro', '_top');
+}, true);
+
 // ── Widok: Pracownicy (forma zatrudnienia) ────────
 
 var FORMA_LABELS = { UoP: 'Umowa o pracę', Zlecenie: 'Umowa zlecenie', B2B: 'B2B' };
@@ -2774,7 +2827,9 @@ function renderStaffList() {
     }).join('');
     return '<div class="staff-row' + (unset ? ' warn' : '') + '" data-id="' + esc(e.id) + '">' +
       '<div><span class="staff-name">' + esc(e.imie + ' ' + e.nazwisko) + '</span>' +
-      '<span class="staff-role">' + esc(e.rola || '') + (e.status ? ' · ' + esc(e.status) : '') + '</span>' +
+      '<span class="staff-role">' +
+        (isAdmin ? '<span class="ws-admin-key" data-cerebro="1">' + esc(e.rola) + '</span>' : esc(e.rola || '')) +
+        (e.status ? ' · ' + esc(e.status) : '') + '</span>' +
       (unset ? '<span class="staff-warn-lbl">Brak formy zatrudnienia — urlop nie doliczy godzin</span>' : '') +
       '</div>' +
       '<div style="display:flex;gap:8px;align-items:center;flex-shrink:0">' +
@@ -2805,6 +2860,9 @@ function renderStaffList() {
   });
 
   bindStaffTagi(wrap);
+  wrap.querySelectorAll('[data-cerebro]').forEach(function(el) {
+    el.addEventListener('click', function(e) { e.stopPropagation(); cerebroProbuj(); });
+  });
 
   wrap.querySelectorAll('.staff-remove-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
