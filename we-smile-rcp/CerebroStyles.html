@@ -11,65 +11,45 @@
    kliniki przestał się renderować, gdy cudzy CDN ma awarię.
    ════════════════════════════════════════════════════════════ */
 
-/* ── Paleta marki We SMILE (Brand Guidelines 3.1) ──────────────────
-   Primary #1B6FB5 (góra gradientu logo) / #31A7E2 (dół gradientu, jasne
-   akcenty) / Accent bordo #7B1E3B (unity, stroje — wyróżnienia i dane
-   kluczowe) / Dark #0F3D5C (Deep Navy) / tekst #1A1A1A na tle #F4F4F2,
-   pomocniczy #6B7280. Kolory funkcjonalne (sukces/błąd/ostrzeżenie)
-   zostają semantyczne i nie są częścią identyfikacji marki. */
 :root{
-  --cb-blue:#1B6FB5;
-  --cb-blue-light:#31A7E2;
-  --cb-bordo:#7B1E3B;
-  --cb-navy:#0F3D5C;
-  --cb-grad-hero:linear-gradient(135deg,#1B6FB5,#31A7E2);
-  --cb-green:#1a8f4c;
-  --cb-red:#c0293f;
-  --cb-orange:#c17a12;
+  --cb-blue:#007aff;
+  --cb-green:#34c759;
+  --cb-red:#ff3b30;
+  --cb-orange:#ff9500;
   --cb-purple:#a855f7;
-  --cb-gray:#6B7280;
-  --cb-bg:#F4F4F2;
+  --cb-gray:#8e8e93;
+  --cb-bg:#f2f2f7;
   --cb-card:#ffffff;
-  --cb-ink:#1A1A1A;
-  --cb-sep:rgba(26,26,26,0.12);
-  --cb-fill:rgba(15,61,92,0.08);
-  --cb-fill-soft:rgba(15,61,92,0.05);
-  --cb-border:#dcdcd8;
-  --cb-shadow:0 1px 3px rgba(15,61,92,0.08), 0 1px 2px rgba(15,61,92,0.05);
+  --cb-ink:#000000;
+  --cb-sep:rgba(60,60,67,0.29);
+  --cb-fill:rgba(120,120,128,0.16);
+  --cb-fill-soft:rgba(120,120,128,0.08);
+  --cb-border:#c6c6c8;
+  --cb-shadow:0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
   --cb-side:264px;
 }
 
 /* Tryb nocny — Cerebro Hub ma jeden motyw, ale ta aplikacja od początku
    ma tryb nocny i użytkownik wchodzi tu właśnie z niego. Odbieranie mu
-   ciemnego interfejsu przy przejściu byłoby krokiem wstecz. Bazą jest
-   Deep Navy z palety marki zamiast czystej czerni. */
+   ciemnego interfejsu przy przejściu byłoby krokiem wstecz. */
 :root[data-theme="dark"]{
-  --cb-blue:#4a9bd6;
-  --cb-blue-light:#31A7E2;
-  --cb-bordo:#c9576f;
-  --cb-grad-hero:linear-gradient(135deg,#0F3D5C,#1B6FB5);
-  --cb-bg:#0a1a26;
-  --cb-card:#0f2233;
-  --cb-ink:#F4F4F2;
-  --cb-gray:#9aa4ad;
-  --cb-sep:rgba(244,244,242,0.12);
-  --cb-fill:rgba(244,244,242,0.09);
-  --cb-fill-soft:rgba(244,244,242,0.05);
-  --cb-border:#1c3849;
+  --cb-bg:#000000;
+  --cb-card:#1c1c1e;
+  --cb-ink:#ffffff;
+  --cb-gray:#98989f;
+  --cb-sep:rgba(84,84,88,0.65);
+  --cb-fill:rgba(120,120,128,0.32);
+  --cb-fill-soft:rgba(120,120,128,0.18);
+  --cb-border:#38383a;
   --cb-shadow:0 1px 3px rgba(0,0,0,0.5);
 }
 
 *{box-sizing:border-box;margin:0;padding:0}
 body{
-  font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;
   -webkit-font-smoothing:antialiased;
   background:var(--cb-bg);color:var(--cb-ink);
 }
-h1,.cb-display{font-family:'DM Sans',sans-serif;font-weight:700}
-/* Cormorant Garamond — akcent typograficzny wg wytycznych (3.2), użyty
-   oszczędnie tam, gdzie interfejs ma "estetyczny" ton: ekran logowania
-   i puste stany, nigdy w gęstych listach danych. */
-.cb-accent-serif{font-family:'Cormorant Garamond',serif;font-style:italic}
 
 @keyframes cbSlideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
 @keyframes cbFadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
@@ -83,8 +63,8 @@ h1,.cb-display{font-family:'DM Sans',sans-serif;font-weight:700}
   border-right:1px solid var(--cb-border);display:flex;flex-direction:column
 }
 .cb-side-logo{padding:20px 16px;border-bottom:1px solid var(--cb-border);display:flex;align-items:center;gap:12px}
-.cb-side-mark{width:34px;height:34px;flex-shrink:0;color:var(--cb-blue)}
-.cb-side-name{font-size:20px;font-weight:700;color:var(--cb-blue);line-height:1.15;font-family:'DM Sans',sans-serif}
+.cb-side-mark{width:34px;height:34px;flex-shrink:0;color:var(--cb-purple)}
+.cb-side-name{font-size:20px;font-weight:700;color:var(--cb-blue);line-height:1.15}
 .cb-side-org{font-size:12px;color:var(--cb-gray);margin-top:1px}
 .cb-nav{flex:1;padding:16px 12px;overflow-y:auto}
 .cb-nav-lbl{font-size:11px;font-weight:600;color:var(--cb-gray);text-transform:uppercase;
@@ -169,13 +149,12 @@ h1,.cb-display{font-family:'DM Sans',sans-serif;font-weight:700}
 
 .badge{padding:3px 8px;border-radius:9999px;font-size:12px;font-weight:600;
   white-space:nowrap;display:inline-block}
-.badge-blue{background:rgba(27,111,181,.12);color:var(--cb-blue)}
-.badge-green{background:rgba(26,143,76,.12);color:var(--cb-green)}
-.badge-red{background:rgba(192,41,63,.12);color:var(--cb-red)}
-.badge-orange{background:rgba(193,122,18,.12);color:var(--cb-orange)}
+.badge-blue{background:rgba(0,122,255,.12);color:var(--cb-blue)}
+.badge-green{background:rgba(52,199,89,.12);color:var(--cb-green)}
+.badge-red{background:rgba(255,59,48,.12);color:var(--cb-red)}
+.badge-orange{background:rgba(255,149,0,.12);color:var(--cb-orange)}
 .badge-gray{background:var(--cb-fill-soft);color:var(--cb-gray)}
 .badge-purple{background:rgba(168,85,247,.14);color:var(--cb-purple)}
-.badge-bordo{background:rgba(123,30,59,.12);color:var(--cb-bordo)}
 
 .section-title{padding:12px 4px 8px;font-size:13px;font-weight:600;text-transform:uppercase;
   color:var(--cb-gray);letter-spacing:.5px}
