@@ -342,6 +342,10 @@ function callRCP(action, argsJson) {
       case 'masterGetDay':          return masterGetDay(args[0], args[1], args[2]);
       case 'masterSetDay':          return masterSetDay(args[0], args[1], args[2], args[3], args[4]);
       case 'masterGetMonth':        return masterGetMonth(args[0], args[1], args[2], args[3]);
+      case 'masterGetNotatkiDnia':   return masterGetNotatkiDnia(args[0], args[1], args[2]);
+      case 'masterAddNotatkaDnia':   return masterAddNotatkaDnia(args[0], args[1], args[2], args[3]);
+      case 'masterDeleteNotatkaDnia': return masterDeleteNotatkaDnia(args[0], args[1]);
+      case 'masterGetTimelineDnia':  return masterGetTimelineDnia(args[0], args[1], args[2]);
       case 'masterSetAbsence':      return masterSetAbsence(args[0], args[1], args[2], args[3], args[4]);
       case 'masterSetOvertimeNote': return masterSetOvertimeNote(args[0], args[1], args[2], args[3]);
       case 'masterSetClinicDayOff': return masterSetClinicDayOff(args[0], args[1], args[2], args[3], args[4]);
@@ -720,7 +724,8 @@ function setupRCP() {
     { name: 'Gabinety',      h: ['ID', 'Nazwa', 'Kolejnosc', 'Aktywny'] },
     { name: 'Grafik',        h: ['ID', 'GabinetID', 'DzienTygodnia', 'Typ', 'OsobaID', 'Od', 'Do', 'AsystaWymagana', 'AsystaUwaga', 'Zmodyfikowano'] },
     { name: 'GrafikAsysta',  h: ['ID', 'BlokID', 'OsobaID', 'Od', 'Do', 'Zmodyfikowano'] },
-    { name: 'GrafikSzablony', h: ['ID', 'Nazwa', 'Typ', 'Od', 'Do', 'AsystaWymagana', 'AsystaUwaga', 'Zmodyfikowano'] }
+    { name: 'GrafikSzablony', h: ['ID', 'Nazwa', 'Typ', 'Od', 'Do', 'AsystaWymagana', 'AsystaUwaga', 'Zmodyfikowano'] },
+    { name: 'NotatkiDnia',   h: ['ID', 'EmpID', 'Data', 'Tresc', 'Utworzono'] }
   ].forEach(def => {
     let sh = spreadsheet.getSheetByName(def.name);
     if (!sh) sh = spreadsheet.insertSheet(def.name);

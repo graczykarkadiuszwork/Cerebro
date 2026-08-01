@@ -949,6 +949,137 @@ function masterSetDay(token, empId, date, wejscie, wyjscie) {
   return { ok: true, overtime };
 }
 
+// ── Notatki sesji ──────────────────────────────────────────────
+// Wolny tekst przypięty do konkretnej osoby i daty — kilka notatek
+// dziennie, każda ze swoim czasem dodania. Aplikacja nie modeluje
+// pacjentów jako osobnych rekordów (to system obecności/grafiku, nie
+// kartoteka medyczna), więc notatka to zwykły dziennik zdarzeń zmiany,
+// nie ustrukturyzowana wizyta.
+
+function _shNotatkiDnia() {
+  return _arkusz('NotatkiDnia', ['ID', 'EmpID', 'Data', 'Tresc', 'Utworzono']);
+}
+
+function masterGetNotatkiDnia(token, empId, data) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  if (!empId || !/^\d{4}-\d{2}-\d{2}$/.test(String(data))) return { ok: false, msg: 'Nieprawidłowe dane.' };
+  const sh = _shNotatkiDnia();
+  if (sh.getLastRow() < 2) return { ok: true, notatki: [] };
+  const notatki = sh.getDataRange().getValues().slice(1)
+    .filter(r => String(r[1]) === String(empId) && _sheetDate(r[2]) === data)
+    .map(r => ({ id: String(r[0]), tresc: String(r[3] || ''), utworzono: String(r[4]) }))
+    .sort((a, b) => a.utworzono < b.utworzono ? -1 : a.utworzono > b.utworzono ? 1 : 0);
+  return { ok: true, notatki };
+}
+
+function masterAddNotatkaDnia(token, empId, data, tresc) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  if (!empId || !/^\d{4}-\d{2}-\d{2}$/.test(String(data))) return { ok: false, msg: 'Nieprawidłowe dane.' };
+  tresc = String(tresc || '').trim().slice(0, 1000);
+  if (!tresc) return { ok: false, msg: 'Wpisz treść notatki.' };
+
+  const sh = _shNotatkiDnia();
+  const rows = sh.getLastRow() >= 2 ? sh.getDataRange().getValues().slice(1) : [];
+  const id = _nextId(rows.map(r => ({ id: String(r[0]) })), 'NT');
+  const teraz = new Date().toISOString();
+  sh.appendRow([id, String(empId), data, tresc, teraz]);
+  _logAdmin('DodanieNotatkiDnia', String(empId), data + ': ' + tresc.slice(0, 60));
+  return { ok: true, id, utworzono: teraz };
+}
+
+function masterDeleteNotatkaDnia(token, notatkaId) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  notatkaId = String(notatkaId || '');
+  const sh = _shNotatkiDnia();
+  const rows = sh.getDataRange().getValues();
+  for (let i = rows.length - 1; i >= 1; i--) {
+    if (String(rows[i][0]) === notatkaId) {
+      sh.deleteRow(i + 1);
+      _logAdmin('UsuniecieNotatkiDnia', notatkaId, '');
+      return { ok: true };
+    }
+  }
+  return { ok: false, msg: 'Nie znaleziono notatki.' };
+}
+
+// ── Timeline dnia ────────────────────────────────────────────
+// Jeden chronologiczny widok tego, co dla danej osoby i daty już
+// istnieje rozproszone po kilku arkuszach (Ewidencja, Nieobecnosci,
+// Grafik/GrafikDni, Logi_Admin) plus nowe notatki — bez duplikowania
+// żadnych z tych danych, to czysty odczyt i scalenie.
+
+function masterGetTimelineDnia(token, empId, data) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  if (!empId || !/^\d{4}-\d{2}-\d{2}$/.test(String(data))) return { ok: false, msg: 'Nieprawidłowe dane.' };
+  const worker = _getWorkers().find(r => String(r[0]) === String(empId));
+  if (!worker) return { ok: false, msg: 'Pracownik nie istnieje.' };
+
+  const zdarzenia = [];
+
+  const ewidSh = _ss().getSheetByName('Ewidencja');
+  const ewidRows = (ewidSh && ewidSh.getLastRow() >= 2) ? ewidSh.getDataRange().getValues().slice(1) : [];
+  ewidRows.forEach(r => {
+    if (String(r[1]) !== String(empId) || _sheetDate(r[5]) !== data) return;
+    const akcja = String(r[4]).trim();
+    zdarzenia.push({
+      czas: data + 'T' + _sheetTime(r[6]) + ':00',
+      typ: 'rcp',
+      tytul: akcja === 'WEJSCIE' ? 'Wejście' : akcja === 'WYJSCIE' ? 'Wyjście' : akcja,
+      opis: String(r[7] || '') === 'admin_override' ? 'skorygowane ręcznie' : ''
+    });
+  });
+
+  const absencja = _absenceMapAll()[String(empId) + '_' + data];
+  if (absencja) {
+    zdarzenia.push({ czas: data + 'T00:00:01', typ: 'nieobecnosc', tytul: 'Nieobecność', opis: absencja.typ + (absencja.note ? ' — ' + absencja.note : '') });
+  }
+
+  const ovrNote = _overtimeNotesAll()[String(empId) + '_' + data];
+  if (ovrNote) {
+    zdarzenia.push({ czas: data + 'T23:59:57', typ: 'nadgodziny', tytul: 'Uzasadnienie nadgodzin', opis: ovrNote });
+  }
+
+  // Bloki grafiku tego dnia (jeśli osoba ma tam obsadę — głównie lekarze/higienistki).
+  try {
+    const y = parseInt(data.slice(0, 4), 10), m = parseInt(data.slice(5, 7), 10);
+    const mies = masterGrafikMiesiac(token, y, m);
+    if (mies.ok) {
+      const dz = mies.dni.find(x => x.data === data);
+      if (dz) {
+        (dz.bloki || []).forEach(b => {
+          if (String(b.osobaId) === String(empId)) {
+            const gab = (mies.gabinety.find(g => g.id === b.gabinetId) || {}).nazwa || b.gabinetId;
+            zdarzenia.push({ czas: data + 'T' + b.od + ':00', typ: 'grafik', tytul: 'Blok w grafiku: ' + gab, opis: b.od + '–' + b.do + (b.typ === 'Higienizacja' ? ' · higienizacja' : '') });
+          }
+          (b.asysta || []).forEach(a => {
+            if (String(a.osobaId) === String(empId)) {
+              const gab = (mies.gabinety.find(g => g.id === b.gabinetId) || {}).nazwa || b.gabinetId;
+              zdarzenia.push({ czas: data + 'T' + (a.od || b.od) + ':00', typ: 'grafik', tytul: 'Asysta: ' + gab, opis: (a.od || b.od) + '–' + (a.do || b.do) });
+            }
+          });
+        });
+      }
+    }
+  } catch (e) { /* grafik nie jest krytyczny dla timeline — pomijamy po cichu przy błędzie */ }
+
+  const logSh = _ss().getSheetByName('Logi_Admin');
+  const logRows = (logSh && logSh.getLastRow() >= 2) ? logSh.getDataRange().getValues().slice(1) : [];
+  logRows.forEach(r => {
+    if (String(r[2]) !== String(empId)) return;
+    const czasIso = String(r[0]);
+    if (!czasIso.startsWith(data)) return;
+    zdarzenia.push({ czas: czasIso, typ: 'log', tytul: String(r[1]), opis: String(r[3] || '') });
+  });
+
+  const notatkiRes = masterGetNotatkiDnia(token, empId, data);
+  (notatkiRes.notatki || []).forEach(n => {
+    zdarzenia.push({ czas: n.utworzono, typ: 'notatka', tytul: 'Notatka', opis: n.tresc, notatkaId: n.id });
+  });
+
+  zdarzenia.sort((a, b) => a.czas < b.czas ? -1 : a.czas > b.czas ? 1 : 0);
+  return { ok: true, zdarzenia };
+}
+
 // ── Nieobecność — edycja przez właściciela ────────────────────
 // Puste typeCode = usunięcie nieobecności danego dnia.
 

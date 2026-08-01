@@ -2056,18 +2056,67 @@ function modDzien(){
     '</select></div>'+
     '<div class="cb-field"><label class="cb-lbl">Adnotacja</label>'+
     '<textarea class="ios-textarea" id="d-note"></textarea></div>'+
-    '<button class="btn-primary" id="d-zapisz">Zapisz dzień</button></div>';
+    '<button class="btn-primary" id="d-zapisz">Zapisz dzień</button>'+
+    '<div class="section-title" style="margin-top:22px">Notatki sesji</div>'+
+    '<div id="d-notatki">'+skeleton(1)+'</div>'+
+    '<div class="cb-field"><textarea class="ios-textarea" id="d-nowa-notatka" '+
+      'placeholder="np. 9:15 początek przyjęć, 12:00 przerwa…"></textarea></div>'+
+    '<button class="btn-secondary" id="d-notatka-dodaj">+ Dodaj notatkę</button>'+
+    '<div class="section-title" style="margin-top:22px">Oś czasu dnia</div>'+
+    '<div id="d-timeline">'+skeleton(2)+'</div></div>';
 
   function wczytaj(){
-    gas('masterGetDay',[S.token,document.getElementById('d-os').value,
-        document.getElementById('d-data').value],function(r){
+    var os=document.getElementById('d-os').value, dt=document.getElementById('d-data').value;
+    gas('masterGetDay',[S.token,os,dt],function(r){
       if(!r||!r.ok) return;
       document.getElementById('d-we').value=r.wejscie||'';
       document.getElementById('d-wy').value=r.wyjscie||'';
       document.getElementById('d-abs').value=r.absence?r.absence.code:'';
       document.getElementById('d-note').value=r.absence?(r.absence.note||''):'';
     });
+    wczytajNotatki();
+    wczytajTimeline();
   }
+
+  function wczytajNotatki(){
+    var os=document.getElementById('d-os').value, dt=document.getElementById('d-data').value;
+    gas('masterGetNotatkiDnia',[S.token,os,dt],function(r){
+      var box=document.getElementById('d-notatki');
+      if(!box) return;
+      if(!r||!r.ok){ box.innerHTML=pusto('⚠️','Nie wczytano',(r&&r.msg)||''); return; }
+      var lista=r.notatki||[];
+      box.innerHTML=lista.length?'<div class="ios-card">'+lista.map(function(n){
+        return '<div class="ios-row"><div class="ios-row-b"><div class="ios-row-t">'+esc(n.tresc)+'</div>'+
+          '<div class="ios-row-s">'+esc(n.utworzono.slice(11,16))+'</div></div>'+
+          '<button class="btn-secondary btn-small" data-notatka-usun="'+esc(n.id)+'">Usuń</button></div>';
+      }).join('')+'</div>':pusto('📝','Brak notatek','');
+      box.querySelectorAll('[data-notatka-usun]').forEach(function(b){
+        b.addEventListener('click',function(){
+          gas('masterDeleteNotatkaDnia',[S.token,this.getAttribute('data-notatka-usun')],function(rd){
+            if(!rd||!rd.ok){ showErr((rd&&rd.msg)||'Błąd.'); return; }
+            wczytajNotatki(); wczytajTimeline();
+          });
+        });
+      });
+    });
+  }
+
+  function wczytajTimeline(){
+    var os=document.getElementById('d-os').value, dt=document.getElementById('d-data').value;
+    var IKONY_ZDARZEN={rcp:'🕒',nieobecnosc:'🏖️',nadgodziny:'⏱️',grafik:'🦷',log:'⚙️',notatka:'📝'};
+    gas('masterGetTimelineDnia',[S.token,os,dt],function(r){
+      var box=document.getElementById('d-timeline');
+      if(!box) return;
+      if(!r||!r.ok){ box.innerHTML=pusto('⚠️','Nie wczytano',(r&&r.msg)||''); return; }
+      var z=r.zdarzenia||[];
+      box.innerHTML=z.length?'<div class="ios-card">'+z.map(function(x){
+        return '<div class="ios-row"><span class="cb-blok-t">'+esc(x.czas.slice(11,16))+'</span>'+
+          '<div class="ios-row-b"><div class="ios-row-t">'+(IKONY_ZDARZEN[x.typ]||'•')+' '+esc(x.tytul)+'</div>'+
+          (x.opis?'<div class="ios-row-s">'+esc(x.opis)+'</div>':'')+'</div></div>';
+      }).join('')+'</div>':pusto('🗓️','Brak zdarzeń w tym dniu','');
+    });
+  }
+
   document.getElementById('d-os').addEventListener('change',wczytaj);
   document.getElementById('d-data').addEventListener('change',wczytaj);
   wczytaj();
@@ -2080,7 +2129,20 @@ function modDzien(){
       gas('masterSetAbsence',[S.token,os,dt,document.getElementById('d-abs').value,
           document.getElementById('d-note').value],function(){
         showOk('Zapisano dzień.');
+        wczytajTimeline();
       });
+    });
+  });
+
+  document.getElementById('d-notatka-dodaj').addEventListener('click',function(){
+    var os=document.getElementById('d-os').value, dt=document.getElementById('d-data').value;
+    var tresc=document.getElementById('d-nowa-notatka').value.trim();
+    if(!tresc){ showErr('Wpisz treść notatki.'); return; }
+    gas('masterAddNotatkaDnia',[S.token,os,dt,tresc],function(r){
+      if(!r||!r.ok){ showErr((r&&r.msg)||'Błąd.'); return; }
+      document.getElementById('d-nowa-notatka').value='';
+      showOk('Dodano notatkę.');
+      wczytajNotatki(); wczytajTimeline();
     });
   });
 }
