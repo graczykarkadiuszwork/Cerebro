@@ -2377,14 +2377,46 @@ function kodRysuj(){
 function modPomoc(){
   document.getElementById('cb-content').innerHTML=
     '<div class="cb-wrap">'+naglowek('Pomoc','Słownik pojęć i wyszukiwarka')+
-    '<div class="cb-field"><input type="text" class="ios-input" id="h-szukaj" placeholder="Szukaj…"></div>'+
+    '<div class="cb-field"><input type="text" class="ios-input" id="h-szukaj" '+
+      'placeholder="Szukaj (np. urlop, PIN, forma zatrudnienia…)"></div>'+
+    '<div class="cb-tags" id="h-kat"></div>'+
+    '<div class="ios-row-s" id="h-licznik" style="margin:2px 0 10px"></div>'+
     '<div id="h-lista"></div></div>';
+
   var dane=(window.WS_GLOSSARY||[]);
+  var kategorie=(window.wsGlossaryCategories?window.wsGlossaryCategories():[]);
+  var aktywnaKat=null;
+
+  function odmianaWynikow(n){
+    if(n===1) return 'wynik';
+    var m10=n%10, m100=n%100;
+    if(m10>=2&&m10<=4&&(m100<10||m100>=20)) return 'wyniki';
+    return 'wyników';
+  }
+
+  function rysujKategorie(){
+    var box=document.getElementById('h-kat');
+    box.innerHTML='<button type="button" class="cb-tag'+(aktywnaKat?' off':'')+'" data-kat="">Wszystko</button>'+
+      kategorie.map(function(k){
+        return '<button type="button" class="cb-tag'+(aktywnaKat===k?'':' off')+'" data-kat="'+esc(k)+'">'+esc(k)+'</button>';
+      }).join('');
+    box.querySelectorAll('[data-kat]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        aktywnaKat=this.getAttribute('data-kat')||null;
+        rysujKategorie();
+        rysuj(document.getElementById('h-szukaj').value);
+      });
+    });
+  }
+
   function rysuj(q){
     q=(q||'').toLowerCase().trim();
     var l=dane.filter(function(e){
-      return !q||e.term.toLowerCase().indexOf(q)!==-1||e.def.toLowerCase().indexOf(q)!==-1;
+      if(aktywnaKat&&e.cat!==aktywnaKat) return false;
+      return !q||e.term.toLowerCase().indexOf(q)!==-1||e.def.toLowerCase().indexOf(q)!==-1||
+        e.cat.toLowerCase().indexOf(q)!==-1;
     });
+    document.getElementById('h-licznik').textContent=l.length+' '+odmianaWynikow(l.length);
     document.getElementById('h-lista').innerHTML=l.length
       ? '<div class="ios-card">'+l.map(function(e){
           return '<div class="ios-row"><div class="ios-row-b">'+
@@ -2393,9 +2425,14 @@ function modPomoc(){
             (e.loc?'<div class="ios-row-s" style="color:var(--cb-blue);margin-top:4px">'+esc(e.loc)+'</div>':'')+
             '</div><span class="badge badge-gray">'+esc(e.cat)+'</span></div>';
         }).join('')+'</div>'
-      : pusto('🔍','Brak wyników','Spróbuj innego hasła');
+      : pusto('🔍','Brak wyników','Spróbuj innego hasła albo wybierz „Wszystko".');
   }
-  document.getElementById('h-szukaj').addEventListener('input',function(){ rysuj(this.value); });
+
+  document.getElementById('h-szukaj').addEventListener('input',function(){
+    if(this.value.trim()&&aktywnaKat){ aktywnaKat=null; rysujKategorie(); }
+    rysuj(this.value);
+  });
+  rysujKategorie();
   rysuj('');
 }
 
