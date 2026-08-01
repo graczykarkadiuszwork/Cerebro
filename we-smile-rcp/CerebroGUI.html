@@ -59,6 +59,33 @@
 .cb-rek-t{font-size:14px;font-weight:600;color:var(--cb-ink);margin-bottom:3px}
 .cb-rek-d{font-size:13px;color:var(--cb-gray);line-height:1.5}
 .cb-rek-a{font-size:13px;color:var(--cb-ink);font-weight:500;margin-top:6px;line-height:1.5}
+
+/* ── Kalendarz miesięczny — siatka z przeciąganiem bloków między dniami ── */
+.cb-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.cb-cal-dow-row{margin-bottom:4px}
+.cb-cal-dow{font-size:11px;font-weight:600;color:var(--cb-gray);text-align:center;
+  text-transform:uppercase;letter-spacing:.4px;padding:4px 0}
+.cb-cal-cell{min-height:96px;background:var(--cb-card);border:1px solid var(--cb-sep);
+  border-radius:10px;padding:6px;cursor:pointer;transition:background .12s,border-color .12s}
+.cb-cal-cell:hover{background:var(--cb-fill-soft)}
+.cb-cal-cell.cb-cal-dragover{border-color:var(--cb-blue);background:rgba(0,122,255,.08)}
+.cb-cal-cell.cb-cal-off{background:var(--cb-fill-soft);cursor:default}
+.cb-cal-cell.cb-cal-empty{background:none;border:none;cursor:default}
+.cb-cal-num{font-size:12px;font-weight:700;color:var(--cb-ink);margin-bottom:4px;
+  display:flex;align-items:center;gap:4px}
+.cb-cal-dot{width:6px;height:6px;border-radius:50%;background:var(--cb-orange);flex-shrink:0}
+.cb-cal-closed{font-size:11px;color:var(--cb-gray)}
+.cb-cal-chips{display:flex;flex-direction:column;gap:3px}
+.cb-cal-chip{font-size:10.5px;font-weight:600;padding:3px 6px;border-radius:6px;
+  background:rgba(0,122,255,.12);color:var(--cb-blue);white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;cursor:grab}
+.cb-cal-chip:active{cursor:grabbing}
+.cb-cal-chip.dragging{opacity:.35}
+.cb-cal-chip.hig{background:rgba(52,199,89,.14);color:var(--cb-green)}
+.cb-cal-chip.brak{box-shadow:inset 0 0 0 1px var(--cb-red)}
+.cb-cal-more{font-size:10.5px;color:var(--cb-gray);padding:2px 6px}
+.cb-cal-nav{display:flex;align-items:center;gap:10px;margin-bottom:2px}
+.cb-cal-tytul{font-size:15px;font-weight:600;color:var(--cb-ink);min-width:140px;text-align:center}
 </style>
 </head>
 <body>
@@ -151,7 +178,7 @@ var BASE_URL = "<?= BASE_URL ?>";
    ════════════════════════════════════════════════════════════ */
 
 var S = {
-  token:null, modul:'pulpit', emps:[], tagi:[], absTypy:[], gr:null, grDzien:1,
+  token:null, modul:'pulpit', emps:[], tagi:[], absTypy:[], gr:null, grDzien:1, szablony:null,
   rpYear:new Date().getFullYear(), rpMonth:new Date().getMonth()+1, rpEmp:null,
   mmYear:new Date().getFullYear(), mmMonth:new Date().getMonth()+1, mmEmp:null
 };
@@ -434,12 +461,19 @@ function modGrafik(){
   document.getElementById('cb-content').innerHTML=
     '<div class="cb-wrap">'+naglowek('Grafik','Obsada gabinetów — szablon tygodniowy',
       '<div class="cb-btn-row"><button class="btn-primary btn-small" id="g-kreator">Ułóż grafik lekarza</button>'+
-      '<button class="btn-secondary btn-small" id="g-rek">Rekomendacje</button></div>')+
+      '<button class="btn-secondary btn-small" id="g-rek">Rekomendacje</button>'+
+      '<button class="btn-secondary btn-small" id="g-szablony">Szablony zmian</button>'+
+      '<button class="btn-secondary btn-small" id="g-kalendarz">Kalendarz miesiąca</button></div>')+
     '<div class="segmented" id="g-dni" style="margin-bottom:16px"></div>'+
     '<div id="g-siatka">'+skeleton(4)+'</div></div>';
 
   document.getElementById('g-kreator').addEventListener('click',kreatorStart);
   document.getElementById('g-rek').addEventListener('click',pokazRekomendacje);
+  document.getElementById('g-szablony').addEventListener('click',szablonySheet);
+  document.getElementById('g-kalendarz').addEventListener('click',function(){
+    MC.widok='kalendarz';
+    navigateTo('miesiac');
+  });
 
   gas('masterGetGrafik',[S.token],function(res){
     if(!res||!res.ok){
@@ -859,11 +893,16 @@ function krAsysta(i){
 var MC = { rok:new Date().getFullYear(), mies:new Date().getMonth()+1, dane:null };
 
 function modMiesiac(){
+  if(!MC.widok) MC.widok='lista';
   document.getElementById('cb-content').innerHTML=
     '<div class="cb-wrap">'+naglowek('Miesiąc','Realny kalendarz — każdy dzień do edycji',
       '<div class="cb-btn-row">'+
       '<button class="btn-secondary btn-small" id="mc-prev">‹</button>'+
       '<button class="btn-secondary btn-small" id="mc-next">›</button></div>')+
+    '<div class="segmented" id="mc-widok" style="margin-bottom:12px">'+
+      '<button class="segmented-btn'+(MC.widok==='lista'?' active':'')+'" data-w="lista">Lista</button>'+
+      '<button class="segmented-btn'+(MC.widok==='kalendarz'?' active':'')+'" data-w="kalendarz">Kalendarz</button>'+
+    '</div>'+
     '<div class="section-title" id="mc-lbl">—</div>'+
     '<div id="mc-siatka">'+skeleton(5)+'</div></div>';
   document.getElementById('mc-prev').addEventListener('click',function(){
@@ -871,6 +910,12 @@ function modMiesiac(){
   });
   document.getElementById('mc-next').addEventListener('click',function(){
     MC.mies++; if(MC.mies>12){MC.mies=1;MC.rok++;} mcWczytaj();
+  });
+  document.querySelectorAll('#mc-widok [data-w]').forEach(function(b){
+    b.addEventListener('click',function(){
+      MC.widok=this.getAttribute('data-w');
+      modMiesiac();
+    });
   });
   mcWczytaj();
 }
@@ -884,7 +929,7 @@ function mcWczytaj(){
       return;
     }
     MC.dane=res;
-    mcRysuj();
+    if(MC.widok==='kalendarz') mcRysujKalendarz(); else mcRysuj();
   });
 }
 
@@ -915,6 +960,133 @@ function mcRysuj(){
 
   box.querySelectorAll('[data-dzien]').forEach(function(b){
     b.addEventListener('click',function(){ mcDzien(this.getAttribute('data-dzien')); });
+  });
+}
+
+// ── Widok kalendarza: siatka tygodni + przeciąganie bloków między dniami ──
+// Edycja szczegółów dnia zostaje w mcDzien() — kalendarz jest do orientacji
+// i szybkiego przenoszenia, nie duplikuje edytora bloków.
+
+function osobaNazwaSkrot(id){
+  var e=S.emps.find(function(x){return x.id===id;});
+  if(e) return (e.imie?e.imie.charAt(0)+'. ':'')+e.nazwisko;
+  var z=((MC.dane&&MC.dane.asystaZew)||[]).find(function(x){return x.id===id;});
+  return z?z.label:id;
+}
+
+function mcRysujKalendarz(){
+  var box=document.getElementById('mc-siatka');
+  if(!box) return;
+  var d=MC.dane;
+  var pierwszy=new Date(d.rok,d.mies-1,1);
+  var startOffset=(pierwszy.getDay()+6)%7; // Pn=0 ... Nd=6
+  var komorki=[];
+  for(var i=0;i<startOffset;i++) komorki.push(null);
+  d.dni.forEach(function(x){ komorki.push(x); });
+  while(komorki.length%7!==0) komorki.push(null);
+  var dniTyg=['Pn','Wt','Śr','Cz','Pt','So','Nd'];
+
+  box.innerHTML=
+    '<div class="cb-cal-grid cb-cal-dow-row">'+dniTyg.map(function(n){
+      return '<div class="cb-cal-dow">'+n+'</div>';
+    }).join('')+'</div>'+
+    '<div class="cb-cal-grid">'+komorki.map(function(x){
+      return x?mcKomorkaHtml(x):'<div class="cb-cal-cell cb-cal-empty"></div>';
+    }).join('')+'</div>';
+
+  mcWpiszDnD(box);
+}
+
+function mcKomorkaHtml(d){
+  return '<div class="cb-cal-cell'+(d.czynny?'':' cb-cal-off')+'" data-cal-dzien="'+esc(d.data)+'">'+
+    '<div class="cb-cal-num">'+esc(String(parseInt(d.data.slice(8),10)))+
+      (!d.zTemplate?'<span class="cb-cal-dot" title="dzień zmieniony ręcznie"></span>':'')+
+    '</div>'+
+    (d.czynny
+      ? '<div class="cb-cal-chips">'+
+          d.bloki.slice(0,4).map(function(b){
+            var brak=b.typ==='Lekarz'&&!(b.asysta||[]).length;
+            return '<div class="cb-cal-chip'+(b.typ==='Higienizacja'?' hig':'')+(brak?' brak':'')+'" '+
+              'draggable="true" data-cal-blok="'+esc(b.id)+'" '+
+              'title="'+esc(osobaNazwa(b.osobaId)+' · '+b.od+'–'+b.do+(brak?' · bez asysty':''))+'">'+
+              esc(b.od)+' '+esc(osobaNazwaSkrot(b.osobaId))+'</div>';
+          }).join('')+
+          (d.bloki.length>4?'<div class="cb-cal-more">+'+(d.bloki.length-4)+' więcej</div>':'')+
+        '</div>'
+      : '<div class="cb-cal-closed">zamknięte</div>')+
+    '</div>';
+}
+
+function mcWpiszDnD(box){
+  var draggedId=null, draggedFrom=null;
+
+  box.querySelectorAll('[data-cal-blok]').forEach(function(chip){
+    chip.addEventListener('dragstart',function(e){
+      draggedId=this.getAttribute('data-cal-blok');
+      draggedFrom=this.closest('[data-cal-dzien]').getAttribute('data-cal-dzien');
+      if(e.dataTransfer){ e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/plain',draggedId); }
+      this.classList.add('dragging');
+    });
+    chip.addEventListener('dragend',function(){ this.classList.remove('dragging'); });
+    chip.addEventListener('click',function(e){
+      e.stopPropagation();
+      mcDzien(this.closest('[data-cal-dzien]').getAttribute('data-cal-dzien'));
+    });
+  });
+
+  box.querySelectorAll('[data-cal-dzien]').forEach(function(cell){
+    cell.addEventListener('dragover',function(e){
+      if(!draggedId) return;
+      e.preventDefault();
+      this.classList.add('cb-cal-dragover');
+    });
+    cell.addEventListener('dragleave',function(){ this.classList.remove('cb-cal-dragover'); });
+    cell.addEventListener('drop',function(e){
+      e.preventDefault();
+      this.classList.remove('cb-cal-dragover');
+      var doData=this.getAttribute('data-cal-dzien');
+      var id=draggedId, zData=draggedFrom;
+      draggedId=null; draggedFrom=null;
+      if(!id||!zData||doData===zData) return;
+      mcPrzeniesBlok(id,zData,doData);
+    });
+    cell.addEventListener('click',function(e){
+      if(e.target.closest('[data-cal-blok]')) return;
+      mcDzien(this.getAttribute('data-cal-dzien'));
+    });
+  });
+}
+
+function mcPrzeniesBlok(blokId,zData,doData){
+  var dZr=MC.dane.dni.find(function(x){return x.data===zData;});
+  var dDo=MC.dane.dni.find(function(x){return x.data===doData;});
+  if(!dZr||!dDo){ return; }
+  if(!dDo.czynny){ showErr('Klinika jest w tym dniu nieczynna.'); return; }
+  var blok=(dZr.bloki||[]).find(function(b){return b.id===blokId;});
+  if(!blok) return;
+
+  var noweDoBloki=(dDo.bloki||[]).concat([{
+    gabinetId:blok.gabinetId, typ:blok.typ, osobaId:blok.osobaId,
+    od:blok.od, do:blok.do, asystaWymagana:blok.asystaWymagana,
+    asystaUwaga:blok.asystaUwaga, asysta:blok.asysta||[]
+  }]);
+
+  showToast('Przenoszenie…','info');
+  // Docelowy dzień zapisujemy jako pierwszy: jeśli go odrzuci (kolizja,
+  // godziny poza otwarciem), dzień źródłowy zostaje nietknięty i blok
+  // nigdzie nie znika.
+  gas('masterZapiszDzienGrafiku',[S.token,doData,noweDoBloki],function(rDo){
+    if(!rDo||!rDo.ok){ showErr((rDo&&rDo.msg)||'Nie udało się przenieść bloku.'); return; }
+    var noweZrBloki=(dZr.bloki||[]).filter(function(b){return b.id!==blokId;});
+    gas('masterZapiszDzienGrafiku',[S.token,zData,noweZrBloki],function(rZr){
+      if(!rZr||!rZr.ok){
+        showErr('Blok trafił na '+doData+', ale nie udało się usunąć go z '+zData+'.');
+        mcWczytaj();
+        return;
+      }
+      showOk('Przeniesiono na '+doData+'.');
+      mcWczytaj();
+    });
   });
 }
 
@@ -973,9 +1145,115 @@ function mcDzien(data){
   rysuj();
 }
 
+// ── Szablony zmian — nazwany, wielokrotnego użytku zestaw godzin
+// (np. „Zmiana poranna", „Higienizacja standard"), niezależny od osoby
+// i dnia. Zarządzanie z poziomu Grafiku (szablonySheet), zastosowanie —
+// przy dodawaniu bloku w Miesiącu (mcNowyBlok), gdzie wybór szablonu tylko
+// wypełnia pola formularza; zapis zawsze idzie przez zwykłe
+// masterZapiszDzienGrafiku, więc walidacja jest identyczna jak ręcznej edycji.
+
+function zapewnijSzablony(cb){
+  if(S.szablony){ cb(); return; }
+  gas('masterGetSzablonyZmian',[S.token],function(res){
+    S.szablony=(res&&res.ok)?res.szablony:[];
+    cb();
+  });
+}
+
+function szablonySheet(){
+  showModal('<div class="modal-title">Szablony zmian</div>'+
+    '<div class="ios-row-s" style="margin-bottom:12px">Nazwany zestaw godzin do szybkiego użycia przy dodawaniu bloku w zakładce Miesiąc.</div>'+
+    '<div class="ios-card" id="sz-lista">'+skeleton(3)+'</div>'+
+    '<button class="btn-primary" id="sz-nowy" style="margin-top:14px">+ Nowy szablon</button>');
+  document.getElementById('sz-nowy').addEventListener('click',function(){ szablonEdytuj(null); });
+  S.szablony=null;
+  zapewnijSzablony(function(){
+    var box=document.getElementById('sz-lista');
+    if(!box) return;
+    box.innerHTML=S.szablony.length
+      ? S.szablony.map(function(sz){
+          return '<div class="ios-row"><span class="cb-blok-t'+(sz.typ==='Higienizacja'?' hig':'')+'">'+
+            esc(sz.od)+'–'+esc(sz.do)+'</span>'+
+            '<div class="ios-row-b"><div class="ios-row-t">'+esc(sz.nazwa)+'</div>'+
+            '<div class="ios-row-s">'+esc(sz.typ)+
+              (sz.asystaWymagana!=null?' · wymagana asysta: '+sz.asystaWymagana:'')+'</div></div>'+
+            '<button class="btn-secondary btn-small" data-sz-edytuj="'+esc(sz.id)+'">Edytuj</button></div>';
+        }).join('')
+      : pusto('📋','Brak szablonów','Dodaj pierwszy poniżej');
+    box.querySelectorAll('[data-sz-edytuj]').forEach(function(b){
+      b.addEventListener('click',function(){
+        var id=this.getAttribute('data-sz-edytuj');
+        szablonEdytuj(S.szablony.find(function(x){return x.id===id;}));
+      });
+    });
+  });
+}
+
+function szablonEdytuj(sz){
+  showModal('<div class="modal-title">'+(sz?'Edytuj szablon':'Nowy szablon')+'</div>'+
+    '<div class="cb-field"><label class="cb-lbl">Nazwa</label>'+
+    '<input class="ios-input" id="se-nazwa" value="'+esc(sz?sz.nazwa:'')+'" placeholder="np. Zmiana poranna"></div>'+
+    '<div class="cb-field"><label class="cb-lbl">Typ</label>'+
+    '<select class="ios-select" id="se-typ">'+
+      '<option value="Lekarz"'+(!sz||sz.typ==='Lekarz'?' selected':'')+'>Lekarz</option>'+
+      '<option value="Higienizacja"'+(sz&&sz.typ==='Higienizacja'?' selected':'')+'>Higienizacja</option>'+
+    '</select></div>'+
+    '<div class="cb-grid2"><div class="cb-field"><label class="cb-lbl">Od</label>'+
+    '<input type="time" class="ios-input" id="se-od" step="300" value="'+esc(sz?sz.od:'09:00')+'"></div>'+
+    '<div class="cb-field"><label class="cb-lbl">Do</label>'+
+    '<input type="time" class="ios-input" id="se-do" step="300" value="'+esc(sz?sz.do:'14:00')+'"></div></div>'+
+    '<div class="cb-field"><label class="cb-lbl">Wymagana asysta (liczba osób)</label>'+
+    '<input type="number" min="0" max="3" class="ios-input" id="se-as" value="'+
+      (sz&&sz.asystaWymagana!=null?sz.asystaWymagana:1)+'"></div>'+
+    '<button class="btn-primary" id="se-ok" style="margin-top:14px">Zapisz szablon</button>'+
+    (sz?'<button class="btn-destructive" id="se-usun" style="margin-top:10px">Usuń szablon</button>':''));
+
+  document.getElementById('se-ok').addEventListener('click',function(){
+    var payload={
+      id:sz?sz.id:'',
+      nazwa:document.getElementById('se-nazwa').value.trim(),
+      typ:document.getElementById('se-typ').value,
+      od:document.getElementById('se-od').value,
+      do:document.getElementById('se-do').value,
+      asystaWymagana:document.getElementById('se-as').value
+    };
+    if(!payload.nazwa){ showErr('Podaj nazwę szablonu.'); return; }
+    gas('masterSaveSzablonZmiany',[S.token,payload],function(r){
+      if(!r||!r.ok){ showErr((r&&r.msg)||'Nie zapisano.'); return; }
+      showOk('Zapisano szablon.');
+      S.szablony=null;
+      szablonySheet();
+    });
+  });
+  var usunBtn=document.getElementById('se-usun');
+  if(usunBtn) usunBtn.addEventListener('click',function(){
+    if(usunBtn.getAttribute('data-armed')!=='1'){
+      usunBtn.setAttribute('data-armed','1'); usunBtn.textContent='Na pewno? Kliknij ponownie';
+      setTimeout(function(){ if(usunBtn){usunBtn.removeAttribute('data-armed');usunBtn.textContent='Usuń szablon';} },4000);
+      return;
+    }
+    gas('masterDeleteSzablonZmiany',[S.token,sz.id],function(r){
+      if(!r||!r.ok){ showErr((r&&r.msg)||'Nie usunięto.'); return; }
+      showOk('Usunięto szablon.');
+      S.szablony=null;
+      szablonySheet();
+    });
+  });
+}
+
 function mcNowyBlok(d,robocze,potem){
+  zapewnijSzablony(function(){ mcNowyBlokRysuj(d,robocze,potem); });
+}
+
+function mcNowyBlokRysuj(d,robocze,potem){
   var krok=(MC.dane.krokMin||5)*60;
+  var szOpcje=(S.szablony||[]).map(function(sz){
+    return '<option value="'+esc(sz.id)+'">'+esc(sz.nazwa)+' ('+esc(sz.od)+'–'+esc(sz.do)+')</option>';
+  }).join('');
   showModal('<div class="modal-title">Nowy blok — '+esc(d.data)+'</div>'+
+    (szOpcje?'<div class="cb-field"><label class="cb-lbl">Szablon zmiany (opcjonalnie)</label>'+
+      '<select class="ios-select" id="n-szablon"><option value="">— wypełnij ręcznie —</option>'+
+      szOpcje+'</select></div>':'')+
     '<div class="cb-field"><label class="cb-lbl">Typ</label>'+
     '<select class="ios-select" id="n-typ"><option value="Lekarz">Lekarz</option>'+
     '<option value="Higienizacja">Higienizacja</option></select></div>'+
@@ -1020,6 +1298,17 @@ function mcNowyBlok(d,robocze,potem){
   }
   document.getElementById('n-typ').addEventListener('change',osoby);
   osoby(); asysta();
+
+  var szSel=document.getElementById('n-szablon');
+  if(szSel) szSel.addEventListener('change',function(){
+    var wybId=this.value;
+    var sz=(S.szablony||[]).find(function(x){return x.id===wybId;});
+    if(!sz) return;
+    document.getElementById('n-typ').value=sz.typ;
+    osoby();
+    document.getElementById('n-od').value=sz.od;
+    document.getElementById('n-do').value=sz.do;
+  });
 
   document.getElementById('n-ok').addEventListener('click',function(){
     var os=document.getElementById('n-os').value;

@@ -74,6 +74,86 @@ function _shGrafik() {
 function _shAsysta() {
   return _zapewnijArkusz('GrafikAsysta', ['ID','BlokID','OsobaID','Od','Do','Zmodyfikowano']);
 }
+function _shSzablony() {
+  return _zapewnijArkusz('GrafikSzablony',
+    ['ID','Nazwa','Typ','Od','Do','AsystaWymagana','AsystaUwaga','Zmodyfikowano']);
+}
+
+// ── Szablony zmian ────────────────────────────────────────────
+// Nazwany, wielokrotnego użytku zestaw godzin (np. „Zmiana poranna",
+// „Higienizacja standard") — niezależny od konkretnej osoby czy dnia.
+// Zastosowanie szablonu do dnia odbywa się po stronie klienta: pobiera
+// pola szablonu, dokłada je do bloków danego dnia i zapisuje przez
+// istniejące masterZapiszDzienGrafiku — bez osobnej ścieżki backendu,
+// więc walidacja (siatka, kolizje, godziny otwarcia) jest dokładnie taka
+// sama, jak przy ręcznej edycji.
+
+function masterGetSzablonyZmian(token) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  const sh = _shSzablony();
+  if (sh.getLastRow() < 2) return { ok: true, szablony: [] };
+  const szablony = sh.getDataRange().getValues().slice(1).map(r => ({
+    id: String(r[0]),
+    nazwa: String(r[1]),
+    typ: String(r[2]),
+    od: _sheetTime(r[3]),
+    do: _sheetTime(r[4]),
+    asystaWymagana: (r[5] === '' || r[5] == null) ? null : parseInt(r[5], 10),
+    asystaUwaga: String(r[6] || '')
+  }));
+  szablony.sort((a, b) => a.nazwa.localeCompare(b.nazwa, 'pl'));
+  return { ok: true, szablony };
+}
+
+function masterSaveSzablonZmiany(token, szablon) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  szablon = szablon || {};
+  const nazwa = String(szablon.nazwa || '').trim().slice(0, 80);
+  if (!nazwa) return { ok: false, msg: 'Podaj nazwę szablonu.' };
+  const typ = BLOK_TYPES.indexOf(szablon.typ) !== -1 ? szablon.typ : BLOK_LEKARZ;
+  const od = String(szablon.od || '').trim(), do_ = String(szablon.do || '').trim();
+  if (!_naSiatce(od) || !_naSiatce(do_)) {
+    return { ok: false, msg: 'Godziny co ' + GRAFIK_KROK_MIN + ' minut.' };
+  }
+  if (_t2m(od) >= _t2m(do_)) return { ok: false, msg: '„Do" musi być późniejsze niż „od".' };
+
+  const sh = _shSzablony();
+  const teraz = new Date().toISOString();
+  const asystaWymagana = (szablon.asystaWymagana === '' || szablon.asystaWymagana == null)
+    ? '' : parseInt(szablon.asystaWymagana, 10);
+  const asystaUwaga = String(szablon.asystaUwaga || '').trim().slice(0, 300);
+
+  let id = String(szablon.id || '').trim();
+  if (id) {
+    const rows = sh.getLastRow() >= 2 ? sh.getDataRange().getValues() : [];
+    let wiersz = -1;
+    for (let i = 1; i < rows.length; i++) { if (String(rows[i][0]) === id) { wiersz = i + 1; break; } }
+    if (wiersz === -1) return { ok: false, msg: 'Nie znaleziono szablonu.' };
+    sh.getRange(wiersz, 1, 1, 8).setValues([[id, nazwa, typ, od, do_, asystaWymagana, asystaUwaga, teraz]]);
+  } else {
+    const rows = sh.getLastRow() >= 2 ? sh.getDataRange().getValues().slice(1) : [];
+    id = _nextId(rows.map(r => ({ id: String(r[0]) })), 'SZ');
+    sh.appendRow([id, nazwa, typ, od, do_, asystaWymagana, asystaUwaga, teraz]);
+  }
+  _logAdmin('ZapisSzablonuZmiany', id, nazwa);
+  return { ok: true, id };
+}
+
+function masterDeleteSzablonZmiany(token, szablonId) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  szablonId = String(szablonId || '').trim();
+  const sh = _shSzablony();
+  if (sh.getLastRow() < 2) return { ok: false, msg: 'Nie znaleziono szablonu.' };
+  const rows = sh.getDataRange().getValues();
+  for (let i = rows.length - 1; i >= 1; i--) {
+    if (String(rows[i][0]) === szablonId) {
+      sh.deleteRow(i + 1);
+      _logAdmin('UsuniecieSzablonuZmiany', szablonId, String(rows[i][1] || ''));
+      return { ok: true };
+    }
+  }
+  return { ok: false, msg: 'Nie znaleziono szablonu.' };
+}
 
 function _gabinetyAll(includeInactive) {
   const sh = _zapewnijGabinety();

@@ -368,6 +368,9 @@ function callRCP(action, argsJson) {
       case 'masterKopiujDzienGrafiku': return masterKopiujDzienGrafiku(args[0], args[1], args[2]);
       case 'masterGrafikImportPodglad': return masterGrafikImportPodglad(args[0], args[1]);
       case 'masterGrafikImportZastosuj': return masterGrafikImportZastosuj(args[0], args[1], args[2]);
+      case 'masterGetSzablonyZmian':   return masterGetSzablonyZmian(args[0]);
+      case 'masterSaveSzablonZmiany':  return masterSaveSzablonZmiany(args[0], args[1]);
+      case 'masterDeleteSzablonZmiany': return masterDeleteSzablonZmiany(args[0], args[1]);
       case 'masterRemoveEmployee':  return masterRemoveEmployee(args[0], args[1]);
       case 'masterRestoreEmployee': return masterRestoreEmployee(args[0], args[1]);
       case 'masterAddEmployee':     return masterAddEmployee(args[0], args[1], args[2], args[3], args[4]);
@@ -710,7 +713,8 @@ function setupRCP() {
     // ── Grafik obsady gabinetów ──
     { name: 'Gabinety',      h: ['ID', 'Nazwa', 'Kolejnosc', 'Aktywny'] },
     { name: 'Grafik',        h: ['ID', 'GabinetID', 'DzienTygodnia', 'Typ', 'OsobaID', 'Od', 'Do', 'AsystaWymagana', 'AsystaUwaga', 'Zmodyfikowano'] },
-    { name: 'GrafikAsysta',  h: ['ID', 'BlokID', 'OsobaID', 'Od', 'Do', 'Zmodyfikowano'] }
+    { name: 'GrafikAsysta',  h: ['ID', 'BlokID', 'OsobaID', 'Od', 'Do', 'Zmodyfikowano'] },
+    { name: 'GrafikSzablony', h: ['ID', 'Nazwa', 'Typ', 'Od', 'Do', 'AsystaWymagana', 'AsystaUwaga', 'Zmodyfikowano'] }
   ].forEach(def => {
     let sh = spreadsheet.getSheetByName(def.name);
     if (!sh) sh = spreadsheet.insertSheet(def.name);
