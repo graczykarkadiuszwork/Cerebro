@@ -2759,59 +2759,10 @@ function imPodglad(res) {
   });
 }
 
-// ════════════════════════════════════════════════════════════
-// ── Ukryte wejście do interfejsu Cerebro Hub ────────────────
-// Sekwencja: tryb nocny → kliknięcie słowa „Admin" w zakładce
-// Zespół → ikona trybu wyświetlania płonie 3 s fioletowym
-// płomieniem → zmienia się w oko Cerebro → kliknięcie otwiera
-// pełny interfejs w stylu Hub.
-//
-// To wyłącznie inna skóra na tych samych danych i tych samych
-// akcjach serwera — nic tu nie jest destrukcyjne, więc ukrycie
-// jest zabawą, a nie zabezpieczeniem.
-// ════════════════════════════════════════════════════════════
-
-var CEREBRO_OKO =
-  '<svg class="ic-sm ws-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
-  'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' +
-  '<path d="M1.6 12S5.5 5 12 5s10.4 7 10.4 7-3.9 7-10.4 7S1.6 12 1.6 12z"/>' +
-  '<circle cx="12" cy="12" r="3.4"/><circle cx="12" cy="12" r="1.1" fill="currentColor"/>' +
-  '</svg>';
-
-var _cerebroStan = 'uspiony';
-
-function cerebroProbuj() {
-  // Warunek wstępny: tryb nocny. Bez niego sekwencja się nie uruchamia.
-  if (document.documentElement.getAttribute('data-theme') !== 'dark') return;
-  if (_cerebroStan !== 'uspiony') return;
-
-  _cerebroStan = 'plonie';
-  var btn = document.getElementById('m-theme');
-  if (!btn) { _cerebroStan = 'uspiony'; return; }
-
-  btn.classList.add('ws-burning');
-  btn.setAttribute('aria-label', 'Cerebro');
-
-  setTimeout(function () {
-    btn.classList.remove('ws-burning');
-    btn.classList.add('ws-eye-btn');
-    btn.innerHTML = CEREBRO_OKO;
-    btn.title = 'Cerebro Hub';
-    _cerebroStan = 'oko';
-  }, 3000);
-}
-
-// Kliknięcie oka przenosi do interfejsu Hub; dopóki oko się nie pojawi,
-// przycisk działa normalnie jako przełącznik trybu nocnego.
-document.getElementById('m-theme').addEventListener('click', function (e) {
-  if (_cerebroStan !== 'oko') return;
-  e.preventDefault();
-  e.stopImmediatePropagation();
-  try { localStorage.setItem('wesmile_ui', 'cerebro'); } catch (err) {}
-  window.open(BASE_URL + '?page=cerebro', '_top');
-}, true);
-
 // ── Widok: Pracownicy (forma zatrudnienia) ────────
+// Uwaga: ukryte wejście do interfejsu Cerebro Hub (sekwencja tryb nocny →
+// słowo „Admin" → płonąca ikona → oko) siedzi w Styles.html i działa przez
+// delegację na `document`. Tutaj wystarczy oznaczyć słowo `data-cerebro="1"`.
 
 var FORMA_LABELS = { UoP: 'Umowa o pracę', Zlecenie: 'Umowa zlecenie', B2B: 'B2B' };
 
@@ -2860,9 +2811,6 @@ function renderStaffList() {
   });
 
   bindStaffTagi(wrap);
-  wrap.querySelectorAll('[data-cerebro]').forEach(function(el) {
-    el.addEventListener('click', function(e) { e.stopPropagation(); cerebroProbuj(); });
-  });
 
   wrap.querySelectorAll('.staff-remove-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {

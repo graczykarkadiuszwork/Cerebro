@@ -446,6 +446,18 @@ document.querySelectorAll('.m-nav-btn').forEach(function(b) {
 
 document.getElementById('m-theme').addEventListener('click', function(){ wsToggleTheme(); });
 
+// Ukryte wejście do Cerebro (obsługa sekwencji jest w Styles.html). Tutaj tylko
+// jedna poprawka pod mobile: gdy słowo „Admin" kliknięto w pełnoekranowym
+// arkuszu, arkusz zasłania nagłówek — zamykamy go, żeby płonąca ikona trybu
+// nocnego była widoczna. Nasłuch w fazie przechwytywania, po handlerze ze
+// Styles.html (ten rejestruje się wcześniej, bo siedzi w <head>).
+document.addEventListener('click', function (e) {
+  var t = e.target;
+  if (!t || !t.closest) return;
+  if (!t.closest('[data-cerebro]')) return;
+  if (t.closest('#m-sheet')) closeSheet();
+}, true);
+
 function onView(v) {
   if (v === 'v-today')   loadPresence();
   if (v === 'v-grafik')  grLoad();
@@ -702,13 +714,21 @@ function renderTeam() {
     if (!e.forma) braki.push('brak formy zatrudnienia');
     if (e.grupa === 'lekarz' && !(e.tagi || []).length) braki.push('brak specjalizacji');
     var pod = braki.length ? braki.join(' · ') : (e.rola || '');
+    // Rola „Admin" jest jednocześnie ukrytym wyzwalaczem interfejsu Cerebro
+    // (obsługa w Styles.html). Dlatego w tym jednym wierszu rola pokazuje się
+    // zawsze — także gdy są braki do zgłoszenia — i ma własny, klikalny span.
+    var isAdmin = String(e.rola).toLowerCase() === 'admin';
+    var podHtml = isAdmin
+      ? '<span class="ws-admin-key" data-cerebro="1">' + esc(e.rola) + '</span>' +
+        (braki.length ? ' · ' + esc(braki.join(' · ')) : '')
+      : esc(pod);
     return '<button class="m-item" data-emp="' + esc(e.id) + '">' +
       '<span class="m-ico-box">' + (e.grupa === 'lekarz'
         ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v5a4 4 0 0 0 8 0V3"/><path d="M12 12v3a4 4 0 0 0 8 0v-2"/><circle cx="20" cy="11" r="1.6"/></svg>'
         : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>') + '</span>' +
       '<span class="m-item-body"><span class="m-item-t">' + esc(e.imie + ' ' + e.nazwisko) + '</span>' +
-      '<span class="m-item-s' + (braki.length ? '" style="color:var(--c-accent);font-weight:600' : '') + '">' +
-      esc(pod) + '</span></span>' +
+      '<span class="m-item-s' + (braki.length && !isAdmin ? '" style="color:var(--c-accent);font-weight:600' : '') + '">' +
+      podHtml + '</span></span>' +
       '<svg class="m-chev ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>' +
       '</button>';
   }).join('') + '</div>';
@@ -723,8 +743,12 @@ function openEmpSheet(id) {
   if (!e) return;
   var lekarz = e.grupa === 'lekarz';
 
+  var adminKey = String(e.rola).toLowerCase() === 'admin';
+
   var html =
-    '<div class="m-card"><div class="m-card-t">' + esc(e.rola || '—') +
+    '<div class="m-card"><div class="m-card-t">' +
+      (adminKey ? '<span class="ws-admin-key" data-cerebro="1">' + esc(e.rola) + '</span>'
+                : esc(e.rola || '—')) +
       (lekarz ? ' · nie odbija się w RCP' : '') + '</div>' +
     '<div style="font-size:19px;font-weight:800;color:var(--c-ink)">' + esc(e.imie + ' ' + e.nazwisko) + '</div></div>' +
 

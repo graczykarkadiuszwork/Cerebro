@@ -273,9 +273,10 @@ button,input,select,textarea{font-family:inherit}
   100%{transform:translateY(-14px) scaleY(.5) scaleX(.7);opacity:0}
 }
 @keyframes wsFlameGlow{
-  0%,100%{box-shadow:0 0 0 0 rgba(168,85,247,0)}
-  30%{box-shadow:0 0 22px 6px rgba(168,85,247,.55)}
-  70%{box-shadow:0 0 30px 10px rgba(124,58,237,.45)}
+  0%  {box-shadow:0 0 0 0 rgba(168,85,247,0);   background:rgba(168,85,247,.20)}
+  30% {box-shadow:0 0 22px 6px rgba(168,85,247,.60); background:rgba(168,85,247,.55)}
+  70% {box-shadow:0 0 30px 10px rgba(124,58,237,.55); background:rgba(124,58,237,.75)}
+  100%{box-shadow:0 0 0 0 rgba(168,85,247,0);   background:rgba(124,58,237,.35)}
 }
 @keyframes wsIconBurn{
   0%{opacity:1;transform:scale(1);filter:none}
@@ -292,25 +293,39 @@ button,input,select,textarea{font-family:inherit}
   50%{filter:drop-shadow(0 0 11px rgba(168,85,247,1))}
 }
 
-.ws-burning{position:relative;overflow:visible;animation:wsFlameGlow 3s ease-in-out}
+/* Płomień musi być widoczny także wtedy, gdy przycisk siedzi w nagłówku
+   z własnym stackingiem i backdrop-filterem: dlatego pali się sam przycisk
+   (tło + poświata w animacji wsFlameGlow), a języki ognia w pseudo-elementach
+   są dodatkiem, nie jedynym nośnikiem efektu. Bez mix-blend-mode — na
+   fioletowym gradiencie hero „screen" potrafił wyprać ogień do niewidocznej
+   bieli. z-index podnosi ogień nad sąsiednie przyciski paska. */
+.ws-burning{
+  position:relative;overflow:visible;z-index:30;
+  animation:wsFlameGlow 3s ease-in-out;
+  backdrop-filter:none !important;
+}
 .ws-burning>svg{animation:wsIconBurn 1.1s ease-in forwards}
 .ws-burning::after{
-  content:'';position:absolute;left:50%;bottom:2px;width:26px;height:34px;
-  margin-left:-13px;pointer-events:none;border-radius:50% 50% 46% 46% / 62% 62% 38% 38%;
+  content:'';position:absolute;left:50%;bottom:4px;width:30px;height:40px;
+  margin-left:-15px;pointer-events:none;border-radius:50% 50% 46% 46% / 62% 62% 38% 38%;
   background:radial-gradient(ellipse at 50% 78%,#f0abfc 0%,#c084fc 28%,#a855f7 52%,#7c3aed 74%,rgba(88,28,135,0) 100%);
   animation:wsFlame .62s ease-in-out infinite;
-  mix-blend-mode:screen;
 }
 .ws-burning::before{
-  content:'';position:absolute;left:50%;bottom:0;width:16px;height:22px;
-  margin-left:-8px;pointer-events:none;border-radius:50% 50% 46% 46% / 60% 60% 40% 40%;
+  content:'';position:absolute;left:50%;bottom:2px;width:18px;height:26px;
+  margin-left:-9px;pointer-events:none;border-radius:50% 50% 46% 46% / 60% 60% 40% 40%;
   background:radial-gradient(ellipse at 50% 80%,#fff 0%,#f5d0fe 30%,#d8b4fe 60%,rgba(168,85,247,0) 100%);
   animation:wsFlame .44s ease-in-out infinite .12s;
-  mix-blend-mode:screen;
+  z-index:1;
 }
 
 .ws-eye{animation:wsEyeIn .6s cubic-bezier(.34,1.56,.64,1),wsEyePulse 2.4s ease-in-out .6s infinite}
-.ws-eye-btn{color:#c084fc !important;border-color:rgba(168,85,247,.55) !important}
+.ws-eye-btn{
+  color:#e9d5ff !important;
+  background:radial-gradient(circle at 50% 50%,rgba(168,85,247,.55),rgba(76,29,149,.85)) !important;
+  border:1px solid rgba(196,181,253,.7) !important;
+  box-shadow:0 0 14px rgba(168,85,247,.6) !important;
+}
 
 /* Słowo „Admin" w zakładce Zespół — klikalne, ale bez żadnej wskazówki,
    że coś się za nim kryje. */
@@ -692,6 +707,10 @@ window.wsSetConnStatus = function (ok, msg) {
 
   function paintIcons(theme) {
     document.querySelectorAll('.theme-ic').forEach(function (el) {
+      // Przycisk przejęty przez ukryte oko Cerebro nie wraca do słońca/księżyca.
+      // Bez tego każde przemalowanie ikon (a robimy je przy każdej zmianie
+      // motywu i po DOMContentLoaded) skasowałoby oko zaraz po jego pojawieniu.
+      if (el.getAttribute('data-ws-eye') === '1') return;
       el.innerHTML = theme === 'dark' ? ICON_SUN : ICON_MOON;
     });
   }
@@ -709,6 +728,91 @@ window.wsSetConnStatus = function (ok, msg) {
 
   apply(current());
   document.addEventListener('DOMContentLoaded', function () { paintIcons(current()); });
+})();
+
+/* ── Ukryte wejście do interfejsu Cerebro Hub ──────────────────
+   Sekwencja: tryb nocny → kliknięcie słowa „Admin" w zakładce Zespół
+   → ikona trybu wyświetlania płonie 3 s fioletowym płomieniem
+   → zamienia się w oko Cerebro → kliknięcie oka otwiera Hub.
+
+   Całość siedzi tutaj, a nie w poszczególnych widokach, z dwóch powodów:
+   1) desktop i mobile mają dokładnie tę samą sekwencję i nie mogą się
+      rozjechać przy kolejnych zmianach,
+   2) nasłuch jest delegowany na `document` w fazie przechwytywania, więc
+      przeżywa każde przerysowanie listy zespołu — wcześniej handler
+      podpinany po renderze znikał przy odświeżeniu widoku.
+
+   Widok musi tylko: (a) oznaczyć klikalne słowo atrybutem
+   `data-cerebro="1"`, (b) mieć przycisk trybu nocnego z klasą `theme-ic`,
+   (c) wystawić `BASE_URL`. Nic poza tym. */
+(function () {
+  var OKO =
+    '<svg class="ic-sm ws-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+    'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M1.6 12S5.5 5 12 5s10.4 7 10.4 7-3.9 7-10.4 7S1.6 12 1.6 12z"/>' +
+    '<circle cx="12" cy="12" r="3.4"/><circle cx="12" cy="12" r="1.1" fill="currentColor"/>' +
+    '</svg>';
+
+  var stan = 'uspiony';   // uspiony → plonie → oko
+
+  // Wszystkie przełączniki motywu na stronie. Widoki mają ich czasem dwa
+  // (ekran logowania + pasek panelu) — pali się ten widoczny.
+  function przelaczniki() {
+    var lista = [];
+    document.querySelectorAll('.theme-ic').forEach(function (el) {
+      if (el.offsetParent !== null || el.getAttribute('data-ws-eye') === '1') lista.push(el);
+    });
+    if (!lista.length) document.querySelectorAll('.theme-ic').forEach(function (el) { lista.push(el); });
+    return lista;
+  }
+
+  window.wsCerebroStart = function () {
+    if (document.documentElement.getAttribute('data-theme') !== 'dark') return;
+    if (stan !== 'uspiony') return;
+
+    var btns = przelaczniki();
+    if (!btns.length) return;
+
+    stan = 'plonie';
+    btns.forEach(function (b) {
+      b.classList.add('ws-burning');
+      b.setAttribute('aria-label', 'Cerebro');
+    });
+
+    setTimeout(function () {
+      btns.forEach(function (b) {
+        b.classList.remove('ws-burning');
+        b.classList.add('ws-eye-btn');
+        b.setAttribute('data-ws-eye', '1');   // chroni oko przed paintIcons()
+        b.innerHTML = OKO;
+        b.title = 'Cerebro Hub';
+      });
+      stan = 'oko';
+    }, 3000);
+  };
+
+  // Wyzwalacz: kliknięcie w element oznaczony data-cerebro.
+  document.addEventListener('click', function (e) {
+    var t = e.target;
+    if (!t || !t.closest) return;
+    if (!t.closest('[data-cerebro]')) return;
+    e.stopPropagation();
+    window.wsCerebroStart();
+  }, true);
+
+  // Kliknięcie oka. Dopóki oko się nie pojawi, przycisk działa normalnie
+  // jako przełącznik trybu nocnego — przechwytujemy dopiero w stanie 'oko'.
+  document.addEventListener('click', function (e) {
+    if (stan !== 'oko') return;
+    var t = e.target;
+    if (!t || !t.closest) return;
+    if (!t.closest('.ws-eye-btn')) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    try { localStorage.setItem('wesmile_ui', 'cerebro'); } catch (err) {}
+    var base = window.BASE_URL || '';
+    window.open(base + '?page=cerebro', '_top');
+  }, true);
 })();
 
 /* ── Baza pojęć RCP — wspólna dla zakładki Pomoc i FAQ ──────────
