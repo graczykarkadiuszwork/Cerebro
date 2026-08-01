@@ -372,6 +372,9 @@ function callRCP(action, argsJson) {
       case 'masterZapiszDzienGrafiku': return masterZapiszDzienGrafiku(args[0], args[1], args[2]);
       case 'masterResetDzienGrafiku':  return masterResetDzienGrafiku(args[0], args[1]);
       case 'masterKopiujDzienGrafiku': return masterKopiujDzienGrafiku(args[0], args[1], args[2]);
+      case 'masterGetPokrycieUrlopu': return masterGetPokrycieUrlopu(args[0], args[1], args[2], args[3]);
+      case 'masterPrzypiszZastepceBloku':
+        return masterPrzypiszZastepceBloku(args[0], args[1], args[2], args[3], args[4], args[5]);
       case 'masterGrafikImportPodglad': return masterGrafikImportPodglad(args[0], args[1]);
       case 'masterGrafikImportZastosuj': return masterGrafikImportZastosuj(args[0], args[1], args[2]);
       case 'masterGetSzablonyZmian':   return masterGetSzablonyZmian(args[0]);

@@ -2163,7 +2163,11 @@ function modUrlop(){
     '</select></div>'+
     '<div class="cb-field"><label class="cb-lbl">Adnotacja</label>'+
     '<textarea class="ios-textarea" id="u-note"></textarea></div>'+
-    '<button class="btn-primary" id="u-ok">Zapisz dla zakresu</button></div>';
+    '<button class="btn-primary" id="u-ok">Zapisz dla zakresu</button>'+
+    '<div class="section-title" style="margin-top:22px">Pokrycie grafiku na czas urlopu</div>'+
+    '<div class="ios-row-s" style="margin-bottom:10px">Sprawdź, które bloki grafiku wypadają w tym terminie i kto wolny może je przejąć — to tylko podpowiedź, nic nie zmienia się automatycznie.</div>'+
+    '<button class="btn-secondary" id="u-pokrycie-btn">Sprawdź pokrycie grafiku</button>'+
+    '<div id="u-pokrycie-wynik" style="margin-top:14px"></div></div>';
 
   document.getElementById('u-ok').addEventListener('click',function(){
     gas('masterSetAbsenceRange',[S.token,document.getElementById('u-os').value,
@@ -2171,6 +2175,59 @@ function modUrlop(){
         document.getElementById('u-typ').value,document.getElementById('u-note').value],function(r){
       if(!r||!r.ok){ showErr((r&&r.msg)||'Błąd.'); return; }
       showOk('Zapisano dla '+r.count+' dni.');
+    });
+  });
+
+  document.getElementById('u-pokrycie-btn').addEventListener('click',pokrycieWczytaj);
+}
+
+function pokrycieWczytaj(){
+  var os=document.getElementById('u-os').value, od=document.getElementById('u-od').value,
+      dt=document.getElementById('u-do').value;
+  var box=document.getElementById('u-pokrycie-wynik');
+  if(!box) return;
+  box.innerHTML=skeleton(2);
+  gas('masterGetPokrycieUrlopu',[S.token,os,od,dt],function(r){
+    if(!document.getElementById('u-pokrycie-wynik')) return;
+    if(!r||!r.ok){ box.innerHTML=pusto('⚠️','Nie udało się sprawdzić',(r&&r.msg)||''); return; }
+    pokrycieRysuj(r);
+  });
+}
+
+function pokrycieRysuj(r){
+  var box=document.getElementById('u-pokrycie-wynik');
+  if(!box) return;
+  if(!r.dni||!r.dni.length){
+    box.innerHTML=pusto('✅','Brak kolizji z grafikiem','W tym terminie '+esc(r.imieNazwisko)+' nie ma bloków w grafiku.');
+    return;
+  }
+  box.innerHTML=r.dni.map(function(d){
+    return '<div class="section-title" style="margin-top:14px">'+esc(d.nazwaDnia)+' '+esc(d.data)+'</div>'+
+      '<div class="ios-card">'+d.bloki.map(function(b){
+        var selId='up-sel-'+b.blokId;
+        var opcje=b.kandydaci.length?b.kandydaci.map(function(k){
+          return '<option value="'+esc(k.id)+'">'+esc(k.imie+' '+k.nazwisko)+'</option>';
+        }).join(''):'<option value="">— brak dostępnych —</option>';
+        return '<div class="ios-row"><div class="ios-row-b"><div class="ios-row-t">'+
+          esc(b.gabinet)+' · '+esc(b.od)+'–'+esc(b.do)+' · '+(b.rola==='obsada'?'obsada':'asysta')+'</div>'+
+          '<select class="ios-select" id="'+esc(selId)+'" style="margin-top:6px" '+(b.kandydaci.length?'':'disabled')+'>'+opcje+'</select></div>'+
+          '<button class="btn-secondary btn-small" '+(b.kandydaci.length?'':'disabled')+
+          ' data-up-przypisz="'+esc(d.data)+'|'+esc(b.blokId)+'|'+esc(b.rola)+'">Przypisz</button></div>';
+      }).join('')+'</div>';
+  }).join('');
+  box.querySelectorAll('[data-up-przypisz]').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var czesci=this.getAttribute('data-up-przypisz').split('|');
+      var data=czesci[0], blokId=czesci[1], rola=czesci[2];
+      var sel=document.getElementById('up-sel-'+blokId);
+      var zastepcaId=sel?sel.value:'';
+      if(!zastepcaId){ showErr('Wybierz zastępcę.'); return; }
+      var os=document.getElementById('u-os').value;
+      gas('masterPrzypiszZastepceBloku',[S.token,data,blokId,rola,os,zastepcaId],function(rp){
+        if(!rp||!rp.ok){ showErr((rp&&rp.msg)||'Błąd.'); return; }
+        showOk('Przypisano zastępcę.');
+        pokrycieWczytaj();
+      });
     });
   });
 }

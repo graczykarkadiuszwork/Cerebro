@@ -2141,6 +2141,60 @@ function _zapiszDniPuste(lista) {
  * `zTemplate` mówi, czy dzień pochodzi z szablonu, czy został nadpisany —
  * dzięki temu interfejs może pokazać, gdzie ktoś świadomie odszedł od normy.
  */
+// Kontekst wspólny dla wszystkich odczytów „co obowiązuje w danym dniu" —
+// budowany raz, przekazywany do _grafikDzienStan dla każdej daty z osobna.
+function _grafikKontekstDni() {
+  const asystaWg = {};
+  _grafikAsystaAll().forEach(a => {
+    if (!asystaWg[a.blokId]) asystaWg[a.blokId] = [];
+    asystaWg[a.blokId].push({ osobaId: a.osobaId, od: a.od, do: a.do });
+  });
+  return {
+    szablon: _grafikBlokiAll(),
+    asystaWg,
+    nadpisane: _dniNadpisaneAll(),
+    puste: _dniPusteAll()
+  };
+}
+
+// Co realnie obowiązuje w jednej dacie: bloki z nadpisania, świadomie pusty
+// dzień, albo — domyślnie — szablon tygodniowy. Wydzielone z masterGrafikMiesiac,
+// żeby ten sam, jedyny algorytm mógł odpowiedzieć na pytanie o pojedynczy dzień
+// (np. przy szukaniu zastępcy na urlop), bez powielania logiki.
+function _grafikDzienStan(ds, ctx) {
+  const dow = new Date(ds + 'T12:00:00').getDay();
+  const czynny = GRAFIK_DAYS.indexOf(dow) !== -1;
+
+  let bloki = [];
+  let zTemplate = true;
+
+  if (ctx.nadpisane[ds]) {
+    bloki = ctx.nadpisane[ds];
+    zTemplate = false;
+  } else if (ctx.puste.indexOf(ds) !== -1) {
+    bloki = [];
+    zTemplate = false;
+  } else if (czynny) {
+    bloki = ctx.szablon.filter(b => b.dzien === dow).map(b => ({
+      id: b.id, gabinetId: b.gabinetId, typ: b.typ, osobaId: b.osobaId,
+      od: b.od, do: b.do, asystaWymagana: b.asystaWymagana,
+      asystaUwaga: b.asystaUwaga, asysta: ctx.asystaWg[b.id] || []
+    }));
+  }
+
+  bloki.sort((a, b) => _t2m(a.od) - _t2m(b.od));
+
+  return {
+    data: ds,
+    dzienTygodnia: dow,
+    nazwaDnia: czynny ? GRAFIK_DAY_NAMES[dow] : 'Niedziela',
+    czynny: czynny,
+    zTemplate: zTemplate,
+    godziny: czynny ? { open: _hhmm(GRAFIK_HOURS[dow].open), close: _hhmm(GRAFIK_HOURS[dow].close) } : null,
+    bloki: bloki
+  };
+}
+
 function masterGrafikMiesiac(token, rok, mies) {
   if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
   const y = parseInt(rok, 10), m = parseInt(mies, 10);
@@ -2148,16 +2202,7 @@ function masterGrafikMiesiac(token, rok, mies) {
 
   const gabinety = _gabinetyAll(false);
   const personel = _grafikPersonel();
-  const szablon = _grafikBlokiAll();
-  const asystaSz = _grafikAsystaAll();
-  const asystaWg = {};
-  asystaSz.forEach(a => {
-    if (!asystaWg[a.blokId]) asystaWg[a.blokId] = [];
-    asystaWg[a.blokId].push({ osobaId: a.osobaId, od: a.od, do: a.do });
-  });
-
-  const nadpisane = _dniNadpisaneAll();
-  const puste = _dniPusteAll();
+  const ctx = _grafikKontekstDni();
   const adnotacje = _adnotacjeAll();
 
   const ile = new Date(y, m, 0).getDate();
@@ -2166,38 +2211,10 @@ function masterGrafikMiesiac(token, rok, mies) {
 
   for (let d = 1; d <= ile; d++) {
     const ds = pfx + String(d).padStart(2, '0');
-    const dow = new Date(ds + 'T12:00:00').getDay();
-    const czynny = GRAFIK_DAYS.indexOf(dow) !== -1;
-
-    let bloki = [];
-    let zTemplate = true;
-
-    if (nadpisane[ds]) {
-      bloki = nadpisane[ds];
-      zTemplate = false;
-    } else if (puste.indexOf(ds) !== -1) {
-      bloki = [];
-      zTemplate = false;
-    } else if (czynny) {
-      bloki = szablon.filter(b => b.dzien === dow).map(b => ({
-        id: b.id, gabinetId: b.gabinetId, typ: b.typ, osobaId: b.osobaId,
-        od: b.od, do: b.do, asystaWymagana: b.asystaWymagana,
-        asystaUwaga: b.asystaUwaga, asysta: asystaWg[b.id] || []
-      }));
-    }
-
-    bloki.sort((a, b) => _t2m(a.od) - _t2m(b.od));
-
-    dni.push({
-      data: ds,
-      dzienTygodnia: dow,
-      nazwaDnia: czynny ? GRAFIK_DAY_NAMES[dow] : 'Niedziela',
-      czynny: czynny,
-      zTemplate: zTemplate,
-      godziny: czynny ? { open: _hhmm(GRAFIK_HOURS[dow].open), close: _hhmm(GRAFIK_HOURS[dow].close) } : null,
-      bloki: bloki,
+    const stan = _grafikDzienStan(ds, ctx);
+    dni.push(Object.assign(stan, {
       adnotacje: adnotacje.filter(a => a.od <= ds && ds <= a.do)
-    });
+    }));
   }
 
   return {
@@ -2338,6 +2355,129 @@ function masterKopiujDzienGrafiku(token, zData, naDaty) {
     if (r && r.ok) ok++; else bledy.push(d + ': ' + ((r && r.msg) || 'błąd'));
   });
   return { ok: true, skopiowano: ok, bledy: bledy.slice(0, 15) };
+}
+
+// ── Rezerwacja pokrycia urlopu (sugestia zastępcy) ────────────
+// Zakres dat urlopu pokazujemy jako listę dni, w których osoba miała
+// bloki w grafiku — dla każdego bloku podpowiadamy, kto z tej samej
+// grupy zawodowej jest w tym terminie wolny (nie ma tam już bloku ani
+// nieobecności). To wyłącznie sugestia: administrator sam decyduje,
+// czy i kogo przypisać — nic nie dzieje się automatycznie.
+const POKRYCIE_URLOPU_MAX_DNI = 62;
+
+function masterGetPokrycieUrlopu(token, empId, dataOd, dataDo) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  empId = String(empId || '').trim();
+  dataOd = String(dataOd || '').trim();
+  dataDo = String(dataDo || '').trim();
+  if (!empId) return { ok: false, msg: 'Wybierz pracownika.' };
+  if (!_dataOk(dataOd) || !_dataOk(dataDo)) return { ok: false, msg: 'Nieprawidłowy zakres dat.' };
+  if (dataOd > dataDo) return { ok: false, msg: '"Do" musi być późniejsze niż "Od".' };
+
+  const rozpietosc = Math.round(
+    (new Date(dataDo + 'T12:00:00') - new Date(dataOd + 'T12:00:00')) / 86400000) + 1;
+  if (rozpietosc > POKRYCIE_URLOPU_MAX_DNI) {
+    return { ok: false, msg: 'Zakres zbyt długi na podgląd pokrycia (maks. ' + POKRYCIE_URLOPU_MAX_DNI + ' dni).' };
+  }
+
+  const personel = _grafikPersonel();
+  const osoba = personel.find(p => p.id === empId);
+  if (!osoba) return { ok: false, msg: 'Pracownik nie istnieje.' };
+
+  const gabinety = _gabinetyAll(false);
+  const ctx = _grafikKontekstDni();
+  const absencje = _absenceMapAll();
+
+  const dni = [];
+  let kursor = new Date(dataOd + 'T12:00:00');
+  const koniec = new Date(dataDo + 'T12:00:00');
+
+  while (kursor <= koniec) {
+    const ds = kursor.getFullYear() + '-' + String(kursor.getMonth() + 1).padStart(2, '0') +
+      '-' + String(kursor.getDate()).padStart(2, '0');
+    const stan = _grafikDzienStan(ds, ctx);
+    const dotkniete = [];
+
+    stan.bloki.forEach(b => {
+      const wObsadzie = b.osobaId === empId;
+      const wAsyscie = (b.asysta || []).some(a => a.osobaId === empId);
+      if (!wObsadzie && !wAsyscie) return;
+
+      const rola = wObsadzie ? 'obsada' : 'asysta';
+      const rolaWymagana = wObsadzie ? osoba.grupa : GRUPA_ASYSTENTKA;
+      const oknoOd = wObsadzie ? b.od : ((b.asysta.find(a => a.osobaId === empId) || {}).od || b.od);
+      const oknoDo = wObsadzie ? b.do : ((b.asysta.find(a => a.osobaId === empId) || {}).do || b.do);
+
+      const kandydaci = personel.filter(p => {
+        if (p.id === empId || p.grupa !== rolaWymagana) return false;
+        if (absencje[p.id + '_' + ds]) return false;
+        const zajety = stan.bloki.some(bb =>
+          (bb.osobaId === p.id && _zakresyNachodza(oknoOd, oknoDo, bb.od, bb.do)) ||
+          (bb.asysta || []).some(a => a.osobaId === p.id && _zakresyNachodza(oknoOd, oknoDo, a.od, a.do)));
+        return !zajety;
+      }).map(p => ({ id: p.id, imie: p.imie, nazwisko: p.nazwisko }));
+
+      dotkniete.push({
+        blokId: b.id,
+        gabinet: (gabinety.find(g => g.id === b.gabinetId) || {}).nazwa || b.gabinetId,
+        typ: b.typ, od: b.od, do: b.do, rola: rola,
+        kandydaci: kandydaci
+      });
+    });
+
+    if (dotkniete.length) dni.push({ data: ds, nazwaDnia: stan.nazwaDnia, bloki: dotkniete });
+    kursor.setDate(kursor.getDate() + 1);
+  }
+
+  return { ok: true, empId, imieNazwisko: osoba.imie + ' ' + osoba.nazwisko, dni };
+}
+
+/**
+ * Przypisuje zastępcę do JEDNEGO bloku w JEDNYM dniu — zamiast osoby na
+ * urlopie (rola „obsada") albo w miejscu jej wpisu w asyście (rola „asysta").
+ * Materializuje cały dzień przez masterZapiszDzienGrafiku, więc korzysta
+ * z tej samej walidacji (siatka, kolizje, godziny otwarcia), co ręczna
+ * edycja — bez osobnej ścieżki zapisu.
+ */
+function masterPrzypiszZastepceBloku(token, data, blokId, rola, empId, zastepcaId) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  data = String(data || '').trim();
+  blokId = String(blokId || '').trim();
+  rola = String(rola || '').trim();
+  empId = String(empId || '').trim();
+  zastepcaId = String(zastepcaId || '').trim();
+
+  if (!_dataOk(data)) return { ok: false, msg: 'Nieprawidłowa data.' };
+  if (rola !== 'obsada' && rola !== 'asysta') return { ok: false, msg: 'Nieprawidłowa rola.' };
+  if (!zastepcaId) return { ok: false, msg: 'Wybierz zastępcę.' };
+  if (zastepcaId === empId) return { ok: false, msg: 'Zastępca musi być inną osobą.' };
+
+  const personel = _grafikPersonel();
+  if (!personel.some(p => p.id === zastepcaId)) return { ok: false, msg: 'Zastępca nie istnieje.' };
+
+  const ctx = _grafikKontekstDni();
+  const stan = _grafikDzienStan(data, ctx);
+  if (!stan.bloki.some(b => b.id === blokId)) {
+    return { ok: false, msg: 'Nie znaleziono bloku w tym dniu (mógł się zmienić w międzyczasie).' };
+  }
+
+  const bloki = stan.bloki.map(b => {
+    const kopia = {
+      gabinetId: b.gabinetId, typ: b.typ, osobaId: b.osobaId, od: b.od, do: b.do,
+      asystaWymagana: b.asystaWymagana, asystaUwaga: b.asystaUwaga, asysta: (b.asysta || []).slice()
+    };
+    if (b.id !== blokId) return kopia;
+    if (rola === 'obsada') {
+      kopia.osobaId = zastepcaId;
+    } else {
+      kopia.asysta = kopia.asysta.map(a => a.osobaId === empId ? { osobaId: zastepcaId, od: a.od, do: a.do } : a);
+    }
+    return kopia;
+  });
+
+  const wynik = masterZapiszDzienGrafiku(token, data, bloki);
+  if (wynik.ok) _logAdmin('PrzypisanieZastepcyUrlop', empId, data + ': ' + rola + ' → ' + zastepcaId);
+  return wynik;
 }
 
 // ── Niedostępność → automatyczny wpis do grafiku ──────────────
