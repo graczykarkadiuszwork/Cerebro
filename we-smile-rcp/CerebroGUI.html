@@ -2247,7 +2247,13 @@ function modWolne(){
     '</select></div>'+
     '<div class="cb-field"><label class="cb-lbl">Adnotacja</label>'+
     '<textarea class="ios-textarea" id="w-note" placeholder="np. Boże Narodzenie"></textarea></div>'+
-    '<button class="btn-destructive" id="w-ok">Zastosuj dla całego zespołu</button></div>';
+    '<button class="btn-destructive" id="w-ok">Zastosuj dla całego zespołu</button>'+
+    '<div class="section-title" style="margin-top:22px">Kalendarz świąt (10 lat z góry)</div>'+
+    '<div class="ios-row-s" style="margin-bottom:10px">Wszystkie polskie święta ustawowo wolne od pracy, wyliczone z góry — bez ręcznego wpisywania dat. Typ dnia wolnego bierzemy z pola „Typ" powyżej.</div>'+
+    '<div class="cb-field"><label class="cb-lbl">Rok</label>'+
+    '<select class="ios-select" id="sw-rok">'+swietaLataOpcje()+'</select></div>'+
+    '<button class="btn-secondary" id="sw-zastosuj-rok">Zastosuj wszystkie święta z tego roku</button>'+
+    '<div id="sw-lista" style="margin-top:14px">'+skeleton(3)+'</div></div>';
 
   document.getElementById('w-ok').addEventListener('click',function(){
     var b=this;
@@ -2262,6 +2268,66 @@ function modWolne(){
         document.getElementById('w-note').value],function(r){
       if(!r||!r.ok){ showErr((r&&r.msg)||'Błąd.'); return; }
       showOk('Zastosowano dla '+r.count+' pracowników.');
+    });
+  });
+
+  document.getElementById('sw-rok').addEventListener('change',swietaWczytaj);
+  document.getElementById('sw-zastosuj-rok').addEventListener('click',function(){
+    var typ=document.getElementById('w-typ').value;
+    if(!typ){ showErr('Wybierz typ dnia wolnego w polu „Typ" powyżej.'); return; }
+    gas('masterZastosujSwietaRoku',[S.token,document.getElementById('sw-rok').value,typ],function(r){
+      if(!r||!r.ok){ showErr((r&&r.msg)||'Błąd.'); return; }
+      showOk('Zastosowano świąt: '+r.zastosowano+'.');
+      swietaWczytaj();
+    });
+  });
+  swietaWczytaj();
+}
+
+function swietaLataOpcje(){
+  var rokTeraz=new Date().getFullYear(), op='';
+  for(var i=0;i<10;i++){ var r=rokTeraz+i; op+='<option value="'+r+'">'+r+'</option>'; }
+  return op;
+}
+
+function swietaWczytaj(){
+  var rok=document.getElementById('sw-rok').value;
+  var box=document.getElementById('sw-lista');
+  if(!box) return;
+  box.innerHTML=skeleton(3);
+  gas('masterGetSwieta',[S.token,rok,rok],function(r){
+    if(!document.getElementById('sw-lista')) return;
+    if(!r||!r.ok){ box.innerHTML=pusto('⚠️','Nie wczytano',(r&&r.msg)||''); return; }
+    var dni=(r.lata[0]||{}).dni||[];
+    box.innerHTML='<div class="ios-card">'+dni.map(function(s){
+      return '<div class="ios-row"><div class="ios-row-b"><div class="ios-row-t">'+esc(s.nazwa)+
+        (s.ruchome?' <span class="ios-row-s">(ruchome)</span>':'')+'</div>'+
+        '<div class="ios-row-s">'+esc(s.data)+' · '+(s.zastosowano?'zastosowano':'nie zastosowano')+'</div></div>'+
+        (s.zastosowano?
+          '<button class="btn-secondary btn-small" data-sw-cofnij="'+esc(s.data)+'">Cofnij</button>':
+          '<button class="btn-secondary btn-small" data-sw-zastosuj="'+esc(s.data)+'|'+esc(s.nazwa)+'">Zastosuj</button>')+
+        '</div>';
+    }).join('')+'</div>';
+    box.querySelectorAll('[data-sw-zastosuj]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var typ=document.getElementById('w-typ').value;
+        if(!typ){ showErr('Wybierz typ dnia wolnego w polu „Typ" powyżej.'); return; }
+        var czesci=this.getAttribute('data-sw-zastosuj').split('|');
+        gas('masterZastosujSwieto',[S.token,czesci[0],czesci[1],typ],function(rz){
+          if(!rz||!rz.ok){ showErr((rz&&rz.msg)||'Błąd.'); return; }
+          showOk('Zastosowano: '+czesci[1]+'.');
+          swietaWczytaj();
+        });
+      });
+    });
+    box.querySelectorAll('[data-sw-cofnij]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        gas('masterCofnijSwieto',[S.token,this.getAttribute('data-sw-cofnij')],function(rz){
+          if(!rz||!rz.ok){ showErr((rz&&rz.msg)||'Błąd.'); return; }
+          showOk('Cofnięto.');
+          swietaWczytaj();
+        });
+      });
     });
   });
 }

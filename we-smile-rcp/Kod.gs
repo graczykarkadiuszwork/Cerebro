@@ -349,6 +349,10 @@ function callRCP(action, argsJson) {
       case 'masterSetAbsence':      return masterSetAbsence(args[0], args[1], args[2], args[3], args[4]);
       case 'masterSetOvertimeNote': return masterSetOvertimeNote(args[0], args[1], args[2], args[3]);
       case 'masterSetClinicDayOff': return masterSetClinicDayOff(args[0], args[1], args[2], args[3], args[4]);
+      case 'masterGetSwieta':      return masterGetSwieta(args[0], args[1], args[2]);
+      case 'masterZastosujSwieto': return masterZastosujSwieto(args[0], args[1], args[2], args[3]);
+      case 'masterCofnijSwieto':   return masterCofnijSwieto(args[0], args[1]);
+      case 'masterZastosujSwietaRoku': return masterZastosujSwietaRoku(args[0], args[1], args[2]);
       case 'masterSetAbsenceRange': return masterSetAbsenceRange(args[0], args[1], args[2], args[3], args[4], args[5]);
       case 'masterSetEmploymentForm': return masterSetEmploymentForm(args[0], args[1], args[2]);
       case 'masterGetArchivedEmployees': return masterGetArchivedEmployees(args[0]);

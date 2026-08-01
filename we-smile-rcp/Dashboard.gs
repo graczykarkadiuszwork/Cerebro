@@ -1163,6 +1163,122 @@ function masterSetClinicDayOff(token, dateFrom, dateTo, typeCode, note) {
   return { ok: true, count: workers.length };
 }
 
+// ── Kalendarz świąt ustawowo wolnych od pracy (10 lat z góry) ─
+// Wszystkie 13 polskich świąt ustawowych — daty wyliczane, nie wpisywane
+// ręcznie, więc lista jest dokładna na dowolny rok bez utrzymywania jej
+// co roku. Ruchome święta (zależne od Wielkanocy) liczone algorytmem
+// Meeusa/Jonesa/Butchera (kalendarz gregoriański) — zweryfikowanym wobec
+// znanych dat Wielkanocy 2024–2036 przed wdrożeniem.
+//
+// Zastosowanie święta = to samo co ręczne „Dni wolne" (masterSetClinicDayOff)
+// dla jednego dnia — tylko przygotowane z góry, żeby nie wpisywać 130 dat
+// ręcznie. Które daty są już zastosowane, pamiętamy w ScriptProperties
+// (ten sam wzorzec, co _dniPusteAll w Grafik.gs) — nie w samej Nieobecnosci,
+// bo tamta warstwa nie odróżnia „to było święto" od zwykłego urlopu.
+
+function _wielkanocData(rok) {
+  const a = rok % 19, b = Math.floor(rok / 100), c = rok % 100;
+  const d = Math.floor(b / 4), e = b % 4;
+  const f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4), k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const miesiac = Math.floor((h + l - 7 * m + 114) / 31);
+  const dzien = ((h + l - 7 * m + 114) % 31) + 1;
+  return rok + '-' + String(miesiac).padStart(2, '0') + '-' + String(dzien).padStart(2, '0');
+}
+
+function _dataPlusDni(ds, dni) {
+  const d = new Date(ds + 'T12:00:00');
+  d.setDate(d.getDate() + dni);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' +
+    String(d.getDate()).padStart(2, '0');
+}
+
+function _swietaDlaRoku(rok) {
+  const wielkanoc = _wielkanocData(rok);
+  return [
+    { data: rok + '-01-01', nazwa: 'Nowy Rok' },
+    { data: rok + '-01-06', nazwa: 'Święto Trzech Króli' },
+    { data: wielkanoc, nazwa: 'Niedziela Wielkanocna', ruchome: true },
+    { data: _dataPlusDni(wielkanoc, 1), nazwa: 'Poniedziałek Wielkanocny', ruchome: true },
+    { data: rok + '-05-01', nazwa: 'Święto Pracy' },
+    { data: rok + '-05-03', nazwa: 'Święto Konstytucji 3 Maja' },
+    { data: _dataPlusDni(wielkanoc, 49), nazwa: 'Zielone Świątki', ruchome: true },
+    { data: _dataPlusDni(wielkanoc, 60), nazwa: 'Boże Ciało', ruchome: true },
+    { data: rok + '-08-15', nazwa: 'Wniebowzięcie Najświętszej Maryi Panny' },
+    { data: rok + '-11-01', nazwa: 'Wszystkich Świętych' },
+    { data: rok + '-11-11', nazwa: 'Narodowe Święto Niepodległości' },
+    { data: rok + '-12-25', nazwa: 'Boże Narodzenie (I dzień)' },
+    { data: rok + '-12-26', nazwa: 'Boże Narodzenie (II dzień)' }
+  ];
+}
+
+function _swietaZastosowaneAll() {
+  const props = PropertiesService.getScriptProperties();
+  try { return JSON.parse(props.getProperty('swieta_zastosowane') || '[]'); }
+  catch (e) { return []; }
+}
+function _zapiszSwietaZastosowane(lista) {
+  PropertiesService.getScriptProperties().setProperty('swieta_zastosowane', JSON.stringify(lista.slice(0, 500)));
+}
+
+const SWIETA_LAT_MAX = 10;
+
+function masterGetSwieta(token, rokOd, rokDo) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  const y1 = parseInt(rokOd, 10), y2 = parseInt(rokDo, 10);
+  if (isNaN(y1) || isNaN(y2) || y1 > y2 || (y2 - y1) >= SWIETA_LAT_MAX) {
+    return { ok: false, msg: 'Nieprawidłowy zakres lat.' };
+  }
+  const zastosowane = _swietaZastosowaneAll();
+  const lata = [];
+  for (let r = y1; r <= y2; r++) {
+    const dni = _swietaDlaRoku(r).map(s => Object.assign({}, s,
+      { zastosowano: zastosowane.indexOf(s.data) !== -1 }));
+    lata.push({ rok: r, dni });
+  }
+  return { ok: true, lata };
+}
+
+function masterZastosujSwieto(token, data, nazwa, typeCode) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(data))) return { ok: false, msg: 'Nieprawidłowa data.' };
+  if (!String(typeCode || '').trim()) return { ok: false, msg: 'Wybierz typ dnia wolnego.' };
+  const wynik = masterSetClinicDayOff(token, data, data, typeCode, String(nazwa || '').trim().slice(0, 200));
+  if (!wynik.ok) return wynik;
+  const zastosowane = _swietaZastosowaneAll();
+  if (zastosowane.indexOf(data) === -1) { zastosowane.push(data); _zapiszSwietaZastosowane(zastosowane); }
+  return wynik;
+}
+
+function masterCofnijSwieto(token, data) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(data))) return { ok: false, msg: 'Nieprawidłowa data.' };
+  const wynik = masterSetClinicDayOff(token, data, data, '', '');
+  if (!wynik.ok) return wynik;
+  _zapiszSwietaZastosowane(_swietaZastosowaneAll().filter(d => d !== data));
+  return wynik;
+}
+
+function masterZastosujSwietaRoku(token, rok, typeCode) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  const r = parseInt(rok, 10);
+  if (isNaN(r)) return { ok: false, msg: 'Nieprawidłowy rok.' };
+  if (!String(typeCode || '').trim()) return { ok: false, msg: 'Wybierz typ dnia wolnego.' };
+  const zastosowane = _swietaZastosowaneAll();
+  const dni = _swietaDlaRoku(r);
+  let zastosowano = 0;
+  dni.forEach(s => {
+    if (zastosowane.indexOf(s.data) !== -1) return;
+    const wynik = masterSetClinicDayOff(token, s.data, s.data, typeCode, s.nazwa);
+    if (wynik.ok) { zastosowane.push(s.data); zastosowano++; }
+  });
+  _zapiszSwietaZastosowane(zastosowane);
+  return { ok: true, zastosowano };
+}
+
 function masterGetMonth(token, empId, year, month) {
   if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
   const y = parseInt(year, 10);
