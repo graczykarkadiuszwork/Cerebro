@@ -96,7 +96,8 @@ body{
 img,svg{max-width:100%}
 button,input,select,textarea{font-family:inherit}
 
-/* ── Wordmark (placeholder do czasu podmiany na plik logo) ── */
+/* ── Wordmark w pasku nagłówka (na kolorowym tle .hero — tam nie ma
+   miejsca na osobną białą płytkę pod logo, więc zostaje tekstowy). ── */
 .wm{
   display:inline-flex;align-items:baseline;gap:1px;
   font-weight:700;font-size:17px;letter-spacing:-.01em;
@@ -106,6 +107,18 @@ button,input,select,textarea{font-family:inherit}
 .wm.on-dark{background:none;-webkit-text-fill-color:#fff;color:#fff}
 .wm.wm-lg{font-size:24px}
 .wm b{font-weight:700}
+
+/* ── Logo marki na ekranach powitalnych (logowanie, kod, splash) ──
+   Logotypu nie modyfikujemy (bez zmiany kolorów) — zamiast tego stoi
+   na własnej białej płytce, więc kontrast jest zagwarantowany także
+   w trybie nocnym, gdzie karta .sheet robi się ciemna. */
+.wm-logo-wrap{
+  display:inline-flex;align-items:center;justify-content:center;
+  padding:6px 16px;border-radius:var(--radius-m);background:#fff;
+}
+.wm-logo{height:22px;width:auto;display:block}
+.wm-logo-wrap.wm-logo-lg{padding:9px 20px}
+.wm-logo-wrap.wm-logo-lg .wm-logo{height:32px}
 
 /* ── Layout shells ──────────────────────────────────────────
    Padding responsywny przez clamp(): bardzo ciasny na wąskim
