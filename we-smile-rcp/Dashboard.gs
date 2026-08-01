@@ -30,6 +30,25 @@ function _logAdmin(action, empId, details) {
   }
 }
 
+// ── Historia zmian pracownika ─────────────────────────────────
+// Logi_Admin już rejestruje kto/kiedy/co przy każdej edycji (forma
+// zatrudnienia, tagi specjalizacji, nieobecności, dodanie/archiwizacja/
+// przywrócenie, korekty dnia…) — to po prostu odczyt tego samego arkusza
+// przefiltrowany do jednej osoby, bez osobnego modelu danych.
+
+function masterGetHistoriaPracownika(token, empId) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  if (!empId) return { ok: false, msg: 'Brak pracownika.' };
+  const sh = _ss().getSheetByName('Logi_Admin');
+  if (!sh || sh.getLastRow() < 2) return { ok: true, wpisy: [] };
+  const wpisy = sh.getDataRange().getValues().slice(1)
+    .filter(r => String(r[2]) === String(empId))
+    .map(r => ({ czas: String(r[0]), akcja: String(r[1]), szczegoly: String(r[3] || '') }))
+    .sort((a, b) => b.czas < a.czas ? -1 : b.czas > a.czas ? 1 : 0)
+    .slice(0, 200);
+  return { ok: true, wpisy };
+}
+
 // ── Mapy nieobecności i przekroczeń ──────────────────────────
 
 // { 'EmpID_yyyy-MM-dd': { code, typ, note } }
@@ -788,7 +807,14 @@ function masterSetAbsenceRange(token, empId, dateFrom, dateTo, typeCode, note) {
   _logAdmin('MasterAbsenceRange', String(empId),
     dateFrom + ' — ' + dateTo + ' → ' + (type ? type.label : 'usunięto') + (note ? ' [' + note.slice(0, 80) + ']' : ''));
 
-  return { ok: true, count: days };
+  // Rejestracja nieobecności (nie jej czyszczenie) automatycznie zdejmuje
+  // osobę z grafiku w tym zakresie — patrz komentarz przy funkcji w Grafik.gs.
+  let grafik = null;
+  if (type) {
+    grafik = _zdejmijZGrafikuNaNieobecnosc(token, String(empId), worker[1] + ' ' + worker[2], dateFrom, dateTo, type.label);
+  }
+
+  return { ok: true, count: days, grafik };
 }
 
 function masterGetDay(token, empId, date) {

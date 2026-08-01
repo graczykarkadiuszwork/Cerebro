@@ -349,6 +349,7 @@ function callRCP(action, argsJson) {
       case 'masterSetEmploymentForm': return masterSetEmploymentForm(args[0], args[1], args[2]);
       case 'masterGetArchivedEmployees': return masterGetArchivedEmployees(args[0]);
       case 'masterSetDoctorTags':   return masterSetDoctorTags(args[0], args[1], args[2]);
+      case 'masterGetHistoriaPracownika': return masterGetHistoriaPracownika(args[0], args[1]);
       // Grafik obsady gabinetów + rekomendacje
       case 'masterGetGrafik':       return masterGetGrafik(args[0]);
       case 'masterSaveGabinet':     return masterSaveGabinet(args[0], args[1], args[2], args[3]);

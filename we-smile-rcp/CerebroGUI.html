@@ -1761,6 +1761,10 @@ function zespolOsoba(id){
         return '<button type="button" class="cb-tag'+(on?'':' off')+'" data-t="'+esc(t)+'">'+esc(t)+'</button>';
       }).join('')+'</div></div>':'')+
     '<button class="btn-primary" id="e-zapisz">Zapisz</button>'+
+    '<button class="btn-secondary" id="e-niedost-tog" style="margin-top:10px">Zgłoś niedostępność</button>'+
+    '<div id="e-niedost-box"></div>'+
+    '<button class="btn-secondary" id="e-hist-tog" style="margin-top:10px">Historia zmian</button>'+
+    '<div id="e-hist-box"></div>'+
     (String(e.rola).toLowerCase()==='admin'?'':
       '<button class="btn-destructive" id="e-arch" style="margin-top:10px">Przenieś do archiwum</button>'));
 
@@ -1785,6 +1789,57 @@ function zespolOsoba(id){
       closeModal(); showOk('Zapisano.'); rysujZespol();
     });
   });
+
+  document.getElementById('e-niedost-tog').addEventListener('click',function(){
+    var box=document.getElementById('e-niedost-box');
+    if(box.innerHTML){ box.innerHTML=''; return; }
+    box.innerHTML=
+      '<div class="ios-card pad" style="margin:10px 0;background:rgba(255,149,0,.08)">'+
+      '<div class="ios-row-s" style="margin-bottom:10px">Zapis automatycznie zdejmie '+esc(e.imie)+
+        ' z bloków grafiku w tym zakresie (jako lekarza/higienistkę — usunie blok, jako asystę — zdejmie tylko asystę) '+
+        'i doda adnotację w Miesiącu.</div>'+
+      '<div class="cb-grid2"><div class="cb-field"><label class="cb-lbl">Od</label>'+
+      '<input type="date" class="ios-input" id="en-od" value="'+dzisStr()+'"></div>'+
+      '<div class="cb-field"><label class="cb-lbl">Do</label>'+
+      '<input type="date" class="ios-input" id="en-do" value="'+dzisStr()+'"></div></div>'+
+      '<div class="cb-field"><label class="cb-lbl">Typ</label>'+
+      '<select class="ios-select" id="en-typ">'+S.absTypy.map(function(t){
+        return '<option value="'+esc(t.code)+'">'+esc(t.label)+'</option>';}).join('')+'</select></div>'+
+      '<div class="cb-field"><label class="cb-lbl">Adnotacja</label>'+
+      '<textarea class="ios-textarea" id="en-note"></textarea></div>'+
+      '<button class="btn-destructive" id="en-ok">Zgłoś niedostępność</button>'+
+      '<div id="en-wynik"></div></div>';
+    document.getElementById('en-ok').addEventListener('click',function(){
+      gas('masterSetAbsenceRange',[S.token,id,
+          document.getElementById('en-od').value,document.getElementById('en-do').value,
+          document.getElementById('en-typ').value,document.getElementById('en-note').value],function(r){
+        if(!r||!r.ok){ showErr((r&&r.msg)||'Błąd.'); return; }
+        var g=r.grafik;
+        document.getElementById('en-wynik').innerHTML='<div class="ios-row-s" style="margin-top:10px">'+
+          'Zapisano dla '+r.count+' dni.'+(g?' Zmieniono '+g.dniZmienione+' dni grafiku'+
+          ' (usunięto bloków: '+g.blokowUsunietych+', zdjęto z asysty: '+g.asystZdjetych+').':'')+'</div>';
+        showOk('Zgłoszono niedostępność.');
+      });
+    });
+  });
+
+  document.getElementById('e-hist-tog').addEventListener('click',function(){
+    var box=document.getElementById('e-hist-box');
+    if(box.innerHTML){ box.innerHTML=''; return; }
+    box.innerHTML=skeleton(2);
+    gas('masterGetHistoriaPracownika',[S.token,id],function(r){
+      if(!r||!r.ok){ box.innerHTML=pusto('⚠️','Błąd',(r&&r.msg)||''); return; }
+      var w=r.wpisy||[];
+      box.innerHTML=w.length?'<div class="ios-card" style="margin:10px 0;max-height:280px;overflow-y:auto">'+
+        w.map(function(x){
+          return '<div class="ios-row"><div class="ios-row-b"><div class="ios-row-t">'+esc(x.akcja)+'</div>'+
+            '<div class="ios-row-s">'+esc(x.szczegoly)+'</div></div>'+
+            '<span class="ios-row-s" style="flex-shrink:0">'+esc(x.czas.slice(0,16).replace('T',' '))+'</span></div>';
+        }).join('')+'</div>'
+        : pusto('🕓','Brak wpisów','Historia pojawi się po pierwszej zmianie');
+    });
+  });
+
   var ar=document.getElementById('e-arch');
   if(ar) ar.addEventListener('click',function(){
     var b=this;

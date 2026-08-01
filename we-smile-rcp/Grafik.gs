@@ -2340,6 +2340,70 @@ function masterKopiujDzienGrafiku(token, zData, naDaty) {
   return { ok: true, skopiowano: ok, bledy: bledy.slice(0, 15) };
 }
 
+// ── Niedostępność → automatyczny wpis do grafiku ──────────────
+// Wywoływane z masterSetAbsenceRange (Dashboard.gs) w momencie
+// REJESTRACJI nieobecności (nie przy jej czyszczeniu — cofnięcie
+// automatycznie usuniętych bloków byłoby zgadywaniem, którego blok
+// przywrócić i w jakich godzinach, więc świadomie tego nie robimy;
+// właściciel dokłada bloki ręcznie, jeśli nieobecność była pomyłką).
+//
+// Osobę zdejmujemy z grafiku dwojako: jeśli jest głównym wykonawcą bloku
+// (lekarz/higienistka) — blok znika, bo nie ma go kto obsadzić; jeśli
+// jest tylko asystą — zostaje usunięta z listy asysty, a sam blok lekarza
+// zostaje (silnik rekomendacji i tak go oznaczy jako brakujący asystę).
+// Dodatkowo jedna zbiorcza adnotacja (typ "wolne") na cały zakres, żeby
+// z samego grafiku było widać PRZYCZYNĘ braku obsady, a nie tylko fakt.
+
+function _zdejmijZGrafikuNaNieobecnosc(token, empId, empImieNazwisko, dateFrom, dateTo, etykietaTypu) {
+  const wynik = { dniZmienione: 0, blokowUsunietych: 0, asystZdjetych: 0 };
+  let y = parseInt(dateFrom.slice(0, 4), 10), m = parseInt(dateFrom.slice(5, 7), 10);
+  const yKoniec = parseInt(dateTo.slice(0, 4), 10), mKoniec = parseInt(dateTo.slice(5, 7), 10);
+
+  while (y < yKoniec || (y === yKoniec && m <= mKoniec)) {
+    const mies = masterGrafikMiesiac(token, y, m);
+    if (mies.ok) {
+      mies.dni.forEach(dz => {
+        if (dz.data < dateFrom || dz.data > dateTo) return;
+        if (!dz.czynny || !(dz.bloki || []).length) return;
+
+        let zmieniono = false;
+        const noweBloki = [];
+        dz.bloki.forEach(b => {
+          if (String(b.osobaId) === String(empId)) {
+            zmieniono = true;
+            wynik.blokowUsunietych++;
+            return; // blok pomijamy — nie trafia do noweBloki
+          }
+          const asysta = b.asysta || [];
+          if (asysta.some(a => String(a.osobaId) === String(empId))) {
+            zmieniono = true;
+            wynik.asystZdjetych++;
+            noweBloki.push(Object.assign({}, b, {
+              asysta: asysta.filter(a => String(a.osobaId) !== String(empId))
+            }));
+          } else {
+            noweBloki.push(b);
+          }
+        });
+
+        if (zmieniono) {
+          const r = masterZapiszDzienGrafiku(token, dz.data, noweBloki);
+          if (r && r.ok) wynik.dniZmienione++;
+        }
+      });
+    }
+    m++;
+    if (m > 12) { m = 1; y++; }
+  }
+
+  masterSaveAdnotacja(token, {
+    od: dateFrom, do: dateTo, typ: 'wolne',
+    tresc: empImieNazwisko + ': ' + etykietaTypu, osobaId: String(empId)
+  });
+
+  return wynik;
+}
+
 // ── Synchronizacja z Google Calendar ─────────────────────────
 // Dwukierunkowa, ale każdy kierunek robi jedną, konkretną rzecz:
 //   RCP → Kalendarz: ISTNIENIE bloku (dodanie/usunięcie w RCP tworzy
