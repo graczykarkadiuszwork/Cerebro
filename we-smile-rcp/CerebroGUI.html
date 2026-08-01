@@ -86,6 +86,26 @@
 .cb-cal-more{font-size:10.5px;color:var(--cb-gray);padding:2px 6px}
 .cb-cal-nav{display:flex;align-items:center;gap:10px;margin-bottom:2px}
 .cb-cal-tytul{font-size:15px;font-weight:600;color:var(--cb-ink);min-width:140px;text-align:center}
+
+/* ── Wydruk grafiku — ukryty na ekranie, widoczny tylko w oknie druku.
+   Kolory na sztywno (nie zmienne --cb-*), bo drukarka i tak je spłaszcza
+   do czerni/bieli, a papier nie ma trybu nocnego. ── */
+.cb-print-area{display:none}
+.cb-print-h1{font-size:20px;font-weight:700;margin-bottom:4px}
+.cb-print-sub{font-size:12px;color:#555;margin-bottom:14px}
+.cb-print-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.cb-print-tbl th{text-align:left;border-bottom:2px solid #000;padding:6px 8px;font-size:11px;text-transform:uppercase}
+.cb-print-tbl td{border-bottom:1px solid #ccc;padding:6px 8px;vertical-align:top}
+.cb-print-data{white-space:nowrap;font-weight:600}
+.cb-print-blok{margin-bottom:4px}
+.cb-print-as{color:#555;font-size:11px}
+.cb-print-brak{color:#b00020;font-weight:700;font-size:11px}
+.cb-print-adn{margin-top:4px;font-style:italic;color:#333}
+.cb-print-pusto{color:#888}
+@media print{
+  body>*:not(.cb-print-area){display:none !important}
+  .cb-print-area{display:block !important}
+}
 </style>
 </head>
 <body>
@@ -160,6 +180,7 @@
 
 <div class="cb-modal" id="cb-modal"><div class="modal-sheet" id="cb-modal-body"></div></div>
 <div class="cb-toasts" id="cb-toasts"></div>
+<div id="cb-print-area" class="cb-print-area"></div>
 
 <script>
 /* global google */
@@ -455,6 +476,11 @@ function wagaBadge(w){
          w==='info'?'badge-green':'badge-blue';
 }
 
+var ADNOTACJA_KOLOR={info:'badge-blue',uwaga:'badge-orange',wazne:'badge-red',wolne:'badge-gray'};
+var ADNOTACJA_LABEL={info:'Informacja',uwaga:'Uwaga',wazne:'Ważne',wolne:'Nieczynne / wolne'};
+function adnBadge(typ){ return ADNOTACJA_KOLOR[typ]||'badge-purple'; }
+function adnLabel(typ){ return ADNOTACJA_LABEL[typ]||typ; }
+
 // ── Grafik ────────────────────────────────────────────────────
 
 function modGrafik(){
@@ -510,7 +536,7 @@ function rysujSiatke(){
     ? '<div class="ios-card" style="margin-bottom:16px">'+(d.adnotacje||[]).map(function(a){
         return '<div class="ios-row"><div class="ios-row-b"><div class="ios-row-t">'+esc(a.tresc)+'</div>'+
           '<div class="ios-row-s">'+esc(a.od)+(a.do!==a.od?' – '+esc(a.do):'')+'</div></div>'+
-          '<span class="badge badge-purple">adnotacja</span></div>';
+          '<span class="badge '+adnBadge(a.typ)+'">'+esc(adnLabel(a.typ))+'</span></div>';
       }).join('')+'</div>' : '';
 
   box.innerHTML=adn+
@@ -897,6 +923,9 @@ function modMiesiac(){
   document.getElementById('cb-content').innerHTML=
     '<div class="cb-wrap">'+naglowek('Miesiąc','Realny kalendarz — każdy dzień do edycji',
       '<div class="cb-btn-row">'+
+      '<button class="btn-secondary btn-small" id="mc-adnotacje">Adnotacje</button>'+
+      '<button class="btn-secondary btn-small" id="mc-wydruk">Wydruk</button>'+
+      '<button class="btn-secondary btn-small" id="mc-gcal">Google Calendar</button>'+
       '<button class="btn-secondary btn-small" id="mc-prev">‹</button>'+
       '<button class="btn-secondary btn-small" id="mc-next">›</button></div>')+
     '<div class="segmented" id="mc-widok" style="margin-bottom:12px">'+
@@ -911,6 +940,9 @@ function modMiesiac(){
   document.getElementById('mc-next').addEventListener('click',function(){
     MC.mies++; if(MC.mies>12){MC.mies=1;MC.rok++;} mcWczytaj();
   });
+  document.getElementById('mc-adnotacje').addEventListener('click',adnotacjeSheet);
+  document.getElementById('mc-wydruk').addEventListener('click',wydrukSheet);
+  document.getElementById('mc-gcal').addEventListener('click',gcalSheet);
   document.querySelectorAll('#mc-widok [data-w]').forEach(function(b){
     b.addEventListener('click',function(){
       MC.widok=this.getAttribute('data-w');
@@ -1100,8 +1132,9 @@ function mcDzien(data){
       '<div class="ios-row-s" style="margin-bottom:12px">Klinika '+esc(d.godziny.open)+'–'+esc(d.godziny.close)+
       (d.zTemplate?' · dzień z szablonu tygodniowego':' · dzień zmieniony ręcznie')+'</div>'+
       (d.adnotacje.length?'<div class="ios-card" style="margin-bottom:12px">'+d.adnotacje.map(function(a){
-        return '<div class="ios-row"><div class="ios-row-b"><div class="ios-row-t">'+esc(a.tresc)+'</div></div>'+
-          '<span class="badge badge-purple">adnotacja</span></div>';
+        return '<div class="ios-row"><div class="ios-row-b"><div class="ios-row-t">'+esc(a.tresc)+'</div>'+
+          (a.od!==a.do?'<div class="ios-row-s">'+esc(a.od)+' – '+esc(a.do)+'</div>':'')+'</div>'+
+          '<span class="badge '+adnBadge(a.typ)+'">'+esc(adnLabel(a.typ))+'</span></div>';
       }).join('')+'</div>':'')+
       '<div class="ios-card" id="mc-bloki">'+
       (robocze.length?robocze.map(function(b,i){
@@ -1350,6 +1383,303 @@ function mcKopiuj(zData,d){
     gas('masterKopiujDzienGrafiku',[S.token,zData,wyb],function(r){
       if(!r||!r.ok){ showErr((r&&r.msg)||'Błąd.'); return; }
       closeModal(); showOk('Skopiowano na '+r.skopiowano+' dni.'); mcWczytaj();
+    });
+  });
+}
+
+// ── Adnotacje — zarządzanie (lista miesiąca, edycja, powtarzanie) ──
+// Odczyt/wyświetlanie adnotacji istniało już wcześniej (przy dniach
+// w Grafiku i Miesiącu); tu dochodzi jedyne miejsce, gdzie da się je
+// tworzyć/edytować/usuwać z poziomu Cerebro, plus opcja serii.
+
+function adnotacjeSheet(){
+  if(!MC.dane){ showErr('Poczekaj na wczytanie miesiąca.'); return; }
+  showModal('<div class="modal-title">Adnotacje — '+esc(MIESIACE[MC.mies-1])+' '+MC.rok+'</div>'+
+    '<div class="ios-row-s" style="margin-bottom:12px">Dotyczą wybranego zakresu dat — mogą wykraczać poza ten miesiąc.</div>'+
+    '<div class="ios-card" id="adn-lista">'+skeleton(3)+'</div>'+
+    '<button class="btn-primary" id="adn-nowa" style="margin-top:14px">+ Nowa adnotacja</button>');
+  document.getElementById('adn-nowa').addEventListener('click',function(){ adnotacjaEdytuj(null); });
+  adnotacjeWczytaj();
+}
+
+function adnotacjeWczytaj(){
+  gas('masterGetAdnotacje',[S.token],function(res){
+    var box=document.getElementById('adn-lista');
+    if(!box) return;
+    if(!res||!res.ok){ box.innerHTML=pusto('⚠️','Nie wczytano',(res&&res.msg)||''); return; }
+    var pierwszy=MC.rok+'-'+String(MC.mies).padStart(2,'0')+'-01';
+    var ostatni=MC.rok+'-'+String(MC.mies).padStart(2,'0')+'-'+String(new Date(MC.rok,MC.mies,0).getDate()).padStart(2,'0');
+    var lista=(res.adnotacje||[]).filter(function(a){ return a.od<=ostatni && a.do>=pierwszy; })
+      .sort(function(a,b){ return a.od<b.od?-1:a.od>b.od?1:0; });
+    S.adnotacje=res.adnotacje||[];
+    box.innerHTML=lista.length
+      ? lista.map(function(a){
+          var gab=(MC.dane.gabinety.find(function(g){return g.id===a.gabinetId;})||{}).nazwa;
+          var os=a.osobaId?osobaNazwa(a.osobaId):'';
+          return '<div class="ios-row"><div class="ios-row-b"><div class="ios-row-t">'+esc(a.tresc)+'</div>'+
+            '<div class="ios-row-s">'+esc(a.od)+(a.do!==a.od?' – '+esc(a.do):'')+
+              (gab?' · '+esc(gab):'')+(os?' · '+esc(os):'')+'</div></div>'+
+            '<span class="badge '+adnBadge(a.typ)+'" style="margin-right:8px">'+esc(adnLabel(a.typ))+'</span>'+
+            '<button class="btn-secondary btn-small" data-adn-edytuj="'+esc(a.id)+'">Edytuj</button></div>';
+        }).join('')
+      : pusto('🗓️','Brak adnotacji w tym miesiącu','Dodaj pierwszą poniżej');
+    box.querySelectorAll('[data-adn-edytuj]').forEach(function(b){
+      b.addEventListener('click',function(){
+        var id=this.getAttribute('data-adn-edytuj');
+        adnotacjaEdytuj(S.adnotacje.find(function(x){return x.id===id;}));
+      });
+    });
+  });
+}
+
+function adnotacjaEdytuj(a){
+  var gabOpcje=(MC.dane.gabinety||[]).map(function(g){
+    return '<option value="'+esc(g.id)+'"'+(a&&a.gabinetId===g.id?' selected':'')+'>'+esc(g.nazwa)+'</option>';
+  }).join('');
+  var osobyDost=(MC.dane.personel||[]);
+  var osOpcje=osobyDost.map(function(p){
+    return '<option value="'+esc(p.id)+'"'+(a&&a.osobaId===p.id?' selected':'')+'>'+esc(p.imie+' '+p.nazwisko)+'</option>';
+  }).join('');
+
+  showModal('<div class="modal-title">'+(a?'Edytuj adnotację':'Nowa adnotacja')+'</div>'+
+    '<div class="cb-field"><label class="cb-lbl">Treść</label>'+
+    '<textarea class="ios-textarea" id="ae-tresc">'+esc(a?a.tresc:'')+'</textarea></div>'+
+    '<div class="cb-field"><label class="cb-lbl">Typ</label>'+
+    '<select class="ios-select" id="ae-typ">'+ADNOTACJA_TYPY_LISTA.map(function(t){
+      return '<option value="'+t.id+'"'+(a&&a.typ===t.id||(!a&&t.id==='info')?' selected':'')+'>'+esc(t.label)+'</option>';
+    }).join('')+'</select></div>'+
+    '<div class="cb-grid2"><div class="cb-field"><label class="cb-lbl">Od</label>'+
+    '<input type="date" class="ios-input" id="ae-od" value="'+esc(a?a.od:dzisStr())+'"></div>'+
+    '<div class="cb-field"><label class="cb-lbl">Do</label>'+
+    '<input type="date" class="ios-input" id="ae-do" value="'+esc(a?a.do:dzisStr())+'"></div></div>'+
+    '<div class="cb-field"><label class="cb-lbl">Gabinet (opcjonalnie)</label>'+
+    '<select class="ios-select" id="ae-gab"><option value="">— cała klinika —</option>'+gabOpcje+'</select></div>'+
+    '<div class="cb-field"><label class="cb-lbl">Osoba (opcjonalnie)</label>'+
+    '<select class="ios-select" id="ae-os"><option value="">— nie dotyczy jednej osoby —</option>'+osOpcje+'</select></div>'+
+    (a?'':
+      '<div class="cb-field"><label class="cb-lbl">Powtarzaj</label>'+
+      '<select class="ios-select" id="ae-powt"><option value="">— nie powtarzaj —</option>'+
+      '<option value="tydzien">co tydzień</option><option value="miesiac">co miesiąc</option>'+
+      '<option value="rok">co rok</option></select></div>'+
+      '<div class="cb-field" id="ae-powt-do-pole" style="display:none">'+
+      '<label class="cb-lbl">Powtarzaj do</label><input type="date" class="ios-input" id="ae-powt-do"></div>')+
+    '<button class="btn-primary" id="ae-ok" style="margin-top:14px">Zapisz</button>'+
+    (a?'<button class="btn-destructive" id="ae-usun" style="margin-top:10px">Usuń adnotację</button>':''));
+
+  var powtSel=document.getElementById('ae-powt');
+  if(powtSel) powtSel.addEventListener('change',function(){
+    document.getElementById('ae-powt-do-pole').style.display=this.value?'block':'none';
+  });
+
+  document.getElementById('ae-ok').addEventListener('click',function(){
+    var payload={
+      id:a?a.id:'', tresc:document.getElementById('ae-tresc').value.trim(),
+      typ:document.getElementById('ae-typ').value,
+      od:document.getElementById('ae-od').value, do:document.getElementById('ae-do').value,
+      gabinetId:document.getElementById('ae-gab').value, osobaId:document.getElementById('ae-os').value
+    };
+    var powt=powtSel?powtSel.value:'';
+    if(powt){
+      var koniec=document.getElementById('ae-powt-do').value;
+      if(!koniec){ showErr('Podaj datę końca powtarzania.'); return; }
+      gas('masterSaveAdnotacjaSeria',[S.token,payload,{tryb:powt,do:koniec}],function(r){
+        if(!r||!r.ok){ showErr((r&&r.msg)||'Nie zapisano.'); return; }
+        showOk('Utworzono '+r.utworzono+' adnotacji.');
+        adnotacjeSheet(); mcWczytaj();
+      });
+      return;
+    }
+    gas('masterSaveAdnotacja',[S.token,payload],function(r){
+      if(!r||!r.ok){ showErr((r&&r.msg)||'Nie zapisano.'); return; }
+      showOk('Zapisano adnotację.');
+      adnotacjeSheet(); mcWczytaj();
+    });
+  });
+
+  var usunBtn=document.getElementById('ae-usun');
+  if(usunBtn) usunBtn.addEventListener('click',function(){
+    if(usunBtn.getAttribute('data-armed')!=='1'){
+      usunBtn.setAttribute('data-armed','1'); usunBtn.textContent='Na pewno? Kliknij ponownie';
+      setTimeout(function(){ if(usunBtn){usunBtn.removeAttribute('data-armed');usunBtn.textContent='Usuń adnotację';} },4000);
+      return;
+    }
+    gas('masterDeleteAdnotacja',[S.token,a.id],function(r){
+      if(!r||!r.ok){ showErr((r&&r.msg)||'Nie usunięto.'); return; }
+      showOk('Usunięto adnotację.');
+      adnotacjeSheet(); mcWczytaj();
+    });
+  });
+}
+
+// ── Wydruk / eksport miesiąca — filtry osoby/gabinet/zakres ────
+// Cały silnik filtrowania (daty, godziny, gabinety, osoby) już istniał
+// po stronie backendu (masterGrafikWydruk, używany przez klasyczny
+// panel) — tu dochodzi tylko formularz i wyrenderowanie wyniku do
+// wydruku w stylu Cerebro.
+
+function wydrukSheet(){
+  if(!MC.dane){ showErr('Poczekaj na wczytanie miesiąca.'); return; }
+  var pierwszy=MC.rok+'-'+String(MC.mies).padStart(2,'0')+'-01';
+  var ostatni=MC.rok+'-'+String(MC.mies).padStart(2,'0')+'-'+String(new Date(MC.rok,MC.mies,0).getDate()).padStart(2,'0');
+  showModal('<div class="modal-title">Wydruk grafiku</div>'+
+    '<div class="cb-grid2"><div class="cb-field"><label class="cb-lbl">Od</label>'+
+    '<input type="date" class="ios-input" id="wd-od" value="'+esc(pierwszy)+'"></div>'+
+    '<div class="cb-field"><label class="cb-lbl">Do</label>'+
+    '<input type="date" class="ios-input" id="wd-do" value="'+esc(ostatni)+'"></div></div>'+
+    '<div class="cb-grid2"><div class="cb-field"><label class="cb-lbl">Godzina od (opcjonalnie)</label>'+
+    '<input type="time" class="ios-input" id="wd-god"></div>'+
+    '<div class="cb-field"><label class="cb-lbl">Godzina do (opcjonalnie)</label>'+
+    '<input type="time" class="ios-input" id="wd-gdo"></div></div>'+
+    '<div class="cb-field"><label class="cb-lbl">Gabinety (puste = wszystkie)</label>'+
+    '<div class="cb-tags" id="wd-gab">'+(MC.dane.gabinety||[]).map(function(g){
+      return '<button type="button" class="cb-tag off" data-g="'+esc(g.id)+'">'+esc(g.nazwa)+'</button>';
+    }).join('')+'</div></div>'+
+    '<div class="cb-field"><label class="cb-lbl">Osoby (puste = wszystkie)</label>'+
+    '<div class="cb-tags" id="wd-os">'+(MC.dane.personel||[]).map(function(p){
+      return '<button type="button" class="cb-tag off" data-o="'+esc(p.id)+'">'+esc(p.imie+' '+p.nazwisko)+'</button>';
+    }).join('')+'</div></div>'+
+    '<button class="btn-primary" id="wd-ok" style="margin-top:14px">Przygotuj i drukuj</button>');
+
+  var gWyb=[], oWyb=[];
+  function przelacz(sel,wyb,attr){
+    document.querySelectorAll(sel).forEach(function(b){
+      b.addEventListener('click',function(){
+        var v=this.getAttribute(attr);
+        var i=wyb.indexOf(v);
+        if(i===-1) wyb.push(v); else wyb.splice(i,1);
+        this.classList.toggle('off',wyb.indexOf(v)===-1);
+      });
+    });
+  }
+  przelacz('#wd-gab [data-g]',gWyb,'data-g');
+  przelacz('#wd-os [data-o]',oWyb,'data-o');
+
+  document.getElementById('wd-ok').addEventListener('click',function(){
+    var opts={
+      od:document.getElementById('wd-od').value, do:document.getElementById('wd-do').value,
+      godzOd:document.getElementById('wd-god').value, godzDo:document.getElementById('wd-gdo').value,
+      gabinetIds:gWyb.slice(), osobaIds:oWyb.slice()
+    };
+    showToast('Przygotowuję wydruk…','info');
+    gas('masterGrafikWydruk',[S.token,opts],function(r){
+      if(!r||!r.ok){ showErr((r&&r.msg)||'Błąd wydruku.'); return; }
+      wydrukRenderuj(r);
+      closeModal();
+      setTimeout(function(){ window.print(); },200);
+    });
+  });
+}
+
+function wydrukRenderuj(d){
+  var box=document.getElementById('cb-print-area');
+  var html='<div class="cb-print-h1">Grafik obsady gabinetów — We SMILE</div>'+
+    '<div class="cb-print-sub">'+esc(d.od)+' – '+esc(d.do)+(d.filtr?' · '+esc(d.filtr):'')+
+    ' · wydruk '+esc(dzisStr())+'</div>';
+  if(!d.dni.length){
+    box.innerHTML=html+'<div class="cb-print-pusto">Brak obsady w wybranym zakresie.</div>';
+    return;
+  }
+  html+='<table class="cb-print-tbl"><thead><tr><th>Data</th><th>Dzień</th><th>Obsada</th></tr></thead><tbody>'+
+    d.dni.map(function(dz){
+      var tresc=(dz.bloki||[]).map(function(b){
+        return '<div class="cb-print-blok"><b>'+esc(b.od)+'–'+esc(b.do)+'</b> · '+esc(b.gabinet)+' · '+esc(b.osoba)+
+          (b.typ==='Higienizacja'?' <i>(higienizacja)</i>':'')+
+          (b.asysta&&b.asysta.length?'<br><span class="cb-print-as">as. '+esc(b.asysta.join(', '))+'</span>':'')+
+          (b.brakAsysty?'<br><span class="cb-print-brak">BRAK ASYSTY</span>':'')+'</div>';
+      }).join('');
+      var adn=(dz.adnotacje||[]).map(function(a){
+        return '<div class="cb-print-adn">'+esc(adnLabel(a.typ))+': '+esc(a.tresc)+
+          (a.gabinet?' ('+esc(a.gabinet)+')':'')+(a.osoba?' ('+esc(a.osoba)+')':'')+'</div>';
+      }).join('');
+      return '<tr><td class="cb-print-data">'+esc(dz.data)+'</td><td>'+esc(dz.dzien)+'</td>'+
+        '<td>'+(tresc||'<span class="cb-print-pusto">—</span>')+adn+'</td></tr>';
+    }).join('')+'</tbody></table>';
+  box.innerHTML=html;
+}
+
+var ADNOTACJA_TYPY_LISTA=[
+  {id:'info',label:'Informacja'},{id:'uwaga',label:'Uwaga'},
+  {id:'wazne',label:'Ważne'},{id:'wolne',label:'Nieczynne / wolne'}
+];
+
+// ── Google Calendar — konfiguracja i synchronizacja ─────────────
+// Istnienie bloku idzie RCP -> Kalendarz (dodanie/usunięcie w RCP
+// tworzy/kasuje wydarzenie), godziny — Kalendarz -> RCP (przesunięcie
+// wydarzenia w telefonie wraca do RCP przy kolejnym "Synchronizuj").
+
+function gcalSheet(){
+  showModal('<div class="modal-title">Google Calendar</div>'+
+    '<div id="gc-body">'+skeleton(2)+'</div>');
+  gas('masterGcalGetConfig',[S.token],function(res){
+    var box=document.getElementById('gc-body');
+    if(!box) return;
+    if(!res||!res.ok){ box.innerHTML=pusto('⚠️','Nie wczytano',(res&&res.msg)||''); return; }
+    gcalRysuj(res);
+  });
+}
+
+function gcalRysuj(cfg){
+  var box=document.getElementById('gc-body');
+  var status=cfg.calendarId
+    ? (cfg.polaczony
+        ? '<div class="ios-row"><div class="ios-row-b"><div class="ios-row-t">Podłączony kalendarz</div>'+
+          '<div class="ios-row-s">'+esc(cfg.nazwaKalendarza)+'</div></div>'+
+          '<span class="badge badge-green">połączono</span></div>'
+        : '<div class="ios-row"><div class="ios-row-b"><div class="ios-row-t">Kalendarz niedostępny</div>'+
+          '<div class="ios-row-s">Sprawdź identyfikator albo uprawnienia.</div></div>'+
+          '<span class="badge badge-red">błąd</span></div>')
+    : '<div class="ios-row-s" style="margin-bottom:8px">Nie podłączono jeszcze kalendarza.</div>';
+
+  box.innerHTML=
+    (cfg.calendarId?'<div class="ios-card" style="margin-bottom:14px">'+status+'</div>':'')+
+    '<div class="cb-field"><label class="cb-lbl">Identyfikator kalendarza Google</label>'+
+    '<input class="ios-input" id="gc-id" value="'+esc(cfg.calendarId||'')+'" '+
+      'placeholder="np. twoj.email@gmail.com albo xxxx@group.calendar.google.com"></div>'+
+    '<div class="ios-row-s" style="margin-bottom:12px">Znajdziesz go w Ustawieniach kalendarza Google → '+
+      'Integracja → Identyfikator kalendarza.</div>'+
+    '<button class="btn-primary" id="gc-polacz">'+(cfg.calendarId?'Zaktualizuj połączenie':'Połącz')+'</button>'+
+    (cfg.calendarId?'<button class="btn-secondary" id="gc-odlacz" style="margin-top:10px">Odłącz kalendarz</button>':'')+
+    (cfg.polaczony?
+      '<div class="section-title" style="margin-top:18px">Synchronizacja</div>'+
+      '<div class="ios-row-s" style="margin-bottom:12px">Obejmuje bieżąco otwarty miesiąc w zakładce Miesiąc'+
+        (MC.dane?' ('+esc(MIESIACE[MC.mies-1])+' '+MC.rok+')':'')+'.</div>'+
+      '<button class="btn-primary" id="gc-sync">Synchronizuj ten miesiąc</button>'+
+      '<div id="gc-wynik"></div>'
+      :'');
+
+  document.getElementById('gc-polacz').addEventListener('click',function(){
+    var id=document.getElementById('gc-id').value.trim();
+    if(!id){ showErr('Podaj identyfikator kalendarza.'); return; }
+    showToast('Łączenie…','info');
+    gas('masterGcalSetConfig',[S.token,id],function(r){
+      if(!r||!r.ok){ showErr((r&&r.msg)||'Nie udało się połączyć.'); return; }
+      showOk('Połączono z „'+r.nazwaKalendarza+'”.');
+      gcalSheet();
+    });
+  });
+  var odlaczBtn=document.getElementById('gc-odlacz');
+  if(odlaczBtn) odlaczBtn.addEventListener('click',function(){
+    gas('masterGcalSetConfig',[S.token,''],function(r){
+      if(!r||!r.ok){ showErr((r&&r.msg)||'Błąd.'); return; }
+      showOk('Odłączono kalendarz.');
+      gcalSheet();
+    });
+  });
+  var syncBtn=document.getElementById('gc-sync');
+  if(syncBtn) syncBtn.addEventListener('click',function(){
+    if(!MC.dane){ showErr('Otwórz najpierw zakładkę Miesiąc.'); return; }
+    syncBtn.disabled=true; syncBtn.textContent='Synchronizuję…';
+    gas('masterGcalSync',[S.token,MC.rok,MC.mies],function(r){
+      syncBtn.disabled=false; syncBtn.textContent='Synchronizuj ten miesiąc';
+      var wynik=document.getElementById('gc-wynik');
+      if(!r||!r.ok){ if(wynik) wynik.innerHTML=pusto('⚠️','Błąd synchronizacji',(r&&r.msg)||''); return; }
+      if(wynik) wynik.innerHTML='<div class="ios-row-s" style="margin-top:10px">'+
+        'Utworzono: '+r.utworzono+' · Zaktualizowano: '+r.zaktualizowane+' · Usunięto: '+r.usuniete+
+        ' · Pobrano zmian godzin z kalendarza: '+r.pociagnieteZKalendarza+
+        (r.bledyPull&&r.bledyPull.length?'<br><span style="color:var(--cb-red)">'+esc(r.bledyPull.join(' · '))+'</span>':'')+
+        '</div>';
+      showOk('Zsynchronizowano.');
+      mcWczytaj();
     });
   });
 }

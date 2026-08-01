@@ -1824,29 +1824,37 @@ function masterGetAdnotacje(token) {
   return { ok: true, adnotacje: _adnotacjeAll(), typy: ADNOTACJA_TYPY };
 }
 
-function masterSaveAdnotacja(token, a) {
-  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+// Waliduje pola wspólne dla pojedynczej adnotacji i każdego wystąpienia
+// serii — jedno miejsce, żeby oba tryby zapisu nie mogły się rozjechać.
+function _walidujAdnotacje(a) {
   a = a || {};
   const od = String(a.od || '').trim();
   const do_ = String(a.do || od).trim();
   const tresc = String(a.tresc || '').trim().slice(0, 500);
   const typ = ADNOTACJA_TYPY.some(x => x.id === a.typ) ? a.typ : 'info';
 
-  if (!_dataOk(od) || !_dataOk(do_)) return { ok: false, msg: 'Podaj poprawny zakres dat.' };
-  if (od > do_) return { ok: false, msg: 'Data „od" nie może być późniejsza niż „do".' };
-  if (!tresc) return { ok: false, msg: 'Wpisz treść adnotacji.' };
+  if (!_dataOk(od) || !_dataOk(do_)) return { blad: 'Podaj poprawny zakres dat.' };
+  if (od > do_) return { blad: 'Data „od" nie może być późniejsza niż „do".' };
+  if (!tresc) return { blad: 'Wpisz treść adnotacji.' };
+
+  return { od, do: do_, typ, tresc, gabinetId: String(a.gabinetId || ''), osobaId: String(a.osobaId || '') };
+}
+
+function masterSaveAdnotacja(token, a) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  const v = _walidujAdnotacje(a);
+  if (v.blad) return { ok: false, msg: v.blad };
 
   const sh = _shAdnotacje();
-  const wartosci = [od, do_, typ, tresc,
-                    String(a.gabinetId || ''), String(a.osobaId || ''), new Date().toISOString()];
-  const id = String(a.id || '');
+  const wartosci = [v.od, v.do, v.typ, v.tresc, v.gabinetId, v.osobaId, new Date().toISOString()];
+  const id = String((a || {}).id || '');
 
   if (id) {
     const rows = sh.getDataRange().getValues();
     for (let i = 1; i < rows.length; i++) {
       if (String(rows[i][0]) === id) {
         sh.getRange(i + 1, 2, 1, wartosci.length).setValues([wartosci]);
-        _logAdmin('EdycjaAdnotacji', id, od + '–' + do_ + ': ' + tresc.slice(0, 60));
+        _logAdmin('EdycjaAdnotacji', id, v.od + '–' + v.do + ': ' + v.tresc.slice(0, 60));
         return { ok: true, id };
       }
     }
@@ -1855,8 +1863,91 @@ function masterSaveAdnotacja(token, a) {
 
   const nowe = _nextId(_adnotacjeAll(), 'AD');
   sh.appendRow([nowe].concat(wartosci));
-  _logAdmin('DodanieAdnotacji', nowe, od + '–' + do_ + ': ' + tresc.slice(0, 60));
+  _logAdmin('DodanieAdnotacji', nowe, v.od + '–' + v.do + ': ' + v.tresc.slice(0, 60));
   return { ok: true, id: nowe };
+}
+
+// ── Adnotacje powtarzające się ────────────────────────────────
+// Nie ma osobnego pola „powtarzalności” w arkuszu — seria to po prostu
+// kilka zwyczajnych adnotacji zapisanych jedna po drugiej, z tą samą
+// treścią. Prostsze niż wprowadzanie wzorca powtarzania do modelu danych,
+// a edycja/usunięcie pojedynczego wystąpienia działa dokładnie tak samo
+// jak dla adnotacji, która nigdy nie była częścią serii.
+const ADNOTACJA_SERIA_MAX = 104; // ok. 2 lata co tydzień — bezpiecznik przed nieskończoną pętlą
+
+function _ymd(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function _przesunDniOd(dataStr, dni) {
+  const d = new Date(dataStr + 'T12:00:00');
+  d.setDate(d.getDate() + dni);
+  return _ymd(d);
+}
+
+// Miesiąc/rok liczymy zawsze OD DATY BAZOWEJ (nie łańcuchowo od poprzedniego
+// wystąpienia), z przycięciem dnia do długości docelowego miesiąca.
+// Bez tego 31 stycznia co miesiąc „uciekłoby” przez luty: JS Date z
+// setMonth() na dniu, którego docelowy miesiąc nie ma, przelewa się na
+// kolejny (31 sty + 1 mies. → 3 marca zamiast 28 lutego), a każde kolejne
+// wystąpienie liczone od takiego dryfu psułoby się coraz bardziej.
+function _przesunDate(dataBazowa, tryb, ile) {
+  const d = new Date(dataBazowa + 'T12:00:00');
+  if (tryb === 'tydzien') { d.setDate(d.getDate() + 7 * ile); return _ymd(d); }
+
+  const dzien = d.getDate();
+  if (tryb === 'miesiac') {
+    const rok = d.getFullYear(), mies = d.getMonth() + ile;
+    const ostatni = new Date(rok, mies + 1, 0);
+    ostatni.setDate(Math.min(dzien, ostatni.getDate()));
+    return _ymd(ostatni);
+  }
+  if (tryb === 'rok') {
+    const rok = d.getFullYear() + ile, mies = d.getMonth();
+    const ostatni = new Date(rok, mies + 1, 0);
+    ostatni.setDate(Math.min(dzien, ostatni.getDate()));
+    return _ymd(ostatni);
+  }
+  return null;
+}
+
+function masterSaveAdnotacjaSeria(token, a, powtarzaj) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  const v = _walidujAdnotacje(a);
+  if (v.blad) return { ok: false, msg: v.blad };
+
+  powtarzaj = powtarzaj || {};
+  const tryb = ['tydzien', 'miesiac', 'rok'].indexOf(powtarzaj.tryb) !== -1 ? powtarzaj.tryb : null;
+  const koniec = String(powtarzaj.do || '').trim();
+  if (!tryb) return { ok: false, msg: 'Wybierz sposób powtarzania.' };
+  if (!_dataOk(koniec)) return { ok: false, msg: 'Podaj datę końca powtarzania.' };
+  if (koniec < v.od) return { ok: false, msg: 'Data końca powtarzania musi być późniejsza niż pierwsze wystąpienie.' };
+
+  // Wystąpienia mają tę samą długość, co pierwsze (np. tydzień urlopu
+  // powtórzony co miesiąc nadal trwa tydzień).
+  const dlugoscDni = Math.round((new Date(v.do + 'T12:00:00') - new Date(v.od + 'T12:00:00')) / 86400000);
+
+  const wystapienia = [{ od: v.od, do: v.do }];
+  for (let i = 1; i < ADNOTACJA_SERIA_MAX; i++) {
+    const nastOd = _przesunDate(v.od, tryb, i);
+    if (!nastOd || nastOd > koniec) break;
+    wystapienia.push({ od: nastOd, do: _przesunDniOd(nastOd, dlugoscDni) });
+  }
+
+  const sh = _shAdnotacje();
+  const teraz = new Date().toISOString();
+  let seed = _adnotacjeAll();
+  const utworzoneId = [];
+  wystapienia.forEach(w => {
+    const id = _nextId(seed, 'AD');
+    seed = seed.concat([{ id }]);
+    sh.appendRow([id, w.od, w.do, v.typ, v.tresc, v.gabinetId, v.osobaId, teraz]);
+    utworzoneId.push(id);
+  });
+
+  _logAdmin('DodanieSeriiAdnotacji', utworzoneId.join(','),
+    wystapienia.length + '× „' + v.tresc.slice(0, 60) + '” (' + tryb + ' do ' + koniec + ')');
+  return { ok: true, utworzono: wystapienia.length, id: utworzoneId };
 }
 
 function masterDeleteAdnotacja(token, id) {
@@ -2247,4 +2338,158 @@ function masterKopiujDzienGrafiku(token, zData, naDaty) {
     if (r && r.ok) ok++; else bledy.push(d + ': ' + ((r && r.msg) || 'błąd'));
   });
   return { ok: true, skopiowano: ok, bledy: bledy.slice(0, 15) };
+}
+
+// ── Synchronizacja z Google Calendar ─────────────────────────
+// Dwukierunkowa, ale każdy kierunek robi jedną, konkretną rzecz:
+//   RCP → Kalendarz: ISTNIENIE bloku (dodanie/usunięcie w RCP tworzy
+//                     lub kasuje wydarzenie).
+//   Kalendarz → RCP: GODZINY (przesunięcie wydarzenia w telefonie czy
+//                     na komputerze wraca do RCP przy kolejnej synchronizacji).
+// CalendarApp działa po stronie serwerów Google — właściciel autoryzuje
+// dostęp raz (standardowe okno zgody Apps Script), bez żadnej ręcznej
+// konfiguracji OAuth.
+//
+// Każde wydarzenie założone przez RCP niesie w opisie znacznik
+// [WeSMILE:data:blokId] — tylko po nim rozpoznajemy „nasze” wydarzenia;
+// nic innego w kalendarzu właściciela nigdy nie jest ruszane.
+//
+// Znane ograniczenie: masterZapiszDzienGrafiku (wywoływany też przez
+// krok „pociągnięcia” godzin z Kalendarza) zawsze nadaje NOWE ID blokom
+// zapisywanego dnia — to established zachowanie GrafikDni, używane też
+// przez kalendarz z przeciąganiem i nie jest tu zmieniane, bo dużo w
+// aplikacji na nim polega. Skutek: wydarzenie powiązane z blokiem, który
+// tego dnia się zmienił, przy kolejnej synchronizacji zostanie odtworzone
+// od nowa (usunięte i założone ponownie) zamiast zaktualizowane w miejscu.
+// Sam grafik się nie rozjeżdża — traci się tylko ciągłość wydarzenia
+// (np. własne przypomnienie dopięte w Kalendarzu do tego konkretnego wpisu).
+
+const GCAL_PROP_KEY = 'grafik_gcal_id';
+const GCAL_TAG_RE = /\[WeSMILE:(\d{4}-\d{2}-\d{2}):([A-Za-z0-9]+)\]/;
+
+function masterGcalGetConfig(token) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  const id = PropertiesService.getScriptProperties().getProperty(GCAL_PROP_KEY) || '';
+  let nazwa = '';
+  if (id) {
+    try { const c = CalendarApp.getCalendarById(id); nazwa = c ? c.getName() : ''; }
+    catch (e) { nazwa = ''; }
+  }
+  return { ok: true, calendarId: id, polaczony: !!nazwa, nazwaKalendarza: nazwa };
+}
+
+function masterGcalSetConfig(token, calendarId) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  calendarId = String(calendarId || '').trim();
+  if (!calendarId) {
+    PropertiesService.getScriptProperties().deleteProperty(GCAL_PROP_KEY);
+    return { ok: true, calendarId: '' };
+  }
+  let cal;
+  try { cal = CalendarApp.getCalendarById(calendarId); } catch (e) { cal = null; }
+  if (!cal) return { ok: false, msg: 'Nie znaleziono kalendarza o tym identyfikatorze (albo brak dostępu).' };
+  PropertiesService.getScriptProperties().setProperty(GCAL_PROP_KEY, calendarId);
+  _logAdmin('KonfiguracjaGCal', calendarId, cal.getName());
+  return { ok: true, calendarId, nazwaKalendarza: cal.getName() };
+}
+
+function masterGcalSync(token, rok, mies) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  const calendarId = PropertiesService.getScriptProperties().getProperty(GCAL_PROP_KEY) || '';
+  if (!calendarId) return { ok: false, msg: 'Najpierw podłącz kalendarz Google.' };
+  let cal;
+  try { cal = CalendarApp.getCalendarById(calendarId); } catch (e) { cal = null; }
+  if (!cal) return { ok: false, msg: 'Kalendarz niedostępny — sprawdź identyfikator i uprawnienia.' };
+
+  const miesiac = masterGrafikMiesiac(token, rok, mies);
+  if (!miesiac.ok) return miesiac;
+
+  const gabMap = {};
+  (miesiac.gabinety || []).forEach(g => { gabMap[g.id] = g.nazwa; });
+  const nazwaOsobyGcal = id => {
+    const p = (miesiac.personel || []).find(x => x.id === id);
+    if (p) return p.imie + ' ' + p.nazwisko;
+    return _czyAsystaZew(id) ? _labelAsystaZew(id) : id;
+  };
+
+  const pierwszy = new Date(rok, mies - 1, 1, 0, 0, 0);
+  const ostatniDzienMies = new Date(rok, mies, 0, 23, 59, 59);
+  const zdarzenia = cal.getEvents(pierwszy, ostatniDzienMies);
+  const naszeWg = {}; // 'data|blokId' -> CalendarEvent
+  zdarzenia.forEach(ev => {
+    const m = GCAL_TAG_RE.exec(ev.getDescription() || '');
+    if (m) naszeWg[m[1] + '|' + m[2]] = ev;
+  });
+
+  const blokiRcp = {}; // 'data|blokId' -> { dzien, blok }
+  miesiac.dni.forEach(dz => {
+    (dz.bloki || []).forEach(b => { blokiRcp[dz.data + '|' + b.id] = { dzien: dz, blok: b }; });
+  });
+
+  // 1) Godziny nadpisane ręcznie w Kalendarzu wracają do RCP. Grupujemy
+  //    po dniu, bo zapis dnia (masterZapiszDzienGrafiku) zawsze zapisuje
+  //    cały dzień naraz, nie pojedynczy blok.
+  const zmienioneDni = {};
+  Object.keys(naszeWg).forEach(klucz => {
+    const wpis = blokiRcp[klucz];
+    if (!wpis) return; // blok już nie istnieje w RCP — posprzątamy w kroku 3
+    const ev = naszeWg[klucz];
+    const evOd = _hhmm(ev.getStartTime().getHours() * 60 + ev.getStartTime().getMinutes());
+    const evDo = _hhmm(ev.getEndTime().getHours() * 60 + ev.getEndTime().getMinutes());
+    if (evOd !== wpis.blok.od || evDo !== wpis.blok.do) {
+      wpis.blok.od = evOd;
+      wpis.blok.do = evDo;
+      zmienioneDni[wpis.dzien.data] = true;
+    }
+  });
+  let pociagnieteZKalendarza = 0;
+  const bledyPull = [];
+  Object.keys(zmienioneDni).forEach(data => {
+    const dz = miesiac.dni.find(x => x.data === data);
+    const r = masterZapiszDzienGrafiku(token, data, dz.bloki);
+    if (r.ok) pociagnieteZKalendarza++; else bledyPull.push(data + ': ' + r.msg);
+  });
+
+  // 2) RCP → Kalendarz: dodaj brakujące wydarzenia, zaktualizuj istniejące.
+  let utworzone = 0, zaktualizowane = 0;
+  Object.keys(blokiRcp).forEach(klucz => {
+    const wpis = blokiRcp[klucz];
+    const dzien = wpis.dzien, blok = wpis.blok;
+    const tytul = (gabMap[blok.gabinetId] || blok.gabinetId) + ' — ' + nazwaOsobyGcal(blok.osobaId) +
+      (blok.typ === BLOK_HIGIENA ? ' (higienizacja)' : '');
+    const asysta = (blok.asysta || []).map(a => nazwaOsobyGcal(a.osobaId)).join(', ');
+    const opis = '[WeSMILE:' + dzien.data + ':' + blok.id + ']' +
+      (asysta ? '\nAsysta: ' + asysta : (blok.typ === BLOK_LEKARZ ? '\nBRAK ASYSTY' : ''));
+    const start = new Date(dzien.data + 'T' + blok.od + ':00');
+    const koniec = new Date(dzien.data + 'T' + blok.do + ':00');
+
+    const ev = naszeWg[klucz];
+    if (!ev) {
+      cal.createEvent(tytul, start, koniec, { description: opis });
+      utworzone++;
+    } else if (ev.getTitle() !== tytul || ev.getDescription() !== opis ||
+               ev.getStartTime().getTime() !== start.getTime() || ev.getEndTime().getTime() !== koniec.getTime()) {
+      ev.setTitle(tytul);
+      ev.setTime(start, koniec);
+      ev.setDescription(opis);
+      zaktualizowane++;
+    }
+  });
+
+  // 3) Sprzątanie: nasze wydarzenia bez odpowiadającego bloku w RCP
+  //    (blok usunięty albo — patrz ograniczenie wyżej — dostał nowe ID
+  //    przy zapisie dnia).
+  let usuniete = 0;
+  Object.keys(naszeWg).forEach(klucz => {
+    if (!blokiRcp[klucz]) { naszeWg[klucz].deleteEvent(); usuniete++; }
+  });
+
+  _logAdmin('SynchronizacjaGCal', rok + '-' + String(mies).padStart(2, '0'),
+    'utworzono ' + utworzone + ', zaktualizowano ' + zaktualizowane + ', usunięto ' + usuniete +
+    ', pociągnięto godzin z kalendarza ' + pociagnieteZKalendarza);
+
+  return {
+    ok: true, utworzono, zaktualizowane, usuniete,
+    pociagnieteZKalendarza, bledyPull: bledyPull.slice(0, 10)
+  };
 }

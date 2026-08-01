@@ -360,6 +360,7 @@ function callRCP(action, argsJson) {
       case 'masterGrafikKreatorZapisz': return masterGrafikKreatorZapisz(args[0], args[1], args[2]);
       case 'masterGetAdnotacje':    return masterGetAdnotacje(args[0]);
       case 'masterSaveAdnotacja':   return masterSaveAdnotacja(args[0], args[1]);
+      case 'masterSaveAdnotacjaSeria': return masterSaveAdnotacjaSeria(args[0], args[1], args[2]);
       case 'masterDeleteAdnotacja': return masterDeleteAdnotacja(args[0], args[1]);
       case 'masterGrafikWydruk':    return masterGrafikWydruk(args[0], args[1]);
       case 'masterGrafikMiesiac':      return masterGrafikMiesiac(args[0], args[1], args[2]);
@@ -371,6 +372,9 @@ function callRCP(action, argsJson) {
       case 'masterGetSzablonyZmian':   return masterGetSzablonyZmian(args[0]);
       case 'masterSaveSzablonZmiany':  return masterSaveSzablonZmiany(args[0], args[1]);
       case 'masterDeleteSzablonZmiany': return masterDeleteSzablonZmiany(args[0], args[1]);
+      case 'masterGcalGetConfig':   return masterGcalGetConfig(args[0]);
+      case 'masterGcalSetConfig':   return masterGcalSetConfig(args[0], args[1]);
+      case 'masterGcalSync':        return masterGcalSync(args[0], args[1], args[2]);
       case 'masterRemoveEmployee':  return masterRemoveEmployee(args[0], args[1]);
       case 'masterRestoreEmployee': return masterRestoreEmployee(args[0], args[1]);
       case 'masterAddEmployee':     return masterAddEmployee(args[0], args[1], args[2], args[3], args[4]);
