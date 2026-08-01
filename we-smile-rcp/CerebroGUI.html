@@ -1901,11 +1901,16 @@ function zespolDodaj(){
 // ── Raporty ───────────────────────────────────────────────────
 
 function modRaporty(){
+  if(!S.rpWidok) S.rpWidok='godziny';
   document.getElementById('cb-content').innerHTML=
-    '<div class="cb-wrap">'+naglowek('Raporty','Czas pracy zespołu',
+    '<div class="cb-wrap">'+naglowek('Raporty','Czas pracy i obecność zespołu',
       '<div class="cb-btn-row"><button class="btn-secondary btn-small" id="r-prev">‹</button>'+
       '<button class="btn-secondary btn-small" id="r-next">›</button>'+
       '<button class="btn-primary btn-small" id="r-exp">Eksport Excel</button></div>')+
+    '<div class="segmented" id="r-widok" style="margin-bottom:12px">'+
+      '<button class="segmented-btn'+(S.rpWidok==='godziny'?' active':'')+'" data-w="godziny">Godziny</button>'+
+      '<button class="segmented-btn'+(S.rpWidok==='obecnosc'?' active':'')+'" data-w="obecnosc">Obecność</button>'+
+    '</div>'+
     '<div class="section-title" id="r-lbl">—</div>'+
     '<div id="r-lista">'+skeleton(4)+'</div></div>';
   document.getElementById('r-prev').addEventListener('click',function(){
@@ -1913,6 +1918,9 @@ function modRaporty(){
   });
   document.getElementById('r-next').addEventListener('click',function(){
     S.rpMonth++; if(S.rpMonth>12){S.rpMonth=1;S.rpYear++;} rapWczytaj();
+  });
+  document.querySelectorAll('#r-widok [data-w]').forEach(function(b){
+    b.addEventListener('click',function(){ S.rpWidok=this.getAttribute('data-w'); modRaporty(); });
   });
   document.getElementById('r-exp').addEventListener('click',function(){
     showInfo('Generuję plik…');
@@ -1935,6 +1943,7 @@ function modRaporty(){
 function rapWczytaj(){
   var l=document.getElementById('r-lbl');
   if(l) l.textContent=MIESIACE[S.rpMonth-1]+' '+S.rpYear;
+  if(S.rpWidok==='obecnosc'){ rapWczytajObecnosc(); return; }
   gas('masterGetDashboard',[S.token,S.rpYear,S.rpMonth],function(res){
     var box=document.getElementById('r-lista');
     if(!box) return;
@@ -1972,6 +1981,58 @@ function rapOsoba(e,etat){
           esc((d.wejscie||'—')+' → '+(d.wyjscie||'brak wyjścia')))+'</div></div>'+
         '<span class="badge badge-gray">'+(d.mins!=null?fmtHM(d.mins):'—')+'</span></div>';
     }).join('')+'</div>':pusto('📅','Brak zdarzeń','')));
+}
+
+// ── Raporty — widok Obecność ─────────────────────────────────
+// Inny kąt niż "Godziny": nie sumuje czasu pracy, tylko dni — ile dni
+// roboczych klinika miała, ile z nich pracownik odbił, ile było
+// usprawiedliwioną nieobecnością, a ile to luka bez wyjaśnienia.
+// Posortowane od najniższej frekwencji, żeby to, co wymaga uwagi, było
+// od razu na górze.
+
+function rapWczytajObecnosc(){
+  gas('masterGetRaportObecnosci',[S.token,S.rpYear,S.rpMonth],function(res){
+    var box=document.getElementById('r-lista');
+    if(!box) return;
+    if(!res||!res.ok){ box.innerHTML=pusto('⚠️','Nie wczytano',(res&&res.msg)||''); return; }
+    var lista=res.pracownicy||[];
+    if(!lista.length){ box.innerHTML=pusto('📊','Brak danych',''); return; }
+    box.innerHTML='<div class="ios-row-s" style="margin-bottom:10px">'+
+      res.dniRoboczeMiesiaca+' dni roboczych klinki w tym miesiącu.</div>'+
+      '<div class="ios-card">'+lista.map(function(p){
+        var kolor=p.frekwencja==null?'badge-gray':p.frekwencja>=95?'badge-green':
+          p.frekwencja>=80?'badge-orange':'badge-red';
+        return '<button class="ios-row tap" data-ro="'+esc(p.id)+'"><div class="ios-row-b">'+
+          '<div class="ios-row-t">'+esc(p.imie+' '+p.nazwisko)+'</div>'+
+          '<div class="ios-row-s">obecnych: '+p.obecnych+' · nieobecność: '+p.nieobecnychUspr+
+            (p.brakujacych?' · <span style="color:var(--cb-red)">bez wyjaśnienia: '+p.brakujacych+'</span>':'')+
+          '</div></div>'+
+          '<span class="badge '+kolor+'">'+(p.frekwencja==null?'—':p.frekwencja+'%')+'</span>'+chev()+'</button>';
+      }).join('')+'</div>';
+    box.querySelectorAll('[data-ro]').forEach(function(b){
+      b.addEventListener('click',function(){
+        var p=lista.find(function(x){return x.id===b.getAttribute('data-ro');});
+        rapObecnoscOsoba(p);
+      });
+    });
+  });
+}
+
+function rapObecnoscOsoba(p){
+  showModal('<div class="modal-title">'+esc(p.imie+' '+p.nazwisko)+'</div>'+
+    '<div class="cb-stats" style="margin-bottom:16px">'+
+      kafel('Frekwencja',(p.frekwencja==null?'—':p.frekwencja+'%'),
+        p.frekwencja!=null&&p.frekwencja<80?'red':'')+
+      kafel('Obecnych dni',p.obecnych,'')+
+      kafel('Nieobecność',p.nieobecnychUspr,'orange')+
+    '</div>'+
+    (p.brakujacych?
+      '<div class="section-title">Dni bez odbicia i bez zgłoszonej nieobecności</div>'+
+      '<div class="ios-card">'+p.brakujaceDaty.map(function(d){
+        return '<div class="ios-row"><div class="ios-row-b"><div class="ios-row-t">'+esc(d)+'</div></div>'+
+          '<span class="badge badge-red">brak</span></div>';
+      }).join('')+'</div>'
+      : pusto('✅','Bez luk','Wszystkie dni robocze wyjaśnione')));
 }
 
 // ── Dzień / Urlop / Dni wolne / Kod / Pomoc ───────────────────

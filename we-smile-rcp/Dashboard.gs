@@ -177,6 +177,69 @@ function getDashboard(token, year, month) {
 }
 
 // Wariant dla panelu Właściciela — jego własna sesja (masterLogin) wystarcza.
+// ── Raport obecności ───────────────────────────────────────────
+// Inny kąt niż istniejący raport godzin (masterGetDashboard sumuje CZAS
+// pracy): tu chodzi o same DNI — ile dni roboczych klinika miała w
+// miesiącu, ile z nich pracownik faktycznie odbił, ile było
+// usprawiedliwioną nieobecnością, a ile to dni bez odbicia i bez
+// nieobecności w Nieobecnosciach (czyli luka wymagająca wyjaśnienia).
+// Tylko personel odbijający się w RCP (_isRcpWorker) — lekarze nie mają
+// tu czego liczyć, ich obecność widać w Grafiku, nie w Ewidencji.
+
+function masterGetRaportObecnosci(token, rok, mies) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  const y = parseInt(rok, 10), m = parseInt(mies, 10);
+  if (isNaN(y) || isNaN(m) || m < 1 || m > 12) return { ok: false, msg: 'Nieprawidłowy miesiąc.' };
+
+  const pracownicy = _getWorkers().filter(_isRcpWorker);
+  const ileDni = new Date(y, m, 0).getDate();
+  const pfx = y + '-' + String(m).padStart(2, '0');
+  const dniRobocze = [];
+  for (let d = 1; d <= ileDni; d++) {
+    const ds = pfx + '-' + String(d).padStart(2, '0');
+    if (_clinicHoursFor(ds)) dniRobocze.push(ds);
+  }
+
+  const ewidSh = _ss().getSheetByName('Ewidencja');
+  const rows = (ewidSh && ewidSh.getLastRow() >= 2) ? ewidSh.getDataRange().getValues().slice(1) : [];
+  const odbiciaWg = {}; // empId -> { data: true }
+  rows.forEach(r => {
+    if (String(r[4]).trim() !== 'WEJSCIE') return;
+    const ds = _sheetDate(r[5]);
+    if (!ds.startsWith(pfx)) return;
+    const id = String(r[1]);
+    if (!odbiciaWg[id]) odbiciaWg[id] = {};
+    odbiciaWg[id][ds] = true;
+  });
+
+  const absMap = _absenceMapAll();
+
+  const pracownicyRaport = pracownicy.map(w => {
+    const id = String(w[0]);
+    let obecnych = 0, nieobecnychUspr = 0, brakujacych = 0;
+    const brakujaceDaty = [];
+    dniRobocze.forEach(ds => {
+      if (odbiciaWg[id] && odbiciaWg[id][ds]) { obecnych++; return; }
+      if (absMap[id + '_' + ds]) { nieobecnychUspr++; return; }
+      brakujacych++;
+      brakujaceDaty.push(ds);
+    });
+    const oczekiwane = dniRobocze.length - nieobecnychUspr;
+    const frekwencja = oczekiwane > 0 ? Math.round((obecnych / oczekiwane) * 1000) / 10 : null;
+    return {
+      id, imie: String(w[1]), nazwisko: String(w[2]), rola: String(w[3]),
+      obecnych, nieobecnychUspr, brakujacych, brakujaceDaty, frekwencja
+    };
+  });
+
+  pracownicyRaport.sort((a, b) => {
+    const fa = a.frekwencja == null ? 999 : a.frekwencja, fb = b.frekwencja == null ? 999 : b.frekwencja;
+    return fa - fb;
+  });
+
+  return { ok: true, rok: y, mies: m, dniRoboczeMiesiaca: dniRobocze.length, pracownicy: pracownicyRaport };
+}
+
 function masterGetDashboard(token, year, month) {
   if (!_masterOk(token)) {
     return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
