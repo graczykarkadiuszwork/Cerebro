@@ -256,6 +256,13 @@
         </button>
       </div>
     </div>
+    <span class="ws-spider" data-cerebro="1" aria-hidden="true">
+      <span class="ws-spider-thread"></span>
+      <svg class="ws-spider-body" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3.4"/>
+        <path d="M12 8.6V4M8.8 10.2 5.4 7.4M15.2 10.2l3.4-2.8M8.8 13.8 5 15.6M15.2 13.8l3.8 1.8M9.2 15.2 7 19M14.8 15.2l2.2 3.8"/>
+      </svg>
+    </span>
   </header>
 
   <div id="m-presence-bar" class="presence-bar" style="display:none">
@@ -2761,8 +2768,9 @@ function imPodglad(res) {
 
 // ── Widok: Pracownicy (forma zatrudnienia) ────────
 // Uwaga: ukryte wejście do interfejsu Cerebro Hub (sekwencja tryb nocny →
-// słowo „Admin" → płonąca ikona → oko) siedzi w Styles.html i działa przez
-// delegację na `document`. Tutaj wystarczy oznaczyć słowo `data-cerebro="1"`.
+// kliknięcie pająka pod nagłówkiem → płonąca ikona → oko) siedzi
+// w Styles.html i działa przez delegację na `document` — wyzwalaczem
+// jest element `.ws-spider` w nagłówku (patrz niżej), nie coś na tej liście.
 
 var FORMA_LABELS = { UoP: 'Umowa o pracę', Zlecenie: 'Umowa zlecenie', B2B: 'B2B' };
 
@@ -2779,7 +2787,7 @@ function renderStaffList() {
     return '<div class="staff-row' + (unset ? ' warn' : '') + '" data-id="' + esc(e.id) + '">' +
       '<div><span class="staff-name">' + esc(e.imie + ' ' + e.nazwisko) + '</span>' +
       '<span class="staff-role">' +
-        (isAdmin ? '<span class="ws-admin-key" data-cerebro="1">' + esc(e.rola) + '</span>' : esc(e.rola || '')) +
+        esc(e.rola || '') +
         (e.status ? ' · ' + esc(e.status) : '') + '</span>' +
       (unset ? '<span class="staff-warn-lbl">Brak formy zatrudnienia — urlop nie doliczy godzin</span>' : '') +
       '</div>' +

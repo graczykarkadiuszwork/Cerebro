@@ -327,9 +327,30 @@ button,input,select,textarea{font-family:inherit}
   box-shadow:0 0 14px rgba(168,85,247,.6) !important;
 }
 
-/* Słowo „Admin" w zakładce Zespół — klikalne, ale bez żadnej wskazówki,
-   że coś się za nim kryje. */
-.ws-admin-key{cursor:pointer;-webkit-tap-highlight-color:transparent}
+/* Pająk zjeżdżający na pajęczynie pod górną belką — wyzwalacz sekwencji
+   Cerebro. Widoczny wyłącznie w trybie nocnym (tak jak wcześniej warunkiem
+   wstępnym całej sekwencji był tryb nocny) — w jasnym motywie nie zajmuje
+   miejsca i nie przechwytuje kliknięć. */
+.ws-spider{
+  display:none;position:absolute;left:50%;top:100%;transform:translateX(-50%);
+  width:34px;height:64px;cursor:pointer;-webkit-tap-highlight-color:transparent;
+  z-index:15;pointer-events:none;
+}
+[data-theme="dark"] .ws-spider{display:block;pointer-events:auto}
+.ws-spider-thread{
+  position:absolute;left:50%;top:0;width:1px;height:100%;
+  background:linear-gradient(rgba(255,255,255,.05),rgba(255,255,255,.55));
+}
+.ws-spider-body{
+  position:absolute;left:50%;top:0;width:15px;height:15px;margin-left:-7.5px;
+  color:#22c55e;filter:drop-shadow(0 0 3px rgba(34,197,94,.55));
+  animation:wsSpiderDangle 4.5s ease-in-out infinite;
+  transform-origin:50% -30px;
+}
+@keyframes wsSpiderDangle{
+  0%,100%{top:36px;transform:rotate(-4deg)}
+  50%{top:48px;transform:rotate(4deg)}
+}
 
 /* ── Popup błędu — samodzielnie zamykany, u góry ekranu ── */
 .ws-error-popup{
@@ -731,20 +752,25 @@ window.wsSetConnStatus = function (ok, msg) {
 })();
 
 /* ── Ukryte wejście do interfejsu Cerebro Hub ──────────────────
-   Sekwencja: tryb nocny → kliknięcie słowa „Admin" w zakładce Zespół
-   → ikona trybu wyświetlania płonie 3 s fioletowym płomieniem
-   → zamienia się w oko Cerebro → kliknięcie oka otwiera Hub.
+   Sekwencja: tryb nocny → kliknięcie zielonego pająka (.ws-spider)
+   zjeżdżającego na pajęczynie pod górną belką → ikona trybu wyświetlania
+   płonie 3 s fioletowym płomieniem → zamienia się w oko Cerebro →
+   kliknięcie oka otwiera Hub. Pająk jest widoczny tylko w trybie nocnym —
+   to on niesie teraz warunek wstępny, który wcześniej sprawdzał osobno
+   `wsCerebroStart()`; funkcja nadal sprawdza motyw, na wypadek gdyby
+   ktoś zdążył kliknąć tuż przed przełączeniem na jasny.
 
    Całość siedzi tutaj, a nie w poszczególnych widokach, z dwóch powodów:
    1) desktop i mobile mają dokładnie tę samą sekwencję i nie mogą się
       rozjechać przy kolejnych zmianach,
    2) nasłuch jest delegowany na `document` w fazie przechwytywania, więc
-      przeżywa każde przerysowanie listy zespołu — wcześniej handler
-      podpinany po renderze znikał przy odświeżeniu widoku.
+      przeżywa każde przerysowanie strony — wcześniej handler podpinany
+      po renderze znikał przy odświeżeniu widoku.
 
-   Widok musi tylko: (a) oznaczyć klikalne słowo atrybutem
-   `data-cerebro="1"`, (b) mieć przycisk trybu nocnego z klasą `theme-ic`,
-   (c) wystawić `BASE_URL`. Nic poza tym. */
+   Widok musi tylko: (a) umieścić w nagłówku element `.ws-spider` (CSS go
+   ukrywa poza trybem nocnym) z atrybutem `data-cerebro="1"`, (b) mieć
+   przycisk trybu nocnego z klasą `theme-ic`, (c) wystawić `BASE_URL`.
+   Nic poza tym. */
 (function () {
   var OKO =
     '<svg class="ic-sm ws-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
