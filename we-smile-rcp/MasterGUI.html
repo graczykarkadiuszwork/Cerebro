@@ -484,7 +484,18 @@
           <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
           Ułóż grafik lekarza
         </button>
+        <button id="gr-lekarza-toggle" class="btn btn-ghost" type="button">Grafik lekarza</button>
         <button id="gr-gabinety-toggle" class="btn btn-ghost" type="button">Gabinety</button>
+      </div>
+
+      <div id="gr-lekarza-panel" class="section" style="display:none">
+        <div class="section-title">Grafik lekarza — cały tydzień naraz</div>
+        <div class="hint">Wybierz lekarza i ustaw jego godziny oraz gabinet dla każdego dnia tygodnia w jednym miejscu.</div>
+        <div class="field" style="margin-top:10px">
+          <span class="field-lbl">Lekarz</span>
+          <select id="grl-lekarz" class="sel"></select>
+        </div>
+        <div id="grl-dni"></div>
       </div>
 
       <div id="gr-gabinety-panel" class="section" style="display:none">
@@ -2081,6 +2092,107 @@ document.getElementById('gr-rek-close').addEventListener('click', function() {
 document.getElementById('gr-rek-modal').addEventListener('click', function(e) {
   if (e.target === this) this.style.display = 'none';
 });
+
+// ── Grafik lekarza — kontekst jednego lekarza, cały tydzień naraz ──
+// Ta sama walidacja i te same zapisy co edycja pojedynczego bloku w
+// widoku tygodniowym (masterSaveGrafikBlok/masterDeleteGrafikBlok) —
+// tylko przełożone na układ „jeden lekarz, siedem wierszy dni".
+
+var GRL = { lekarzId: null };
+
+document.getElementById('gr-lekarza-toggle').addEventListener('click', function() {
+  var p = document.getElementById('gr-lekarza-panel');
+  var open = p.style.display === 'none';
+  p.style.display = open ? 'block' : 'none';
+  if (open) grlRysuj();
+});
+
+function grlRysuj() {
+  var lekarze = (GR.dane.personel || []).filter(function(p) { return p.grupa === 'lekarz'; });
+  if (!GRL.lekarzId || !lekarze.some(function(p) { return p.id === GRL.lekarzId; })) {
+    GRL.lekarzId = lekarze.length ? lekarze[0].id : null;
+  }
+  var sel = document.getElementById('grl-lekarz');
+  sel.innerHTML = lekarze.map(function(p) {
+    return '<option value="' + esc(p.id) + '"' + (p.id === GRL.lekarzId ? ' selected' : '') + '>' +
+      esc(p.imie + ' ' + p.nazwisko) + '</option>';
+  }).join('');
+  grlRysujDni();
+}
+
+document.getElementById('grl-lekarz').addEventListener('change', function() {
+  GRL.lekarzId = this.value;
+  grlRysujDni();
+});
+
+function grlRysujDni() {
+  var box = document.getElementById('grl-dni');
+  if (!GRL.lekarzId) { box.innerHTML = '<div class="hint">Brak lekarzy — dodaj lekarza w zakładce Zespół.</div>'; return; }
+
+  var bloki = (GR.dane.bloki || []).filter(function(b) { return b.osobaId === GRL.lekarzId && b.typ === 'Lekarz'; });
+  var gabinety = GR.dane.gabinety || [];
+
+  box.innerHTML = GR.dane.dni.map(function(nr) {
+    var g = GR.dane.godziny[nr];
+    var blok = bloki.find(function(b) { return b.dzien === nr; });
+    return '<div class="staff-row" style="align-items:flex-start;flex-wrap:wrap;gap:10px">' +
+      '<div style="min-width:100%">' +
+        '<div class="staff-name">' + esc(g.nazwa) + ' <span class="staff-role">(klinika ' + esc(g.open) + '–' + esc(g.close) + ')</span></div>' +
+        '<div class="field" style="margin-top:8px;margin-bottom:6px">' +
+          '<span class="field-lbl">Gabinet</span>' +
+          '<select class="sel" data-grl-gab="' + nr + '">' +
+            '<option value="">— nie pracuje w tym dniu —</option>' +
+            gabinety.map(function(gab) {
+              return '<option value="' + esc(gab.id) + '"' + (blok && blok.gabinetId === gab.id ? ' selected' : '') + '>' + esc(gab.nazwa) + '</option>';
+            }).join('') +
+          '</select></div>' +
+        '<div class="field-row2">' +
+          '<div class="field" style="margin-bottom:0"><span class="field-lbl">Od</span>' +
+          '<input type="time" class="inp" data-grl-od="' + nr + '" value="' + (blok ? esc(blok.od) : esc(g.open)) + '"></div>' +
+          '<div class="field" style="margin-bottom:0"><span class="field-lbl">Do</span>' +
+          '<input type="time" class="inp" data-grl-do="' + nr + '" value="' + (blok ? esc(blok.do) : esc(g.close)) + '"></div>' +
+        '</div>' +
+      '</div>' +
+      '<button type="button" class="btn btn-primary" data-grl-zapisz="' + nr + '">' + (blok ? 'Zapisz' : 'Dodaj') + '</button>' +
+      (blok ? '<button type="button" class="btn btn-ghost" data-grl-usun="' + esc(blok.id) + '">Usuń</button>' : '') +
+    '</div>';
+  }).join('');
+
+  box.querySelectorAll('[data-grl-zapisz]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var nr = parseInt(this.getAttribute('data-grl-zapisz'), 10);
+      var gabinetId = box.querySelector('[data-grl-gab="' + nr + '"]').value;
+      var od = box.querySelector('[data-grl-od="' + nr + '"]').value;
+      var doCzas = box.querySelector('[data-grl-do="' + nr + '"]').value;
+      if (!gabinetId) { toast('Wybierz gabinet.', false); return; }
+      var blok = bloki.find(function(b) { return b.dzien === nr; });
+      var payload = { id: blok ? blok.id : '', gabinetId: gabinetId, dzien: nr, typ: 'Lekarz', osobaId: GRL.lekarzId,
+        od: od, do: doCzas, asystaWymagana: blok ? blok.asystaWymagana : 1, asystaUwaga: blok ? blok.asystaUwaga : '' };
+      gas('masterSaveGrafikBlok', [M.token, payload], function(res) {
+        if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+        if (!res || !res.ok) { toast((res && res.msg) || 'Nie zapisano.', false); return; }
+        toast('Zapisano.', true);
+        grLoad(function() { grlRysujDni(); });
+      });
+    });
+  });
+  box.querySelectorAll('[data-grl-usun]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var b = this;
+      if (b.getAttribute('data-armed') !== '1') {
+        b.setAttribute('data-armed', '1'); b.textContent = 'Na pewno?';
+        setTimeout(function() { if (b.isConnected) { b.removeAttribute('data-armed'); b.textContent = 'Usuń'; } }, 4000);
+        return;
+      }
+      gas('masterDeleteGrafikBlok', [M.token, this.getAttribute('data-grl-usun')], function(res) {
+        if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+        if (!res || !res.ok) { toast((res && res.msg) || 'Błąd.', false); return; }
+        toast('Usunięto.', true);
+        grLoad(function() { grlRysujDni(); });
+      });
+    });
+  });
+}
 
 // ── Gabinety ──────────────────────────────────────────────────
 
