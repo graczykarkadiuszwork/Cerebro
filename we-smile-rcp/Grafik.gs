@@ -506,8 +506,8 @@ function masterSetGrafikAsysta(token, blokId, lista) {
     const zew = _czyAsystaZew(osobaId);
     const osoba = zew ? null : personel.find(p => p.id === osobaId);
     if (!zew && !osoba) return { ok: false, msg: 'Wybierz asystę z listy.' };
-    if (osoba && osoba.grupa !== GRUPA_ASYSTENTKA) {
-      return { ok: false, msg: osoba.imie + ' ' + osoba.nazwisko + ' nie jest asystentką.' };
+    if (osoba && osoba.grupa !== GRUPA_ASYSTENTKA && osoba.grupa !== GRUPA_HIGIENISTKA) {
+      return { ok: false, msg: osoba.imie + ' ' + osoba.nazwisko + ' nie jest asystentką ani higienistką.' };
     }
     if (uzyte.indexOf(osobaId) !== -1) {
       return { ok: false, msg: 'Ta sama osoba dwa razy w tym samym bloku.' };
@@ -2576,12 +2576,12 @@ function masterGetPokrycieUrlopu(token, empId, dataOd, dataDo) {
       if (!wObsadzie && !wAsyscie) return;
 
       const rola = wObsadzie ? 'obsada' : 'asysta';
-      const rolaWymagana = wObsadzie ? osoba.grupa : GRUPA_ASYSTENTKA;
+      const rolaWymagana = wObsadzie ? [osoba.grupa] : [GRUPA_ASYSTENTKA, GRUPA_HIGIENISTKA];
       const oknoOd = wObsadzie ? b.od : ((b.asysta.find(a => a.osobaId === empId) || {}).od || b.od);
       const oknoDo = wObsadzie ? b.do : ((b.asysta.find(a => a.osobaId === empId) || {}).do || b.do);
 
       const kandydaci = personel.filter(p => {
-        if (p.id === empId || p.grupa !== rolaWymagana) return false;
+        if (p.id === empId || rolaWymagana.indexOf(p.grupa) === -1) return false;
         if (absencje[p.id + '_' + ds]) return false;
         const zajety = stan.bloki.some(bb =>
           (bb.osobaId === p.id && _zakresyNachodza(oknoOd, oknoDo, bb.od, bb.do)) ||
