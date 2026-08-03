@@ -184,7 +184,8 @@ const DOCTOR_SPECIALIZATION_TAGS = [
   'Gnatologia',
   'Traumatologia stomatologiczna',
   'Leczenie pod mikroskopem',
-  'Konsultacje / pierwsza wizyta'
+  'Konsultacje / pierwsza wizyta',
+  'Medycyna estetyczna'
 ];
 
 // ── Forma zatrudnienia ───────────────────────────────────────
