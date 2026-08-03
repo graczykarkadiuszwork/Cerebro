@@ -340,16 +340,18 @@ button,input,select,textarea{font-family:inherit}
   box-shadow:0 0 14px rgba(168,85,247,.6) !important;
 }
 
-/* Pająk zjeżdżający na pajęczynie pod górną belką — wyzwalacz sekwencji
-   Cerebro. Widoczny wyłącznie w trybie nocnym (tak jak wcześniej warunkiem
-   wstępnym całej sekwencji był tryb nocny) — w jasnym motywie nie zajmuje
-   miejsca i nie przechwytuje kliknięć. */
+/* Pająk zjeżdżający na pajęczynie pod przyciskiem "Wyloguj" — wyzwalacz
+   sekwencji Cerebro. Warunek wstępny to teraz cała kombinacja, nie sam
+   tryb nocny: tryb jasny → odwiedzenie zakładki Zespół → przełączenie na
+   tryb nocny (patrz JS niżej, `data-ws-spider-unlocked`). Poza tą
+   kombinacją pająk nie zajmuje miejsca i nie przechwytuje kliknięć,
+   nawet w trybie nocnym. */
 .ws-spider{
   display:none;position:absolute;left:50%;top:100%;transform:translateX(-50%);
   width:34px;height:64px;cursor:pointer;-webkit-tap-highlight-color:transparent;
   z-index:15;pointer-events:none;
 }
-[data-theme="dark"] .ws-spider{display:block;pointer-events:auto}
+html[data-theme="dark"][data-ws-spider-unlocked="1"] .ws-spider{display:block;pointer-events:auto}
 .ws-spider-thread{
   position:absolute;left:50%;top:0;width:1px;height:100%;
   background:linear-gradient(rgba(255,255,255,.05),rgba(255,255,255,.55));
@@ -765,13 +767,14 @@ window.wsSetConnStatus = function (ok, msg) {
 })();
 
 /* ── Ukryte wejście do interfejsu Cerebro Hub ──────────────────
-   Sekwencja: tryb nocny → kliknięcie zielonego pająka (.ws-spider)
-   zjeżdżającego na pajęczynie pod górną belką → ikona trybu wyświetlania
+   Sekwencja: tryb jasny → odwiedzenie zakładki Zespół → przełączenie na
+   tryb nocny → pod przyciskiem "Wyloguj" zjeżdża na pajęczynie zielony
+   pająk (.ws-spider) → kliknięcie pająka → ikona trybu wyświetlania
    płonie 3 s fioletowym płomieniem → zamienia się w oko Cerebro →
-   kliknięcie oka otwiera Hub. Pająk jest widoczny tylko w trybie nocnym —
-   to on niesie teraz warunek wstępny, który wcześniej sprawdzał osobno
-   `wsCerebroStart()`; funkcja nadal sprawdza motyw, na wypadek gdyby
-   ktoś zdążył kliknąć tuż przed przełączeniem na jasny.
+   kliknięcie oka otwiera Hub. Sam tryb nocny już nie wystarcza — pająk
+   odblokowuje się tylko po całej kombinacji (patrz `zespolArmed` /
+   `data-ws-spider-unlocked` niżej); wejście w tryb jasny w dowolnym
+   momencie kasuje odblokowanie i sekwencję trzeba powtórzyć od nowa.
 
    Całość siedzi tutaj, a nie w poszczególnych widokach, z dwóch powodów:
    1) desktop i mobile mają dokładnie tę samą sekwencję i nie mogą się
@@ -780,9 +783,12 @@ window.wsSetConnStatus = function (ok, msg) {
       przeżywa każde przerysowanie strony — wcześniej handler podpinany
       po renderze znikał przy odświeżeniu widoku.
 
-   Widok musi tylko: (a) umieścić w nagłówku element `.ws-spider` (CSS go
-   ukrywa poza trybem nocnym) z atrybutem `data-cerebro="1"`, (b) mieć
-   przycisk trybu nocnego z klasą `theme-ic`, (c) wystawić `BASE_URL`.
+   Widok musi tylko: (a) umieścić element `.ws-spider` z atrybutem
+   `data-cerebro="1"` tam, gdzie ma się pojawiać (pod przyciskiem
+   Wyloguj — CSS i tak go chowa poza odblokowaną kombinacją), (b) mieć
+   przycisk trybu nocnego z klasą `theme-ic` wywołujący `wsToggleTheme()`,
+   (c) mieć zakładkę/przycisk Zespołu rozpoznawalny jako `#tab-staff`
+   (desktop) albo `[data-view="v-team"]` (mobile), (d) wystawić `BASE_URL`.
    Nic poza tym. */
 (function () {
   var OKO =
@@ -793,6 +799,36 @@ window.wsSetConnStatus = function (ok, msg) {
     '</svg>';
 
   var stan = 'uspiony';   // uspiony → plonie → oko
+
+  // ── Kombinacja odblokowująca pająka: jasny → Zespół → ciemny ──
+  var zespolArmed = false;   // Zespół odwiedzony w trybie jasnym, czeka na przełączenie
+
+  function odblokujPajaka(v) {
+    document.documentElement.setAttribute('data-ws-spider-unlocked', v ? '1' : '0');
+  }
+
+  // Odwiedzenie Zespołu w trybie jasnym uzbraja kombinację.
+  document.addEventListener('click', function (e) {
+    var t = e.target;
+    if (!t || !t.closest) return;
+    if (!t.closest('#tab-staff') && !t.closest('[data-view="v-team"]')) return;
+    if (document.documentElement.getAttribute('data-theme') === 'light') zespolArmed = true;
+  }, true);
+
+  // Przełączenie na tryb nocny po uzbrojeniu odblokowuje pająka; powrót do
+  // jasnego zawsze kasuje i uzbrojenie, i odblokowanie — kombinację trzeba
+  // powtórzyć od zera.
+  var oryginalnyToggle = window.wsToggleTheme;
+  window.wsToggleTheme = function () {
+    oryginalnyToggle();
+    var teraz = document.documentElement.getAttribute('data-theme');
+    if (teraz === 'dark' && zespolArmed) {
+      odblokujPajaka(true);
+    } else if (teraz === 'light') {
+      zespolArmed = false;
+      odblokujPajaka(false);
+    }
+  };
 
   // Wszystkie przełączniki motywu na stronie. Widoki mają ich czasem dwa
   // (ekran logowania + pasek panelu) — pali się ten widoczny.
@@ -807,6 +843,7 @@ window.wsSetConnStatus = function (ok, msg) {
 
   window.wsCerebroStart = function () {
     if (document.documentElement.getAttribute('data-theme') !== 'dark') return;
+    if (document.documentElement.getAttribute('data-ws-spider-unlocked') !== '1') return;
     if (stan !== 'uspiony') return;
 
     var btns = przelaczniki();
