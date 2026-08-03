@@ -260,7 +260,9 @@ function _dashboardData(year, month) {
     const props = PropertiesService.getScriptProperties();
 
     const etatKey = 'etat_' + y + '_' + String(m).padStart(2, '0');
-    const etat = parseFloat(props.getProperty(etatKey) || '') || 0;
+    const etatZapisana = props.getProperty(etatKey);
+    const etat = (etatZapisana !== null) ? (parseFloat(etatZapisana) || 0) : _domyslnaNormaMiesiaca(y, m);
+    const etatAuto = (etatZapisana === null);
 
     const ewidSh = _ss().getSheetByName('Ewidencja');
     const ewidRows = (ewidSh && ewidSh.getLastRow() >= 2)
@@ -349,12 +351,60 @@ function _dashboardData(year, month) {
         };
       });
 
-    return { ok: true, year: y, month: m, etat, employees };
+    return { ok: true, year: y, month: m, etat, etatAuto, employees };
 
   } catch (e) {
     Logger.log('getDashboard error: ' + e);
     return { ok: false, msg: 'Błąd serwera: ' + e.toString() };
   }
+}
+
+// ── Domyślna norma godzin (wymiar czasu pracy) ────────────────
+// Standardowe polskie wyliczenie: dni robocze pon–pt w miesiącu,
+// pomniejszone o święta ustawowe przypadające w dzień roboczy, razy 8h.
+// To tylko PUNKT WYJŚCIA — każdy miesiąc można nadpisać ręcznie
+// (masterSetEtat/setEtat), a nadpisanie zawsze wygrywa z wyliczeniem.
+// Korzysta z tego samego kalendarza świąt, co zakładka Dni wolne.
+
+function _domyslnaNormaMiesiaca(rok, mies) {
+  const dni = new Date(rok, mies, 0).getDate();
+  const swietaDaty = _swietaDlaRoku(rok).map(s => s.data);
+  const pfx = rok + '-' + String(mies).padStart(2, '0') + '-';
+  let robocze = 0;
+  for (let d = 1; d <= dni; d++) {
+    const dow = new Date(rok, mies - 1, d).getDay();
+    if (dow < 1 || dow > 5) continue;
+    const ds = pfx + String(d).padStart(2, '0');
+    if (swietaDaty.indexOf(ds) !== -1) continue;
+    robocze++;
+  }
+  return robocze * 8;
+}
+
+// Przegląd normy na kilka lat do przodu naraz — punkt wyjścia do
+// zaplanowania z góry, z jawnym rozróżnieniem które miesiące są
+// wyliczone automatycznie, a które ktoś już ręcznie nadpisał.
+const NORMA_LAT_MAX = 5;
+
+function masterGetNormaLat(token, rokOd, iloscLat) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  const y1 = parseInt(rokOd, 10);
+  const lat = Math.min(NORMA_LAT_MAX, Math.max(1, parseInt(iloscLat, 10) || NORMA_LAT_MAX));
+  if (isNaN(y1)) return { ok: false, msg: 'Nieprawidłowy rok.' };
+
+  const props = PropertiesService.getScriptProperties();
+  const lata = [];
+  for (let r = y1; r < y1 + lat; r++) {
+    const miesiace = [];
+    for (let m = 1; m <= 12; m++) {
+      const key = 'etat_' + r + '_' + String(m).padStart(2, '0');
+      const zapisana = props.getProperty(key);
+      const godziny = (zapisana !== null) ? (parseFloat(zapisana) || 0) : _domyslnaNormaMiesiaca(r, m);
+      miesiace.push({ miesiac: m, godziny, auto: zapisana === null });
+    }
+    lata.push({ rok: r, miesiace });
+  }
+  return { ok: true, lata };
 }
 
 // ── Zapis normy godzin ────────────────────────────────────────

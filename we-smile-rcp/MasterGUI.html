@@ -587,6 +587,7 @@
         <div class="field">
           <span class="field-lbl">Norma godzin (miesiąc)</span>
           <input type="number" id="rp-etat" class="inp" min="0" step="0.5" placeholder="np. 168">
+          <span id="rp-etat-auto" class="hint" style="display:none;margin-top:4px">Wyliczone automatycznie z dni roboczych i świąt — możesz nadpisać.</span>
         </div>
         <div class="field">
           <span class="field-lbl">&nbsp;</span>
@@ -3331,6 +3332,7 @@ function rpLoadMonth() {
     }
     RP.data = res;
     document.getElementById('rp-etat').value = res.etat > 0 ? res.etat : '';
+    document.getElementById('rp-etat-auto').style.display = res.etatAuto ? 'block' : 'none';
     var emp = null;
     (res.employees || []).forEach(function(e) { if (e.id === RP.empId) emp = e; });
     if (!emp) {
@@ -3346,7 +3348,11 @@ document.getElementById('rp-etat').addEventListener('blur', function() {
   var val = parseFloat(this.value);
   if (isNaN(val) || val < 0) return;
   gas('masterSetEtat', [M.token, RP.year, RP.month, val], function(res) {
-    if (res && res.ok) { wsConfirmPopup('Zapisano normę.'); if (RP.empId) rpLoadMonth(); }
+    if (res && res.ok) {
+      wsConfirmPopup('Zapisano normę.');
+      document.getElementById('rp-etat-auto').style.display = 'none';
+      if (RP.empId) rpLoadMonth();
+    }
     else toast((res && res.msg) || 'Błąd zapisu normy.', false);
   });
 });

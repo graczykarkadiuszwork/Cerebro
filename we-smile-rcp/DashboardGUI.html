@@ -571,6 +571,8 @@ function loadMonth() {
     }
     S.data = res;
     document.getElementById('etat-inp').value = res.etat > 0 ? res.etat : '';
+    document.getElementById('etat-inp').title = res.etatAuto
+      ? 'Wyliczone automatycznie z dni roboczych i świąt — możesz nadpisać.' : '';
     fillSelector(res.employees);
     if (S.selId) {
       var emp = getEmp(S.selId);
