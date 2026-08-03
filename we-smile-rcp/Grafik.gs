@@ -963,7 +963,51 @@ const GRAFIK_SCENARIUSZE = [
     akcja:'Wstaw przerwę — higienizacja to praca w stałej pozycji, bez przerw kończy się kontuzją.' },
   { kod:'J07', kat:'Higienizacja', waga:'sugestia', tytul:'Higienizacja mogłaby wypełnić istniejącą lukę',
     tresc:'Jest {liczba} luk możliwych do wypełnienia higienizacją, a {ile} higienistek nie ma w tym czasie zajęcia.',
-    akcja:'Dopasuj je do luk — to najszybszy zysk z tego grafiku, bez żadnych nowych kosztów.' }
+    akcja:'Dopasuj je do luk — to najszybszy zysk z tego grafiku, bez żadnych nowych kosztów.' },
+
+  // ── K. Regularność i przewidywalność grafiku (129–142) ────────
+  { kod:'K01', kat:'Regularność', waga:'sugestia', tytul:'Zmienne godziny pracy z dnia na dzień',
+    tresc:'{osoba} zaczyna i kończy pracę o innej porze niemal każdego dnia — rozrzut godzin startu to {rozrzut}.',
+    akcja:'Ujednolić godziny choćby w części dni — pacjentom (i samej osobie) łatwiej zapamiętać stały rytm.' },
+  { kod:'K02', kat:'Regularność', waga:'info', tytul:'Stały, powtarzalny rytm pracy',
+    tresc:'{osoba} zaczyna i kończy pracę o tej samej porze każdego dnia obecności ({od}–{do}).',
+    akcja:'Nic nie trzeba robić — to ułatwia zapamiętanie grafiku pacjentom i planowanie reszty zespołu.' },
+  { kod:'K03', kat:'Regularność', waga:'sugestia', tytul:'Częsta zmiana gabinetu między dniami',
+    tresc:'{osoba} pracuje w innym gabinecie niemal każdego dnia obecności ({liczba} różnych gabinetów).',
+    akcja:'Przypisz stały gabinet, jeśli to możliwe — łatwiej zorganizować narzędzia i materiały przypisane do miejsca.' },
+  { kod:'K04', kat:'Regularność', waga:'info', tytul:'Stały gabinet przez cały tydzień',
+    tresc:'{osoba} pracuje wyłącznie w {gabinet} przez cały tydzień.',
+    akcja:'Nic nie trzeba robić — stabilna organizacja miejsca pracy.' },
+  { kod:'K05', kat:'Regularność', waga:'sugestia', tytul:'Nikt nie ma dnia przerwy w środku tygodnia',
+    tresc:'Każda aktywna osoba w zespole pracuje we wszystkie czynne dni tygodnia — nikt nie ma dnia bez bloku w środku tygodnia.',
+    akcja:'Rozważ rotację, żeby przynajmniej część zespołu miała dzień wytchnienia w środku tygodnia, nie tylko w niedzielę.' },
+  { kod:'K06', kat:'Regularność', waga:'wazna', tytul:'Praca przez wszystkie czynne dni tygodnia bez przerwy',
+    tresc:'{osoba} ma blok w każdym z {liczba} czynnych dni tygodnia — bez ani jednego dnia przerwy.',
+    akcja:'Zaplanuj jej choć jeden dzień bez bloków — ciągła praca bez przerwy zwiększa ryzyko wypalenia i błędów.' },
+  { kod:'K07', kat:'Regularność', waga:'sugestia', tytul:'Duża rozbieżność w liczbie dni pracy między lekarzami',
+    tresc:'{osobaMax} pracuje {dniMax} dni w tygodniu, a {osobaMin} tylko {dniMin}.',
+    akcja:'Sprawdź, czy ta różnica jest celowa (np. inny wymiar etatu) — jeśli nie, wyrównaj liczbę dni.' },
+  { kod:'K08', kat:'Regularność', waga:'info', tytul:'Wyrównana liczba dni pracy w zespole lekarzy',
+    tresc:'Liczba dni pracy w tygodniu jest zbliżona u wszystkich aktywnych lekarzy.',
+    akcja:'Nic nie trzeba robić.' },
+  { kod:'K09', kat:'Regularność', waga:'sugestia', tytul:'Higienistka pracuje w innych dniach niż lekarze',
+    tresc:'{osoba} nie ma w grafiku ani jednego dnia pokrywającego się z dniem pracy lekarza.',
+    akcja:'Nakładające się dni ułatwiają przekazywanie pacjentów między higienizacją a leczeniem tego samego dnia.' },
+  { kod:'K10', kat:'Regularność', waga:'sugestia', tytul:'Sobota znacznie krótsza niż pozostałe dni obsady',
+    tresc:'W sobotę suma godzin obsady to {ileSobota}, podczas gdy średnio w pozostałe dni to {ileSrednia}.',
+    akcja:'Sprawdź, czy to celowe ograniczenie, czy po prostu sobota została pominięta przy układaniu grafiku.' },
+  { kod:'K11', kat:'Regularność', waga:'wazna', tytul:'Godzina rozpoczęcia różni się o ponad 2 godziny między dniami',
+    tresc:'{osoba} zaczyna pracę raz o {najwczesniej}, a innym razem dopiero o {najpozniej} — różnica {roznica}.',
+    akcja:'Duży rozrzut godziny startu utrudnia pacjentom umawianie się na stałą porę — rozważ ujednolicenie.' },
+  { kod:'K12', kat:'Regularność', waga:'sugestia', tytul:'Wszyscy pracują dokładnie w tych samych godzinach',
+    tresc:'{dzien}: wszystkie bloki zaczynają się i kończą o tej samej porze ({od}–{do}) — poza tym oknem klinika jest całkiem pusta.',
+    akcja:'Rozważ przesunięcie części zmian, żeby wydłużyć okno, w którym ktoś jest dostępny tego dnia.' },
+  { kod:'K13', kat:'Regularność', waga:'info', tytul:'Żaden dzień tygodnia nie jest całkowicie pusty',
+    tresc:'W żadnym z {liczba} czynnych dni tygodnia klinika nie stoi całkowicie pusta — zawsze przynajmniej jeden gabinet ma obsadę.',
+    akcja:'Nic nie trzeba robić.' },
+  { kod:'K14', kat:'Regularność', waga:'sugestia', tytul:'Gabinet ma zupełnie inny rytm obsady niż pozostałe',
+    tresc:'{gabinet} jest obsadzony w zupełnie innych dniach niż pozostałe gabinety ({dni}).',
+    akcja:'Utrudnia to rotację personelu między gabinetami — sprawdź, czy to zamierzone.' }
 ];
 
 // Indeks scenariuszy po kodzie — budowany raz przy pierwszym użyciu.
@@ -1619,6 +1663,134 @@ function _grafikRekomendacje(ctx) {
         { dzien: b.dzien, gabinetId: b.gabinetId, blokId: b.id });
     }
   });
+
+  // ── K: regularność i przewidywalność grafiku ──
+  (function() {
+    const osobyZBlokami = personel.filter(p => (osobaBloki[p.id] || []).length > 0);
+
+    osobyZBlokami.forEach(p => {
+      const blokiOs = (osobaBloki[p.id] || []);
+      const dniList = Object.keys(osobaDni[p.id] || {}).map(d => parseInt(d, 10));
+
+      // K01 / K02 / K11: rozrzut godziny startu pierwszego bloku między dniami.
+      const startyPoDniu = {};
+      blokiOs.forEach(b => {
+        const t = _t2m(b.od);
+        if (startyPoDniu[b.dzien] === undefined || t < startyPoDniu[b.dzien]) startyPoDniu[b.dzien] = t;
+      });
+      const starty = Object.keys(startyPoDniu).map(k => startyPoDniu[k]);
+      if (starty.length >= 2) {
+        const min = Math.min.apply(null, starty), max = Math.max.apply(null, starty);
+        const roznica = max - min;
+        if (roznica === 0) {
+          const koniecMax = Math.max.apply(null, blokiOs.map(b => _t2m(b.do)));
+          dodaj('K02', { osoba: _osobaLabel(p), od: _hhmm(min), do: _hhmm(koniecMax) });
+        } else if (roznica > 120) {
+          dodaj('K11', { osoba: _osobaLabel(p), najwczesniej: _hhmm(min), najpozniej: _hhmm(max), roznica: _hm(roznica) });
+        } else if (roznica >= 30) {
+          dodaj('K01', { osoba: _osobaLabel(p), rozrzut: _hm(roznica) });
+        }
+      }
+
+      // K03 / K04: liczba różnych gabinetów w tygodniu.
+      const gabSet = {};
+      blokiOs.forEach(b => { gabSet[b.gabinetId] = true; });
+      const gabIds = Object.keys(gabSet);
+      if (dniList.length >= 2) {
+        if (gabIds.length === 1) {
+          const g = gabinety.find(x => x.id === gabIds[0]);
+          dodaj('K04', { osoba: _osobaLabel(p), gabinet: (g && g.nazwa) || gabIds[0] });
+        } else if (gabIds.length >= Math.max(3, Math.ceil(dniList.length * 0.75))) {
+          dodaj('K03', { osoba: _osobaLabel(p), liczba: gabIds.length });
+        }
+      }
+
+      // K06: praca we wszystkie czynne dni tygodnia bez ani jednej przerwy.
+      if (dniList.length === GRAFIK_DAYS.length) {
+        dodaj('K06', { osoba: _osobaLabel(p), liczba: GRAFIK_DAYS.length });
+      }
+    });
+
+    // K05: nikt w zespole nie ma dnia przerwy w środku tygodnia.
+    if (osobyZBlokami.length > 0 &&
+        osobyZBlokami.every(p => Object.keys(osobaDni[p.id] || {}).length === GRAFIK_DAYS.length)) {
+      dodaj('K05', {});
+    }
+
+    // K07 / K08: rozbieżność liczby dni pracy między lekarzami.
+    const lekDni = lekarze.filter(l => osobaTydz[l.id])
+      .map(l => ({ p: l, dni: Object.keys(osobaDni[l.id] || {}).length }));
+    if (lekDni.length >= 2) {
+      lekDni.sort((a, b) => b.dni - a.dni);
+      const max = lekDni[0], min = lekDni[lekDni.length - 1];
+      if (max.dni - min.dni >= 3) {
+        dodaj('K07', { osobaMax: _osobaLabel(max.p), dniMax: max.dni, osobaMin: _osobaLabel(min.p), dniMin: min.dni });
+      } else {
+        dodaj('K08', {});
+      }
+    }
+
+    // K09: higienistka bez ani jednego dnia wspólnego z lekarzem.
+    const lekarzDniZbior = {};
+    lekarze.forEach(l => { Object.keys(osobaDni[l.id] || {}).forEach(d => { lekarzDniZbior[d] = true; }); });
+    higienistki.forEach(h => {
+      const dniH = Object.keys(osobaDni[h.id] || {});
+      if (dniH.length === 0 || lekarze.length === 0) return;
+      const wspolne = dniH.some(d => lekarzDniZbior[d]);
+      if (!wspolne) dodaj('K09', { osoba: _osobaLabel(h) });
+    });
+
+    // K10: sobota wyraźnie krótsza niż średnia pozostałych czynnych dni.
+    if (GRAFIK_DAYS.indexOf(6) !== -1) {
+      let sumaInne = 0, dniInneCzynne = 0;
+      GRAFIK_DAYS.filter(d => d !== 6).forEach(d => {
+        let suma = 0;
+        gabinety.forEach(g => { blokiPo[d][g.id].forEach(b => { suma += _t2m(b.do) - _t2m(b.od); }); });
+        if (suma > 0) { sumaInne += suma; dniInneCzynne++; }
+      });
+      let sumaSobota = 0;
+      gabinety.forEach(g => { blokiPo[6][g.id].forEach(b => { sumaSobota += _t2m(b.do) - _t2m(b.od); }); });
+      if (dniInneCzynne > 0 && sumaSobota > 0) {
+        const sredniaInne = sumaInne / dniInneCzynne;
+        if (sumaSobota < sredniaInne * 0.4) {
+          dodaj('K10', { ileSobota: _hm(sumaSobota), ileSrednia: _hm(Math.round(sredniaInne)) });
+        }
+      }
+    }
+
+    // K12: wszystkie bloki danego dnia mają identyczne godziny od-do.
+    GRAFIK_DAYS.forEach(dzien => {
+      const wszystkie = [];
+      gabinety.forEach(g => { blokiPo[dzien][g.id].forEach(b => wszystkie.push(b)); });
+      if (wszystkie.length >= 2) {
+        const od0 = wszystkie[0].od, do0 = wszystkie[0].do;
+        if (wszystkie.every(b => b.od === od0 && b.do === do0)) {
+          dodaj('K12', { dzien: GRAFIK_DAY_NAMES[dzien], od: od0, do: do0 }, { dzien });
+        }
+      }
+    });
+
+    // K13: żaden dzień tygodnia nie jest całkowicie pusty.
+    const pustyDzienIstnieje = gabinety.length > 0 && GRAFIK_DAYS.some(dzien =>
+      gabinety.every(g => blokiPo[dzien][g.id].length === 0));
+    if (!pustyDzienIstnieje && gabinety.length > 0) {
+      dodaj('K13', { liczba: GRAFIK_DAYS.length });
+    }
+
+    // K14: gabinet, który nie dzieli ani jednego dnia obsady z żadnym innym.
+    if (gabinety.length >= 3) {
+      const dniGab = {};
+      gabinety.forEach(g => { dniGab[g.id] = GRAFIK_DAYS.filter(d => blokiPo[d][g.id].length > 0); });
+      gabinety.forEach(g => {
+        if (!dniGab[g.id].length) return;
+        const inne = gabinety.filter(x => x.id !== g.id);
+        const wspolne = inne.some(x => dniGab[g.id].some(d => dniGab[x.id].indexOf(d) !== -1));
+        if (!wspolne) {
+          dodaj('K14', { gabinet: g.nazwa, dni: dniGab[g.id].map(d => GRAFIK_DAY_NAMES[d]).join(', ') });
+        }
+      });
+    }
+  })();
 
   // Sortowanie: najpierw to, co realnie boli.
   const rank = { krytyczna: 0, wazna: 1, sugestia: 2, info: 3 };
