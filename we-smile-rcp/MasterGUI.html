@@ -1009,12 +1009,19 @@
     </div>
 
     <div class="section">
+      <div class="section-title">Szybki wybór wg roli / formy zatrudnienia</div>
+      <div id="m-exp-quick" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+    </div>
+
+    <div class="section">
       <div class="section-title" style="justify-content:space-between;display:flex">
         <span>Pracownicy</span>
         <span><a href="#" id="m-exp-all" style="color:var(--c-primary);font-weight:700">wszyscy</a> · <a href="#" id="m-exp-none" style="color:var(--c-primary);font-weight:700">żaden</a></span>
       </div>
       <div id="m-exp-emp-list" style="max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:2px"></div>
     </div>
+
+    <div class="hint" style="margin-top:4px">Plik zawsze zawiera arkusz "Podsumowanie" ze zbiorczymi danymi wszystkich wybranych osób, obok arkuszy szczegółowych dla każdej z nich.</div>
 
     <button id="m-exp-generate" class="btn btn-accent" style="margin-top:14px">Generuj plik</button>
   </div>
@@ -3471,6 +3478,27 @@ function openMExportModal() {
     toInp.min     = earliestVal;
     toInp.max     = curMonthVal;
 
+    var quick = document.getElementById('m-exp-quick');
+    var grupyOpts = (res.grupy || []).map(function(g) {
+      return '<button type="button" class="btn btn-ghost btn-small" data-exp-quick-grupa="' + esc(g.id) + '">' + esc(g.label) + '</button>';
+    }).join('');
+    var formyOpts = (res.formy || []).map(function(f) {
+      return '<button type="button" class="btn btn-ghost btn-small" data-exp-quick-forma="' + esc(f.id) + '">' + esc(f.label) + '</button>';
+    }).join('');
+    quick.innerHTML = grupyOpts + formyOpts;
+    quick.querySelectorAll('[data-exp-quick-grupa]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var g = this.getAttribute('data-exp-quick-grupa');
+        document.querySelectorAll('.m-exp-emp-cb[data-grupa="' + g + '"]').forEach(function(cb) { cb.checked = true; });
+      });
+    });
+    quick.querySelectorAll('[data-exp-quick-forma]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var f = this.getAttribute('data-exp-quick-forma');
+        document.querySelectorAll('.m-exp-emp-cb[data-forma="' + f + '"]').forEach(function(cb) { cb.checked = true; });
+      });
+    });
+
     var list = document.getElementById('m-exp-emp-list');
     if (!res.employees || res.employees.length === 0) {
       list.innerHTML = '<div class="modal-empty">Brak aktywnych pracowników</div>';
@@ -3478,10 +3506,10 @@ function openMExportModal() {
     }
     list.innerHTML = res.employees.map(function(e) {
       return '<label style="display:flex;align-items:center;gap:10px;padding:9px 4px;font-size:14px;cursor:pointer">' +
-        '<input type="checkbox" class="m-exp-emp-cb" value="' + esc(e.id) + '"' +
+        '<input type="checkbox" class="m-exp-emp-cb" value="' + esc(e.id) + '" data-grupa="' + esc(e.grupa) + '" data-forma="' + esc(e.forma) + '"' +
         (RP.empId && e.id === RP.empId ? ' checked' : (RP.empId ? '' : ' checked')) +
         ' style="accent-color:var(--c-primary);width:19px;height:19px"> ' +
-        esc(e.imie + ' ' + e.nazwisko) + '</label>';
+        esc(e.imie + ' ' + e.nazwisko) + ' <span class="hint" style="margin:0">(' + esc(e.rola || '') + ')</span></label>';
     }).join('');
   });
 }

@@ -485,13 +485,26 @@ function _exportMetaData() {
   const today = _todayPL();
   const employees = _getWorkers()
     .filter(_isRcpWorker)
-    .map(w => ({ id: String(w[0]), imie: String(w[1]), nazwisko: String(w[2]) }));
+    .map(w => ({
+      id: String(w[0]), imie: String(w[1]), nazwisko: String(w[2]),
+      rola: String(w[3] || ''), grupa: _grupaZawodowa(w[3]), forma: String(w[6] || '')
+    }));
 
   return {
     ok: true,
     earliest: minDate || today,
     today,
-    employees
+    employees,
+    grupy: [
+      { id: GRUPA_ASYSTENTKA, label: 'Asystentki' },
+      { id: GRUPA_HIGIENISTKA, label: 'Higienistki' },
+      { id: GRUPA_INNE, label: 'Rejestracja / pozostali' }
+    ],
+    formy: [
+      { id: FORMA_UOP, label: 'Umowa o pracę' },
+      { id: 'Zlecenie', label: 'Umowa zlecenie' },
+      { id: 'B2B', label: 'B2B' }
+    ]
   };
 }
 
@@ -533,14 +546,26 @@ function _dashExportXlsxData(opts) {
     return { ok: false, msg: 'Nieprawidłowy zakres dat.' };
   }
 
-  const workers = _getWorkers().filter(_isRcpWorker);
+  let workers = _getWorkers().filter(_isRcpWorker);
+
+  // Dodatkowe wymiary filtrowania — zawężają pulę PRZED wyborem konkretnych
+  // osób, więc można je swobodnie łączyć z listą employeeIds.
+  if (Array.isArray(opts.grupy) && opts.grupy.length) {
+    const grupy = opts.grupy.map(String);
+    workers = workers.filter(w => grupy.indexOf(_grupaZawodowa(w[3])) !== -1);
+  }
+  if (Array.isArray(opts.formy) && opts.formy.length) {
+    const formy = opts.formy.map(String);
+    workers = workers.filter(w => formy.indexOf(String(w[6] || '')) !== -1);
+  }
+
   const wantedIds = Array.isArray(opts.employeeIds) && opts.employeeIds.length
     ? opts.employeeIds.map(String)
     : workers.map(w => String(w[0]));
 
   const selected = workers.filter(w => wantedIds.indexOf(String(w[0])) !== -1);
   if (selected.length === 0) {
-    return { ok: false, msg: 'Nie wybrano żadnego pracownika.' };
+    return { ok: false, msg: 'Nie wybrano żadnego pracownika (sprawdź filtry — mogły wykluczyć wszystkich).' };
   }
 
   const { map } = _buildEwidMap();
@@ -552,6 +577,10 @@ function _dashExportXlsxData(opts) {
   const tmpSs = SpreadsheetApp.create(tmpName);
   const defaultSheet = tmpSs.getSheets()[0];
 
+  // Zbiorcze wiersze do arkusza "Podsumowanie" — jeden wgląd na cały wybór
+  // naraz, zamiast otwierania każdego arkusza osobno, żeby wyciągnąć wnioski.
+  const podsumowanie = [];
+
   selected.forEach(w => {
     const id = String(w[0]);
     const forma = String(w[6] || '');
@@ -561,7 +590,7 @@ function _dashExportXlsxData(opts) {
     const header = ['Data', 'Dzień', 'Wejście', 'Wyjście', 'Godziny', 'Nieobecność', 'Uwagi'];
     sh.appendRow(header);
 
-    let totalMins = 0;
+    let totalMins = 0, dniNieobecnosci = 0, dniPozaGodzinami = 0;
     const cursor = new Date(fromStr + 'T12:00:00');
     const end = new Date(toStr + 'T12:00:00');
     while (cursor <= end) {
@@ -581,6 +610,7 @@ function _dashExportXlsxData(opts) {
       }
 
       const abs = absMap[id + '_' + ds] || null;
+      if (abs) dniNieobecnosci++;
       if (abs && forma === FORMA_UOP && PAID_8H_CODES.indexOf(abs.code) !== -1) {
         totalMins += 480;
         godzTxt = _fmtHM(480);
@@ -588,6 +618,7 @@ function _dashExportXlsxData(opts) {
       const uwagi = [];
       if (abs && abs.note) uwagi.push(abs.note);
       if (_dayOutsideClinic(ds, we, wy)) {
+        dniPozaGodzinami++;
         const ovrNote = ovrNotes[id + '_' + ds] || '';
         uwagi.push('Poza godzinami Kliniki' + (ovrNote ? ': ' + ovrNote : ' (brak uzasadnienia)'));
       }
@@ -600,7 +631,16 @@ function _dashExportXlsxData(opts) {
     sh.appendRow(['', '', '', 'RAZEM', _fmtHM(totalMins), '', '']);
     sh.getRange(1, 1, 1, header.length).setFontWeight('bold');
     sh.autoResizeColumns(1, header.length);
+
+    podsumowanie.push([rawName, w[3] || '', forma || '—', _fmtHM(totalMins), dniNieobecnosci, dniPozaGodzinami]);
   });
+
+  const podsumowaniaSh = tmpSs.insertSheet('Podsumowanie', 0);
+  const podsumowanieHeader = ['Pracownik', 'Rola', 'Forma zatrudnienia', 'Suma godzin', 'Dni z nieobecnością', 'Dni poza godzinami Kliniki'];
+  podsumowaniaSh.appendRow(podsumowanieHeader);
+  podsumowanie.forEach(r => podsumowaniaSh.appendRow(r));
+  podsumowaniaSh.getRange(1, 1, 1, podsumowanieHeader.length).setFontWeight('bold');
+  podsumowaniaSh.autoResizeColumns(1, podsumowanieHeader.length);
 
   tmpSs.deleteSheet(defaultSheet);
   SpreadsheetApp.flush();
