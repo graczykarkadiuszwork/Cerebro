@@ -1286,9 +1286,14 @@ function loadEmployees() {
   });
 }
 
-function bindEmpSelector(inputId, dropdownId, onPick) {
+// Lekarze nie odbijają się w RCP — w selektorach dotyczących korekty
+// godzin/odbić (Dzień, Miesiąc) nie mają czego szukać i tylko pompują listę.
+function _rcpEmps() { return _emps.filter(function(e){ return e.grupa !== 'lekarz'; }); }
+
+function bindEmpSelector(inputId, dropdownId, onPick, zrodlo) {
   var input = document.getElementById(inputId);
   var dl    = document.getElementById(dropdownId);
+  zrodlo = zrodlo || function(){ return _emps; };
 
   function renderOpts(list) {
     if (list.length === 0) { dl.innerHTML = ''; dl.style.display = 'none'; return; }
@@ -1306,22 +1311,22 @@ function bindEmpSelector(inputId, dropdownId, onPick) {
     });
   }
 
-  input.addEventListener('focus', function() { renderOpts(_emps); });
+  input.addEventListener('focus', function() { renderOpts(zrodlo()); });
   input.addEventListener('input', function() {
     var q = this.value.toLowerCase();
     onPick(null);
-    renderOpts(_emps.filter(function(e){ return (e.imie+' '+e.nazwisko).toLowerCase().indexOf(q) !== -1; }));
+    renderOpts(zrodlo().filter(function(e){ return (e.imie+' '+e.nazwisko).toLowerCase().indexOf(q) !== -1; }));
   });
   input.addEventListener('blur', function() {
     setTimeout(function(){ dl.style.display = 'none'; }, 160);
   });
 }
 
-bindEmpSelector('m-emp-input', 'm-emp-dropdown', function(id) { M.empId = id; });
+bindEmpSelector('m-emp-input', 'm-emp-dropdown', function(id) { M.empId = id; }, _rcpEmps);
 bindEmpSelector('mm-emp-input', 'mm-emp-dropdown', function(id) {
   M.mmEmpId = id;
   if (id) loadMonthTable();
-});
+}, _rcpEmps);
 bindEmpSelector('rg-emp-input', 'rg-emp-dropdown', function(id) { M.rgEmpId = id; });
 
 // ── Przełącznik widoków + historia cofania ─────────
