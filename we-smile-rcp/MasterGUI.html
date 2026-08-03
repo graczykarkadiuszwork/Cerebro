@@ -2789,7 +2789,7 @@ function renderStaffList() {
     var opts = ['UoP', 'Zlecenie', 'B2B'].map(function(f) {
       return '<option value="' + f + '"' + (e.forma === f ? ' selected' : '') + '>' + FORMA_LABELS[f] + '</option>';
     }).join('');
-    return '<div class="staff-row' + (unset ? ' warn' : '') + '" data-id="' + esc(e.id) + '">' +
+    return '<div class="staff-row' + (unset ? ' warn' : '') + '" style="border-left:4px solid ' + _rolaKolor(e) + '" data-id="' + esc(e.id) + '">' +
       '<div><span class="staff-name">' + esc(e.imie + ' ' + e.nazwisko) + '</span>' +
       '<span class="staff-role">' +
         esc(e.rola || '') +
@@ -2894,6 +2894,17 @@ function tagStyl(t) {
   if (!hex) return '';
   var r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
   return ' style="background:rgba(' + r + ',' + g + ',' + b + ',.16);color:' + hex + '"';
+}
+
+// Kolor wg roli — czysto wizualna kategoryzacja listy Zespołu (lekarz /
+// asystentka / higienistka / rejestracja / pozostali), niezwiązana z grupą
+// zawodową używaną do logiki RCP/grafiku.
+function _rolaKolor(e) {
+  if (e.grupa === 'lekarz') return '#2F6FED';
+  if (e.grupa === 'asystentka') return '#2FA37A';
+  if (e.grupa === 'higienistka') return '#9B59B6';
+  if (String(e.rola || '').toLowerCase().indexOf('rejestr') !== -1) return '#E8912D';
+  return '#8A93A6';
 }
 
 var _tagiOtwarte = {};

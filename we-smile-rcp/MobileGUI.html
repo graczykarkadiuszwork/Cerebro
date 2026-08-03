@@ -742,6 +742,16 @@ function tagStyl(t) {
   return ' style="background:rgba(' + r + ',' + g + ',' + b + ',.16);color:' + hex + '"';
 }
 
+// Kolor wg roli — czysto wizualna kategoryzacja listy Zespołu, niezwiązana
+// z grupą zawodową używaną do logiki RCP/grafiku.
+function _rolaKolor(e) {
+  if (e.grupa === 'lekarz') return '#2F6FED';
+  if (e.grupa === 'asystentka') return '#2FA37A';
+  if (e.grupa === 'higienistka') return '#9B59B6';
+  if (String(e.rola || '').toLowerCase().indexOf('rejestr') !== -1) return '#E8912D';
+  return '#8A93A6';
+}
+
 function renderTeam() {
   var el = document.getElementById('m-team-list');
   if (!S.emps.length) { el.innerHTML = '<div class="m-empty">Brak pracowników.</div>'; return; }
@@ -751,7 +761,7 @@ function renderTeam() {
     if (!e.forma) braki.push('brak formy zatrudnienia');
     if (e.grupa === 'lekarz' && !(e.tagi || []).length) braki.push('brak specjalizacji');
     var pod = braki.length ? braki.join(' · ') : (e.rola || '');
-    return '<button class="m-item" data-emp="' + esc(e.id) + '">' +
+    return '<button class="m-item" style="border-left:4px solid ' + _rolaKolor(e) + '" data-emp="' + esc(e.id) + '">' +
       '<span class="m-ico-box">' + (e.grupa === 'lekarz'
         ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v5a4 4 0 0 0 8 0V3"/><path d="M12 12v3a4 4 0 0 0 8 0v-2"/><circle cx="20" cy="11" r="1.6"/></svg>'
         : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>') + '</span>' +
