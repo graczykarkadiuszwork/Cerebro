@@ -26,6 +26,16 @@
 .grl-info small{display:block;font-weight:400;color:var(--c-muted)}
 .grl-brak{color:var(--c-accent);font-weight:700}
 
+/* Przegląd importu grafiku — grupy wg daty, wiersz na wpis. */
+.gli-dzien{font-weight:700;font-size:13px;color:var(--c-ink);margin:14px 0 6px;padding-top:10px;border-top:1px solid var(--c-border)}
+.gli-dzien:first-child{margin-top:0;padding-top:0;border-top:none}
+.gli-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--c-white);border:1px solid var(--c-border);border-radius:var(--radius-m);padding:8px 10px;margin-bottom:6px}
+.gli-row.gli-niepewny{border-color:var(--c-accent);background:var(--c-accent-tint)}
+.gli-row.gli-asysta{margin-left:22px}
+.gli-rola{font-size:10px;font-weight:800;text-transform:uppercase;color:var(--c-muted);min-width:52px}
+.gli-osoba{flex:2;min-width:150px}
+.gli-godz{width:76px}
+
 .ovr-flag{display:none;align-items:flex-start;gap:10px;background:var(--c-accent-tint);border:1px solid rgba(123,30,59,.22);border-radius:var(--radius-m);padding:12px 14px;font-size:13px;line-height:1.5;color:var(--c-accent-dark);font-weight:600;margin-bottom:10px}
 .ovr-flag.on{display:flex}
 
@@ -512,10 +522,17 @@
           <span id="grl-label" class="month-label">—</span>
           <button id="grl-next" class="btn-icon" type="button"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
         </div>
-        <button id="grl-export" class="btn btn-ghost" type="button" style="margin-bottom:14px">
-          <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>
-          Pobierz Excel (cały grafik tego miesiąca)
-        </button>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+          <button id="grl-export" class="btn btn-ghost" type="button" style="margin-bottom:0;flex:1;min-width:220px">
+            <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>
+            Pobierz Excel (cały grafik tego miesiąca)
+          </button>
+          <button id="grl-import-toggle" class="btn btn-ghost" type="button" style="margin-bottom:0;flex:1;min-width:220px">
+            <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V9"/><path d="M7 14l5-5 5 5"/><path d="M4 5h16"/></svg>
+            Wgraj grafik z Excela
+          </button>
+          <input type="file" id="grl-import-file" accept=".xlsx" style="display:none">
+        </div>
         <div id="grl-kalendarz"><div class="hint">Ładowanie…</div></div>
       </div>
 
@@ -1026,6 +1043,21 @@
     <button id="gld-save" class="btn btn-primary" style="margin-top:14px" type="button">Zapisz dzień</button>
     <button id="gld-copy" class="btn btn-ghost" style="margin-top:8px;display:none" type="button">Kopiuj na te same dni tygodnia w tym miesiącu</button>
     <button id="gld-clear" class="btn-link" style="color:var(--c-accent);display:none" type="button">Lekarz nie pracuje w tym dniu</button>
+  </div>
+</div>
+
+<!-- ═══════ MODAL — przegląd importu grafiku z Excela ═══════ -->
+<div id="gli-modal" class="modal-overlay" style="display:none">
+  <div class="modal-card" style="max-width:640px">
+    <div class="modal-head">
+      <span id="gli-title">Import grafiku — przejrzyj przed zatwierdzeniem</span>
+      <button id="gli-close" class="btn-icon" aria-label="Zamknij">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="hint" style="margin-bottom:12px">Nic jeszcze nie zostało zapisane. Sprawdź każdy wiersz — czerwone tło oznacza osobę, której system nie rozpoznał automatycznie. Wybierz osobę z listy albo odznacz „Wgraj", żeby pominąć wiersz.</div>
+    <div id="gli-lista"></div>
+    <button id="gli-zatwierdz" class="btn btn-primary" style="margin-top:14px" type="button">Zatwierdź import</button>
   </div>
 </div>
 
@@ -2463,6 +2495,149 @@ document.getElementById('gld-copy').addEventListener('click', function() {
     if (pominieteAsysty) opis += ' Pominięto asystę ' + pominieteAsysty + ' razy (zajęta w innym miejscu).';
     wsConfirmPopup(opis);
     grlLoad();
+  });
+});
+
+// ── Import grafiku z Excela — formatka pobrana przyciskiem "Pobierz
+// Excel" ma ukryty arkusz "_dane", który pozwala systemowi pewnie
+// dopasować niezmienione wiersze; dla dopisanych ręcznie próbujemy
+// dopasować po imieniu i nazwisku. NIC nie zapisuje się, dopóki
+// właściciel nie przejrzy listy i nie kliknie "Zatwierdź import".
+
+var GLI = { wpisy: [], rok: null, mies: null, personel: [], gabinety: [] };
+var GLI_DNI = ['', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota'];
+
+document.getElementById('grl-import-toggle').addEventListener('click', function() {
+  document.getElementById('grl-import-file').click();
+});
+
+document.getElementById('grl-import-file').addEventListener('change', function(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function() {
+    var b64 = String(reader.result).split(',')[1] || '';
+    toast('Odczytuję plik…', true);
+    gas('masterGrafikImportPreview', [M.token, b64], function(res) {
+      document.getElementById('grl-import-file').value = '';
+      if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+      if (!res || !res.ok) { toast((res && res.msg) || 'Nie udało się odczytać pliku.', false); return; }
+      if (!res.wpisy.length) { toast('Nie znaleziono żadnych wpisów w pliku.', false); return; }
+      GLI.wpisy = res.wpisy;
+      GLI.rok = res.rok; GLI.mies = res.mies;
+      GLI.personel = res.personel || [];
+      GLI.gabinety = res.gabinety || [];
+      gliRysuj();
+      document.getElementById('gli-modal').style.display = 'flex';
+    });
+  };
+  reader.readAsDataURL(file);
+});
+
+function gliRysuj() {
+  var box = document.getElementById('gli-lista');
+  document.getElementById('gli-title').textContent =
+    'Import grafiku — ' + MONTHS[GLI.mies - 1] + ' ' + GLI.rok + ' — przejrzyj przed zatwierdzeniem';
+
+  var poDacie = {};
+  var kolejnosc = [];
+  GLI.wpisy.forEach(function(w, i) {
+    if (!poDacie[w.data]) { poDacie[w.data] = []; kolejnosc.push(w.data); }
+    poDacie[w.data].push(i);
+  });
+
+  box.innerHTML = kolejnosc.map(function(data) {
+    var i0 = poDacie[data][0];
+    var naglowek = GLI_DNI[GLI.wpisy[i0].dzienTydzien] + ' ' +
+      data.slice(8) + '.' + data.slice(5, 7) + '.' + data.slice(0, 4);
+    return '<div class="gli-dzien">' + esc(naglowek) + '</div>' +
+      poDacie[data].map(function(i) { return gliWierszHtml(i); }).join('');
+  }).join('');
+
+  box.querySelectorAll('[data-gli-osoba]').forEach(function(sel) {
+    sel.addEventListener('change', function() {
+      GLI.wpisy[parseInt(this.getAttribute('data-gli-osoba'), 10)].osobaId = this.value;
+      gliRysuj();
+    });
+  });
+  box.querySelectorAll('[data-gli-gab]').forEach(function(sel) {
+    sel.addEventListener('change', function() {
+      GLI.wpisy[parseInt(this.getAttribute('data-gli-gab'), 10)].gabinetId = this.value;
+    });
+  });
+  box.querySelectorAll('[data-gli-od]').forEach(function(inp) {
+    inp.addEventListener('change', function() {
+      GLI.wpisy[parseInt(this.getAttribute('data-gli-od'), 10)].od = this.value;
+    });
+  });
+  box.querySelectorAll('[data-gli-do]').forEach(function(inp) {
+    inp.addEventListener('change', function() {
+      GLI.wpisy[parseInt(this.getAttribute('data-gli-do'), 10)].do = this.value;
+    });
+  });
+}
+
+function gliWierszHtml(i) {
+  var w = GLI.wpisy[i];
+  var niepewny = !w.osobaId;
+  var opcje = '<option value="">— pomiń ten wiersz —</option>' +
+    GLI.personel.map(function(p) {
+      return '<option value="' + esc(p.id) + '"' + (p.id === w.osobaId ? ' selected' : '') + '>' + esc(p.nazwa) + '</option>';
+    }).join('');
+  var gabOpcje = '<option value="">— gabinet —</option>' + GLI.gabinety.map(function(g) {
+    return '<option value="' + esc(g.id) + '"' + (g.id === w.gabinetId ? ' selected' : '') + '>' + esc(g.nazwa) + '</option>';
+  }).join('');
+
+  return '<div class="gli-row' + (niepewny ? ' gli-niepewny' : '') + (w.rola === 'asysta' ? ' gli-asysta' : '') + '">' +
+    '<span class="gli-rola">' + (w.rola === 'obsada' ? 'Obsada' : 'Asysta') + '</span>' +
+    '<select class="sel gli-osoba" data-gli-osoba="' + i + '">' + opcje + '</select>' +
+    '<select class="sel" style="width:130px" data-gli-gab="' + i + '">' + gabOpcje + '</select>' +
+    '<input type="time" class="inp gli-godz" data-gli-od="' + i + '" value="' + esc(w.od) + '">' +
+    '<input type="time" class="inp gli-godz" data-gli-do="' + i + '" value="' + esc(w.do) + '">' +
+    (niepewny ? '<span class="hint" style="width:100%;margin:2px 0 0">rozpoznano tekst: „' + esc(w.osobaTekst) + '"' +
+      (w.kandydaci && w.kandydaci.length ? ' — możliwi: ' + w.kandydaci.map(function(k) { return esc(k.nazwa); }).join(', ') : '') +
+      '</span>' : '') +
+    '</div>';
+}
+
+document.getElementById('gli-close').addEventListener('click', function() {
+  document.getElementById('gli-modal').style.display = 'none';
+});
+document.getElementById('gli-modal').addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
+
+document.getElementById('gli-zatwierdz').addEventListener('click', function() {
+  // Kolejne wiersze "obsada" zaczynają nowy blok, "asysta" (aż do
+  // następnej obsady) doklejają się do ostatniego bloku — dokładnie
+  // w kolejności, w jakiej system je odczytał z pliku.
+  var bloki = [];
+  var biezacy = null;
+  GLI.wpisy.forEach(function(w) {
+    if (!w.osobaId) { if (w.rola === 'obsada') biezacy = null; return; }
+    if (w.rola === 'obsada') {
+      biezacy = { data: w.data, gabinetId: w.gabinetId, osobaId: w.osobaId, od: w.od, do: w.do, asysta: [] };
+      bloki.push(biezacy);
+    } else if (biezacy && biezacy.data === w.data) {
+      biezacy.asysta.push({ osobaId: w.osobaId, od: w.od, do: w.do });
+    }
+  });
+
+  if (!bloki.length) { toast('Nic do zapisania — wszystkie wiersze pominięte.', false); return; }
+
+  gas('masterGrafikImportZatwierdz', [M.token, bloki], function(res) {
+    if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+    if (!res || !res.ok) { toast((res && res.msg) || 'Nie udało się zaimportować.', false); return; }
+    var udane = res.wyniki.filter(function(w) { return w.ok; }).length;
+    document.getElementById('gli-modal').style.display = 'none';
+    var bledy = res.wyniki.filter(function(w) { return !w.ok; });
+    var opis = 'Zaimportowano ' + udane + ' z ' + res.wyniki.length + ' dni.';
+    if (bledy.length) {
+      wsShowError(opis + ' Błędy: ' + bledy.map(function(b) { return b.data + ': ' + b.msg; }).join(' · '));
+    } else {
+      wsConfirmPopup(opis);
+    }
+    if (GRL.rok === GLI.rok && GRL.mies === GLI.mies) grlLoad();
   });
 });
 

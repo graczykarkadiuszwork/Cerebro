@@ -2471,6 +2471,15 @@ function masterGrafikExportXlsx(token, rok, mies) {
   sh.getRange(1, 2).setValue(String(y)).setFontWeight('bold');
   sh.getRange(1, 4).setValue(GRAFIK_XLSX_MIESIACE[m - 1]).setFontWeight('bold');
 
+  // "_dane" to ukryty arkusz-formatka: dla każdej wypełnionej komórki
+  // zapamiętuje, KOGO i w jakim gabinecie/dniu ona przedstawia. Osoba
+  // wypełniająca grafik w Excelu nigdy go nie widzi ani nie dotyka —
+  // to on czyni ten sam plik jednocześnie eksportem (do przejrzenia)
+  // i formatką (do wypełnienia i wgrania z powrotem): import czyta stąd
+  // pewne dopasowania, a dla wierszy dopisanych ręcznie (bez wpisu tutaj)
+  // pada z powrotem na dopasowanie po samym imieniu i nazwisku.
+  const daneWiersze = [['Wiersz', 'Kolumna', 'Data', 'Rola', 'OsobaID', 'GabinetID']];
+
   let wiersz = 3;
   tygodnie.forEach(tydz => {
     const wierszNaglowek = wiersz;
@@ -2484,6 +2493,7 @@ function masterGrafikExportXlsx(token, rok, mies) {
       sh.getRange(wierszNaglowek, kol, 1, 2).merge()
         .setValue(GRAFIK_DAY_NAMES[d.dzienTygodnia].toUpperCase()).setFontWeight('bold');
       sh.getRange(wierszNumer, kol).setValue(parseInt(d.data.slice(8), 10)).setFontWeight('bold');
+      daneWiersze.push([wierszNumer, kol, d.data, 'dzien', '', '']);
 
       let r = wierszNumer + 1;
       d.bloki.slice().sort((a, b) => _t2m(a.od) - _t2m(b.od)).forEach(b => {
@@ -2492,10 +2502,12 @@ function masterGrafikExportXlsx(token, rok, mies) {
         sh.getRange(r, kol).setValue(etykieta);
         sh.getRange(r, kol + 1).setValue(b.od + '-' + b.do);
         sh.getRange(r, kol, 1, 2).setBackground(kolorDla(b.osobaId));
+        daneWiersze.push([r, kol, d.data, 'obsada', b.osobaId, b.gabinetId]);
         r++;
         (b.asysta || []).forEach(a => {
           sh.getRange(r, kol).setValue(nazwaOsoby(a.osobaId));
           sh.getRange(r, kol + 1).setValue(a.od + '-' + a.do);
+          daneWiersze.push([r, kol, d.data, 'asysta', a.osobaId, b.gabinetId]);
           r++;
         });
       });
@@ -2506,6 +2518,11 @@ function masterGrafikExportXlsx(token, rok, mies) {
   });
 
   sh.autoResizeColumns(1, 13);
+
+  const shDane = tmpSs.insertSheet('_dane');
+  daneWiersze.forEach(w => shDane.appendRow(w));
+  shDane.hideSheet();
+
   SpreadsheetApp.flush();
 
   const fileId = tmpSs.getId();
@@ -2524,6 +2541,320 @@ function masterGrafikExportXlsx(token, rok, mies) {
     filename: 'WeSMILE_Grafik_' + y + '-' + String(m).padStart(2, '0') + '.xlsx',
     base64: b64
   };
+}
+
+// ── Import grafiku z formatki Excel ─────────────────────────────
+// Plik pobrany przyciskiem "Pobierz Excel" (masterGrafikExportXlsx) można
+// wypełnić w Excelu — dopisać/zmienić osoby i godziny w kolumnach dni —
+// i wgrać z powrotem. Ukryty arkusz "_dane" w tym samym pliku mówi
+// dokładnie, kto jest kim w każdej niezmienionej komórce; dla wierszy
+// dopisanych ręcznie (bez wpisu w "_dane") system dopasowuje osobę po
+// samym imieniu i nazwisku. Nic nie zapisuje się automatycznie —
+// masterGrafikImportPreview tylko PROPONUJE, a właściciel przegląda
+// i poprawia, zanim masterGrafikImportZatwierdz cokolwiek zapisze.
+
+function _xmlUnescape(s) {
+  return String(s || '')
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&apos;/g, "'")
+    .replace(/&amp;/g, '&');
+}
+
+function _xlsxColToIdx(col) {
+  let idx = 0;
+  for (let i = 0; i < col.length; i++) idx = idx * 26 + (col.charCodeAt(i) - 64);
+  return idx;
+}
+
+function _idxToCol(idx) {
+  let s = '';
+  while (idx > 0) {
+    const r = (idx - 1) % 26;
+    s = String.fromCharCode(65 + r) + s;
+    idx = Math.floor((idx - 1) / 26);
+  }
+  return s;
+}
+
+function _xlsxParseSharedStrings(xml) {
+  if (!xml) return [];
+  const out = [];
+  const siRe = /<si>([\s\S]*?)<\/si>/g;
+  let m;
+  while ((m = siRe.exec(xml))) {
+    const texts = [];
+    const tRe = /<t[^>]*>([\s\S]*?)<\/t>/g;
+    let tm;
+    while ((tm = tRe.exec(m[1]))) texts.push(_xmlUnescape(tm[1]));
+    out.push(texts.join(''));
+  }
+  return out;
+}
+
+// Zwraca mapę "B5" -> {value, row, col}. Obsługuje wspólne łańcuchy (t="s"),
+// tekst formuły (t="str") i tekst inline (t="inlineStr") — trzy warianty,
+// jakie w praktyce piszą Excel/LibreOffice/Arkusze Google.
+function _xlsxParseSheetCells(xml, sharedStrings) {
+  const cells = {};
+  const cRe = /<c r="([A-Z]+)(\d+)"([^>]*)>([\s\S]*?)<\/c>/g;
+  let m;
+  while ((m = cRe.exec(xml))) {
+    const col = m[1], row = parseInt(m[2], 10), attrs = m[3], inner = m[4];
+    const tMatch = attrs.match(/t="([^"]+)"/);
+    const t = tMatch ? tMatch[1] : null;
+    let value = null;
+
+    if (t === 'inlineStr') {
+      const isMatch = inner.match(/<is>([\s\S]*?)<\/is>/);
+      if (isMatch) {
+        const texts = [];
+        const tRe = /<t[^>]*>([\s\S]*?)<\/t>/g;
+        let tm;
+        while ((tm = tRe.exec(isMatch[1]))) texts.push(_xmlUnescape(tm[1]));
+        value = texts.join('');
+      }
+    } else {
+      const vMatch = inner.match(/<v>([\s\S]*?)<\/v>/);
+      if (vMatch) {
+        const raw = _xmlUnescape(vMatch[1]);
+        value = (t === 's') ? (sharedStrings[parseInt(raw, 10)] || '') : raw;
+      }
+    }
+
+    if (value !== null && value !== '') {
+      cells[col + row] = { value, row, col: _xlsxColToIdx(col) };
+    }
+  }
+  return cells;
+}
+
+function _xlsxParseWorkbookSheets(workbookXml, relsXml) {
+  const ridToTarget = {};
+  const relRe = /<Relationship Id="([^"]+)"[^>]*Target="([^"]+)"/g;
+  let m;
+  while ((m = relRe.exec(relsXml))) ridToTarget[m[1]] = m[2];
+
+  const sheets = [];
+  const shRe = /<sheet name="([^"]*)"[^>]*r:id="([^"]+)"/g;
+  while ((m = shRe.exec(workbookXml))) {
+    const target = ridToTarget[m[2]];
+    if (target) sheets.push({ name: _xmlUnescape(m[1]), path: 'xl/' + target });
+  }
+  return sheets;
+}
+
+function _xlsxUnzipEntries(base64) {
+  const bytes = Utilities.base64Decode(base64);
+  const zipBlob = Utilities.newBlob(bytes, 'application/zip', 'import.zip');
+  const blobs = Utilities.unzip(zipBlob);
+  const map = {};
+  blobs.forEach(b => { map[b.getName()] = b; });
+  return map;
+}
+
+function masterGrafikImportPreview(token, base64) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  base64 = String(base64 || '');
+  if (!base64) return { ok: false, msg: 'Brak pliku.' };
+
+  let entries;
+  try { entries = _xlsxUnzipEntries(base64); }
+  catch (e) { return { ok: false, msg: 'Nie udało się odczytać pliku — czy to na pewno plik .xlsx?' }; }
+
+  const workbookXml = entries['xl/workbook.xml'] ? entries['xl/workbook.xml'].getDataAsString() : '';
+  const relsXml = entries['xl/_rels/workbook.xml.rels'] ? entries['xl/_rels/workbook.xml.rels'].getDataAsString() : '';
+  if (!workbookXml || !relsXml) return { ok: false, msg: 'Plik nie wygląda na poprawny grafik Excela.' };
+
+  const sheets = _xlsxParseWorkbookSheets(workbookXml, relsXml);
+  const sharedXml = entries['xl/sharedStrings.xml'] ? entries['xl/sharedStrings.xml'].getDataAsString() : '';
+  const shared = _xlsxParseSharedStrings(sharedXml);
+
+  const glowny = sheets.find(s => s.name !== '_dane');
+  const daneS = sheets.find(s => s.name === '_dane');
+  if (!glowny || !entries[glowny.path]) return { ok: false, msg: 'Nie znaleziono arkusza z grafikiem.' };
+
+  const cells = _xlsxParseSheetCells(entries[glowny.path].getDataAsString(), shared);
+
+  // Mapa "wiersz,kolumna" -> {data, rola, osobaId, gabinetId} z ukrytego
+  // arkusza "_dane" — pewne dopasowanie dla komórek, których osoba
+  // wypełniająca formatkę nie ruszyła.
+  const daneMap = {};
+  if (daneS && entries[daneS.path]) {
+    const daneCells = _xlsxParseSheetCells(entries[daneS.path].getDataAsString(), shared);
+    const wiersze = {};
+    Object.keys(daneCells).forEach(ref => {
+      const c = daneCells[ref];
+      if (!wiersze[c.row]) wiersze[c.row] = {};
+      wiersze[c.row][c.col] = c.value;
+    });
+    Object.keys(wiersze).forEach(rIdx => {
+      const w = wiersze[rIdx];
+      if (!w[1] || w[1] === 'Wiersz') return; // nagłówek albo wiersz bez danych
+      daneMap[w[1] + ',' + w[2]] = {
+        data: String(w[3] || ''), rola: String(w[4] || ''),
+        osobaId: String(w[5] || ''), gabinetId: String(w[6] || '')
+      };
+    });
+  }
+
+  const rok = parseInt(String((cells.B1 || {}).value || '').trim(), 10);
+  const nazwaMiesiaca = String((cells.D1 || {}).value || '').trim().toUpperCase();
+  const mies = GRAFIK_XLSX_MIESIACE.indexOf(nazwaMiesiaca) + 1;
+  if (!rok || !mies) return { ok: false, msg: 'Nie rozpoznano roku/miesiąca w pliku (komórki B1/D1).' };
+
+  const personel = _grafikPersonel();
+  const gabinety = _gabinetyAll(false);
+  const gabByNazwa = {};
+  gabinety.forEach(g => { gabByNazwa[g.nazwa.toLowerCase()] = g.id; });
+
+  const poPelnymImieniu = {};
+  const poImieniu = {};
+  personel.forEach(p => {
+    poPelnymImieniu[(p.imie + ' ' + p.nazwisko).trim().toLowerCase()] = p;
+    const imie = p.imie.trim().toLowerCase();
+    if (!poImieniu[imie]) poImieniu[imie] = [];
+    poImieniu[imie].push(p);
+  });
+
+  function dopasujOsobe(tekst) {
+    const surowy = String(tekst || '').replace(/\s*\([^)]*\)\s*$/, '').trim();
+    const lower = surowy.toLowerCase();
+    if (poPelnymImieniu[lower]) return { osoba: poPelnymImieniu[lower], pewne: true, kandydaci: [] };
+    const pierwszy = lower.split(/\s+/)[0];
+    const kand = poImieniu[pierwszy] || [];
+    if (kand.length === 1) return { osoba: kand[0], pewne: true, kandydaci: [] };
+    if (kand.length > 1) return { osoba: null, pewne: false, kandydaci: kand };
+    return { osoba: null, pewne: false, kandydaci: [] };
+  }
+
+  function wyciagnijGabinet(tekst) {
+    const m = String(tekst || '').match(/\(([^)]*)\)\s*$/);
+    return m ? (gabByNazwa[m[1].trim().toLowerCase()] || null) : null;
+  }
+
+  const wpisy = [];
+  const ileDni = new Date(rok, mies, 0).getDate();
+
+  Object.keys(GRAFIK_XLSX_KOL).forEach(dzienStr => {
+    const dzien = parseInt(dzienStr, 10);
+    const kol = GRAFIK_XLSX_KOL[dzien];
+
+    // Wiersze w tej kolumnie, które wyglądają jak numer dnia (1..N) —
+    // każdy taki wiersz zaczyna kolejny blok tygodnia.
+    const numeryDni = [];
+    Object.keys(cells).forEach(ref => {
+      const c = cells[ref];
+      if (c.col !== kol) return;
+      const txt = String(c.value).trim();
+      const n = parseInt(txt, 10);
+      if (!isNaN(n) && n >= 1 && n <= ileDni && txt === String(n)) numeryDni.push({ row: c.row, dzien: n });
+    });
+    numeryDni.sort((a, b) => a.row - b.row);
+
+    numeryDni.forEach((nd, i) => {
+      const dataStr = rok + '-' + String(mies).padStart(2, '0') + '-' + String(nd.dzien).padStart(2, '0');
+      const kolejnyRow = (i + 1 < numeryDni.length) ? numeryDni[i + 1].row : (nd.row + 60);
+
+      let biezacaObsada = null;
+      let pustePodRzad = 0;
+      for (let r = nd.row + 1; r < kolejnyRow; r++) {
+        const nazwaC = cells[_idxToCol(kol) + r];
+        if (!nazwaC || !String(nazwaC.value).trim()) {
+          pustePodRzad++;
+          if (pustePodRzad >= 2) break;
+          continue;
+        }
+        pustePodRzad = 0;
+
+        const godzC = cells[_idxToCol(kol + 1) + r];
+        const godzTxt = godzC ? String(godzC.value).trim() : '';
+        const godzM = godzTxt.match(/^(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})$/) ||
+                      godzTxt.match(/^(\d{1,2})-(\d{1,2})$/);
+        let od = '', do_ = '';
+        if (godzM) {
+          od = godzM[1].indexOf(':') === -1 ? godzM[1].padStart(2, '0') + ':00' : godzM[1];
+          do_ = godzM[2].indexOf(':') === -1 ? godzM[2].padStart(2, '0') + ':00' : godzM[2];
+        }
+
+        const daneWpis = daneMap[r + ',' + kol];
+        let dopasowanie;
+        if (daneWpis && daneWpis.osobaId && personel.some(p => p.id === daneWpis.osobaId)) {
+          dopasowanie = { osoba: personel.find(p => p.id === daneWpis.osobaId), pewne: true, kandydaci: [] };
+        } else {
+          dopasowanie = dopasujOsobe(nazwaC.value);
+        }
+        const p = dopasowanie.osoba;
+
+        let jestObsada;
+        if (daneWpis && daneWpis.rola) {
+          jestObsada = daneWpis.rola === 'obsada';
+        } else if (p && p.grupa === GRUPA_LEKARZ) {
+          jestObsada = true; // lekarz zawsze zaczyna nowy blok
+        } else if (p && p.grupa === GRUPA_HIGIENISTKA) {
+          jestObsada = !biezacaObsada; // pierwsza w bloku = własny dyżur, kolejna = asysta
+        } else {
+          jestObsada = !biezacaObsada;
+        }
+
+        const gabinetId = (daneWpis && daneWpis.gabinetId) || wyciagnijGabinet(nazwaC.value) || null;
+
+        const wpis = {
+          data: dataStr, dzienTydzien: dzien, wiersz: r, kolumna: kol,
+          rola: jestObsada ? 'obsada' : 'asysta',
+          osobaTekst: String(nazwaC.value).trim(),
+          osobaId: p ? p.id : '',
+          osobaNazwa: p ? (p.imie + ' ' + p.nazwisko) : '',
+          pewne: dopasowanie.pewne,
+          kandydaci: dopasowanie.kandydaci.map(k => ({ id: k.id, nazwa: k.imie + ' ' + k.nazwisko })),
+          gabinetId: gabinetId,
+          od: od, do: do_
+        };
+        wpisy.push(wpis);
+        if (jestObsada) biezacaObsada = wpis;
+      }
+    });
+  });
+
+  return {
+    ok: true, rok, mies, wpisy,
+    gabinety: gabinety.map(g => ({ id: g.id, nazwa: g.nazwa })),
+    personel: personel.map(p => ({ id: p.id, nazwa: p.imie + ' ' + p.nazwisko, grupa: p.grupa }))
+  };
+}
+
+/**
+ * Zapisuje POTWIERDZONE (i ewentualnie poprawione w przeglądzie) pozycje
+ * z importu. `wpisy` to gotowe bloki dnia — dokładnie w kształcie, jaki
+ * przyjmuje masterZapiszDzienGrafiku — pogrupowane tu po dacie, żeby zapis
+ * każdego dnia był atomowy: jedna zła data nie blokuje pozostałych.
+ */
+function masterGrafikImportZatwierdz(token, wpisy) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  wpisy = Array.isArray(wpisy) ? wpisy : [];
+  if (!wpisy.length) return { ok: false, msg: 'Brak pozycji do zapisania.' };
+
+  const personel = _grafikPersonel();
+  const poDacie = {};
+  wpisy.forEach(w => {
+    if (!w || !_dataOk(w.data) || !w.osobaId) return;
+    if (!poDacie[w.data]) poDacie[w.data] = [];
+    const osoba = personel.find(p => p.id === w.osobaId);
+    poDacie[w.data].push({
+      gabinetId: w.gabinetId, osobaId: w.osobaId, od: w.od, do: w.do,
+      typ: (osoba && osoba.grupa === GRUPA_HIGIENISTKA) ? BLOK_HIGIENA : BLOK_LEKARZ,
+      asystaWymagana: null, asystaUwaga: '',
+      asysta: Array.isArray(w.asysta) ? w.asysta : []
+    });
+  });
+
+  const wyniki = [];
+  Object.keys(poDacie).forEach(data => {
+    const r = masterZapiszDzienGrafiku(token, data, poDacie[data]);
+    wyniki.push({ data, ok: !!(r && r.ok), msg: (r && !r.ok && r.msg) || '', bloki: (r && r.bloki) || 0 });
+  });
+
+  _logAdmin('ImportGrafikuXLSX', '—', 'Import ' + Object.keys(poDacie).length + ' dni');
+  return { ok: true, wyniki };
 }
 
 /**
