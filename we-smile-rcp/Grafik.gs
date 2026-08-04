@@ -1107,8 +1107,9 @@ function _grafikRekomendacje(ctx) {
 
   // Kto jest wolny w danym dniu i oknie czasowym.
   function wolni(dzien, od, do_, grupa) {
+    const grupy = Array.isArray(grupa) ? grupa : (grupa ? [grupa] : null);
     return personel.filter(p => {
-      if (grupa && p.grupa !== grupa) return false;
+      if (grupy && grupy.indexOf(p.grupa) === -1) return false;
       const kolizjaBlok = bloki.some(b =>
         b.osobaId === p.id && b.dzien === dzien && _zakresyNachodza(od, do_, b.od, b.do));
       if (kolizjaBlok) return false;
@@ -1339,8 +1340,8 @@ function _grafikRekomendacje(ctx) {
 
         if (lista.length === 0) {
           blokiBezPelnej++;
-          const wolneAs = wolni(dzien, b.od, b.do, GRUPA_ASYSTENTKA);
-          if (asystentki.length === 0) dodaj('B02b', wsp, ref);
+          const wolneAs = wolni(dzien, b.od, b.do, [GRUPA_ASYSTENTKA, GRUPA_HIGIENISTKA]);
+          if (asystentki.length === 0 && higienistki.length === 0) dodaj('B02b', wsp, ref);
           else if (wolneAs.length === 0) dodaj('B02', wsp, ref);
           else dodaj('B01', Object.assign({}, wsp, { kandydaci: nazwiska(wolneAs) }), ref);
           return;
@@ -1843,7 +1844,7 @@ function masterGrafikWolneAsysty(token, dzien, od, do_, zajete) {
   }
 
   const wolne = _grafikPersonel()
-    .filter(p => p.grupa === GRUPA_ASYSTENTKA)
+    .filter(p => p.grupa === GRUPA_ASYSTENTKA || p.grupa === GRUPA_HIGIENISTKA)
     .map(p => ({ id: p.id, label: p.imie + ' ' + p.nazwisko, zew: false, wolna: wolna(p.id) }));
 
   const zewnetrzne = ASYSTA_ZEW.map(a => ({
@@ -2455,7 +2456,8 @@ function masterZapiszDzienGrafiku(token, data, bloki) {
     const asysta = (Array.isArray(b.asysta) ? b.asysta : [])
       .map(a => ({ osobaId: String(a.osobaId || a), od: a.od || od, do: a.do || do_ }))
       .filter(a => a.osobaId && (_czyAsystaZew(a.osobaId) ||
-        (personel.find(p => p.id === a.osobaId) || {}).grupa === GRUPA_ASYSTENTKA));
+        [GRUPA_ASYSTENTKA, GRUPA_HIGIENISTKA].indexOf(
+          (personel.find(p => p.id === a.osobaId) || {}).grupa) !== -1));
 
     czyste.push({
       gabinetId: String(b.gabinetId), typ, osobaId: String(b.osobaId), od, do: do_,
