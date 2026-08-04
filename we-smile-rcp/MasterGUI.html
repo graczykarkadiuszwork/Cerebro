@@ -224,7 +224,16 @@
 <script>
 /* Wybór wersji interfejsu. Apps Script nie udostępnia User-Agent w doGet,
    więc decyzja zapada po stronie klienta — raz podjęty wybór zapamiętujemy,
-   żeby nie odbierać nikomu kontroli nad tym, czego używa. */
+   żeby nie odbierać nikomu kontroli nad tym, czego używa.
+
+   UWAGA: strona We SMILE działa wewnątrz zaszytej ramki (iframe) Apps
+   Script — automatyczne przekierowanie window.open(url,'_top') wywołane
+   BEZ gestu użytkownika bywa blokowane przez piaskownicę tej ramki
+   (obserwowane konkretnie na Chrome mobilnym: strona zostawała ukryta
+   na zawsze, bo blokowane przekierowanie nigdy nie zdążyło jej
+   odsłonić). Dlatego NIE chowamy już całej strony na ślepo — pokazujemy
+   nakładkę z zawsze klikalnym zapasowym linkiem, a przekierowanie
+   próbujemy dwiema metodami naraz. */
 (function () {
   try {
     var wybor = localStorage.getItem('wesmile_ui');
@@ -235,8 +244,17 @@
     var maly = window.matchMedia('(max-width:820px)').matches;
     var dotyk = /Android|iPhone|iPod|Windows Phone/i.test(navigator.userAgent);
     if (wybor === 'mobile' || maly || dotyk) {
-      document.documentElement.style.visibility = 'hidden';
-      window.open("<?= BASE_URL ?>?page=owner-mobile", '_top');
+      var url = "<?= BASE_URL ?>?page=owner-mobile";
+      document.documentElement.insertAdjacentHTML('afterbegin',
+        '<div id="ws-mobile-redirect" style="visibility:visible;position:fixed;inset:0;z-index:99999;' +
+        'background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;' +
+        'gap:16px;font-family:-apple-system,system-ui,sans-serif;text-align:center;padding:24px">' +
+        '<div style="font-size:15px;color:#333">Otwieranie wersji mobilnej…</div>' +
+        '<a href="' + url + '" style="padding:13px 26px;background:#2F6FED;color:#fff;border-radius:12px;' +
+        'text-decoration:none;font-weight:700;font-size:15px">Kliknij, jeśli strona się nie otworzyła</a>' +
+        '</div>');
+      try { top.location.href = url; } catch (e1) { try { location.href = url; } catch (e2) {} }
+      try { window.open(url, '_top'); } catch (e3) {}
     }
   } catch (e) { /* przy jakimkolwiek problemie zostajemy na desktopie */ }
 })();

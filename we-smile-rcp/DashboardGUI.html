@@ -87,7 +87,13 @@ tr.note-tr .nt-ovr{color:var(--c-accent)}
 
 <script>
 /* Wybór wersji interfejsu — identyczna zasada jak w Panelu Właściciela.
-   Raz podjęty wybór zapamiętujemy w localStorage. */
+   Raz podjęty wybór zapamiętujemy w localStorage.
+
+   UWAGA: automatyczne window.open(url,'_top') bez gestu użytkownika bywa
+   blokowane przez piaskownicę ramki Apps Script (obserwowane na Chrome
+   mobilnym — strona zostawała ukryta na zawsze). Nie chowamy już całej
+   strony na ślepo — pokazujemy nakładkę z zawsze klikalnym zapasowym
+   linkiem, a przekierowanie próbujemy dwiema metodami naraz. */
 (function () {
   try {
     var wybor = localStorage.getItem('wesmile_ui');
@@ -97,8 +103,17 @@ tr.note-tr .nt-ovr{color:var(--c-accent)}
     var maly = window.matchMedia('(max-width:820px)').matches;
     var dotyk = /Android|iPhone|iPod|Windows Phone/i.test(navigator.userAgent);
     if (wybor === 'mobile' || maly || dotyk) {
-      document.documentElement.style.visibility = 'hidden';
-      window.open("<?= BASE_URL ?>?page=dashboard-mobile", '_top');
+      var url = "<?= BASE_URL ?>?page=dashboard-mobile";
+      document.documentElement.insertAdjacentHTML('afterbegin',
+        '<div id="ws-mobile-redirect" style="visibility:visible;position:fixed;inset:0;z-index:99999;' +
+        'background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;' +
+        'gap:16px;font-family:-apple-system,system-ui,sans-serif;text-align:center;padding:24px">' +
+        '<div style="font-size:15px;color:#333">Otwieranie wersji mobilnej…</div>' +
+        '<a href="' + url + '" style="padding:13px 26px;background:#2F6FED;color:#fff;border-radius:12px;' +
+        'text-decoration:none;font-weight:700;font-size:15px">Kliknij, jeśli strona się nie otworzyła</a>' +
+        '</div>');
+      try { top.location.href = url; } catch (e1) { try { location.href = url; } catch (e2) {} }
+      try { window.open(url, '_top'); } catch (e3) {}
     }
   } catch (e) { /* przy problemie zostajemy na desktopie */ }
 })();
