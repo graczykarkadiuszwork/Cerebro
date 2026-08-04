@@ -1417,7 +1417,7 @@ function mcNowyBlokRysuj(d,robocze,potem){
     document.getElementById('n-as').style.display=(t==='Higienizacja')?'none':'block';
   }
   function asysta(){
-    var as=(MC.dane.personel||[]).filter(function(p){return p.grupa==='asystentka';})
+    var as=(MC.dane.personel||[]).filter(function(p){return p.grupa==='asystentka'||p.grupa==='higienistka';})
       .concat(MC.dane.asystaZew.map(function(z){return {id:z.id,imie:z.label,nazwisko:''};}));
     document.getElementById('n-as').innerHTML='<div class="cb-tags">'+as.map(function(p){
       return '<button type="button" class="cb-tag off" data-a="'+esc(p.id)+'">'+

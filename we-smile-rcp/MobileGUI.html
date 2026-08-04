@@ -1131,7 +1131,7 @@ function grSheet(blokId, gabId, od, do_) {
     document.getElementById('gb-as-add').addEventListener('click', function(e) {
       e.preventDefault();
       var cur = gbZbierz();
-      var asy = (S.gr.personel || []).filter(function(p){ return p.grupa === 'asystentka'; });
+      var asy = (S.gr.personel || []).filter(function(p){ return p.grupa === 'asystentka' || p.grupa === 'higienistka'; });
       cur.push({ osobaId: asy.length ? asy[0].id : '',
                  od: document.getElementById('gb-od').value,
                  do: document.getElementById('gb-do').value });
@@ -1165,8 +1165,8 @@ function grSheet(blokId, gabId, od, do_) {
 
 function gbRender(lista) {
   var wrap = document.getElementById('gb-as-lista');
-  var asy = (S.gr.personel || []).filter(function(p){ return p.grupa === 'asystentka'; });
-  if (!asy.length) { wrap.innerHTML = '<div class="m-note">Brak asystentek w zespole.</div>'; return; }
+  var asy = (S.gr.personel || []).filter(function(p){ return p.grupa === 'asystentka' || p.grupa === 'higienistka'; });
+  if (!asy.length) { wrap.innerHTML = '<div class="m-note">Brak osób do asysty (asystentek ani higienistek) w zespole.</div>'; return; }
   if (!lista.length) { wrap.innerHTML = '<div class="m-note">Nikt nie przypisany.</div>'; return; }
 
   wrap.innerHTML = lista.map(function(a, i) {

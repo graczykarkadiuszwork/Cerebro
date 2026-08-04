@@ -836,7 +836,7 @@
         <textarea id="gr-blok-uwaga" class="ta" placeholder="np. zabieg implantologiczny wymagający dwóch par rąk"></textarea>
       </div>
       <div class="field" style="margin-bottom:0">
-        <span class="field-lbl">Przypisane asystentki</span>
+        <span class="field-lbl">Przypisana asysta</span>
         <div id="gr-asysta-lista"></div>
         <button id="gr-asysta-add" class="btn-link" type="button" style="margin-top:6px">+ Dodaj asystę</button>
       </div>
@@ -1911,10 +1911,10 @@ function grOnAsystaNChange() {
 
 function grRenderAsysta(lista) {
   var wrap = document.getElementById('gr-asysta-lista');
-  var asystentki = (GR.dane.personel || []).filter(function(p) { return p.grupa === 'asystentka'; });
+  var asystentki = (GR.dane.personel || []).filter(function(p) { return p.grupa === 'asystentka' || p.grupa === 'higienistka'; });
 
   if (!asystentki.length) {
-    wrap.innerHTML = '<div class="hint" style="padding:6px 0">Brak asystentek w zespole — dodaj je w zakładce Zespół.</div>';
+    wrap.innerHTML = '<div class="hint" style="padding:6px 0">Brak osób do asysty (asystentek ani higienistek) w zespole — dodaj je w zakładce Zespół.</div>';
     return;
   }
   if (!lista.length) {
@@ -1973,7 +1973,7 @@ document.getElementById('gr-asysta-add').addEventListener('click', function() {
     od: document.getElementById('gr-blok-od').value,
     do: document.getElementById('gr-blok-do').value
   });
-  var asystentki = (GR.dane.personel || []).filter(function(p) { return p.grupa === 'asystentka'; });
+  var asystentki = (GR.dane.personel || []).filter(function(p) { return p.grupa === 'asystentka' || p.grupa === 'higienistka'; });
   if (asystentki.length) cur[cur.length - 1].osobaId = asystentki[0].id;
   grRenderAsysta(cur);
 });
