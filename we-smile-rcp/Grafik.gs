@@ -2531,6 +2531,66 @@ function masterKopiujDzienGrafiku(token, zData, naDaty) {
   return { ok: true, skopiowano: ok, bledy: bledy.slice(0, 15) };
 }
 
+/**
+ * Kopiuje wzorzec obsady JEDNEGO lekarza z dnia źródłowego na wskazane dni
+ * docelowe — bez ruszania bloków pozostałych osób w te dni. To odpowiednik
+ * masterKopiujDzienGrafiku, ale skoped do jednego lekarza: używa edytor
+ * miesięczny "Grafik lekarza" do rozsiania ustawień jednego dnia na te same
+ * dni tygodnia w całym miesiącu.
+ *
+ * Jeśli asysta z dnia źródłowego jest w danym dniu docelowym zajęta gdzie
+ * indziej, blok lekarza i tak powstaje (bez tej osoby) — całe kopiowanie nie
+ * ma się wywalać przez jeden zajęty termin asystentki.
+ */
+function masterKopiujBlokLekarzaNaDaty(token, osobaId, zData, naDaty) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  osobaId = String(osobaId || '');
+  if (!_dataOk(zData)) return { ok: false, msg: 'Nieprawidłowa data źródłowa.' };
+  naDaty = Array.isArray(naDaty) ? naDaty.filter(_dataOk) : [];
+  if (!naDaty.length) return { ok: false, msg: 'Nie wskazano dat docelowych.' };
+
+  const personel = _grafikPersonel();
+  const osoba = personel.find(p => p.id === osobaId);
+  if (!osoba || osoba.grupa !== GRUPA_LEKARZ) return { ok: false, msg: 'Wybierz lekarza.' };
+
+  const ctx = _grafikKontekstDni();
+  const zrodloStan = _grafikDzienStan(zData, ctx);
+  const wzorzec = (zrodloStan.bloki || []).find(b => b.osobaId === osobaId && b.typ === BLOK_LEKARZ);
+  if (!wzorzec) return { ok: false, msg: 'Brak bloku tego lekarza w dniu źródłowym.' };
+
+  const wyniki = [];
+  naDaty.forEach(data => {
+    if (data === zData) { wyniki.push({ data, ok: true, msg: '', asystaPominieta: 0 }); return; }
+
+    const stan = _grafikDzienStan(data, ctx);
+    const inne = (stan.bloki || []).filter(b => b.osobaId !== osobaId);
+
+    let pominieta = 0;
+    const asysta = (wzorzec.asysta || []).filter(a => {
+      const zajeta = inne.some(b =>
+        (b.osobaId === a.osobaId && _zakresyNachodza(a.od, a.do, b.od, b.do)) ||
+        (b.asysta || []).some(x => x.osobaId === a.osobaId && _zakresyNachodza(a.od, a.do, x.od, x.do)));
+      if (zajeta) pominieta++;
+      return !zajeta;
+    });
+
+    const nowyBlok = {
+      gabinetId: wzorzec.gabinetId, typ: BLOK_LEKARZ, osobaId: osobaId,
+      od: wzorzec.od, do: wzorzec.do,
+      asystaWymagana: wzorzec.asystaWymagana, asystaUwaga: wzorzec.asystaUwaga,
+      asysta: asysta
+    };
+
+    const r = masterZapiszDzienGrafiku(token, data, inne.concat([nowyBlok]));
+    wyniki.push({
+      data, ok: !!(r && r.ok), msg: (r && !r.ok && r.msg) || '',
+      asystaPominieta: pominieta
+    });
+  });
+
+  return { ok: true, wyniki };
+}
+
 // ── Rezerwacja pokrycia urlopu (sugestia zastępcy) ────────────
 // Zakres dat urlopu pokazujemy jako listę dni, w których osoba miała
 // bloki w grafiku — dla każdego bloku podpowiadamy, kto z tej samej
