@@ -512,6 +512,10 @@
           <span id="grl-label" class="month-label">—</span>
           <button id="grl-next" class="btn-icon" type="button"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
         </div>
+        <button id="grl-export" class="btn btn-ghost" type="button" style="margin-bottom:14px">
+          <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>
+          Pobierz Excel (cały grafik tego miesiąca)
+        </button>
         <div id="grl-kalendarz"><div class="hint">Ładowanie…</div></div>
       </div>
 
@@ -2201,6 +2205,25 @@ document.getElementById('grl-prev').addEventListener('click', function() {
 document.getElementById('grl-next').addEventListener('click', function() {
   GRL.mies++; if (GRL.mies > 12) { GRL.mies = 1; GRL.rok++; }
   grlLoad();
+});
+
+document.getElementById('grl-export').addEventListener('click', function() {
+  toast('Generowanie pliku Excel…', true);
+  gas('masterGrafikExportXlsx', [M.token, GRL.rok, GRL.mies], function(res) {
+    if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+    if (!res || !res.ok) { toast('Błąd eksportu: ' + ((res && res.msg) || ''), false); return; }
+    var byteChars = atob(res.base64);
+    var byteNumbers = new Array(byteChars.length);
+    for (var i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+    var byteArray = new Uint8Array(byteNumbers);
+    var blob = new Blob([byteArray], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = res.filename;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+    wsConfirmPopup('Plik pobrany!');
+  });
 });
 
 function grlLoad() {

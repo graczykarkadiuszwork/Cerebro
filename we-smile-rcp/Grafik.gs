@@ -2398,6 +2398,134 @@ function masterGrafikMiesiac(token, rok, mies) {
   };
 }
 
+// ── Eksport grafiku do Excela — układ wzorowany na ręcznie
+// prowadzonym grafiku kliniki (dni tygodnia w kolumnach, tydzień pod
+// tygodniem, kolorem oznaczony specjalista przyjmujący w gabinecie,
+// bez wypełnienia — jego asysta bezpośrednio pod nim). ──
+
+const GRAFIK_XLSX_KOL = { 1: 2, 2: 4, 3: 6, 4: 8, 5: 10, 6: 12 }; // dzień tygodnia -> kolumna startowa (B, D, F, H, J, L)
+const GRAFIK_XLSX_PALETA = [
+  '#92D050', '#FFD966', '#9FC5E8', '#D5A6BD', '#F6B26B', '#B4A7D6',
+  '#93C47D', '#76A5AF', '#E06666', '#C9DAF8', '#FCE5CD', '#D9EAD3'
+];
+const GRAFIK_XLSX_MIESIACE = [
+  'STYCZEŃ', 'LUTY', 'MARZEC', 'KWIECIEŃ', 'MAJ', 'CZERWIEC',
+  'LIPIEC', 'SIERPIEŃ', 'WRZESIEŃ', 'PAŹDZIERNIK', 'LISTOPAD', 'GRUDZIEŃ'
+];
+
+function masterGrafikExportXlsx(token, rok, mies) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  const y = parseInt(rok, 10), m = parseInt(mies, 10);
+  if (isNaN(y) || isNaN(m) || m < 1 || m > 12) return { ok: false, msg: 'Nieprawidłowy miesiąc.' };
+
+  const gabinety = _gabinetyAll(false);
+  const gabMap = {};
+  gabinety.forEach(g => { gabMap[g.id] = g.nazwa; });
+  const personel = _grafikPersonel();
+  const osobaMap = {};
+  personel.forEach(p => { osobaMap[p.id] = p; });
+  const nazwaOsoby = id => {
+    const p = osobaMap[id];
+    if (p) return p.imie + ' ' + p.nazwisko;
+    return _czyAsystaZew(id) ? _labelAsystaZew(id) : id;
+  };
+
+  const ctx = _grafikKontekstDni();
+  const ile = new Date(y, m, 0).getDate();
+  const pfx = y + '-' + String(m).padStart(2, '0') + '-';
+  const dni = [];
+  for (let d = 1; d <= ile; d++) dni.push(_grafikDzienStan(pfx + String(d).padStart(2, '0'), ctx));
+
+  // Nowy tydzień zaczyna się w poniedziałek — tak jak w ręcznie prowadzonym
+  // grafiku, dni przed pierwszym poniedziałkiem miesiąca (resztki
+  // poprzedniego tygodnia) pomijamy; ostatni tydzień bywa niepełny.
+  const tygodnie = [];
+  let biezacy = [];
+  let started = false;
+  dni.forEach(d => {
+    if (d.dzienTygodnia === 1) {
+      if (started) tygodnie.push(biezacy);
+      biezacy = [];
+      started = true;
+    }
+    if (started) biezacy.push(d);
+  });
+  if (biezacy.length) tygodnie.push(biezacy);
+
+  // Jeden kolor na osobę (lekarza/higienistkę) na cały eksport — ta sama
+  // osoba zawsze wygląda tak samo, niezależnie od tego, w ilu dniach pracuje.
+  const kolorOsoby = {};
+  function kolorDla(id) {
+    if (!kolorOsoby[id]) {
+      const idx = Object.keys(kolorOsoby).length % GRAFIK_XLSX_PALETA.length;
+      kolorOsoby[id] = GRAFIK_XLSX_PALETA[idx];
+    }
+    return kolorOsoby[id];
+  }
+
+  const tmpName = 'WeSMILE_Grafik_' + y + '-' + String(m).padStart(2, '0') + '_' + Utilities.getUuid().slice(0, 8);
+  const tmpSs = SpreadsheetApp.create(tmpName);
+  const sh = tmpSs.getSheets()[0];
+  sh.setName(GRAFIK_XLSX_MIESIACE[m - 1] + ' ' + y);
+
+  sh.getRange(1, 2).setValue(String(y)).setFontWeight('bold');
+  sh.getRange(1, 4).setValue(GRAFIK_XLSX_MIESIACE[m - 1]).setFontWeight('bold');
+
+  let wiersz = 3;
+  tygodnie.forEach(tydz => {
+    const wierszNaglowek = wiersz;
+    const wierszNumer = wiersz + 1;
+    let maxRows = 0;
+
+    tydz.forEach(d => {
+      if (!d.czynny) return;
+      const kol = GRAFIK_XLSX_KOL[d.dzienTygodnia];
+
+      sh.getRange(wierszNaglowek, kol, 1, 2).merge()
+        .setValue(GRAFIK_DAY_NAMES[d.dzienTygodnia].toUpperCase()).setFontWeight('bold');
+      sh.getRange(wierszNumer, kol).setValue(parseInt(d.data.slice(8), 10)).setFontWeight('bold');
+
+      let r = wierszNumer + 1;
+      d.bloki.slice().sort((a, b) => _t2m(a.od) - _t2m(b.od)).forEach(b => {
+        const gab = gabMap[b.gabinetId] || '';
+        const etykieta = nazwaOsoby(b.osobaId).toUpperCase() + (gab ? ' (' + gab + ')' : '');
+        sh.getRange(r, kol).setValue(etykieta);
+        sh.getRange(r, kol + 1).setValue(b.od + '-' + b.do);
+        sh.getRange(r, kol, 1, 2).setBackground(kolorDla(b.osobaId));
+        r++;
+        (b.asysta || []).forEach(a => {
+          sh.getRange(r, kol).setValue(nazwaOsoby(a.osobaId));
+          sh.getRange(r, kol + 1).setValue(a.od + '-' + a.do);
+          r++;
+        });
+      });
+      maxRows = Math.max(maxRows, r - wierszNumer);
+    });
+
+    wiersz = wierszNaglowek + Math.max(maxRows + 1, 2) + 2; // + wiersz numeru + pusty odstęp
+  });
+
+  sh.autoResizeColumns(1, 13);
+  SpreadsheetApp.flush();
+
+  const fileId = tmpSs.getId();
+  const url = 'https://docs.google.com/spreadsheets/d/' + fileId + '/export?format=xlsx';
+  const resp = UrlFetchApp.fetch(url, {
+    headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() }
+  });
+  const b64 = Utilities.base64Encode(resp.getContent());
+
+  try { DriveApp.getFileById(fileId).setTrashed(true); } catch (e) { Logger.log('cleanup error: ' + e); }
+
+  _logAdmin('EksportGrafikuXLSX', y + '-' + m, 'Eksport grafiku ' + GRAFIK_XLSX_MIESIACE[m - 1] + ' ' + y);
+
+  return {
+    ok: true,
+    filename: 'WeSMILE_Grafik_' + y + '-' + String(m).padStart(2, '0') + '.xlsx',
+    base64: b64
+  };
+}
+
 /**
  * Zapisuje komplet bloków dla JEDNEJ daty. Od tej chwili ta data nie
  * podlega już szablonowi — aż do jawnego przywrócenia.
