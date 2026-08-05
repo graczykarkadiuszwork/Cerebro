@@ -307,6 +307,7 @@ function _dashboardData(year, month) {
 
     const absMap   = _absenceMapAll();
     const ovrNotes = _overtimeNotesAll();
+    const urlopOverrideAll = _urlopGodzinyOverrideAll();
 
     const DOW = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'];
 
@@ -320,6 +321,11 @@ function _dashboardData(year, month) {
         let paidAbsDays = 0;
         let ovrDays = 0;
         let ovrMinutes = 0;
+
+        // Proporcjonalne (edytowalne) godziny urlopu tego pracownika w tym
+        // miesiącu — wyliczone raz przed pętlą dni, bo zależą od sumy
+        // za CAŁY miesiąc, nie da się ich policzyć dzień po dniu w locie.
+        const urlopDomyslne = _urlopGodzinyUoPDomyslne(id, forma, y, m, rcpMap, absMap);
 
         const days = [];
         for (let d = 1; d <= daysInMonth; d++) {
@@ -344,16 +350,27 @@ function _dashboardData(year, month) {
           if (absence)  absDays++;
           if (overtime) { ovrDays++; ovrMinutes += overtimeMinutes; }
 
-          // Urlop UoP z kodu płatnego 8h/dzień dolicza się do sumy miesięcznej,
-          // niezależnie od tego, że w tym dniu nie ma odbić w Ewidencji.
+          // Urlop UoP z kodem płatnym dolicza się do sumy miesięcznej,
+          // niezależnie od tego, że w tym dniu nie ma odbić w Ewidencji —
+          // domyślnie proporcjonalnie do brakujących godzin (patrz
+          // _urlopGodzinyUoPDomyslne), a nie sztywne 8h; ręczne nadpisanie
+          // (masterSetUrlopGodzinyDnia) zawsze ma pierwszeństwo.
+          let urlopKredytMin = null, urlopReczny = false;
           if (absence && forma === FORMA_UOP && PAID_8H_CODES.indexOf(absence.code) !== -1) {
-            mins = 480;
-            totalMins += 480;
+            const nadpisane = urlopOverrideAll[key];
+            urlopKredytMin = (nadpisane !== undefined) ? nadpisane : (urlopDomyslne[ds] || 0);
+            urlopReczny = (nadpisane !== undefined);
+            mins = urlopKredytMin;
+            totalMins += urlopKredytMin;
             paidAbsDays++;
           }
 
           const dow = DOW[new Date(ds + 'T12:00:00').getDay()];
-          days.push({ date: ds, dow, wejscie, wyjscie, mins, absence, overtime, overtimeMinutes, overtimeNote });
+          days.push({
+            date: ds, dow, wejscie, wyjscie, mins, absence, overtime, overtimeMinutes, overtimeNote,
+            urlopKredytGodz: urlopKredytMin !== null ? Math.round((urlopKredytMin / 60) * 100) / 100 : null,
+            urlopReczny
+          });
         }
 
         const noteKey = 'note_' + id + '_' + y + '_' + String(m).padStart(2, '0');
@@ -404,6 +421,85 @@ function _domyslnaNormaMiesiaca(rok, mies) {
     robocze++;
   }
   return robocze * 8;
+}
+
+// ── Proporcjonalne godziny urlopu dla UoP ──────────────────────
+// Domyślnie (edytowalnie) każdy płatny dzień nieobecności UoP
+// (PAID_8H_CODES) dostaje NIE sztywne 8h, tylko (norma miesiąca —
+// godziny już zarejestrowane w tym miesiącu) / liczba takich dni —
+// tak żeby suma miesięczna dokładnie wypełniała ustaloną normę.
+// Np. brakuje 12h do normy, 2 dni urlopu → 6h/dzień; 15h, 3 dni → 5h/dzień.
+// Zwraca { 'yyyy-MM-dd': minuty } tylko dla dni z płatnym kodem tego
+// miesiąca; nie-UoP i miesiące bez takich dni dostają pustą mapę.
+
+function _urlopGodzinyUoPDomyslne(empId, forma, rok, mies, rcpMapCaly, absMapCaly) {
+  if (forma !== FORMA_UOP) return {};
+  const pfx = rok + '-' + String(mies).padStart(2, '0');
+  const ile = new Date(rok, mies, 0).getDate();
+  const etatKey = 'etat_' + rok + '_' + String(mies).padStart(2, '0');
+  const etatZapisana = PropertiesService.getScriptProperties().getProperty(etatKey);
+  const normaGodz = (etatZapisana !== null) ? (parseFloat(etatZapisana) || 0) : _domyslnaNormaMiesiaca(rok, mies);
+  const normaMin = normaGodz * 60;
+
+  let zarejestrowaneMin = 0;
+  const dniUrlopowe = [];
+  for (let d = 1; d <= ile; d++) {
+    const ds = pfx + '-' + String(d).padStart(2, '0');
+    const key = empId + '_' + ds;
+    const abs = absMapCaly[key] || null;
+    if (abs && PAID_8H_CODES.indexOf(abs.code) !== -1) { dniUrlopowe.push(ds); continue; }
+    const rcp = rcpMapCaly[key];
+    if (rcp && rcp.e.length && rcp.x.length) {
+      const we = rcp.e.slice().sort()[0], wy = rcp.x.slice().sort().reverse()[0];
+      const diff = _t2m(wy) - _t2m(we);
+      if (diff > 0) zarejestrowaneMin += diff;
+    }
+  }
+  if (!dniUrlopowe.length) return {};
+
+  const brakujaceMin = Math.max(0, normaMin - zarejestrowaneMin);
+  const naDzienMin = Math.round(brakujaceMin / dniUrlopowe.length);
+  const mapa = {};
+  dniUrlopowe.forEach(ds => { mapa[ds] = naDzienMin; });
+  return mapa;
+}
+
+// Ręczne nadpisania proporcjonalnego wyliczenia — jeden wiersz na
+// EmpID+Data. Bez wpisu = wartość wyliczona automatycznie obowiązuje.
+function _urlopGodzinyOverrideAll() {
+  const sh = _arkusz('UrlopGodzinyOverride', ['EmpID', 'Data', 'Minuty', 'Zmodyfikowano']);
+  const rows = (sh.getLastRow() >= 2) ? sh.getDataRange().getValues().slice(1) : [];
+  const mapa = {};
+  rows.forEach(r => {
+    const ds = _sheetDate(r[1]);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(ds)) return;
+    mapa[String(r[0]) + '_' + ds] = parseFloat(r[2]) || 0;
+  });
+  return mapa;
+}
+
+function masterSetUrlopGodzinyDnia(token, empId, data, godziny) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  empId = String(empId || '');
+  data = String(data || '');
+  if (!empId || !/^\d{4}-\d{2}-\d{2}$/.test(data)) return { ok: false, msg: 'Nieprawidłowe dane.' };
+
+  const sh = _arkusz('UrlopGodzinyOverride', ['EmpID', 'Data', 'Minuty', 'Zmodyfikowano']);
+  const rows = (sh.getLastRow() >= 2) ? sh.getDataRange().getValues() : [];
+  for (let i = rows.length - 1; i >= 1; i--) {
+    if (String(rows[i][0]) === empId && _sheetDate(rows[i][1]) === data) sh.deleteRow(i + 1);
+  }
+
+  if (godziny === null || godziny === '' || godziny === undefined) {
+    _logAdmin('UrlopGodzinyReset', empId, data + ' → z powrotem wyliczenie automatyczne');
+    return { ok: true };
+  }
+  const h = parseFloat(godziny);
+  if (isNaN(h) || h < 0 || h > 24) return { ok: false, msg: 'Nieprawidłowa liczba godzin (0–24).' };
+
+  sh.appendRow([empId, data, Math.round(h * 60), new Date().toISOString()]);
+  _logAdmin('UrlopGodzinyOverride', empId, data + ' → ' + h + ' h (ręcznie)');
+  return { ok: true };
 }
 
 // Przegląd normy na kilka lat do przodu naraz — punkt wyjścia do
@@ -596,6 +692,8 @@ function _dashExportXlsxData(opts) {
   const { map } = _buildEwidMap();
   const absMap   = _absenceMapAll();
   const ovrNotes = _overtimeNotesAll();
+  const urlopOverrideAll = _urlopGodzinyOverrideAll();
+  const urlopDomyslneCache = {}; // 'empId_rok_mies' -> mapa dnia->minuty, liczona raz na parę
   const DOW = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'];
 
   const tmpName = 'WeSMILE_Raport_' + fromStr + '_' + toStr + '_' + Utilities.getUuid().slice(0, 8);
@@ -637,8 +735,18 @@ function _dashExportXlsxData(opts) {
       const abs = absMap[id + '_' + ds] || null;
       if (abs) dniNieobecnosci++;
       if (abs && forma === FORMA_UOP && PAID_8H_CODES.indexOf(abs.code) !== -1) {
-        totalMins += 480;
-        godzTxt = _fmtHM(480);
+        // Proporcjonalnie do brakujących godzin danego miesiąca (patrz
+        // _urlopGodzinyUoPDomyslne), z uwzględnieniem ręcznego nadpisania —
+        // ta sama zasada co w widoku Miesiąc, żeby liczby się zgadzały.
+        const rok = parseInt(ds.slice(0, 4), 10), mies = parseInt(ds.slice(5, 7), 10);
+        const cacheKey = id + '_' + rok + '_' + mies;
+        if (!urlopDomyslneCache[cacheKey]) {
+          urlopDomyslneCache[cacheKey] = _urlopGodzinyUoPDomyslne(id, forma, rok, mies, map, absMap);
+        }
+        const nadpisane = urlopOverrideAll[id + '_' + ds];
+        const kredytMin = (nadpisane !== undefined) ? nadpisane : (urlopDomyslneCache[cacheKey][ds] || 0);
+        totalMins += kredytMin;
+        godzTxt = _fmtHM(kredytMin);
       }
       const uwagi = [];
       if (abs && abs.note) uwagi.push(abs.note);
@@ -1118,7 +1226,23 @@ function masterGetDay(token, empId, date) {
   const ovrNote  = _overtimeNotesAll()[key] || '';
   const overtime = _dayOutsideClinic(date, wejscie || null, wyjscie || null);
 
-  return { ok: true, wejscie, wyjscie, absence, overtime, overtimeNote: ovrNote };
+  const worker = _getWorkers().find(r => String(r[0]) === String(empId));
+  const forma = worker ? String(worker[6] || '') : '';
+  let urlopKredytGodz = null, urlopReczny = false;
+  if (absence && forma === FORMA_UOP && PAID_8H_CODES.indexOf(absence.code) !== -1) {
+    const rok = parseInt(date.slice(0, 4), 10), mies = parseInt(date.slice(5, 7), 10);
+    const { map: ewidCaly } = _buildEwidMap();
+    const domyslne = _urlopGodzinyUoPDomyslne(String(empId), forma, rok, mies, ewidCaly, _absenceMapAll());
+    const nadpisane = _urlopGodzinyOverrideAll()[key];
+    const kredytMin = (nadpisane !== undefined) ? nadpisane : (domyslne[date] || 0);
+    urlopKredytGodz = Math.round((kredytMin / 60) * 100) / 100;
+    urlopReczny = (nadpisane !== undefined);
+  }
+
+  return {
+    ok: true, wejscie, wyjscie, absence, overtime, overtimeNote: ovrNote,
+    formaUoP: forma === FORMA_UOP, urlopKredytGodz, urlopReczny
+  };
 }
 
 function masterSetDay(token, empId, date, wejscie, wyjscie) {

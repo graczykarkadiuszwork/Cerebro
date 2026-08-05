@@ -415,6 +415,7 @@ function callRCP(action, argsJson) {
       case 'masterWlaczAutoBackup':  return masterWlaczAutoBackup(args[0]);
       case 'masterSetEtat':        return masterSetEtat(args[0], args[1], args[2], args[3]);
       case 'masterGetNormaLat':    return masterGetNormaLat(args[0], args[1], args[2]);
+      case 'masterSetUrlopGodzinyDnia': return masterSetUrlopGodzinyDnia(args[0], args[1], args[2], args[3]);
       case 'masterSetNote':        return masterSetNote(args[0], args[1], args[2], args[3], args[4]);
       case 'masterGetExportMeta':  return masterGetExportMeta(args[0]);
       case 'masterDashExportXlsx': return masterDashExportXlsx(args[0], args[1]);
@@ -842,6 +843,7 @@ function setupRCP() {
     { name: 'Przekroczenia', h: ['Timestamp', 'EmpID', 'Data', 'Uzasadnienie', 'Źródło'] },
     { name: 'Przerwy',       h: ['Timestamp', 'EmpID', 'Data', 'Godzina', 'Uzasadnienie', 'Źródło'] },
     { name: 'EwidencjaWersje', h: ['WersjaId', 'RowIdx', 'Timestamp', 'EmpID', 'Imię', 'Nazwisko', 'Akcja', 'Data', 'Godzina', 'Źródło', 'Powód', 'Przywrócono'] },
+    { name: 'UrlopGodzinyOverride', h: ['EmpID', 'Data', 'Minuty', 'Zmodyfikowano'] },
     // ── Grafik obsady gabinetów ──
     { name: 'Gabinety',      h: ['ID', 'Nazwa', 'Kolejnosc', 'Aktywny'] },
     { name: 'Grafik',        h: ['ID', 'GabinetID', 'DzienTygodnia', 'Typ', 'OsobaID', 'Od', 'Do', 'AsystaWymagana', 'AsystaUwaga', 'Zmodyfikowano'] },

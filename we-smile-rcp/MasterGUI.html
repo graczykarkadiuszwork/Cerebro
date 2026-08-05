@@ -486,6 +486,11 @@
           <span class="field-lbl">Adnotacja do nieobecności</span>
           <textarea id="m-abs-note" class="ta" placeholder="Adnotacja pracownika / właściciela…"></textarea>
         </div>
+        <div class="field" id="m-urlop-godz-field" style="display:none;margin-top:12px;margin-bottom:0">
+          <span class="field-lbl">Godziny za ten dzień urlopu (UoP)</span>
+          <input type="number" id="m-urlop-godz" class="inp" min="0" max="24" step="0.25">
+          <span class="hint" id="m-urlop-godz-hint" style="margin-top:6px"></span>
+        </div>
       </div>
 
       <!-- Przekroczenie godzin Kliniki -->
@@ -1837,6 +1842,21 @@ function fillDayForm(res) {
   document.getElementById('m-abs-note').value = res.absence ? (res.absence.note || '') : '';
   document.getElementById('m-ovr-note').value = res.overtimeNote || '';
   document.getElementById('m-ovr-flag').className = 'ovr-flag' + (res.overtime ? ' on' : '');
+
+  // Proporcjonalne (edytowalne) godziny urlopu UoP — pole widoczne tylko
+  // gdy dzień faktycznie ma płatny kod nieobecności u pracownika UoP
+  // (patrz masterGetDay/_urlopGodzinyUoPDomyslne).
+  var pole = document.getElementById('m-urlop-godz-field');
+  if (res.urlopKredytGodz !== null && res.urlopKredytGodz !== undefined) {
+    pole.style.display = 'block';
+    document.getElementById('m-urlop-godz').value = res.urlopKredytGodz;
+    document.getElementById('m-urlop-godz-hint').textContent = res.urlopReczny
+      ? 'Ustawione ręcznie — wyczyść pole i zapisz, żeby wrócić do wyliczenia automatycznego.'
+      : 'Wyliczone automatycznie: (norma miesiąca − zarejestrowane godziny) / liczba dni płatnej nieobecności.';
+  } else {
+    pole.style.display = 'none';
+    document.getElementById('m-urlop-godz').value = '';
+  }
 }
 
 function loadDay(cb) {
@@ -1866,6 +1886,8 @@ document.getElementById('m-save').addEventListener('click', function() {
   var absCode = document.getElementById('m-abs').value;
   var absNote = document.getElementById('m-abs-note').value;
   var ovrNote = document.getElementById('m-ovr-note').value;
+  var urlopPoleWidoczne = document.getElementById('m-urlop-godz-field').style.display !== 'none';
+  var urlopGodz = document.getElementById('m-urlop-godz').value;
 
   toast('Zapisywanie…', true);
   gas('masterSetDay', [M.token, M.empId, date, wejscie, wyjscie], function(res) {
@@ -1880,7 +1902,14 @@ document.getElementById('m-save').addEventListener('click', function() {
       gas('masterSetOvertimeNote', [M.token, M.empId, date, ovrNote], function(res3) {
         if (res3 && res3.errorType === 'UNAUTHORIZED') { location.reload(); return; }
         if (!res3 || !res3.ok) { toast((res3 && res3.msg) || 'Błąd zapisu uzasadnienia.', false); return; }
-        wsConfirmPopup('Zapisano wszystko.');
+
+        if (!urlopPoleWidoczne) { wsConfirmPopup('Zapisano wszystko.'); return; }
+        gas('masterSetUrlopGodzinyDnia', [M.token, M.empId, date, urlopGodz], function(res4) {
+          if (res4 && res4.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+          if (!res4 || !res4.ok) { toast((res4 && res4.msg) || 'Błąd zapisu godzin urlopu.', false); return; }
+          wsConfirmPopup('Zapisano wszystko.');
+          loadDay();
+        });
       });
     });
   });
