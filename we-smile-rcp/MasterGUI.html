@@ -46,6 +46,26 @@
 .gli-osoba{flex:2;min-width:150px}
 .gli-godz{width:76px}
 
+/* Pasek normy godzin — stały, widoczny na każdej zakładce pod paskiem
+   obecności, żeby nie było wątpliwości, że to ustawienie całej kliniki
+   na dany miesiąc, a nie coś związanego z jednym raportem. */
+.norma-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--c-white);
+  border:1px solid var(--c-border);border-radius:999px;padding:10px 16px;margin:10px 16px 0;
+  box-shadow:var(--shadow-s);max-width:928px}
+@media(min-width:960px){.norma-bar{margin-left:auto;margin-right:auto}}
+.norma-bar-lbl{font-size:13px;font-weight:600;color:var(--c-muted);white-space:nowrap}
+.norma-bar-lbl b{color:var(--c-ink)}
+.norma-bar #norma-bar-godz{width:88px;margin:0;min-height:38px}
+.norma-bar #norma-bar-zapisz{width:auto;margin:0;min-height:38px;padding:0 16px}
+.norma-bar-auto{font-size:11px;color:var(--c-muted);font-style:italic;width:100%}
+
+.norma-hist-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--c-border)}
+.norma-hist-row:last-child{border-bottom:none}
+.norma-hist-mies{flex:1;font-size:13px;font-weight:600;color:var(--c-ink)}
+.norma-hist-mies.current{color:var(--c-primary)}
+.norma-hist-row input{width:88px;margin:0}
+.norma-hist-row button{width:auto;margin:0;padding:0 12px;min-height:38px}
+
 .ovr-flag{display:none;align-items:flex-start;gap:10px;background:var(--c-accent-tint);border:1px solid rgba(123,30,59,.22);border-radius:var(--radius-m);padding:12px 14px;font-size:13px;line-height:1.5;color:var(--c-accent-dark);font-weight:600;margin-bottom:10px}
 .ovr-flag.on{display:flex}
 
@@ -321,6 +341,16 @@
 
   <div id="m-presence-bar" class="presence-bar" style="display:none">
     <div class="presence-track" id="m-presence-track"></div>
+  </div>
+
+  <div id="norma-bar" class="norma-bar">
+    <span class="norma-bar-lbl">Norma godzin na miesiąc <b id="norma-bar-mies">—</b>:</span>
+    <input type="number" id="norma-bar-godz" class="inp" min="0" step="0.5" placeholder="np. 168">
+    <button id="norma-bar-zapisz" class="btn btn-primary" type="button">Zapisz</button>
+    <button id="norma-bar-hist" class="btn-icon" type="button" aria-label="Poprzednie i kolejne miesiące" title="Poprzednie i kolejne miesiące">
+      <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+    </button>
+    <span id="norma-bar-auto" class="norma-bar-auto" style="display:none">wyliczone automatycznie</span>
   </div>
 
   <div id="nav-backdrop" class="nav-backdrop"></div>
@@ -656,13 +686,7 @@
       </div>
 
       <div class="field-row2">
-        <div class="field">
-          <span class="field-lbl">Norma godzin (miesiąc)</span>
-          <input type="number" id="rp-etat" class="inp" min="0" step="0.5" placeholder="np. 168">
-          <span id="rp-etat-auto" class="hint" style="display:none;margin-top:4px">Wyliczone automatycznie z dni roboczych i świąt — możesz nadpisać.</span>
-        </div>
-        <div class="field">
-          <span class="field-lbl">&nbsp;</span>
+        <div class="field" style="grid-column:1/-1">
           <button id="rp-export" class="btn btn-accent" style="margin-top:0">
             <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>
             Eksportuj do Excel
@@ -1095,6 +1119,20 @@
   </div>
 </div>
 
+<!-- ═══════ MODAL — historia normy godzin (poprzednie/kolejne miesiące) ═══════ -->
+<div id="norma-hist-modal" class="modal-overlay" style="display:none">
+  <div class="modal-card">
+    <div class="modal-head">
+      <span>Norma godzin — poprzednie i kolejne miesiące</span>
+      <button id="norma-hist-close" class="btn-icon" aria-label="Zamknij">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="hint" style="margin-bottom:12px">Bieżący miesiąc zapisuje się od razu. Każdy inny miesiąc — przeszły albo przyszły — wymaga dwuetapowego potwierdzenia (kliknij "Zapisz" dwa razy).</div>
+    <div id="norma-hist-lista"></div>
+  </div>
+</div>
+
 <!-- ═══════ MODAL — eksport Excel ═══════ -->
 <div id="m-export-modal" class="modal-overlay" style="display:none">
   <div class="modal-card">
@@ -1266,6 +1304,7 @@ document.getElementById('kp-login').addEventListener('click', function(e) {
         document.getElementById('rg-from').value = todayStr();
         document.getElementById('rg-to').value   = todayStr();
         buildHomeGrid();
+        normaBarLoad();
         loadEmployees();
         loadAbsTypes();
         updateMMLabel();
@@ -3548,6 +3587,96 @@ function rpFmtHM(mins) {
   return Math.floor(n / 60) + ':' + String(n % 60).padStart(2, '0');
 }
 
+// ── Pasek normy godzin (górna belka) — widoczny na każdej zakładce,
+// bo to ustawienie całej kliniki na dany miesiąc, nie coś związanego
+// z jednym raportem. Bieżący miesiąc zapisuje się jednym kliknięciem;
+// każdy inny (przeszły albo przyszły), edytowany w historii, wymaga
+// dwuetapowego potwierdzenia — ten sam wzorzec co inne nieodwracalne
+// akcje w tej aplikacji.
+var NORMA_DZIS = { rok: new Date().getFullYear(), mies: new Date().getMonth() + 1 };
+
+function normaBarLoad() {
+  document.getElementById('norma-bar-mies').textContent = MONTHS[NORMA_DZIS.mies - 1] + ' ' + NORMA_DZIS.rok;
+  gas('masterGetNormaLat', [M.token, NORMA_DZIS.rok, 1], function(res) {
+    if (!res || !res.ok) return;
+    var m = res.lata[0].miesiace[NORMA_DZIS.mies - 1];
+    document.getElementById('norma-bar-godz').value = m.godziny > 0 ? m.godziny : '';
+    document.getElementById('norma-bar-auto').style.display = m.auto ? 'inline' : 'none';
+  });
+}
+
+document.getElementById('norma-bar-zapisz').addEventListener('click', function() {
+  var val = parseFloat(document.getElementById('norma-bar-godz').value);
+  if (isNaN(val) || val < 0) { toast('Podaj liczbę godzin.', false); return; }
+  gas('masterSetEtat', [M.token, NORMA_DZIS.rok, NORMA_DZIS.mies, val], function(res) {
+    if (!res || !res.ok) { toast((res && res.msg) || 'Błąd zapisu normy.', false); return; }
+    document.getElementById('norma-bar-auto').style.display = 'none';
+    wsConfirmPopup('Zapisano normę na ' + MONTHS[NORMA_DZIS.mies - 1] + '.');
+    if (RP.empId) rpLoadMonth();
+  });
+});
+
+document.getElementById('norma-bar-hist').addEventListener('click', function() {
+  document.getElementById('norma-hist-modal').style.display = 'flex';
+  normaHistLoad();
+});
+document.getElementById('norma-hist-close').addEventListener('click', function() {
+  document.getElementById('norma-hist-modal').style.display = 'none';
+});
+document.getElementById('norma-hist-modal').addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
+
+function normaHistLoad() {
+  var box = document.getElementById('norma-hist-lista');
+  box.innerHTML = '<div class="hint">Ładowanie…</div>';
+  gas('masterGetNormaLat', [M.token, NORMA_DZIS.rok - 1, 5], function(res) {
+    if (!res || !res.ok) { box.innerHTML = '<div class="hint">' + esc((res && res.msg) || 'Błąd.') + '</div>'; return; }
+    var wiersze = [];
+    res.lata.forEach(function(rokBlok) {
+      rokBlok.miesiace.forEach(function(m) {
+        wiersze.push({ rok: rokBlok.rok, mies: m.miesiac, godziny: m.godziny, auto: m.auto });
+      });
+    });
+    box.innerHTML = wiersze.map(function(w) {
+      var biezacy = (w.rok === NORMA_DZIS.rok && w.mies === NORMA_DZIS.mies);
+      return '<div class="norma-hist-row">' +
+        '<span class="norma-hist-mies' + (biezacy ? ' current' : '') + '">' + esc(MONTHS[w.mies - 1]) + ' ' + w.rok +
+        (biezacy ? ' (bieżący)' : '') + (w.auto ? ' <span class="hint" style="display:inline">(auto)</span>' : '') + '</span>' +
+        '<input type="number" class="inp" min="0" step="0.5" value="' + (w.godziny > 0 ? w.godziny : '') + '">' +
+        '<button type="button" class="btn btn-primary" data-biezacy="' + biezacy + '" data-rok="' + w.rok + '" data-mies="' + w.mies + '">Zapisz</button>' +
+        '</div>';
+    }).join('');
+
+    box.querySelectorAll('.norma-hist-row button').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var biezacy = this.getAttribute('data-biezacy') === 'true';
+        var rok = parseInt(this.getAttribute('data-rok'), 10);
+        var mies = parseInt(this.getAttribute('data-mies'), 10);
+        var input = this.closest('.norma-hist-row').querySelector('input');
+        var val = parseFloat(input.value);
+        if (isNaN(val) || val < 0) { toast('Podaj liczbę godzin.', false); return; }
+
+        if (!biezacy && this.getAttribute('data-armed') !== '1') {
+          this.setAttribute('data-armed', '1');
+          this.textContent = 'Na pewno? Kliknij ponownie';
+          var self = this;
+          clearTimeout(this._t);
+          this._t = setTimeout(function() { self.removeAttribute('data-armed'); self.textContent = 'Zapisz'; }, 4000);
+          return;
+        }
+
+        gas('masterSetEtat', [M.token, rok, mies, val], function(res) {
+          if (!res || !res.ok) { toast((res && res.msg) || 'Błąd zapisu.', false); return; }
+          wsConfirmPopup('Zapisano normę.');
+          if (biezacy) normaBarLoad();
+          normaHistLoad();
+        });
+      });
+    });
+  });
+}
+
 function rpLoadMonth() {
   document.getElementById('rp-data').innerHTML = '<div class="hint">Ładowanie…</div>';
   gas('masterGetDashboard', [M.token, RP.year, RP.month], function(res) {
@@ -3557,8 +3686,6 @@ function rpLoadMonth() {
       return;
     }
     RP.data = res;
-    document.getElementById('rp-etat').value = res.etat > 0 ? res.etat : '';
-    document.getElementById('rp-etat-auto').style.display = res.etatAuto ? 'block' : 'none';
     var emp = null;
     (res.employees || []).forEach(function(e) { if (e.id === RP.empId) emp = e; });
     if (!emp) {
@@ -3568,20 +3695,6 @@ function rpLoadMonth() {
     renderRPEmployee(emp, res.etat);
   });
 }
-
-document.getElementById('rp-etat').addEventListener('blur', function() {
-  if (!RP.empId && !RP.data) return;
-  var val = parseFloat(this.value);
-  if (isNaN(val) || val < 0) return;
-  gas('masterSetEtat', [M.token, RP.year, RP.month, val], function(res) {
-    if (res && res.ok) {
-      wsConfirmPopup('Zapisano normę.');
-      document.getElementById('rp-etat-auto').style.display = 'none';
-      if (RP.empId) rpLoadMonth();
-    }
-    else toast((res && res.msg) || 'Błąd zapisu normy.', false);
-  });
-});
 
 function renderRPEmployee(emp, etat) {
   var totalMins = emp.totalMinutes || 0;
