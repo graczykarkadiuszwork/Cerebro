@@ -917,14 +917,21 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-6 4 3 5-8"/></svg>
       <span>Raporty</span>
     </button>
-    <button class="seg-btn" id="tab-code">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10v4M11 10v4M15 10v4"/></svg>
-      <span>Kod</span>
+    <button class="seg-group-toggle" id="tab-group-emp-screens" type="button" aria-expanded="false" aria-controls="seg-group-emp-screens">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20"/></svg>
+      <span>Ekrany pracowników</span>
+      <svg class="seg-group-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </button>
-    <button class="seg-btn" id="tab-clock">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 18h6"/></svg>
-      <span>Odbicia</span>
-    </button>
+    <div class="seg-group" id="seg-group-emp-screens" style="display:none">
+      <button class="seg-btn" id="tab-code">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10v4M11 10v4M15 10v4"/></svg>
+        <span>Kod</span>
+      </button>
+      <button class="seg-btn" id="tab-clock">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 18h6"/></svg>
+        <span>Odbicia</span>
+      </button>
+    </div>
     <button class="seg-btn" id="tab-legend">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.6 2.6 0 0 1 5 1c0 1.7-2.5 2-2.5 4"/><circle cx="12" cy="17" r="0.1" fill="currentColor" stroke-width="2.6"/></svg>
       <span>Pomoc</span>
@@ -1587,6 +1594,24 @@ var viewStack = [];
 var currentTab = 'tab-home';
 var mBack = document.getElementById('m-back');
 
+// Zakładki schowane w rozwijanych grupach szuflady — patrz .seg-group
+// w Styles.html i tab-group-emp-screens niżej. Klucz = id zakładki,
+// wartość = id przycisku rozwijacza tej grupy.
+var TAB_GRUPA = { 'tab-code': 'tab-group-emp-screens', 'tab-clock': 'tab-group-emp-screens' };
+
+function segGroupSetOpen(toggleId, open) {
+  var toggle = document.getElementById(toggleId);
+  if (!toggle) return;
+  var group = document.getElementById(toggle.getAttribute('aria-controls'));
+  toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (group) group.style.display = open ? 'flex' : 'none';
+}
+
+document.getElementById('tab-group-emp-screens').addEventListener('click', function() {
+  var open = this.getAttribute('aria-expanded') === 'true';
+  segGroupSetOpen('tab-group-emp-screens', !open);
+});
+
 function onTabActivated(tabId) {
   if (tabId === 'tab-home')    buildHomeGrid();
   if (tabId === 'tab-grafik')  grInit();
@@ -1642,6 +1667,10 @@ function activateTab(tabId, opts) {
     if (btn) btn.className = 'seg-btn' + (id === tabId ? ' on' : '');
     document.getElementById(TABS[id]).style.display = (id === tabId) ? 'block' : 'none';
   });
+  // Jeśli zakładka mieszka w rozwijanej grupie (np. Kod/Odbicia pod
+  // "Ekrany pracowników"), rozwiń ją — inaczej podświetlenie "on"
+  // byłoby niewidoczne pod zwiniętym rozwijaczem.
+  if (TAB_GRUPA[tabId]) segGroupSetOpen(TAB_GRUPA[tabId], true);
   mBack.style.display = viewStack.length ? 'inline-flex' : 'none';
   onTabActivated(tabId);
 }

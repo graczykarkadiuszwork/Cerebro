@@ -496,6 +496,22 @@ body.nav-open .nav-backdrop{display:block}
 @keyframes navIconPulse{0%{transform:scale(1)}40%{transform:scale(1.35)}100%{transform:scale(1)}}
 .tabbar .seg-btn.pulsing svg{animation:navIconPulse .38s var(--ease-snap,ease-out)}
 
+/* Grupa nawigacji rozwijana w szufladzie (np. "Ekrany pracowników" —
+   Kod + Odbicia) — sam przycisk grupy wygląda jak pozycja menu, ale to
+   tylko rozwijacz, nie zakładka: nie ma wpisu w TABS i nie dostaje
+   klasy .on przy przełączaniu widoków. */
+.tabbar .seg-group-toggle{
+  flex:0 0 auto;width:100%;display:flex;flex-direction:row;align-items:center;gap:12px;
+  background:none;border:none;border-radius:var(--radius-m);cursor:pointer;
+  color:var(--c-ink);font-size:14px;font-weight:600;padding:12px 14px;min-height:50px;
+  white-space:nowrap;text-align:left;font-family:inherit;
+}
+.tabbar .seg-group-toggle svg:first-child{width:21px;height:21px;color:var(--c-muted);flex-shrink:0}
+.tabbar .seg-group-toggle span{flex:1}
+.seg-group-chevron{width:16px;height:16px;color:var(--c-muted);flex-shrink:0;transition:transform .2s var(--ease,ease)}
+.tabbar .seg-group-toggle[aria-expanded="true"] .seg-group-chevron{transform:rotate(90deg)}
+.tabbar .seg-group{display:flex;flex-direction:column;gap:2px;padding-left:14px;border-left:2px solid var(--c-border);margin:0 0 0 24px}
+
 /* ── Presence ticker — pływająca pigułka pod hero (wspólna: Raporty + Właściciel) ── */
 .presence-bar{background:var(--c-white);border:1px solid var(--c-border);border-radius:999px;padding:10px 0;overflow:hidden;cursor:pointer;margin:14px 16px 0;box-shadow:var(--shadow-s);max-width:928px}
 @media(min-width:960px){.presence-bar{margin-left:auto;margin-right:auto}}
