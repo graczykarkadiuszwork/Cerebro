@@ -43,6 +43,27 @@
 .ob2-row-osoba{font-weight:700;color:var(--c-ink)}
 .ob2-row-czas{font-family:ui-monospace,monospace;color:var(--c-muted);font-size:12.5px;text-align:right}
 
+/* ── Strona główna: dashboard zbiorczy zespołu ── */
+.hd-card{background:var(--c-white);border:1px solid var(--c-border);border-radius:var(--radius-l,16px);box-shadow:var(--shadow-s);padding:16px;margin-bottom:20px}
+.hd-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.hd-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:18px}
+.hd-tile{display:flex;flex-direction:column;gap:2px;padding:12px 10px;border-radius:var(--radius-m);background:var(--c-offwhite);border:1px solid var(--c-border);transition:transform .18s var(--ease-snap,ease-out),box-shadow .18s ease-out}
+.hd-tile:hover{transform:translateY(-2px);box-shadow:var(--shadow-s)}
+.hd-tile-num{font-size:24px;font-weight:800;color:var(--c-ink);font-variant-numeric:tabular-nums}
+.hd-tile-lbl{font-size:11px;color:var(--c-muted);font-weight:600}
+.hd-tile-warn .hd-tile-num{color:var(--c-accent)}
+.hd-chart-title{font-size:12px;font-weight:700;color:var(--c-muted);text-transform:uppercase;letter-spacing:.4px;margin:14px 0 8px}
+.hd-trend{display:flex;align-items:flex-end;gap:2px;height:88px;padding:0 2px}
+.hd-trend-bar{flex:1;min-width:2px;background:var(--c-primary);border-radius:3px 3px 0 0;height:0;transition:height .5s var(--ease-snap,cubic-bezier(.4,0,.2,1));cursor:pointer}
+.hd-trend-bar:hover{background:var(--c-accent)}
+.hd-trend-empty{color:var(--c-muted);font-size:12.5px;align-self:center}
+.hd-role{display:flex;flex-direction:column;gap:8px}
+.hd-role-row{display:flex;align-items:center;gap:10px}
+.hd-role-lbl{width:120px;flex-shrink:0;font-size:12.5px;font-weight:700;color:var(--c-ink)}
+.hd-role-track{flex:1;height:10px;border-radius:999px;background:var(--c-field);overflow:hidden}
+.hd-role-fill{height:100%;border-radius:999px;width:0;transition:width .6s var(--ease-snap,cubic-bezier(.4,0,.2,1))}
+.hd-role-val{width:56px;flex-shrink:0;text-align:right;font-size:12px;font-weight:700;color:var(--c-muted);font-variant-numeric:tabular-nums}
+
 /* ── Raporty: kopia zapasowa (Dysk Google) ── */
 .rp-backup-card{border:1px solid var(--c-border);border-radius:var(--radius-m);background:var(--c-offwhite);padding:12px 14px;margin-bottom:16px;display:flex;flex-direction:column;gap:8px}
 .rp-backup-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
@@ -432,6 +453,48 @@
 
     <!-- ── WIDOK: STRONA GŁÓWNA (kliknięcie w logo, domyślny widok po zalogowaniu) ── -->
     <div id="view-home">
+      <div class="hd-card" id="hd-card">
+        <div class="hd-head">
+          <div class="section-title" style="margin-bottom:0">Zespół w skrócie</div>
+          <div class="month-nav" style="margin:0">
+            <button id="hd-prev" class="btn-icon" type="button" aria-label="Poprzedni miesiąc"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+            <span id="hd-label" class="month-label">—</span>
+            <button id="hd-next" class="btn-icon" type="button" aria-label="Następny miesiąc"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+          </div>
+        </div>
+
+        <div class="hd-tiles" id="hd-tiles">
+          <div class="hd-tile">
+            <span class="hd-tile-num" id="hd-num-godziny">0</span>
+            <span class="hd-tile-lbl">godzin zespołu</span>
+          </div>
+          <div class="hd-tile">
+            <span class="hd-tile-num" id="hd-num-srednia">0</span>
+            <span class="hd-tile-lbl">śr. godz./osobę</span>
+          </div>
+          <div class="hd-tile">
+            <span class="hd-tile-num" id="hd-num-aktywni">0</span>
+            <span class="hd-tile-lbl">aktywnych teraz</span>
+          </div>
+          <div class="hd-tile">
+            <span class="hd-tile-num" id="hd-num-urlop">0</span>
+            <span class="hd-tile-lbl">na urlopie dziś</span>
+          </div>
+          <div class="hd-tile hd-tile-warn">
+            <span class="hd-tile-num" id="hd-num-ovr">0</span>
+            <span class="hd-tile-lbl">dni z nadgodzinami</span>
+          </div>
+        </div>
+
+        <div class="hd-chart-title">Godziny zespołu dzień po dniu</div>
+        <div id="hd-trend" class="hd-trend"><div class="hint">Ładowanie…</div></div>
+
+        <div class="hd-chart-title">Godziny wg roli</div>
+        <div id="hd-role" class="hd-role"></div>
+
+        <button id="hd-details" class="btn-link" type="button" style="margin-top:4px">Zobacz pełną obecność zespołu →</button>
+      </div>
+
       <div class="section-title" style="margin-bottom:12px">Menu</div>
       <div class="home-grid" id="home-grid"></div>
     </div>
@@ -1488,6 +1551,7 @@ document.getElementById('kp-login').addEventListener('click', function(e) {
         document.getElementById('rg-from').value = todayStr();
         document.getElementById('rg-to').value   = todayStr();
         buildHomeGrid();
+        hdInit();
         normaBarLoad();
         loadEmployees();
         loadAbsTypes();
@@ -1735,7 +1799,7 @@ document.getElementById('tab-group-emp-screens').addEventListener('click', funct
 });
 
 function onTabActivated(tabId) {
-  if (tabId === 'tab-home')    buildHomeGrid();
+  if (tabId === 'tab-home')  { buildHomeGrid(); hdInit(); }
   if (tabId === 'tab-grafik')  grInit();
   if (tabId === 'tab-staff')   renderStaffList();
   if (tabId === 'tab-legend')  wsRenderLegend('legend-container');
@@ -1759,6 +1823,107 @@ function buildHomeGrid() {
     tile.innerHTML = btn.innerHTML;
     tile.addEventListener('click', function() { btn.click(); });
     grid.appendChild(tile);
+  });
+}
+
+// ── Strona główna: dashboard zbiorczy zespołu (#62) ──────────────
+// Zbiorcze dane całego zespołu za miesiąc, z prostymi animowanymi
+// wykresami (czysty inline SVG/CSS — bez bibliotek). Kolory kategorii
+// (wykres wg roli) to te same stałe barwy co w Zespole (_rolaKolor) —
+// spójność z resztą aplikacji zamiast osobnej, nowej palety.
+
+var HD = { rok: new Date().getFullYear(), mies: new Date().getMonth() + 1 };
+var HD_KOLORY_ROLA = { asystentka: '#2FA37A', higienistka: '#9B59B6', inne: '#E8912D' };
+
+function hdInit() { hdLoad(); }
+
+document.getElementById('hd-prev').addEventListener('click', function(e) {
+  e.stopPropagation();
+  HD.mies--; if (HD.mies < 1) { HD.mies = 12; HD.rok--; }
+  hdLoad();
+});
+document.getElementById('hd-next').addEventListener('click', function(e) {
+  e.stopPropagation();
+  HD.mies++; if (HD.mies > 12) { HD.mies = 1; HD.rok++; }
+  hdLoad();
+});
+document.getElementById('hd-details').addEventListener('click', function(e) {
+  e.stopPropagation();
+  activateTab('tab-obecnosc');
+});
+
+function hdLoad() {
+  document.getElementById('hd-label').textContent = MONTHS[HD.mies - 1] + ' ' + HD.rok;
+  gas('masterGetHomeDashboard', [M.token, HD.rok, HD.mies], function(res) {
+    if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+    if (!res || !res.ok) {
+      document.getElementById('hd-trend').innerHTML = '<div class="hint">' + esc((res && res.msg) || 'Błąd ładowania.') + '</div>';
+      document.getElementById('hd-role').innerHTML = '';
+      return;
+    }
+    hdAnimujLiczbe('hd-num-godziny', res.sumaGodzin, ' h');
+    hdAnimujLiczbe('hd-num-srednia', res.sredniaGodzinNaOsobe, ' h');
+    hdAnimujLiczbe('hd-num-aktywni', res.aktywniDzis, '');
+    hdAnimujLiczbe('hd-num-urlop', res.naUrlopieDzis, '');
+    hdAnimujLiczbe('hd-num-ovr', res.ovrDni, '');
+    hdRysujTrend(res.trend || []);
+    hdRysujRole(res.perRola || []);
+  });
+}
+
+// Prosty tween liczby — bez zależności, wystarczy requestAnimationFrame.
+function hdAnimujLiczbe(id, docelowa, sufiks) {
+  var el = document.getElementById(id);
+  docelowa = docelowa || 0;
+  var czasStart = null, czasTrwania = 500, calkowita = (docelowa % 1 !== 0);
+  function krok(ts) {
+    if (!czasStart) czasStart = ts;
+    var postep = Math.min(1, (ts - czasStart) / czasTrwania);
+    var wartosc = docelowa * postep;
+    el.textContent = (calkowita ? wartosc.toFixed(1) : Math.round(wartosc)) + (sufiks || '');
+    if (postep < 1) requestAnimationFrame(krok);
+  }
+  requestAnimationFrame(krok);
+}
+
+function hdRysujTrend(trend) {
+  var box = document.getElementById('hd-trend');
+  var max = Math.max.apply(null, trend.map(function(t) { return t.minuty; }).concat([0]));
+  if (!trend.length || max <= 0) {
+    box.innerHTML = '<div class="hd-trend-empty">Brak zarejestrowanych godzin w tym miesiącu.</div>';
+    return;
+  }
+  box.innerHTML = trend.map(function(t) {
+    var godz = Math.round((t.minuty / 60) * 10) / 10;
+    return '<div class="hd-trend-bar" data-min="' + t.minuty + '" title="' + esc(t.data) + ': ' + godz + ' h"></div>';
+  }).join('');
+  // Wysokości dopiero w kolejnej klatce — inaczej przejście CSS (height)
+  // by się nie odegrało (start i cel byłyby ustawione w tym samym takcie).
+  requestAnimationFrame(function() {
+    box.querySelectorAll('.hd-trend-bar').forEach(function(el) {
+      var minuty = parseFloat(el.getAttribute('data-min'));
+      el.style.height = Math.max(2, Math.round((minuty / max) * 84)) + 'px';
+    });
+  });
+}
+
+function hdRysujRole(perRola) {
+  var box = document.getElementById('hd-role');
+  if (!perRola.length) { box.innerHTML = '<div class="hint">Brak danych za ten miesiąc.</div>'; return; }
+  var max = Math.max.apply(null, perRola.map(function(r) { return r.godziny; }).concat([0.01]));
+  box.innerHTML = perRola.map(function(r) {
+    var kolor = HD_KOLORY_ROLA[r.grupa] || '#8A93A6';
+    var pct = Math.round((r.godziny / max) * 100);
+    return '<div class="hd-role-row">' +
+      '<span class="hd-role-lbl">' + esc(r.label) + ' (' + r.osob + ')</span>' +
+      '<span class="hd-role-track"><span class="hd-role-fill" data-pct="' + pct + '" style="background:' + kolor + '"></span></span>' +
+      '<span class="hd-role-val">' + r.godziny + ' h</span>' +
+      '</div>';
+  }).join('');
+  requestAnimationFrame(function() {
+    box.querySelectorAll('.hd-role-fill').forEach(function(el) {
+      el.style.width = el.getAttribute('data-pct') + '%';
+    });
   });
 }
 

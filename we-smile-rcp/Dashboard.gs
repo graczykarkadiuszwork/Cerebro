@@ -1727,3 +1727,70 @@ function masterGetObecnoscMiesiac(token, rok, mies) {
 
   return { ok: true, rok: y, mies: m, pracownicyLiczba: pracownicy.length, dni };
 }
+
+// ── Dashboard zbiorczy strony głównej (#62) ───────────────────────
+// Zbiorcze liczby dla całego zespołu RCP naraz — nie rozbite na osoby
+// (do tego służy Obecność zespołu / Raporty, "zobacz pełną obecność"
+// prowadzi właśnie tam). Świadomie oparte na _dashboardData zamiast
+// osobnego przejścia po Ewidencji — jedno źródło prawdy dla sum
+// miesięcznych, ten sam wynik co w widoku Miesiąc dla każdej osoby.
+
+function masterGetHomeDashboard(token, rok, mies) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  const y = parseInt(rok, 10), m = parseInt(mies, 10);
+  if (isNaN(y) || isNaN(m) || m < 1 || m > 12) return { ok: false, msg: 'Nieprawidłowy miesiąc.' };
+
+  const dane = _dashboardData(y, m);
+  if (!dane.ok) return dane;
+
+  const grupaById = {};
+  _getWorkers().forEach(w => { grupaById[String(w[0])] = _grupaZawodowa(w[3]); });
+
+  const GRUPA_LABEL = { asystentka: 'Asystentki', higienistka: 'Higienistki', inne: 'Rejestracja / pozostali' };
+  const perRolaMap = {};
+  let sumaMin = 0, sumaOvrMin = 0, sumaOvrDni = 0;
+
+  dane.employees.forEach(p => {
+    sumaMin += p.totalMinutes;
+    sumaOvrMin += p.ovrMinutes;
+    sumaOvrDni += p.ovrDays;
+    const grupa = grupaById[p.id] || 'inne';
+    if (!perRolaMap[grupa]) perRolaMap[grupa] = { grupa, label: GRUPA_LABEL[grupa] || grupa, minuty: 0, osob: 0 };
+    perRolaMap[grupa].minuty += p.totalMinutes;
+    perRolaMap[grupa].osob++;
+  });
+
+  const ileDni = new Date(y, m, 0).getDate();
+  const pfx = y + '-' + String(m).padStart(2, '0') + '-';
+  const trend = [];
+  for (let d = 1; d <= ileDni; d++) {
+    const ds = pfx + String(d).padStart(2, '0');
+    let minutyDnia = 0;
+    dane.employees.forEach(p => {
+      const dzien = p.days.find(x => x.date === ds);
+      if (dzien && dzien.mins) minutyDnia += dzien.mins;
+    });
+    trend.push({ data: ds, minuty: minutyDnia });
+  }
+
+  const dzisiaj = _todayPL();
+  const aktywniDzis = _activeNowData().active.length;
+  const absMap = _absenceMapAll();
+  const naUrlopieDzis = dane.employees.filter(p => absMap[p.id + '_' + dzisiaj]).length;
+
+  const liczbaOsob = dane.employees.length;
+  return {
+    ok: true, rok: y, mies: m,
+    pracownicyLiczba: liczbaOsob,
+    sumaGodzin: Math.round((sumaMin / 60) * 10) / 10,
+    sredniaGodzinNaOsobe: liczbaOsob ? Math.round((sumaMin / liczbaOsob / 60) * 10) / 10 : 0,
+    ovrDni: sumaOvrDni,
+    ovrGodzin: Math.round((sumaOvrMin / 60) * 10) / 10,
+    aktywniDzis, naUrlopieDzis,
+    perRola: Object.keys(perRolaMap).map(k => {
+      const r = perRolaMap[k];
+      return { grupa: r.grupa, label: r.label, godziny: Math.round((r.minuty / 60) * 10) / 10, osob: r.osob };
+    }),
+    trend
+  };
+}
