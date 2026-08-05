@@ -43,6 +43,14 @@
 .ob2-row-osoba{font-weight:700;color:var(--c-ink)}
 .ob2-row-czas{font-family:ui-monospace,monospace;color:var(--c-muted);font-size:12.5px;text-align:right}
 
+/* ── Raporty: kopia zapasowa (Dysk Google) ── */
+.rp-backup-card{border:1px solid var(--c-border);border-radius:var(--radius-m);background:var(--c-offwhite);padding:12px 14px;margin-bottom:16px;display:flex;flex-direction:column;gap:8px}
+.rp-backup-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.rp-backup-title{font-size:13.5px;font-weight:700;color:var(--c-ink)}
+.rp-backup-status{font-size:12px;color:var(--c-muted);margin-top:2px}
+.rp-backup-status.ok{color:var(--c-success)}
+.rp-backup-status.err{color:var(--c-accent)}
+
 /* ── Urlop: historia odbić zastąpionych urlopem (wersjonowanie) ── */
 .rg-wersja-grupa{border:1px solid var(--c-border);border-radius:var(--radius-m);margin-bottom:12px;overflow:hidden}
 .rg-wersja-head{padding:10px 12px;background:var(--c-offwhite);border-bottom:1px solid var(--c-border);font-size:12.5px;color:var(--c-muted);font-weight:600}
@@ -792,6 +800,20 @@
 
     <!-- ── WIDOK: RAPORTY (Panel Raportowy osadzony) ── -->
     <div id="view-reports" style="display:none">
+      <div class="rp-backup-card" id="rp-backup-card">
+        <div class="rp-backup-row">
+          <div>
+            <div class="rp-backup-title">Kopia zapasowa (Dysk Google)</div>
+            <div class="rp-backup-status" id="rp-backup-status">Sprawdzanie…</div>
+          </div>
+          <button id="rp-backup-now" class="btn btn-ghost" type="button" style="margin:0;width:auto">Wykonaj teraz</button>
+        </div>
+        <div class="rp-backup-row" id="rp-backup-trigger-row" style="display:none">
+          <div class="hint" style="margin:0">Automatyczny backup raz dziennie (03:00) nie jest jeszcze włączony.</div>
+          <button id="rp-backup-trigger-on" class="btn-link" type="button" style="margin:0;padding:0">Włącz</button>
+        </div>
+      </div>
+
       <div class="field" style="position:relative">
         <span class="field-lbl">Pracownik</span>
         <input type="text" id="rp-emp-input" class="inp" placeholder="Wpisz imię lub nazwisko…" autocomplete="off">
@@ -1715,6 +1737,7 @@ function onTabActivated(tabId) {
   if (tabId === 'tab-code')    mcRefreshToken(false);
   if (tabId === 'tab-clock')   obReset();
   if (tabId === 'tab-obecnosc') ob2Init();
+  if (tabId === 'tab-reports') rpBackupStatusLoad();
 }
 
 // Strona główna — pełnoekranowa siatka tych samych pozycji co w
@@ -4074,6 +4097,49 @@ function initEmbeddedReports() {
   rpLoadPresence();
   setInterval(rpLoadPresence, 60000);
 }
+
+// ── Kopia zapasowa (Dysk Google) — #59 ────────────────────────
+function rpBackupStatusLoad() {
+  var status = document.getElementById('rp-backup-status');
+  status.className = 'rp-backup-status';
+  status.textContent = 'Sprawdzanie…';
+  gas('masterBackupStatus', [M.token], function(res) {
+    if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+    if (!res || !res.ok) {
+      status.className = 'rp-backup-status err';
+      status.textContent = (res && res.msg) || 'Błąd sprawdzania.';
+      return;
+    }
+    if (res.ostatni) {
+      status.className = 'rp-backup-status ok';
+      status.textContent = 'Ostatnia kopia: ' + res.ostatni.nazwa.replace('WeSMILE_RCP_backup_', '');
+    } else {
+      status.className = 'rp-backup-status';
+      status.textContent = 'Brak kopii zapasowych — wykonaj pierwszą.';
+    }
+    document.getElementById('rp-backup-trigger-row').style.display = res.trigerWlaczony ? 'none' : 'flex';
+  });
+}
+
+document.getElementById('rp-backup-now').addEventListener('click', function() {
+  var btn = this;
+  btn.disabled = true;
+  toast('Tworzenie kopii zapasowej…', true);
+  gas('masterBackupTeraz', [M.token], function(res) {
+    btn.disabled = false;
+    if (!res || !res.ok) { toast((res && res.msg) || 'Błąd tworzenia kopii.', false); return; }
+    wsConfirmPopup('Kopia zapasowa utworzona.');
+    rpBackupStatusLoad();
+  });
+});
+
+document.getElementById('rp-backup-trigger-on').addEventListener('click', function() {
+  gas('masterWlaczAutoBackup', [M.token], function(res) {
+    if (!res || !res.ok) { toast((res && res.msg) || 'Błąd włączania harmonogramu.', false); return; }
+    wsConfirmPopup('Automatyczny backup włączony (codziennie o 3:00).');
+    rpBackupStatusLoad();
+  });
+});
 
 function updateRPLabel() {
   document.getElementById('rp-label').textContent = MONTHS[RP.month - 1] + ' ' + RP.year;

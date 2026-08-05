@@ -28,6 +28,11 @@ function _logAdmin(action, empId, details) {
   } catch (e) {
     Logger.log('_logAdmin error: ' + e);
   }
+  // Zwierciadło na Dysku Google (patrz Drive.gs) — osobny plik CSV per
+  // rok, żeby dało się ustalić co się stało nawet bez wchodzenia
+  // do samego arkusza. Celowo osobny try/catch: awaria Dysku nie może
+  // ubić zapisu do arkusza powyżej (to on jest źródłem prawdy).
+  if (typeof _logRoczny === 'function') _logRoczny(action, empId, details);
 }
 
 // ── Historia zmian pracownika ─────────────────────────────────
