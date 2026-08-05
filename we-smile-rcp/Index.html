@@ -138,7 +138,7 @@
     </div>
     <textarea id="ovr-note" class="ta" placeholder="Wpisz uzasadnienie (przypisane do dzisiejszego dnia)…"></textarea>
     <button class="btn btn-accent" id="ovr-save" style="margin-top:12px">Zapisz uzasadnienie</button>
-    <button class="btn-link" id="ovr-skip">Pomiń — uzupełni administrator</button>
+    <button class="btn-link" id="ovr-skip">Wróć bez zapisywania — zapytamy przy następnym odbiciu</button>
   </div>
 
   <!-- Krok 3: potwierdzenie -->
@@ -407,7 +407,10 @@ if (PAGE === 'admin') {
   });
 
   document.getElementById('ovr-skip').addEventListener('click', function () {
-    finishOk(ICON_OK, false, 'Zarejestrowano', 'Pamiętaj o uzupełnieniu uzasadnienia u administratora.', 3500);
+    // Odbicie już jest zapisane — to tylko adnotacja czeka. Nic tu nie
+    // "kończymy" na trwałe: przy KOLEJNYM odbiciu tego dnia ten sam ekran
+    // wróci, dopóki ktoś nie wpisze uzasadnienia.
+    finishOk(ICON_OK, false, 'Zarejestrowano', 'Uzasadnienie wciąż czeka — zapytamy o nie przy następnym odbiciu.', 3500);
   });
 
   // ── Nieobecność ───────────────────────────────────────────

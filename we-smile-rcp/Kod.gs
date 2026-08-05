@@ -604,13 +604,22 @@ function clock(pin, tokenCode, action) {
 
   _resetRate('clk_' + empId);
 
-  // Wykrycie pracy poza regularnymi godzinami Kliniki:
-  // wejście przed otwarciem lub wyjście po zamknięciu (Nd — zawsze).
-  const h = _clinicHoursFor(today);
-  let overtime = false;
-  if (!h) overtime = true;
-  else if (action === 'WEJSCIE' && _t2m(godzina) < h.open)  overtime = true;
-  else if (action === 'WYJSCIE' && _t2m(godzina) > h.close) overtime = true;
+  // Wykrycie pracy poza regularnymi godzinami Kliniki — na poziomie
+  // CAŁEGO dnia (pierwsze wejście / ostatnie wyjście), nie tylko tego
+  // jednego zdarzenia. Dzięki temu popup z uzasadnieniem wraca przy
+  // KAŻDEJ kolejnej próbie odbicia tego dnia, dopóki ktoś nie wpisze
+  // adnotacji — nawet jeśli akurat TO zdarzenie samo w sobie mieści się
+  // w normalnych godzinach (np. wyjście po nadgodzinowym wejściu).
+  const wszystkieAkcje = todayEmp.map(r => ({ akcja: String(r[4]), godz: _sheetTime(r[6]) }))
+    .concat([{ akcja: action, godz: godzina }]);
+  const wejscia = wszystkieAkcje.filter(a => a.akcja === 'WEJSCIE').map(a => a.godz).sort();
+  const wyjscia = wszystkieAkcje.filter(a => a.akcja === 'WYJSCIE').map(a => a.godz).sort();
+  const dzienWejscie = wejscia.length ? wejscia[0] : null;
+  const dzienWyjscie = wyjscia.length ? wyjscia[wyjscia.length - 1] : null;
+
+  const dzienPozaGodzinami = _dayOutsideClinic(today, dzienWejscie, dzienWyjscie);
+  const notatkaJuzJest = !!(_overtimeNotesAll()[empId + '_' + today]);
+  const overtime = dzienPozaGodzinami && !notatkaJuzJest;
 
   return { ok: true, imie: String(worker[1]), godzina, overtime };
 }
