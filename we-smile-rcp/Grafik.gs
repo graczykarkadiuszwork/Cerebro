@@ -2368,6 +2368,65 @@ function _grafikDzienStan(ds, ctx) {
   };
 }
 
+// ── Zatwierdzanie grafiku miesiąca (dwuetapowa autoryzacja) ──────
+// Świadoma decyzja admina "ten miesiąc jest gotowy" — dopiero wtedy
+// sensowne jest porównywanie realnych odbić RCP z planem (patrz
+// masterGrafikZgodnoscRcp niżej). To celowo NIE wpływa na popupy
+// pracownika przy odbiciu na kiosku — te rządzą się wyłącznie
+// godzinami otwarcia Kliniki (Kod.gs, _dayOutsideClinic), niezależnie
+// od tego czy i jak grafik jest zatwierdzony.
+//
+// Jakakolwiek zmiana bloku w już zatwierdzonym miesiącu automatycznie
+// cofa zatwierdzenie — inaczej status mógłby milcząco rozjechać się
+// z rzeczywistością, a to ma być świadoma, jawna decyzja za każdym razem.
+
+function _grafikZatwKlucz(rok, mies) { return rok + '-' + String(mies).padStart(2, '0'); }
+
+function _grafikZatwStatus(rok, mies) {
+  const sh = _arkusz('GrafikZatwierdzenia', ['Rok', 'Miesiac', 'Klucz', 'Zatwierdzone', 'Kiedy', 'Kto']);
+  const rows = (sh.getLastRow() >= 2) ? sh.getDataRange().getValues().slice(1) : [];
+  const klucz = _grafikZatwKlucz(rok, mies);
+  for (let i = rows.length - 1; i >= 0; i--) {
+    if (String(rows[i][2]) === klucz) {
+      return { zatwierdzone: rows[i][3] === true || String(rows[i][3]).toUpperCase() === 'TRUE', kiedy: String(rows[i][4] || ''), kto: String(rows[i][5] || '') };
+    }
+  }
+  return { zatwierdzone: false, kiedy: '', kto: '' };
+}
+
+function _grafikZatwUstaw(rok, mies, zatwierdzone, kto) {
+  const sh = _arkusz('GrafikZatwierdzenia', ['Rok', 'Miesiac', 'Klucz', 'Zatwierdzone', 'Kiedy', 'Kto']);
+  sh.appendRow([rok, mies, _grafikZatwKlucz(rok, mies), zatwierdzone, new Date().toISOString(), kto || '']);
+}
+
+// Wywoływane przez każdą akcję zmieniającą bloki grafiku danego dnia —
+// cofa zatwierdzenie miesiąca, do którego ten dzień należy, jeśli był
+// zatwierdzony.
+function _grafikZatwCofnijJesliTrzeba(data) {
+  const rok = parseInt(String(data).slice(0, 4), 10);
+  const mies = parseInt(String(data).slice(5, 7), 10);
+  if (isNaN(rok) || isNaN(mies)) return;
+  const stan = _grafikZatwStatus(rok, mies);
+  if (stan.zatwierdzone) _grafikZatwUstaw(rok, mies, false, 'auto (edycja grafiku po zatwierdzeniu)');
+}
+
+function masterGrafikZatwierdzStatus(token, rok, mies) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  const y = parseInt(rok, 10), m = parseInt(mies, 10);
+  if (isNaN(y) || isNaN(m) || m < 1 || m > 12) return { ok: false, msg: 'Nieprawidłowy miesiąc.' };
+  const stan = _grafikZatwStatus(y, m);
+  return { ok: true, zatwierdzone: stan.zatwierdzone, kiedy: stan.kiedy, kto: stan.kto };
+}
+
+function masterGrafikZatwierdz(token, rok, mies) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  const y = parseInt(rok, 10), m = parseInt(mies, 10);
+  if (isNaN(y) || isNaN(m) || m < 1 || m > 12) return { ok: false, msg: 'Nieprawidłowy miesiąc.' };
+  _grafikZatwUstaw(y, m, true, 'admin');
+  _logAdmin('ZatwierdzGrafik', '—', 'Zatwierdzono grafik ' + y + '-' + String(m).padStart(2, '0'));
+  return { ok: true };
+}
+
 function masterGrafikMiesiac(token, rok, mies) {
   if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
   const y = parseInt(rok, 10), m = parseInt(mies, 10);
@@ -2396,6 +2455,66 @@ function masterGrafikMiesiac(token, rok, mies) {
     krokMin: GRAFIK_KROK_MIN,
     asystaZew: ASYSTA_ZEW
   };
+}
+
+// ── Zgodność zatwierdzonego grafiku z rzeczywistymi odbiciami RCP ──
+// Czysto informacyjne porównanie dla admina — samo w sobie NIE wpływa
+// na popupy pracownika przy odbiciu (patrz komentarz przy zatwierdzaniu
+// wyżej). Tolerancja: spóźnienie/wcześniejsze przyjście do
+// GRAFIK_ZGODNOSC_TOLERANCJA_MIN minut nie liczy się jako rozbieżność;
+// wyjście PÓŹNIEJSZE niż plan nigdy nie jest rozbieżnością (pracownik
+// mógł np. musieć dokończyć sprzątanie gabinetu) — flagowane jest
+// tylko wyjście WCZEŚNIEJSZE niż plan minus tolerancja.
+
+const GRAFIK_ZGODNOSC_TOLERANCJA_MIN = 20;
+
+function masterGrafikZgodnoscRcp(token, rok, mies) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  const y = parseInt(rok, 10), m = parseInt(mies, 10);
+  if (isNaN(y) || isNaN(m) || m < 1 || m > 12) return { ok: false, msg: 'Nieprawidłowy miesiąc.' };
+
+  const stanZatw = _grafikZatwStatus(y, m);
+  const ctx = _grafikKontekstDni();
+  const personel = _grafikPersonel();
+  const gabinety = _gabinetyAll(false);
+  const ewid = _buildEwidMap().map;
+
+  const ile = new Date(y, m, 0).getDate();
+  const pfx = y + '-' + String(m).padStart(2, '0') + '-';
+  const wiersze = [];
+
+  for (let d = 1; d <= ile; d++) {
+    const ds = pfx + String(d).padStart(2, '0');
+    const stanDnia = _grafikDzienStan(ds, ctx);
+    (stanDnia.bloki || []).forEach(b => {
+      if (b.typ !== BLOK_LEKARZ && b.typ !== BLOK_HIGIENA) return;
+      const osoba = personel.find(p => p.id === b.osobaId);
+      if (!osoba) return;
+      const gab = gabinety.find(g => g.id === b.gabinetId);
+
+      const rec = ewid[b.osobaId + '_' + ds] || { e: [], x: [] };
+      const rzeczywisteWejscie = rec.e.length ? rec.e.slice().sort()[0] : null;
+      const rzeczywisteWyjscie = rec.x.length ? rec.x.slice().sort().reverse()[0] : null;
+
+      let status = 'brak_danych', roznicaWejscieMin = null, roznicaWyjscieMin = null;
+      if (rzeczywisteWejscie || rzeczywisteWyjscie) {
+        if (rzeczywisteWejscie) roznicaWejscieMin = _t2m(rzeczywisteWejscie) - _t2m(b.od);
+        if (rzeczywisteWyjscie) roznicaWyjscieMin = _t2m(rzeczywisteWyjscie) - _t2m(b.do);
+        const wOk = roznicaWejscieMin === null || Math.abs(roznicaWejscieMin) <= GRAFIK_ZGODNOSC_TOLERANCJA_MIN;
+        const xOk = roznicaWyjscieMin === null || roznicaWyjscieMin >= -GRAFIK_ZGODNOSC_TOLERANCJA_MIN;
+        status = (wOk && xOk) ? 'zgodne' : 'rozbieznosc';
+      }
+
+      wiersze.push({
+        data: ds, osobaId: b.osobaId, osobaNazwa: osoba.imie + ' ' + osoba.nazwisko,
+        gabinetId: b.gabinetId, gabinetNazwa: gab ? gab.nazwa : '',
+        planOd: b.od, planDo: b.do, rzeczywisteWejscie, rzeczywisteWyjscie,
+        roznicaWejscieMin, roznicaWyjscieMin, status
+      });
+    });
+  }
+
+  return { ok: true, rok: y, mies: m, zatwierdzone: stanZatw.zatwierdzone, kiedy: stanZatw.kiedy, wiersze };
 }
 
 // ── Eksport grafiku do Excela — układ wzorowany na ręcznie
@@ -2945,6 +3064,7 @@ function masterZapiszDzienGrafiku(token, data, bloki) {
   if (!czyste.length) puste.push(data);
   _zapiszDniPuste(puste);
 
+  _grafikZatwCofnijJesliTrzeba(data);
   _logAdmin('EdycjaDniaGrafiku', data, czyste.length + ' bloków');
   return { ok: true, bloki: czyste.length };
 }
@@ -2965,6 +3085,7 @@ function masterResetDzienGrafiku(token, data) {
   if (!_dataOk(data)) return { ok: false, msg: 'Nieprawidłowa data.' };
   _usunDzienGrafiku(data);
   _zapiszDniPuste(_dniPusteAll().filter(d => d !== data));
+  _grafikZatwCofnijJesliTrzeba(data);
   _logAdmin('ResetDniaGrafiku', data, 'przywrócono szablon');
   return { ok: true };
 }

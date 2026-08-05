@@ -384,6 +384,9 @@ function callRCP(action, argsJson) {
       case 'masterGrafikExportXlsx': return masterGrafikExportXlsx(args[0], args[1], args[2]);
       case 'masterGrafikImportPreview': return masterGrafikImportPreview(args[0], args[1]);
       case 'masterGrafikImportZatwierdz': return masterGrafikImportZatwierdz(args[0], args[1]);
+      case 'masterGrafikZatwierdzStatus': return masterGrafikZatwierdzStatus(args[0], args[1], args[2]);
+      case 'masterGrafikZatwierdz':       return masterGrafikZatwierdz(args[0], args[1], args[2]);
+      case 'masterGrafikZgodnoscRcp':     return masterGrafikZgodnoscRcp(args[0], args[1], args[2]);
       case 'masterGetPokrycieUrlopu': return masterGetPokrycieUrlopu(args[0], args[1], args[2], args[3]);
       case 'masterPrzypiszZastepceBloku':
         return masterPrzypiszZastepceBloku(args[0], args[1], args[2], args[3], args[4], args[5]);
@@ -837,6 +840,7 @@ function setupRCP() {
     { name: 'Grafik',        h: ['ID', 'GabinetID', 'DzienTygodnia', 'Typ', 'OsobaID', 'Od', 'Do', 'AsystaWymagana', 'AsystaUwaga', 'Zmodyfikowano'] },
     { name: 'GrafikAsysta',  h: ['ID', 'BlokID', 'OsobaID', 'Od', 'Do', 'Zmodyfikowano'] },
     { name: 'GrafikSzablony', h: ['ID', 'Nazwa', 'Typ', 'Od', 'Do', 'AsystaWymagana', 'AsystaUwaga', 'Zmodyfikowano'] },
+    { name: 'GrafikZatwierdzenia', h: ['Rok', 'Miesiac', 'Klucz', 'Zatwierdzone', 'Kiedy', 'Kto'] },
     { name: 'NotatkiDnia',   h: ['ID', 'EmpID', 'Data', 'Tresc', 'Utworzono'] }
   ].forEach(def => {
     let sh = spreadsheet.getSheetByName(def.name);
