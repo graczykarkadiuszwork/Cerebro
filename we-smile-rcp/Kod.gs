@@ -358,6 +358,8 @@ function callRCP(action, argsJson) {
       case 'masterCofnijSwieto':   return masterCofnijSwieto(args[0], args[1]);
       case 'masterZastosujSwietaRoku': return masterZastosujSwietaRoku(args[0], args[1], args[2]);
       case 'masterSetAbsenceRange': return masterSetAbsenceRange(args[0], args[1], args[2], args[3], args[4], args[5]);
+      case 'masterGetWersjeOdbic': return masterGetWersjeOdbic(args[0], args[1]);
+      case 'masterPrzywrocOdbicia': return masterPrzywrocOdbicia(args[0], args[1], args[2]);
       case 'masterSetEmploymentForm': return masterSetEmploymentForm(args[0], args[1], args[2]);
       case 'masterGetArchivedEmployees': return masterGetArchivedEmployees(args[0]);
       case 'masterSetDoctorTags':   return masterSetDoctorTags(args[0], args[1], args[2]);
@@ -836,6 +838,7 @@ function setupRCP() {
     { name: 'Nieobecnosci',  h: ['Timestamp', 'EmpID', 'Imię', 'Nazwisko', 'Data', 'Kod', 'Typ', 'Adnotacja', 'Źródło'] },
     { name: 'Przekroczenia', h: ['Timestamp', 'EmpID', 'Data', 'Uzasadnienie', 'Źródło'] },
     { name: 'Przerwy',       h: ['Timestamp', 'EmpID', 'Data', 'Godzina', 'Uzasadnienie', 'Źródło'] },
+    { name: 'EwidencjaWersje', h: ['WersjaId', 'RowIdx', 'Timestamp', 'EmpID', 'Imię', 'Nazwisko', 'Akcja', 'Data', 'Godzina', 'Źródło', 'Powód', 'Przywrócono'] },
     // ── Grafik obsady gabinetów ──
     { name: 'Gabinety',      h: ['ID', 'Nazwa', 'Kolejnosc', 'Aktywny'] },
     { name: 'Grafik',        h: ['ID', 'GabinetID', 'DzienTygodnia', 'Typ', 'OsobaID', 'Od', 'Do', 'AsystaWymagana', 'AsystaUwaga', 'Zmodyfikowano'] },

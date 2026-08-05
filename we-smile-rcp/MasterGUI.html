@@ -43,6 +43,16 @@
 .ob2-row-osoba{font-weight:700;color:var(--c-ink)}
 .ob2-row-czas{font-family:ui-monospace,monospace;color:var(--c-muted);font-size:12.5px;text-align:right}
 
+/* ── Urlop: historia odbić zastąpionych urlopem (wersjonowanie) ── */
+.rg-wersja-grupa{border:1px solid var(--c-border);border-radius:var(--radius-m);margin-bottom:12px;overflow:hidden}
+.rg-wersja-head{padding:10px 12px;background:var(--c-offwhite);border-bottom:1px solid var(--c-border);font-size:12.5px;color:var(--c-muted);font-weight:600}
+.rg-wersja-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--c-border)}
+.rg-wersja-row:last-of-type{border-bottom:none}
+.rg-wersja-row input[type="checkbox"]{width:19px;height:19px;accent-color:var(--c-primary);flex-shrink:0}
+.rg-wersja-txt{flex:1;font-size:13.5px;color:var(--c-ink)}
+.rg-wersja-txt b{font-family:ui-monospace,monospace}
+.rg-wersja-foot{padding:10px 12px;display:flex;justify-content:flex-end}
+
 .grl-zatw-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0 6px}
 .grl-zatw-status{font-size:12.5px;font-weight:700;color:var(--c-muted);padding:6px 10px;border-radius:999px;background:var(--c-offwhite)}
 .grl-zatw-status.on{color:var(--c-success);background:var(--c-success-tint)}
@@ -571,6 +581,10 @@
         <button id="rg-cancel" class="btn btn-ghost">Anuluj</button>
         <button id="rg-yes" class="btn btn-accent">Tak, zapisz</button>
       </div>
+
+      <button id="rg-wersje-open" class="btn-link" type="button" style="margin-top:6px">
+        Historia odbić zastąpionych urlopem — sprawdź / przywróć
+      </button>
     </div>
 
     <!-- ── WIDOK: DNI WOLNE (masowo, dla całej Kliniki) ── -->
@@ -1259,6 +1273,20 @@
       </button>
     </div>
     <div id="ob2-dzien-lista"></div>
+  </div>
+</div>
+
+<!-- ═══════ MODAL — Urlop: historia odbić zastąpionych urlopem ═══════ -->
+<div id="rg-wersje-modal" class="modal-overlay" style="display:none">
+  <div class="modal-card">
+    <div class="modal-head">
+      <span>Historia odbić</span>
+      <button id="rg-wersje-close" class="btn-icon" aria-label="Zamknij">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="hint" style="margin-bottom:12px">Odbicia RCP zastąpione przy oznaczaniu urlopu tego pracownika — nadal odwracalne. Zaznacz, co przywrócić.</div>
+    <div id="rg-wersje-lista"></div>
   </div>
 </div>
 
@@ -1984,9 +2012,67 @@ document.getElementById('rg-yes').addEventListener('click', function() {
     rgDisarm();
     if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
     if (!res || !res.ok) { toast((res && res.msg) || 'Błąd zapisu.', false); return; }
-    wsConfirmPopup('Zapisano dla ' + res.count + ' dni.');
+    var dodatek = (res.archiwum && res.archiwum.liczba)
+      ? ' ' + res.archiwum.liczba + ' odbić RCP z tego zakresu zarchiwizowano (patrz „Historia odbić” niżej).'
+      : '';
+    wsConfirmPopup('Zapisano dla ' + res.count + ' dni.' + dodatek);
   });
 });
+
+// ── Historia odbić zastąpionych urlopem (wersjonowanie, #56) ────
+document.getElementById('rg-wersje-open').addEventListener('click', function() {
+  if (!M.rgEmpId) { toast('Wybierz pracownika z listy.', false); return; }
+  document.getElementById('rg-wersje-modal').style.display = 'flex';
+  rgWersjeLoad();
+});
+document.getElementById('rg-wersje-close').addEventListener('click', function() {
+  document.getElementById('rg-wersje-modal').style.display = 'none';
+});
+document.getElementById('rg-wersje-modal').addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
+
+function rgWersjeLoad() {
+  var box = document.getElementById('rg-wersje-lista');
+  box.innerHTML = '<div class="hint">Ładowanie…</div>';
+  gas('masterGetWersjeOdbic', [M.token, M.rgEmpId], function(res) {
+    if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+    if (!res || !res.ok) { box.innerHTML = '<div class="hint">' + esc((res && res.msg) || 'Błąd.') + '</div>'; return; }
+    if (!res.wersje.length) { box.innerHTML = '<div class="hint">Brak zarchiwizowanych odbić dla tego pracownika.</div>'; return; }
+
+    var AKCJA_LBL = { WEJSCIE: 'Wejście', WYJSCIE: 'Wyjście' };
+    box.innerHTML = res.wersje.map(function(g) {
+      var wiersze = g.wiersze.map(function(w) {
+        return '<div class="rg-wersja-row">' +
+          '<input type="checkbox" class="rg-wersja-cb" data-row-idx="' + w.rowIdx + '">' +
+          '<span class="rg-wersja-txt">' + esc(AKCJA_LBL[w.akcja] || w.akcja) + ' — <b>' + esc(w.data) + ' ' + esc(w.godzina) + '</b></span>' +
+          '</div>';
+      }).join('');
+      return '<div class="rg-wersja-grupa" data-wersja-id="' + esc(g.wersjaId) + '">' +
+        '<div class="rg-wersja-head">' + esc(g.powod) + '</div>' +
+        wiersze +
+        '<div class="rg-wersja-foot"><button type="button" class="btn btn-primary rg-wersja-przywroc" style="margin:0;width:auto">Przywróć zaznaczone</button></div>' +
+        '</div>';
+    }).join('');
+
+    box.querySelectorAll('.rg-wersja-przywroc').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var grupa = this.closest('.rg-wersja-grupa');
+        var wersjaId = grupa.getAttribute('data-wersja-id');
+        var zaznaczone = Array.prototype.map.call(
+          grupa.querySelectorAll('.rg-wersja-cb:checked'),
+          function(cb) { return parseInt(cb.getAttribute('data-row-idx'), 10); }
+        );
+        if (!zaznaczone.length) { toast('Zaznacz co najmniej jedno odbicie.', false); return; }
+        gas('masterPrzywrocOdbicia', [M.token, wersjaId, zaznaczone], function(res) {
+          if (!res || !res.ok) { toast((res && res.msg) || 'Błąd przywracania.', false); return; }
+          wsConfirmPopup('Przywrócono ' + res.przywrocone + ' odbić.');
+          rgWersjeLoad();
+        });
+      });
+    });
+  });
+}
 
 // ════════════════════════════════════════════════════════════
 // ── Widok: GRAFIK obsady gabinetów ──────────────────────────

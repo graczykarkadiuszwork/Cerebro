@@ -983,11 +983,112 @@ function masterSetAbsenceRange(token, empId, dateFrom, dateTo, typeCode, note) {
   // Rejestracja nieobecności (nie jej czyszczenie) automatycznie zdejmuje
   // osobę z grafiku w tym zakresie — patrz komentarz przy funkcji w Grafik.gs.
   let grafik = null;
+  // Odbicia RCP zostawione w tym samym zakresie (np. ktoś się faktycznie
+  // odbił, zanim urlop wpisano wstecznie) archiwizujemy i USUWAMY z
+  // Ewidencji — inaczej raporty pokazywałyby jednocześnie "na urlopie"
+  // i "w pracy" tego samego dnia. Archiwum jest w pełni odwracalne,
+  // patrz masterGetWersjeOdbic/masterPrzywrocOdbicia.
+  let archiwum = null;
   if (type) {
     grafik = _zdejmijZGrafikuNaNieobecnosc(token, String(empId), worker[1] + ' ' + worker[2], dateFrom, dateTo, type.label);
+    archiwum = _zarchiwizujOdbiciaUrlopu(String(empId), String(worker[1]), String(worker[2]), dateFrom, dateTo,
+      'Zastąpione urlopem (' + type.label + ') ' + dateFrom + '–' + dateTo);
   }
 
-  return { ok: true, count: days, grafik };
+  return { ok: true, count: days, grafik, archiwum };
+}
+
+// ── Wersjonowanie odbić RCP zastąpionych urlopem ─────────────────
+// Usuwane odbicia trafiają do EwidencjaWersje zanim znikną z Ewidencji —
+// świadoma, odwracalna operacja, nie ciche kasowanie danych.
+
+function _zarchiwizujOdbiciaUrlopu(empId, imie, nazwisko, dateFrom, dateTo, powod) {
+  const ewidSh = _ss().getSheetByName('Ewidencja');
+  const rows = (ewidSh && ewidSh.getLastRow() >= 2) ? ewidSh.getDataRange().getValues() : [];
+  const doUsuniecia = []; // numery wierszy w arkuszu (1-based, wliczając nagłówek)
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (String(r[1]) !== empId) continue;
+    const ds = _sheetDate(r[5]);
+    if (ds < dateFrom || ds > dateTo) continue;
+    doUsuniecia.push(i + 1);
+  }
+  if (!doUsuniecia.length) return null;
+
+  const wersjaId = Utilities.getUuid();
+  const wersjeSh = _arkusz('EwidencjaWersje',
+    ['WersjaId', 'RowIdx', 'Timestamp', 'EmpID', 'Imie', 'Nazwisko', 'Akcja', 'Data', 'Godzina', 'Zrodlo', 'Powod', 'Przywrocono']);
+  let idx = 0;
+  doUsuniecia.forEach(wiersz => {
+    const r = rows[wiersz - 1];
+    wersjeSh.appendRow([wersjaId, idx++, r[0], r[1], r[2], r[3], r[4], _sheetDate(r[5]), _sheetTime(r[6]), String(r[7] || ''), powod, false]);
+  });
+  // Usuwamy od najwyższego numeru wiersza — inaczej kolejne usunięcia
+  // przesuwałyby numerację wcześniej zapisanych do skasowania wierszy.
+  doUsuniecia.slice().sort((a, b) => b - a).forEach(wiersz => ewidSh.deleteRow(wiersz));
+
+  return { wersjaId, liczba: doUsuniecia.length };
+}
+
+// Lista zarchiwizowanych (jeszcze nieprzywróconych) partii odbić danego
+// pracownika — do popupu z checkboxami w zakładce Urlop.
+function masterGetWersjeOdbic(token, empId) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  if (!empId) return { ok: false, msg: 'Wybierz pracownika.' };
+
+  const sh = _arkusz('EwidencjaWersje',
+    ['WersjaId', 'RowIdx', 'Timestamp', 'EmpID', 'Imie', 'Nazwisko', 'Akcja', 'Data', 'Godzina', 'Zrodlo', 'Powod', 'Przywrocono']);
+  const rows = (sh.getLastRow() >= 2) ? sh.getDataRange().getValues().slice(1) : [];
+
+  const grupy = {};
+  rows.forEach(r => {
+    if (String(r[3]) !== String(empId)) return;
+    if (r[11] === true || String(r[11]).toUpperCase() === 'TRUE') return; // już przywrócone — nie pokazuj ponownie
+    const wid = String(r[0]);
+    if (!grupy[wid]) grupy[wid] = { wersjaId: wid, powod: String(r[10] || ''), wiersze: [] };
+    grupy[wid].wiersze.push({
+      rowIdx: parseInt(r[1], 10), akcja: String(r[6]),
+      data: _sheetDate(r[7]), godzina: _sheetTime(r[8])
+    });
+  });
+
+  const lista = Object.keys(grupy).map(k => grupy[k]);
+  lista.forEach(g => g.wiersze.sort((a, b) => (a.data + a.godzina).localeCompare(b.data + b.godzina)));
+  lista.sort((a, b) => {
+    const da = a.wiersze.length ? a.wiersze[0].data : '', db = b.wiersze.length ? b.wiersze[0].data : '';
+    return db.localeCompare(da); // najnowsze partie pierwsze
+  });
+
+  return { ok: true, wersje: lista };
+}
+
+// Przywraca ZAZNACZONE wiersze jednej partii z powrotem do Ewidencji.
+function masterPrzywrocOdbicia(token, wersjaId, rowIdxs) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  wersjaId = String(wersjaId || '');
+  rowIdxs = (Array.isArray(rowIdxs) ? rowIdxs : []).map(x => parseInt(x, 10));
+  if (!wersjaId || !rowIdxs.length) return { ok: false, msg: 'Nie wybrano żadnych odbić do przywrócenia.' };
+
+  const sh = _arkusz('EwidencjaWersje',
+    ['WersjaId', 'RowIdx', 'Timestamp', 'EmpID', 'Imie', 'Nazwisko', 'Akcja', 'Data', 'Godzina', 'Zrodlo', 'Powod', 'Przywrocono']);
+  const rows = (sh.getLastRow() >= 2) ? sh.getDataRange().getValues() : [];
+  const ewidSh = _arkusz('Ewidencja', ['Timestamp', 'EmpID', 'Imię', 'Nazwisko', 'Akcja', 'Data', 'Godzina', 'Źródło']);
+
+  let przywrocone = 0;
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (String(r[0]) !== wersjaId) continue;
+    if (rowIdxs.indexOf(parseInt(r[1], 10)) === -1) continue;
+    if (r[11] === true || String(r[11]).toUpperCase() === 'TRUE') continue; // już przywrócone
+
+    ewidSh.appendRow([new Date().toISOString(), r[3], r[4], r[5], r[6], r[7], r[8], 'admin_restore']);
+    sh.getRange(i + 1, 12).setValue(true);
+    przywrocone++;
+  }
+
+  if (!przywrocone) return { ok: false, msg: 'Nic nie przywrócono (być może już przywrócone wcześniej).' };
+  _logAdmin('PrzywrocOdbicia', wersjaId, przywrocone + ' odbić');
+  return { ok: true, przywrocone };
 }
 
 function masterGetDay(token, empId, date) {
