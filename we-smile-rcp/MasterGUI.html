@@ -26,6 +26,16 @@
 .grl-info small{display:block;font-weight:400;color:var(--c-muted)}
 .grl-brak{color:var(--c-accent);font-weight:700}
 
+/* Strona główna — pełnoekranowa siatka pozycji menu (te same, co
+   w hamburgerze; kafle klonowane z jego przycisków w JS). */
+.home-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:12px}
+.home-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+  min-height:104px;border-radius:var(--radius-m);border:1.5px solid var(--c-border);
+  background:var(--c-white);cursor:pointer;font-family:inherit;font-weight:700;font-size:13px;
+  color:var(--c-ink);padding:14px 8px;text-align:center}
+.home-tile svg{width:26px;height:26px;flex-shrink:0}
+.home-tile:active{background:var(--c-primary-tint);border-color:var(--c-primary)}
+
 /* Przegląd importu grafiku — grupy wg daty, wiersz na wpis. */
 .gli-dzien{font-weight:700;font-size:13px;color:var(--c-ink);margin:14px 0 6px;padding-top:10px;border-top:1px solid var(--c-border)}
 .gli-dzien:first-child{margin-top:0;padding-top:0;border-top:none}
@@ -317,8 +327,14 @@
 
   <div class="page-wrap has-tabbar">
 
+    <!-- ── WIDOK: STRONA GŁÓWNA (kliknięcie w logo, domyślny widok po zalogowaniu) ── -->
+    <div id="view-home">
+      <div class="section-title" style="margin-bottom:12px">Menu</div>
+      <div class="home-grid" id="home-grid"></div>
+    </div>
+
     <!-- ── WIDOK: DZIEŃ ── -->
-    <div id="view-day">
+    <div id="view-day" style="display:none">
       <div class="hint-banner" id="hb-day" data-hb-id="day">
         <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>
         <span>Puste pole godziny = brak zdarzenia tego typu w tym dniu. Pusty typ nieobecności = usuwa nieobecność dnia; puste uzasadnienie = usuwa uzasadnienie. Zapis nadpisuje istniejące dane wybranego dnia. Każda zmiana jest logowana.</span>
@@ -793,7 +809,7 @@
         <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
       </button>
     </div>
-    <button class="seg-btn on" id="tab-day">
+    <button class="seg-btn" id="tab-day">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18"/><path d="M8 3v4M16 3v4"/><path d="M12 14v4M10 16h4"/></svg>
       <span>Dzień</span>
     </button>
@@ -1249,6 +1265,7 @@ document.getElementById('kp-login').addEventListener('click', function(e) {
         document.getElementById('do-to').value   = todayStr();
         document.getElementById('rg-from').value = todayStr();
         document.getElementById('rg-to').value   = todayStr();
+        buildHomeGrid();
         loadEmployees();
         loadAbsTypes();
         updateMMLabel();
@@ -1459,6 +1476,7 @@ bindEmpSelector('rg-emp-input', 'rg-emp-dropdown', function(id) { M.rgEmpId = id
 // dowolnego miejsca, bez utraty stanu (wybrany pracownik, miesiąc itd.
 // zostają w pamięci JS, nie są resetowane przy przełączaniu zakładek).
 var TABS = {
+  'tab-home':    'view-home',
   'tab-day':     'view-day',
   'tab-month':   'view-month',
   'tab-range':   'view-range',
@@ -1471,16 +1489,48 @@ var TABS = {
   'tab-legend':  'view-legend'
 };
 var viewStack = [];
-var currentTab = 'tab-day';
+var currentTab = 'tab-home';
 var mBack = document.getElementById('m-back');
 
 function onTabActivated(tabId) {
+  if (tabId === 'tab-home')    buildHomeGrid();
   if (tabId === 'tab-grafik')  grInit();
   if (tabId === 'tab-staff')   renderStaffList();
   if (tabId === 'tab-legend')  wsRenderLegend('legend-container');
   if (tabId === 'tab-code')    mcRefreshToken(false);
   if (tabId === 'tab-clock')   obReset();
 }
+
+// Strona główna — pełnoekranowa siatka tych samych pozycji co w
+// hamburgerze (klonujemy przyciski nawigacji, więc jedna lista pozycji
+// menu żyje w jednym miejscu — hamburger pozostaje spójny ze stroną
+// główną bez ręcznego powielania ikon).
+function buildHomeGrid() {
+  var grid = document.getElementById('home-grid');
+  if (grid.childElementCount) return;
+  document.querySelectorAll('.tabbar .seg-btn').forEach(function(btn) {
+    var tile = document.createElement('button');
+    tile.type = 'button';
+    tile.className = 'home-tile';
+    tile.innerHTML = btn.innerHTML;
+    tile.addEventListener('click', function() { btn.click(); });
+    grid.appendChild(tile);
+  });
+}
+
+// Logo w górnym pasku (nie ten na ekranie logowania — tamten ma dodatkową
+// klasę wm-logo-lg) prowadzi do strony głównej.
+(function () {
+  var logo = document.querySelector('.hero-row .wm-logo-wrap');
+  if (!logo) return;
+  logo.style.cursor = 'pointer';
+  logo.setAttribute('role', 'button');
+  logo.setAttribute('aria-label', 'Strona główna');
+  logo.addEventListener('click', function() {
+    activateTab('tab-home');
+    closeNav();
+  });
+})();
 
 function activateTab(tabId, opts) {
   opts = opts || {};
@@ -1491,7 +1541,10 @@ function activateTab(tabId, opts) {
   }
   currentTab = tabId;
   Object.keys(TABS).forEach(function(id) {
-    document.getElementById(id).className = 'seg-btn' + (id === tabId ? ' on' : '');
+    // "tab-home" nie ma własnego przycisku w hamburgerze (do strony głównej
+    // trafia się przez logo, nie przez pozycję w menu) — stąd brak elementu.
+    var btn = document.getElementById(id);
+    if (btn) btn.className = 'seg-btn' + (id === tabId ? ' on' : '');
     document.getElementById(TABS[id]).style.display = (id === tabId) ? 'block' : 'none';
   });
   mBack.style.display = viewStack.length ? 'inline-flex' : 'none';
@@ -1518,7 +1571,10 @@ window.addEventListener('popstate', function (e) {
 mBack.addEventListener('click', goBack);
 
 Object.keys(TABS).forEach(function(tabId) {
-  document.getElementById(tabId).addEventListener('click', function() {
+  // "tab-home" nie ma własnego przycisku w hamburgerze — patrz activateTab().
+  var btnEl = document.getElementById(tabId);
+  if (!btnEl) return;
+  btnEl.addEventListener('click', function() {
     var btn = this;
     btn.classList.remove('pulsing');
     void btn.offsetWidth; // restart animacji przy szybkich powtórnych kliknięciach
