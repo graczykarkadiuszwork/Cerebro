@@ -81,6 +81,21 @@ function _overtimeNotesAll() {
   return map;
 }
 
+// { 'EmpID_yyyy-MM-dd_HH:mm': 'powód' } — adnotacja obowiązkowa przy
+// starcie przerwy (klucz zawiera godzinę, bo w jednym dniu może być
+// więcej niż jedna przerwa).
+function _przerwyNotesAll() {
+  const sh = _ss().getSheetByName('Przerwy');
+  const rows = (sh && sh.getLastRow() >= 2) ? sh.getDataRange().getValues().slice(1) : [];
+  const map = {};
+  rows.forEach(r => {
+    const ds = _sheetDate(r[2]);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(ds)) return;
+    map[String(r[1]) + '_' + ds + '_' + _sheetTime(r[3])] = String(r[4] || '');
+  });
+  return map;
+}
+
 // ── Login ─────────────────────────────────────────────────────
 
 function dashLogin(pin) {
@@ -132,6 +147,11 @@ function _activeNowData() {
     if (ds !== today) return;
     const empId = String(r[1]);
     const akcja = String(r[4]).trim();
+    // Przerwy (PRZERWA_START/PRZERWA_KONIEC) nie liczą się do stanu
+    // obecności — inaczej pracownik na przerwie zniknąłby z obu list
+    // (ani "aktywny", ani "zakończony"), bo śledzimy tu tylko ostatnie
+    // zdarzenie dnia, a to akurat mogłaby być przerwa.
+    if (akcja !== 'WEJSCIE' && akcja !== 'WYJSCIE') return;
     const godz  = _sheetTime(r[6]);
     if (!byEmp[empId]) byEmp[empId] = { e: [], x: [], last: null, lastGodz: null };
     if (akcja === 'WEJSCIE') byEmp[empId].e.push(godz);
@@ -1108,14 +1128,19 @@ function masterGetTimelineDnia(token, empId, data) {
 
   const ewidSh = _ss().getSheetByName('Ewidencja');
   const ewidRows = (ewidSh && ewidSh.getLastRow() >= 2) ? ewidSh.getDataRange().getValues().slice(1) : [];
+  const przerwyNotes = _przerwyNotesAll();
+  const AKCJA_TYTUL = { WEJSCIE: 'Wejście', WYJSCIE: 'Wyjście', PRZERWA_START: 'Start przerwy', PRZERWA_KONIEC: 'Koniec przerwy' };
   ewidRows.forEach(r => {
     if (String(r[1]) !== String(empId) || _sheetDate(r[5]) !== data) return;
     const akcja = String(r[4]).trim();
+    const godz  = _sheetTime(r[6]);
+    let opis = String(r[7] || '') === 'admin_override' ? 'skorygowane ręcznie' : '';
+    if (akcja === 'PRZERWA_START') opis = przerwyNotes[String(empId) + '_' + data + '_' + godz] || '';
     zdarzenia.push({
-      czas: data + 'T' + _sheetTime(r[6]) + ':00',
+      czas: data + 'T' + godz + ':00',
       typ: 'rcp',
-      tytul: akcja === 'WEJSCIE' ? 'Wejście' : akcja === 'WYJSCIE' ? 'Wyjście' : akcja,
-      opis: String(r[7] || '') === 'admin_override' ? 'skorygowane ręcznie' : ''
+      tytul: AKCJA_TYTUL[akcja] || akcja,
+      opis: opis
     });
   });
 

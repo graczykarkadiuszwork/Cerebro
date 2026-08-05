@@ -8,6 +8,7 @@
 //   Anomalie      : [Timestamp, EmpID, Opis]
 //   Nieobecnosci  : [Timestamp, EmpID, Imię, Nazwisko, Data, Kod, Typ, Adnotacja, Źródło]
 //   Przekroczenia : [Timestamp, EmpID, Data, Uzasadnienie, Źródło]
+//   Przerwy       : [Timestamp, EmpID, Data, Godzina, Uzasadnienie, Źródło]
 //   Gabinety      : [ID, Nazwa, Kolejnosc, Aktywny]
 //   Grafik        : [ID, GabinetID, DzienTygodnia, Typ, OsobaID, Od, Do, AsystaWymagana, AsystaUwaga, Zmodyfikowano]
 //   GrafikAsysta  : [ID, BlokID, OsobaID, Od, Do, Zmodyfikowano]
@@ -329,6 +330,8 @@ function callRCP(action, argsJson) {
       case 'getAbsenceTypes': return getAbsenceTypes(args[0]);
       case 'reportAbsence':   return reportAbsence(args[0], args[1], args[2], args[3], args[4]);
       case 'setOvertimeNote': return setOvertimeNote(args[0], args[1]);
+      case 'przerwaStart':    return clockPrzerwa(args[0], args[1], 'START', args[2]);
+      case 'przerwaKoniec':   return clockPrzerwa(args[0], args[1], 'KONIEC', null);
       // Dashboard
       case 'dashLogin':      return dashLogin(args[0]);
       case 'getDashboard':   return getDashboard(args[0], args[1], args[2]);
@@ -542,13 +545,35 @@ function checkPin(pin) {
   }
 
   _resetRate('pin');
+  const stan = _stanDniaPracownika(String(worker[0]), _todayPL());
   return {
-    ok:       true,
-    id:       String(worker[0]),
-    imie:     String(worker[1]),
-    nazwisko: String(worker[2]),
-    rola:     String(worker[3])
+    ok:             true,
+    id:             String(worker[0]),
+    imie:           String(worker[1]),
+    nazwisko:       String(worker[2]),
+    rola:           String(worker[3]),
+    wTrakcie:       stan.wTrakcie,
+    przerwaOtwarta: stan.przerwaOtwarta
   };
+}
+
+// Stan bieżącej sesji pracownika danego dnia w Ewidencji — czy jest
+// właśnie "w pracy" (po WEJŚCIU, przed WYJŚCIEM) i czy ma otwartą
+// przerwę. Współdzielone przez checkPin (żeby kiosk pokazał właściwy
+// przycisk przerwy) i clockPrzerwa (do walidacji sekwencji zdarzeń).
+function _stanDniaPracownika(empId, today) {
+  const ewidSh = _ss().getSheetByName('Ewidencja');
+  const allRows = (ewidSh && ewidSh.getLastRow() >= 2)
+    ? ewidSh.getDataRange().getValues().slice(1) : [];
+  const todayEmp = allRows.filter(r => String(r[1]) === empId && String(r[5]) === today);
+
+  const wejWyj = todayEmp.filter(r => r[4] === 'WEJSCIE' || r[4] === 'WYJSCIE');
+  const wTrakcie = wejWyj.length > 0 && String(wejWyj[wejWyj.length - 1][4]) === 'WEJSCIE';
+
+  const przerwy = todayEmp.filter(r => r[4] === 'PRZERWA_START' || r[4] === 'PRZERWA_KONIEC');
+  const przerwaOtwarta = przerwy.length > 0 && String(przerwy[przerwy.length - 1][4]) === 'PRZERWA_START';
+
+  return { todayEmp, wTrakcie, przerwaOtwarta };
 }
 
 // ── clock — rejestracja zdarzenia (krok 2) ───────────────────
@@ -622,6 +647,70 @@ function clock(pin, tokenCode, action) {
   const overtime = dzienPozaGodzinami && !notatkaJuzJest;
 
   return { ok: true, imie: String(worker[1]), godzina, overtime };
+}
+
+// ── clockPrzerwa — start/koniec przerwy w trakcie dnia pracy ─
+// Osobna para zdarzeń od WEJŚCIE/WYJŚCIE: pracownik może mieć w grafiku
+// okno bez zadań w trakcie dnia (np. między przygotowaniem gabinetu
+// a asystą) i nie chcemy zmuszać go do dodatkowego wyjścia/wejścia,
+// co fałszywie skróciłoby jego dzień w raportach godzinowych. Start
+// przerwy wymaga obowiązkowej adnotacji — powód musi być znany
+// natychmiast, nie doklejany później jak przy nadgodzinach.
+
+function clockPrzerwa(pin, tokenCode, kierunek, uzasadnienie) {
+  if (!pin || !tokenCode) return { ok: false, msg: 'Brak wymaganych danych.' };
+  kierunek = String(kierunek || '').toUpperCase();
+  if (kierunek !== 'START' && kierunek !== 'KONIEC') {
+    return { ok: false, msg: 'Nieprawidłowy kierunek przerwy.' };
+  }
+
+  const worker = _findActiveByPin(pin);
+  if (!worker) return { ok: false, msg: 'Pracownik nie istnieje.' };
+  const empId = String(worker[0]);
+
+  if (!_checkRate('brk_' + empId)) {
+    return { ok: false, msg: 'Zbyt wiele prób. Odczekaj 5 minut.' };
+  }
+  if (!_verifyToken(String(tokenCode))) {
+    return { ok: false, msg: 'Nieprawidłowy kod autoryzacyjny lub wygasł.' };
+  }
+
+  const dedupKey = 'dupbrk_' + empId;
+  if (_cache().get(dedupKey)) {
+    return { ok: false, msg: 'Zdarzenie już zarejestrowane. Chwilę odczekaj.' };
+  }
+
+  const today = _todayPL();
+  const stan = _stanDniaPracownika(empId, today);
+
+  if (!stan.wTrakcie) {
+    return { ok: false, msg: 'Przerwę można zarejestrować tylko w trakcie trwającej pracy (po WEJŚCIU, przed WYJŚCIEM).' };
+  }
+
+  const ewidSh = _ss().getSheetByName('Ewidencja');
+  const godzina = _nowPL();
+
+  if (kierunek === 'START') {
+    if (stan.przerwaOtwarta) return { ok: false, msg: 'Masz już rozpoczętą przerwę — najpierw ją zakończ.' };
+    const powod = String(uzasadnienie || '').trim().slice(0, 500);
+    if (!powod) return { ok: false, msg: 'Podaj powód przerwy.' };
+
+    ewidSh.appendRow([new Date().toISOString(), empId, String(worker[1]), String(worker[2]), 'PRZERWA_START', today, godzina, 'worker']);
+    _arkusz('Przerwy', ['Timestamp', 'EmpID', 'Data', 'Godzina', 'Uzasadnienie', 'Źródło'])
+      .appendRow([new Date().toISOString(), empId, today, godzina, powod, 'worker']);
+
+    _cache().put(dedupKey, '1', DEDUP_SEC);
+    _resetRate('brk_' + empId);
+    return { ok: true, imie: String(worker[1]), godzina, kierunek: 'START' };
+  }
+
+  // KONIEC
+  if (!stan.przerwaOtwarta) return { ok: false, msg: 'Nie masz rozpoczętej przerwy do zakończenia.' };
+  ewidSh.appendRow([new Date().toISOString(), empId, String(worker[1]), String(worker[2]), 'PRZERWA_KONIEC', today, godzina, 'worker']);
+
+  _cache().put(dedupKey, '1', DEDUP_SEC);
+  _resetRate('brk_' + empId);
+  return { ok: true, imie: String(worker[1]), godzina, kierunek: 'KONIEC' };
 }
 
 // ── reportAbsence — zgłoszenie nieobecności przez pracownika ─
@@ -742,6 +831,7 @@ function setupRCP() {
     { name: 'Statusy',       h: ['Date', 'EmpID', 'Status', 'Notes', 'Modified'] },
     { name: 'Nieobecnosci',  h: ['Timestamp', 'EmpID', 'Imię', 'Nazwisko', 'Data', 'Kod', 'Typ', 'Adnotacja', 'Źródło'] },
     { name: 'Przekroczenia', h: ['Timestamp', 'EmpID', 'Data', 'Uzasadnienie', 'Źródło'] },
+    { name: 'Przerwy',       h: ['Timestamp', 'EmpID', 'Data', 'Godzina', 'Uzasadnienie', 'Źródło'] },
     // ── Grafik obsady gabinetów ──
     { name: 'Gabinety',      h: ['ID', 'Nazwa', 'Kolejnosc', 'Aktywny'] },
     { name: 'Grafik',        h: ['ID', 'GabinetID', 'DzienTygodnia', 'Typ', 'OsobaID', 'Od', 'Do', 'AsystaWymagana', 'AsystaUwaga', 'Zmodyfikowano'] },
