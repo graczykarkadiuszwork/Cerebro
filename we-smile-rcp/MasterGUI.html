@@ -120,6 +120,23 @@
 .gr-day-name{font-size:17px;font-weight:700;color:var(--c-ink)}
 .gr-day-okno{font-size:12px;color:var(--c-muted);font-weight:600}
 
+.gr-day-back{display:inline-flex;align-items:center;gap:4px;padding:6px 0 14px;font-size:13px}
+.gr-day-back svg{width:16px;height:16px}
+
+/* ── Grafik: kafle tygodnia (Pn-So) ── */
+.gr-week-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.gr-tyd-cell{display:flex;flex-direction:column;gap:6px;min-height:96px;padding:10px;border-radius:var(--radius-m);border:1.5px solid var(--c-border);background:var(--c-white);text-align:left;cursor:pointer;font-family:inherit}
+.gr-tyd-cell:active{opacity:.8}
+.gr-tyd-head{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.gr-tyd-nazwa{font-size:13.5px;font-weight:800;color:var(--c-ink)}
+.gr-tyd-godz{font-size:10.5px;color:var(--c-muted);font-weight:600}
+.gr-tyd-gab{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.gr-tyd-gab-nazwa{font-size:11px;color:var(--c-muted);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gr-tyd-chips{display:flex;gap:3px;flex-wrap:wrap;justify-content:flex-end}
+.gr-tyd-chip{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 4px;border-radius:999px;font-size:10px;font-weight:800}
+.gr-tyd-puste{font-size:11px;color:var(--c-muted);font-weight:600}
+.gr-tyd-brak{font-size:10.5px;color:var(--c-accent);font-weight:700;margin-top:auto}
+
 .gr-gab{background:var(--c-white);border:1px solid var(--c-border);border-radius:var(--radius-m);margin-bottom:12px;overflow:hidden}
 .gr-gab-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 14px;background:var(--c-offwhite);border-bottom:1px solid var(--c-border)}
 .gr-gab-nazwa{font-weight:700;font-size:14px;color:var(--c-ink)}
@@ -615,11 +632,26 @@
         </div>
       </div>
 
-      <div class="seg seg-scroll" id="gr-days" style="margin-bottom:14px"></div>
+      <div class="seg" id="gr-view-toggle" style="max-width:260px;margin-bottom:14px">
+        <button type="button" class="seg-btn on" data-grview="tydzien">Tydzień</button>
+        <button type="button" class="seg-btn" data-grview="dzien">Dzień</button>
+      </div>
 
-      <div id="gr-adnot-strip"></div>
-      <div id="gr-day-head" class="gr-day-head"></div>
-      <div id="gr-grid"><div class="hint">Ładowanie…</div></div>
+      <div id="gr-week-view">
+        <div class="gr-week-grid" id="gr-week-grid"><div class="hint">Ładowanie…</div></div>
+      </div>
+
+      <div id="gr-day-view" style="display:none">
+        <button type="button" class="btn-link gr-day-back" id="gr-day-back">
+          <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+          Tydzień
+        </button>
+        <div class="seg seg-scroll" id="gr-days" style="margin:10px 0 14px"></div>
+
+        <div id="gr-adnot-strip"></div>
+        <div id="gr-day-head" class="gr-day-head"></div>
+        <div id="gr-grid"><div class="hint">Ładowanie…</div></div>
+      </div>
     </div>
 
     <!-- ── WIDOK: ZESPÓŁ (forma zatrudnienia, dodawanie/archiwizacja) ── -->
@@ -1842,7 +1874,7 @@ document.getElementById('rg-yes').addEventListener('click', function() {
 // tu tylko je pokazujemy, więc podmiana silnika na AI nic tu nie zmieni.
 // ════════════════════════════════════════════════════════════
 
-var GR = { dane: null, dzien: 1, edytowany: null, filtrRek: null };
+var GR = { dane: null, dzien: 1, edytowany: null, filtrRek: null, widok: 'tydzien' };
 
 function grInit() {
   grLoad();
@@ -1859,9 +1891,80 @@ function grLoad(cb) {
     GR.dane = res;
     grRenderDni();
     grRenderDzien();
+    grRenderTydzien();
     grRenderLicznikRek();
     if (cb) cb();
   });
+}
+
+// ── Widok tygodnia — kafle Pn-So, wejście domyślne do zakładki Grafik ──
+
+document.getElementById('gr-view-toggle').addEventListener('click', function(e) {
+  var btn = e.target.closest('[data-grview]');
+  if (!btn) return;
+  grSwitchView(btn.getAttribute('data-grview'));
+});
+document.getElementById('gr-day-back').addEventListener('click', function() { grSwitchView('tydzien'); });
+
+function grSwitchView(widok) {
+  GR.widok = widok;
+  document.querySelectorAll('#gr-view-toggle [data-grview]').forEach(function(b) {
+    b.className = 'seg-btn' + (b.getAttribute('data-grview') === widok ? ' on' : '');
+  });
+  document.getElementById('gr-week-view').style.display = widok === 'tydzien' ? 'block' : 'none';
+  document.getElementById('gr-day-view').style.display = widok === 'dzien' ? 'block' : 'none';
+  if (widok === 'dzien') { grRenderDni(); grRenderDzien(); }
+}
+
+function grRenderTydzien() {
+  var box = document.getElementById('gr-week-grid');
+  if (!GR.dane) { box.innerHTML = '<div class="hint">Ładowanie…</div>'; return; }
+  box.innerHTML = GR.dane.dni.map(function(nr) { return grTydzienKomorkaHtml(nr); }).join('');
+  box.querySelectorAll('[data-gr-tyd-dzien]').forEach(function(el) {
+    el.addEventListener('click', function(e) {
+      if (e.target.closest('.gr-rek-ic')) return;
+      GR.dzien = parseInt(this.getAttribute('data-gr-tyd-dzien'), 10);
+      grSwitchView('dzien');
+    });
+  });
+  grBindRekIkony();
+}
+
+function grTydzienKomorkaHtml(nr) {
+  var d = GR.dane;
+  var g = d.godziny[nr];
+  var bloki = (d.bloki || []).filter(function(b) { return b.dzien === nr; });
+  var rek = grRekDlaDnia(nr);
+  var brakAsysty = bloki.filter(function(b) {
+    return b.typ !== 'Higienizacja' && !(b.asysta || []).length && !/BRAK ASYSTY/.test(b.asystaUwaga || '');
+  }).length;
+
+  var perGab = {};
+  bloki.forEach(function(b) { (perGab[b.gabinetId] = perGab[b.gabinetId] || []).push(b); });
+  var wiersze = (d.gabinety || []).map(function(gab) {
+    var lista = (perGab[gab.id] || []).sort(function(a, b) { return grT2M(a.od) - grT2M(b.od); });
+    if (!lista.length) return '';
+    var chipy = lista.map(function(b) {
+      var os = (d.personel || []).find(function(p) { return p.id === b.osobaId; });
+      var kolor = os ? _rolaKolor(os) : '#8A93A6';
+      var inicjaly = os ? ((os.imie[0] || '') + (os.nazwisko[0] || '')) : '?';
+      return '<span class="gr-tyd-chip" style="background:' + kolor + '26;color:' + kolor + '" title="' +
+        esc(os ? (os.imie + ' ' + os.nazwisko) : b.osobaId) + ' · ' + esc(gab.nazwa) + ' ' + esc(b.od) + '–' + esc(b.do) + '">' +
+        esc(inicjaly) + '</span>';
+    }).join('');
+    return '<div class="gr-tyd-gab"><span class="gr-tyd-gab-nazwa">' + esc(gab.nazwa) + '</span>' +
+      '<span class="gr-tyd-chips">' + chipy + '</span></div>';
+  }).join('');
+
+  // Div, nie button: kafel zawiera przycisk ikony rekomendacji (grIkonaRek) —
+  // button-w-buttonie jest nieprawidłowym HTML-em i przeglądarka po cichu
+  // domyka zewnętrzny element przy parsowaniu, ucinając resztę kafelka.
+  return '<div class="gr-tyd-cell" data-gr-tyd-dzien="' + nr + '">' +
+    '<div class="gr-tyd-head"><span class="gr-tyd-nazwa">' + esc(g.nazwa) + '</span>' + grIkonaRek(rek, g.nazwa) + '</div>' +
+    '<span class="gr-tyd-godz">' + esc(g.open) + '–' + esc(g.close) + '</span>' +
+    (wiersze || '<span class="gr-tyd-puste">brak obsady</span>') +
+    (brakAsysty ? '<span class="gr-tyd-brak">' + brakAsysty + '× brak asysty</span>' : '') +
+    '</div>';
 }
 
 function grRenderDni() {
