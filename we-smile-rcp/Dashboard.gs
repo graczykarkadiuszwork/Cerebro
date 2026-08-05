@@ -1444,3 +1444,56 @@ function masterGetMonth(token, empId, year, month) {
 
   return { ok: true, imie: String(worker[1]), nazwisko: String(worker[2]), days };
 }
+
+// ── Obecność całego zespołu w jednym miejscu — kalendarz miesiąca ──
+// Każdy dzień: lista pracowników, którzy tego dnia mieli jakiekolwiek
+// zdarzenie RCP (odbicie i/lub nieobecność). Pracownik bez żadnego
+// zdarzenia po prostu nie pojawia się w liście danego dnia — pusty
+// dzień (nikt nie pracował, np. niedziela) to po prostu pusta lista,
+// interfejs pokazuje wtedy jawne „—”, zgodnie z zasadą: brak
+// obecności ma być jednoznacznie widoczny, nie domyślać się z pustki.
+
+function masterGetObecnoscMiesiac(token, rok, mies) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  const y = parseInt(rok, 10), m = parseInt(mies, 10);
+  if (isNaN(y) || isNaN(m) || m < 1 || m > 12) return { ok: false, msg: 'Nieprawidłowy miesiąc.' };
+
+  const pracownicy = _getWorkers().filter(_isRcpWorker).map(_workerToObj);
+  const ewid = _buildEwidMap().map;
+  const absMap = _absenceMapAll();
+
+  const ile = new Date(y, m, 0).getDate();
+  const pfx = y + '-' + String(m).padStart(2, '0') + '-';
+  const DOW = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'];
+  const dni = [];
+
+  for (let d = 1; d <= ile; d++) {
+    const ds = pfx + String(d).padStart(2, '0');
+    const dow = new Date(ds + 'T12:00:00').getDay();
+    const czynny = !!_clinicHoursFor(ds);
+    const osoby = [];
+
+    pracownicy.forEach(p => {
+      const rec = ewid[p.id + '_' + ds];
+      const absencja = absMap[p.id + '_' + ds] || null;
+      const wejscie = (rec && rec.e.length) ? rec.e.slice().sort()[0] : null;
+      const wyjscie = (rec && rec.x.length) ? rec.x.slice().sort().reverse()[0] : null;
+      if (!wejscie && !wyjscie && !absencja) return; // nic do pokazania dla tej osoby tego dnia
+
+      osoby.push({
+        empId: p.id, imie: p.imie, nazwisko: p.nazwisko,
+        inicjaly: (p.imie.charAt(0) || '') + (p.nazwisko.charAt(0) || ''),
+        grupa: p.grupa,
+        wejscie, wyjscie,
+        minutyPracy: (wejscie && wyjscie) ? Math.max(0, _t2m(wyjscie) - _t2m(wejscie)) : null,
+        absencja: absencja ? { code: absencja.code, typ: absencja.typ } : null,
+        overtime: _dayOutsideClinic(ds, wejscie, wyjscie)
+      });
+    });
+
+    osoby.sort((a, b) => (a.wejscie || '99:99').localeCompare(b.wejscie || '99:99'));
+    dni.push({ data: ds, dzienTygodnia: dow, nazwaDnia: DOW[dow], czynny, osoby });
+  }
+
+  return { ok: true, rok: y, mies: m, pracownicyLiczba: pracownicy.length, dni };
+}
