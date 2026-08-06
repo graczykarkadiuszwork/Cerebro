@@ -157,6 +157,25 @@
     <button class="btn-link" id="brk-cancel">← Anuluj</button>
   </div>
 
+  <!-- Krok 2e: uzupełnienie brakującego odbicia z wcześniejszego dnia -->
+  <!-- Zawsze dotyczy JEDNEGO, najnowszego braku. Starsze zaległości
+       zostają dla administratora — pięć popupów pod rząd nikogo nie
+       zmotywuje do uzupełnienia czegokolwiek. -->
+  <div class="step" id="s-mis">
+    <div class="step-title">Brakujące odbicie</div>
+    <div class="step-sub" id="mis-sub"></div>
+    <div class="ovr-alert">
+      <svg class="ic-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      <div id="mis-info">W tym dniu brakuje odbicia.</div>
+    </div>
+    <div class="field">
+      <label class="field-lbl" for="mis-godz">Godzina</label>
+      <input type="time" id="mis-godz" class="inp" step="300">
+    </div>
+    <button class="btn btn-accent" id="mis-save" style="margin-top:12px">Zapisz godzinę</button>
+    <button class="btn-link" id="mis-skip">Pomiń — uzupełni to administrator</button>
+  </div>
+
   <!-- Krok 3: potwierdzenie -->
   <div class="step" id="s-ok">
     <div class="ok-wrap">
@@ -293,13 +312,14 @@ if (PAGE === 'admin') {
   var resetTimer = null;
   var brkMozliwa = false; // czy pracownik jest właśnie w trakcie pracy (po WEJŚCIU, przed WYJŚCIEM)
   var brkOtwarta = false; // czy ma już rozpoczętą, niezakończoną przerwę
+  var brakOdbicia = null; // najnowszy niedomknięty dzień, o który pytamy po odbiciu
 
   var ICON_OK  = '<svg class="ic-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 5-5"/></svg>';
   var ICON_ABS = '<svg class="ic-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 3v4M16 3v4"/><path d="M9.5 14.5l5 5M14.5 14.5l-5 5"/></svg>';
 
   // Przełączanie kroków
   function show(id) {
-    ['s-pin', 's-code', 's-abs', 's-ovr', 's-brk', 's-ok'].forEach(function (s) {
+    ['s-pin', 's-code', 's-abs', 's-ovr', 's-brk', 's-mis', 's-ok'].forEach(function (s) {
       document.getElementById(s).className = 'step' + (s === id ? ' on' : '');
     });
   }
@@ -321,7 +341,7 @@ if (PAGE === 'admin') {
   function resetAll() {
     pin = ''; code = ''; empPin = ''; empName = '';
     absTypes = null; // lista zależy od formy zatrudnienia — nie może przetrwać zmiany pracownika
-    brkMozliwa = false; brkOtwarta = false;
+    brkMozliwa = false; brkOtwarta = false; brakOdbicia = null;
     setDots(pin, 'p');
     setDots(code, 'c');
     show('s-pin');
@@ -408,11 +428,18 @@ if (PAGE === 'admin') {
       if (res && res.ok) {
         var label = (action === 'WEJSCIE') ? 'Wejście' : 'Wyjście';
         var msg = res.imie + ' — ' + label + ' o ' + res.godzina;
+        // Bieżące odbicie jest już zapisane — dopiero potem pytamy
+        // o uzasadnienie nadgodzin, a na końcu o zaległy brak.
+        // Kolejność jest celowa: to, po co pracownik przyszedł, nigdy
+        // nie czeka na załatwienie starszych spraw.
+        brakOdbicia = res.brakOdbicia || null;
         if (res.overtime) {
           // Praca poza regularnymi godzinami Kliniki → uzasadnienie
           document.getElementById('ovr-sub').textContent = msg;
           document.getElementById('ovr-note').value = '';
           show('s-ovr');
+        } else if (brakOdbicia) {
+          pokazBrakOdbicia(msg);
         } else {
           finishOk(ICON_OK, false, 'Zarejestrowano', msg, 3000);
         }
@@ -446,7 +473,56 @@ if (PAGE === 'admin') {
     // Odbicie już jest zapisane — to tylko adnotacja czeka. Nic tu nie
     // "kończymy" na trwałe: przy KOLEJNYM odbiciu tego dnia ten sam ekran
     // wróci, dopóki ktoś nie wpisze uzasadnienia.
+    if (brakOdbicia) { pokazBrakOdbicia(''); return; }
     finishOk(ICON_OK, false, 'Zarejestrowano', 'Uzasadnienie wciąż czeka — zapytamy o nie przy następnym odbiciu.', 3500);
+  });
+
+  // ── Uzupełnienie brakującego odbicia ────────────────────────
+  // Pytamy o JEDEN, najnowszy brak. Jeśli po zapisie zostają starsze,
+  // mówimy o tym wprost, ale nie otwieramy kolejnego okna — resztę
+  // porządkuje administrator w Panelu.
+
+  var MIS_DNI_PL = ['niedziela','poniedziałek','wtorek','środa','czwartek','piątek','sobota'];
+
+  function misOpisDaty(ds) {
+    var d = new Date(ds + 'T12:00:00');
+    return MIS_DNI_PL[d.getDay()] + ', ' + d.getDate() + '.' +
+           String(d.getMonth() + 1).padStart(2, '0') + '.' + d.getFullYear();
+  }
+
+  function pokazBrakOdbicia(msgPoprzedni) {
+    if (!brakOdbicia) { finishOk(ICON_OK, false, 'Zarejestrowano', msgPoprzedni || '', 3000); return; }
+    var czego = brakOdbicia.brakuje === 'WEJSCIE' ? 'wejścia' : 'wyjścia';
+    document.getElementById('mis-sub').textContent = msgPoprzedni || '';
+    document.getElementById('mis-info').textContent =
+      'W dniu ' + misOpisDaty(brakOdbicia.data) + ' brakuje odbicia ' + czego +
+      '. Podaj godzinę, o której ' + (brakOdbicia.brakuje === 'WEJSCIE'
+        ? 'zaczęłaś/zacząłeś pracę.' : 'skończyłaś/skończyłeś pracę.');
+    document.getElementById('mis-godz').value = '';
+    show('s-mis');
+  }
+
+  document.getElementById('mis-save').addEventListener('click', function () {
+    var godz = document.getElementById('mis-godz').value;
+    if (!godz) { toast('Podaj godzinę.', false); return; }
+    if (!brakOdbicia) { resetAll(); return; }
+    toast('Zapisywanie…', true);
+    gas('uzupelnijBrakOdbicia', [empPin, code, brakOdbicia.data, brakOdbicia.brakuje, godz], function (res) {
+      if (res && res.ok) {
+        var dodatek = res.kolejnyBrak
+          ? ' Masz jeszcze starsze braki — uzupełni je administrator.'
+          : '';
+        brakOdbicia = null;
+        finishOk(ICON_OK, false, 'Uzupełniono', 'Godzina zapisana.' + dodatek, 3500);
+      } else {
+        toast((res && res.msg) || 'Nie udało się zapisać.', false);
+      }
+    });
+  });
+
+  document.getElementById('mis-skip').addEventListener('click', function () {
+    brakOdbicia = null;
+    finishOk(ICON_OK, false, 'Zarejestrowano', 'Brakujące odbicie uzupełni administrator.', 3000);
   });
 
   // ── Przerwa w trakcie dnia pracy ────────────────────────────

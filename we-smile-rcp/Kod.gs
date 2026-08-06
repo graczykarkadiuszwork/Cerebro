@@ -332,6 +332,8 @@ function callRCP(action, argsJson) {
       case 'setOvertimeNote': return setOvertimeNote(args[0], args[1]);
       case 'przerwaStart':    return clockPrzerwa(args[0], args[1], 'START', args[2]);
       case 'przerwaKoniec':   return clockPrzerwa(args[0], args[1], 'KONIEC', null);
+      case 'uzupelnijBrakOdbicia':
+        return uzupelnijBrakOdbicia(args[0], args[1], args[2], args[3], args[4]);
       // Dashboard
       case 'dashLogin':      return dashLogin(args[0]);
       case 'getDashboard':   return getDashboard(args[0], args[1], args[2]);
@@ -378,8 +380,15 @@ function callRCP(action, argsJson) {
       case 'masterSaveAdnotacjaSeria': return masterSaveAdnotacjaSeria(args[0], args[1], args[2]);
       case 'masterDeleteAdnotacja': return masterDeleteAdnotacja(args[0], args[1]);
       case 'masterGrafikWydruk':    return masterGrafikWydruk(args[0], args[1]);
+      case 'masterGrafikWydrukMiesiac':
+        return masterGrafikWydrukMiesiac(args[0], args[1], args[2], args[3]);
       case 'masterGrafikMiesiac':      return masterGrafikMiesiac(args[0], args[1], args[2]);
+      case 'masterGrafikStanMiesiaca': return masterGrafikStanMiesiaca(args[0], args[1], args[2]);
+      case 'masterGrafikMaterializujMiesiac':
+        return masterGrafikMaterializujMiesiac(args[0], args[1], args[2], args[3], args[4]);
       case 'masterZapiszDzienGrafiku': return masterZapiszDzienGrafiku(args[0], args[1], args[2]);
+      case 'masterZapiszDzienGrafikuPelny':
+        return masterZapiszDzienGrafikuPelny(args[0], args[1], args[2]);
       case 'masterResetDzienGrafiku':  return masterResetDzienGrafiku(args[0], args[1]);
       case 'masterKopiujDzienGrafiku': return masterKopiujDzienGrafiku(args[0], args[1], args[2]);
       case 'masterKopiujBlokLekarzaNaDaty': return masterKopiujBlokLekarzaNaDaty(args[0], args[1], args[2], args[3]);
@@ -587,6 +596,115 @@ function _stanDniaPracownika(empId, today) {
   return { todayEmp, wTrakcie, przerwaOtwarta };
 }
 
+// ── Braki odbić — wykrycie i uzupełnienie przez pracownika ───
+// Pracownik, który zapomni odbić wejście albo wyjście, zostawia dzień
+// niedomknięty. Pytamy go o to przy najbliższym kontakcie z kioskiem,
+// ale TYLKO o NAJNOWSZY brak i tylko o jeden naraz: pięć nałożonych
+// na siebie popupów za pięć zapomnianych dni skutecznie zniechęca do
+// uzupełnienia czegokolwiek. Pozostałe braki widzi administrator
+// w Panelu — to jego narzędzie, nie kolejka zadań dla pracownika.
+//
+// Uzupełnienie wpisane przez pracownika jest oznaczane w Ewidencji
+// jako 'worker-manual'. Poprawka administratora NIE jest flagowana:
+// pochodzi z zaufanego źródła i ma zostać nieodróżnialna od zwykłego
+// odbicia (ślad po niej jest w arkuszu Google zasilającym RCP).
+
+const ZRODLO_UZUPELNIENIE = 'worker-manual';
+const BRAKI_DNI_WSTECZ = 30;
+
+/**
+ * Najnowszy niedomknięty dzień pracownika: dzień z samym WEJŚCIEM bez
+ * WYJŚCIA albo z samym WYJŚCIEM bez WEJŚCIA. Bieżący dzień jest pomijany —
+ * trwająca praca to nie jest brak odbicia.
+ */
+function _najnowszyBrakOdbicia(empId, dzisiaj) {
+  const ewidSh = _ss().getSheetByName('Ewidencja');
+  if (!ewidSh || ewidSh.getLastRow() < 2) return null;
+
+  const granica = new Date(dzisiaj + 'T12:00:00');
+  granica.setDate(granica.getDate() - BRAKI_DNI_WSTECZ);
+  const odKiedy = Utilities.formatDate(granica, 'Europe/Warsaw', 'yyyy-MM-dd');
+
+  const poDniach = {};
+  ewidSh.getDataRange().getValues().slice(1).forEach(r => {
+    if (String(r[1]) !== String(empId)) return;
+    const ds = _sheetDate(r[5]);
+    if (!ds || ds >= dzisiaj || ds < odKiedy) return;
+    const akcja = String(r[4]);
+    if (akcja !== 'WEJSCIE' && akcja !== 'WYJSCIE') return;
+    if (!poDniach[ds]) poDniach[ds] = { wejscie: false, wyjscie: false };
+    if (akcja === 'WEJSCIE') poDniach[ds].wejscie = true;
+    else poDniach[ds].wyjscie = true;
+  });
+
+  const braki = Object.keys(poDniach)
+    .filter(ds => !poDniach[ds].wejscie || !poDniach[ds].wyjscie)
+    .sort();
+  if (!braki.length) return null;
+
+  const ds = braki[braki.length - 1]; // najnowszy
+  return { data: ds, brakuje: poDniach[ds].wejscie ? 'WYJSCIE' : 'WEJSCIE' };
+}
+
+/**
+ * Uzupełnia brakujące odbicie wpisane przez pracownika w popupie.
+ * Zapisywane ze źródłem 'worker-manual' — to jedyna poprawka, która
+ * zostaje oflagowana w RCP.
+ */
+function uzupelnijBrakOdbicia(pin, tokenCode, data, akcja, godzina) {
+  if (!pin || !tokenCode) return { ok: false, msg: 'Brak wymaganych danych.' };
+
+  const worker = _findActiveByPin(pin);
+  if (!worker) return { ok: false, msg: 'Pracownik nie istnieje.' };
+  const empId = String(worker[0]);
+
+  if (!_checkRate('uzp_' + empId)) {
+    return { ok: false, msg: 'Zbyt wiele prób. Odczekaj 5 minut.' };
+  }
+  if (!_verifyToken(String(tokenCode))) {
+    return { ok: false, msg: 'Nieprawidłowy kod autoryzacyjny lub wygasł.' };
+  }
+
+  data = String(data || '').trim();
+  akcja = String(akcja || '').toUpperCase();
+  godzina = String(godzina || '').trim();
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return { ok: false, msg: 'Nieprawidłowa data.' };
+  if (akcja !== 'WEJSCIE' && akcja !== 'WYJSCIE') return { ok: false, msg: 'Nieprawidłowy typ odbicia.' };
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(godzina)) return { ok: false, msg: 'Godzina w formacie HH:MM.' };
+  if (data >= _todayPL()) return { ok: false, msg: 'Uzupełnić można tylko wcześniejszy dzień.' };
+
+  // Pracownik może uzupełnić wyłącznie to, czego faktycznie brakuje —
+  // popup jest podpowiedzią, a nie furtką do dopisywania dowolnych odbić.
+  const brak = _najnowszyBrakOdbicia(empId, _todayPL());
+  if (!brak || brak.data !== data || brak.brakuje !== akcja) {
+    return { ok: false, msg: 'Ten brak został już uzupełniony. Odśwież ekran.' };
+  }
+
+  // Kolejność musi mieć sens: wejście przed wyjściem.
+  const ewidSh = _ss().getSheetByName('Ewidencja');
+  const tegoDnia = ewidSh.getDataRange().getValues().slice(1)
+    .filter(r => String(r[1]) === empId && _sheetDate(r[5]) === data)
+    .map(r => ({ akcja: String(r[4]), godz: _sheetTime(r[6]) }));
+
+  const istniejaceWej = tegoDnia.filter(a => a.akcja === 'WEJSCIE').map(a => a.godz).sort()[0];
+  const istniejaceWyj = tegoDnia.filter(a => a.akcja === 'WYJSCIE').map(a => a.godz).sort().pop();
+
+  if (akcja === 'WEJSCIE' && istniejaceWyj && godzina >= istniejaceWyj) {
+    return { ok: false, msg: 'Wejście musi być wcześniejsze niż zarejestrowane wyjście (' + istniejaceWyj + ').' };
+  }
+  if (akcja === 'WYJSCIE' && istniejaceWej && godzina <= istniejaceWej) {
+    return { ok: false, msg: 'Wyjście musi być późniejsze niż zarejestrowane wejście (' + istniejaceWej + ').' };
+  }
+
+  ewidSh.appendRow([new Date().toISOString(), empId, String(worker[1]), String(worker[2]),
+                    akcja, data, godzina, ZRODLO_UZUPELNIENIE]);
+  _resetRate('uzp_' + empId);
+
+  const kolejny = _najnowszyBrakOdbicia(empId, _todayPL());
+  return { ok: true, data, akcja, godzina, kolejnyBrak: kolejny };
+}
+
 // ── clock — rejestracja zdarzenia (krok 2) ───────────────────
 
 function clock(pin, tokenCode, action) {
@@ -657,7 +775,12 @@ function clock(pin, tokenCode, action) {
   const notatkaJuzJest = !!(_overtimeNotesAll()[empId + '_' + today]);
   const overtime = dzienPozaGodzinami && !notatkaJuzJest;
 
-  return { ok: true, imie: String(worker[1]), godzina, overtime };
+  // Najnowszy niedomknięty dzień — jeden, nie kolejka. Popup pojawia się
+  // dopiero po zarejestrowaniu bieżącego odbicia, więc nigdy nie blokuje
+  // tego, po co pracownik faktycznie przyszedł do kiosku.
+  const brakOdbicia = _najnowszyBrakOdbicia(empId, today);
+
+  return { ok: true, imie: String(worker[1]), godzina, overtime, brakOdbicia };
 }
 
 // ── clockPrzerwa — start/koniec przerwy w trakcie dnia pracy ─

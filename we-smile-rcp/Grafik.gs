@@ -2258,6 +2258,119 @@ function masterGrafikWydruk(token, opts) {
   };
 }
 
+// ── Wydruk miesięczny A4 (układ wzorcowy kliniki) ───────────────
+// Odwzorowuje papierowy grafik, z którego klinika korzysta na co dzień:
+// miesiąc rozbity na pasma tygodni, w każdym paśmie sześć kolumn dni
+// (Pn–Sb), a w kolumnie kolejne wpisy „operator + godziny", pod każdym
+// jego asysta. Higienistka prowadząca własny gabinet ma sufiks -HIG,
+// dokładnie jak w arkuszu, z którego ten układ pochodzi.
+//
+// Bierze dane z realnego stanu każdej DATY (_grafikDzienStan), nie
+// z wiecznego szablonu — inaczej wydruk pokazywałby co innego niż
+// system, gdy tydzień 1 różni się od tygodnia 3.
+
+const WYDRUK_MIESIACE_PL = ['STYCZEŃ','LUTY','MARZEC','KWIECIEŃ','MAJ','CZERWIEC',
+  'LIPIEC','SIERPIEŃ','WRZESIEŃ','PAŹDZIERNIK','LISTOPAD','GRUDZIEŃ'];
+
+// „09:00" → „9", „14:30" → „14:30" — wydruk ma być czytelny, a nie
+// formalnie kompletny; pełne godziny bez minut czyta się szybciej.
+function _wydrukGodz(t) {
+  const s = String(t || '');
+  const m = s.match(/^(\d{2}):(\d{2})$/);
+  if (!m) return s;
+  const h = String(parseInt(m[1], 10));
+  return m[2] === '00' ? h : (h + ':' + m[2]);
+}
+function _wydrukZakres(od, do_) {
+  return _wydrukGodz(od) + '-' + _wydrukGodz(do_);
+}
+
+function masterGrafikWydrukMiesiac(token, rok, mies, opts) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  const y = parseInt(rok, 10), m = parseInt(mies, 10);
+  if (isNaN(y) || isNaN(m) || m < 1 || m > 12) return { ok: false, msg: 'Nieprawidłowy miesiąc.' };
+  opts = opts || {};
+
+  const filtrGab = Array.isArray(opts.gabinetIds) && opts.gabinetIds.length
+    ? opts.gabinetIds.map(String) : null;
+  const filtrOsob = Array.isArray(opts.osobaIds) && opts.osobaIds.length
+    ? opts.osobaIds.map(String) : null;
+
+  const gabinety = _gabinetyAll(true);
+  const gabMap = {};
+  gabinety.forEach(g => { gabMap[g.id] = g.nazwa; });
+
+  const personel = _grafikPersonel();
+  const osobaMap = {};
+  personel.forEach(p => { osobaMap[p.id] = p; });
+  const nazwaOsoby = id => {
+    const p = osobaMap[id];
+    if (p) return p.imie + (p.nazwisko ? ' ' + p.nazwisko.charAt(0) + '.' : '');
+    return _czyAsystaZew(id) ? _labelAsystaZew(id) : String(id);
+  };
+
+  const ctx = _grafikKontekstDni();
+  const adnotacje = _adnotacjeAll();
+  const ile = new Date(y, m, 0).getDate();
+  const pfx = y + '-' + String(m).padStart(2, '0') + '-';
+
+  // Pasma tygodni: każde pasmo to poniedziałek–sobota. Miesiąc prawie nigdy
+  // nie zaczyna się w poniedziałek, więc pierwsze pasmo bywa niepełne —
+  // puste komórki są w wydruku poprawne, nie są błędem.
+  const tygodnie = [];
+  let biezacy = null;
+
+  for (let d = 1; d <= ile; d++) {
+    const ds = pfx + String(d).padStart(2, '0');
+    const dow = new Date(ds + 'T12:00:00').getDay();
+    if (GRAFIK_DAYS.indexOf(dow) === -1) continue; // niedziela
+
+    if (!biezacy || dow === 1) {
+      biezacy = { dni: [null, null, null, null, null, null] };
+      tygodnie.push(biezacy);
+    }
+
+    const stan = _grafikDzienStan(ds, ctx);
+    const wpisy = stan.bloki
+      .filter(b => !filtrGab || filtrGab.indexOf(b.gabinetId) !== -1)
+      .filter(b => !filtrOsob || filtrOsob.indexOf(b.osobaId) !== -1)
+      .sort((a, b) => _t2m(a.od) - _t2m(b.od))
+      .map(b => {
+        const higiena = b.typ === BLOK_HIGIENA;
+        return {
+          operator: nazwaOsoby(b.osobaId).toUpperCase() + (higiena ? '-HIG' : ''),
+          godziny: _wydrukZakres(b.od, b.do),
+          gabinet: gabMap[b.gabinetId] || b.gabinetId,
+          higiena,
+          brakAsysty: !higiena && !(b.asysta || []).length,
+          asysta: (b.asysta || []).map(a => ({
+            nazwa: nazwaOsoby(a.osobaId),
+            godziny: _wydrukZakres(a.od || b.od, a.do || b.do)
+          }))
+        };
+      });
+
+    const adnDnia = adnotacje
+      .filter(a => a.od <= ds && ds <= a.do)
+      .filter(a => !a.gabinetId || !filtrGab || filtrGab.indexOf(a.gabinetId) !== -1)
+      .map(a => a.tresc);
+
+    biezacy.dni[dow - 1] = { data: ds, numer: d, wpisy, adnotacje: adnDnia };
+  }
+
+  const opisFiltra = [];
+  if (filtrGab)  opisFiltra.push('gabinety: ' + filtrGab.map(id => gabMap[id] || id).join(', '));
+  if (filtrOsob) opisFiltra.push('osoby: ' + filtrOsob.map(nazwaOsoby).join(', '));
+
+  return {
+    ok: true, rok: y, mies: m,
+    nazwaMiesiaca: WYDRUK_MIESIACE_PL[m - 1],
+    naglowkiDni: GRAFIK_DAYS.map(d => GRAFIK_DAY_NAMES[d].toUpperCase()),
+    tygodnie,
+    filtr: opisFiltra.join(' · ')
+  };
+}
+
 // ── Edycja konkretnych dni miesiąca ──────────────────────────
 // Szablon tygodniowy jest domyślną podstawą, ale realny miesiąc rzadko
 // jest idealnie powtarzalny. Dzień, który raz zostanie zmieniony, zapisuje
@@ -2977,21 +3090,22 @@ function masterGrafikImportZatwierdz(token, wpisy) {
 }
 
 /**
- * Zapisuje komplet bloków dla JEDNEJ daty. Od tej chwili ta data nie
- * podlega już szablonowi — aż do jawnego przywrócenia.
+ * Sprawdza i normalizuje komplet bloków JEDNEJ daty — bez dotykania arkusza.
+ * Wydzielone z masterZapiszDzienGrafiku, żeby zapis wielu dni naraz
+ * (materializacja miesiąca) mógł zwalidować wszystko w pamięci i dopiero
+ * potem wykonać JEDEN zapis do arkusza. Wcześniej każdy dzień oznaczał
+ * osobny cykl odczyt-kasuj-dopisz, co przy całym miesiącu dawało setki
+ * wywołań API i było głównym powodem, dla którego grafik reagował wolno.
+ *
+ * Zwraca { ok:true, bloki:[...] } albo { ok:false, msg }.
  */
-function masterZapiszDzienGrafiku(token, data, bloki) {
-  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
-  data = String(data || '').trim();
+function _walidujDzienGrafiku(data, bloki, personel, gabinety) {
   if (!_dataOk(data)) return { ok: false, msg: 'Nieprawidłowa data.' };
-
   const dow = new Date(data + 'T12:00:00').getDay();
   if (GRAFIK_DAYS.indexOf(dow) === -1) return { ok: false, msg: 'Klinika jest w tym dniu nieczynna.' };
   const h = GRAFIK_HOURS[dow];
 
   bloki = Array.isArray(bloki) ? bloki : [];
-  const personel = _grafikPersonel();
-  const gabinety = _gabinetyAll(false);
   const czyste = [];
 
   for (let i = 0; i < bloki.length; i++) {
@@ -3031,7 +3145,9 @@ function masterZapiszDzienGrafiku(token, data, bloki) {
       }
     }
 
-    const asysta = (Array.isArray(b.asysta) ? b.asysta : [])
+    // Higienistka prowadząca własny gabinet jest samodzielnym specjalistą —
+    // asysta jej nie przysługuje (przy lekarzu bywa asystą, ale to inna rola).
+    const asysta = (typ === BLOK_HIGIENA ? [] : (Array.isArray(b.asysta) ? b.asysta : []))
       .map(a => ({ osobaId: String(a.osobaId || a), od: a.od || od, do: a.do || do_ }))
       .filter(a => a.osobaId && (_czyAsystaZew(a.osobaId) ||
         [GRUPA_ASYSTENTKA, GRUPA_HIGIENISTKA].indexOf(
@@ -3039,43 +3155,118 @@ function masterZapiszDzienGrafiku(token, data, bloki) {
 
     czyste.push({
       gabinetId: String(b.gabinetId), typ, osobaId: String(b.osobaId), od, do: do_,
-      asystaWymagana: (b.asystaWymagana === '' || b.asystaWymagana == null)
-        ? (typ === BLOK_LEKARZ ? 1 : 0) : parseInt(b.asystaWymagana, 10),
+      asystaWymagana: (typ === BLOK_HIGIENA) ? 0
+        : ((b.asystaWymagana === '' || b.asystaWymagana == null) ? 1 : parseInt(b.asystaWymagana, 10)),
       asystaUwaga: String(b.asystaUwaga || '').trim().slice(0, 300),
       asysta
     });
   }
 
-  _usunDzienGrafiku(data);
+  czyste.sort((a, b) => _t2m(a.od) - _t2m(b.od));
+  return { ok: true, bloki: czyste };
+}
+
+/**
+ * Zapisuje komplet bloków dla WIELU dat naraz — jednym przepisaniem arkusza.
+ * `mapa` to { 'YYYY-MM-DD': [bloki] }. Dni nieobecne w mapie zostają nietknięte.
+ * Data z pustą listą bloków = świadomie pusty dzień.
+ */
+function _zapiszDniGrafikuBatch(mapa) {
+  const daty = Object.keys(mapa);
+  if (!daty.length) return { ok: true, dni: 0, bloki: 0 };
+
+  const personel = _grafikPersonel();
+  const gabinety = _gabinetyAll(false);
+
+  // Najpierw walidacja WSZYSTKIEGO — nic nie zapisujemy, dopóki cały
+  // zestaw nie jest poprawny. Częściowy zapis zostawiłby grafik w stanie,
+  // którego admin nie zamawiał i nie widzi.
+  const zwalidowane = {};
+  for (let i = 0; i < daty.length; i++) {
+    const w = _walidujDzienGrafiku(daty[i], mapa[daty[i]], personel, gabinety);
+    if (!w.ok) return { ok: false, msg: daty[i] + ' — ' + w.msg, data: daty[i] };
+    zwalidowane[daty[i]] = w.bloki;
+  }
 
   const sh = _shGrafikDni();
+  const stare = sh.getLastRow() >= 2 ? sh.getDataRange().getValues().slice(1) : [];
+  const zachowane = stare.filter(r => daty.indexOf(_sheetDate(r[1])) === -1);
+
   const teraz = new Date().toISOString();
-  let seed = [];
-  czyste.forEach(b => {
-    const id = _nextId(seed, 'D');
-    seed = seed.concat([{ id }]);
-    sh.appendRow([id, data, b.gabinetId, b.typ, b.osobaId, b.od, b.do,
-                  b.asystaWymagana, b.asystaUwaga, JSON.stringify(b.asysta), teraz]);
+  let licznik = 0;
+  stare.forEach(r => {
+    const m = String(r[0]).match(/^D(\d+)$/);
+    if (m) licznik = Math.max(licznik, parseInt(m[1], 10));
   });
+
+  const nowe = [];
+  let ileBlokow = 0;
+  daty.forEach(data => {
+    zwalidowane[data].forEach(b => {
+      licznik++;
+      ileBlokow++;
+      nowe.push(['D' + String(licznik).padStart(3, '0'), data, b.gabinetId, b.typ,
+                 b.osobaId, b.od, b.do, b.asystaWymagana, b.asystaUwaga,
+                 JSON.stringify(b.asysta), teraz]);
+    });
+  });
+
+  const wynik = zachowane.concat(nowe);
+
+  // Jedno czyszczenie + jeden setValues zamiast pętli deleteRow/appendRow.
+  if (sh.getLastRow() >= 2) {
+    sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).clearContent();
+  }
+  if (wynik.length) sh.getRange(2, 1, wynik.length, 11).setValues(wynik);
 
   // Świadomie pusty dzień też jest decyzją — musimy ją zapamiętać,
   // inaczej szablon wróciłby przy najbliższym odświeżeniu.
-  const puste = _dniPusteAll().filter(d => d !== data);
-  if (!czyste.length) puste.push(data);
+  let puste = _dniPusteAll().filter(d => daty.indexOf(d) === -1);
+  daty.forEach(d => { if (!zwalidowane[d].length) puste.push(d); });
   _zapiszDniPuste(puste);
 
-  _grafikZatwCofnijJesliTrzeba(data);
-  _logAdmin('EdycjaDniaGrafiku', data, czyste.length + ' bloków');
-  return { ok: true, bloki: czyste.length };
+  daty.forEach(d => _grafikZatwCofnijJesliTrzeba(d));
+  return { ok: true, dni: daty.length, bloki: ileBlokow };
+}
+
+/**
+ * Zapisuje komplet bloków dla JEDNEJ daty. Od tej chwili ta data nie
+ * podlega już szablonowi — aż do jawnego przywrócenia.
+ */
+function masterZapiszDzienGrafiku(token, data, bloki) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  data = String(data || '').trim();
+  if (!_dataOk(data)) return { ok: false, msg: 'Nieprawidłowa data.' };
+
+  const mapa = {};
+  mapa[data] = Array.isArray(bloki) ? bloki : [];
+  const r = _zapiszDniGrafikuBatch(mapa);
+  if (!r.ok) return { ok: false, msg: String(r.msg || '').replace(data + ' — ', '') };
+
+  _logAdmin('EdycjaDniaGrafiku', data, r.bloki + ' bloków');
+  return { ok: true, bloki: r.bloki };
+}
+
+/**
+ * Zapis dnia + od razu odświeżony stan tego dnia w jednej odpowiedzi.
+ * Interfejs po zapisie potrzebuje dokładnie tych danych; osobne dopytanie
+ * oznaczałoby drugi round-trip do Apps Script tylko po to, żeby dowiedzieć
+ * się tego, co serwer właśnie policzył.
+ */
+function masterZapiszDzienGrafikuPelny(token, data, bloki) {
+  const zapis = masterZapiszDzienGrafiku(token, data, bloki);
+  if (!zapis.ok) return zapis;
+  const stan = _grafikDzienStan(String(data).trim(), _grafikKontekstDni());
+  return { ok: true, bloki: zapis.bloki, dzien: stan };
 }
 
 function _usunDzienGrafiku(data) {
   const sh = _shGrafikDni();
   if (sh.getLastRow() < 2) return;
   const rows = sh.getDataRange().getValues();
-  for (let i = rows.length - 1; i >= 1; i--) {
-    if (_sheetDate(rows[i][1]) === data) sh.deleteRow(i + 1);
-  }
+  const zachowane = rows.slice(1).filter(r => _sheetDate(r[1]) !== data);
+  sh.getRange(2, 1, rows.length - 1, sh.getLastColumn()).clearContent();
+  if (zachowane.length) sh.getRange(2, 1, zachowane.length, 11).setValues(zachowane);
 }
 
 /** Przywraca dzień do szablonu tygodniowego. */
@@ -3102,13 +3293,132 @@ function masterKopiujDzienGrafiku(token, zData, naDaty) {
   if (!mies.ok) return mies;
   const zrodlo = (mies.dni.find(d => d.data === zData) || {}).bloki || [];
 
-  let ok = 0;
+  // Dni docelowe wypadające w innym dniu tygodnia mogą mieć węższe okno
+  // otwarcia (sobota) — te pomijamy zamiast wywracać całe kopiowanie.
+  const mapa = {};
   const bledy = [];
+  const personel = _grafikPersonel(), gabinety = _gabinetyAll(false);
   naDaty.forEach(d => {
-    const r = masterZapiszDzienGrafiku(token, d, zrodlo);
-    if (r && r.ok) ok++; else bledy.push(d + ': ' + ((r && r.msg) || 'błąd'));
+    const w = _walidujDzienGrafiku(d, zrodlo, personel, gabinety);
+    if (w.ok) mapa[d] = zrodlo; else bledy.push(d + ': ' + w.msg);
   });
-  return { ok: true, skopiowano: ok, bledy: bledy.slice(0, 15) };
+
+  const r = _zapiszDniGrafikuBatch(mapa);
+  if (!r.ok) return r;
+  _logAdmin('KopiowanieDniGrafiku', zData, 'na ' + r.dni + ' dni');
+  return { ok: true, skopiowano: r.dni, bledy: bledy.slice(0, 15) };
+}
+
+// ── Materializacja miesiąca ─────────────────────────────────────
+// Miesiąc jest jedyną jednostką, w której buduje się grafik: każdy dzień
+// dostaje własne, konkretne bloki przypisane do daty. Tydzień i dzień to
+// wyłącznie widoki tego samego miesiąca — nie osobne miejsca przechowywania.
+//
+// Wcześniej obsada gabinetów żyła jako JEDEN wieczny szablon tygodniowy
+// rzutowany na każdą datę. To fizycznie uniemożliwiało, żeby lekarz
+// pracował w jeden poniedziałek do 16, a w kolejny do 18 — bo to był
+// dosłownie ten sam wiersz danych. Materializacja rozwiązuje to raz:
+// po niej każdy dzień jest niezależny i edytowalny w pełnym zakresie.
+
+/**
+ * Wypełnia wskazany miesiąc konkretnymi blokami z wybranego źródła.
+ *   zrodlo: 'szablon'   — wzorcowy tydzień (Pn–Sb) rozsiany na dni miesiąca
+ *           'poprzedni' — układ z analogicznych dni tygodnia poprzedniego miesiąca
+ * `nadpisz` = false (domyślnie) pomija dni, które mają już własną obsadę —
+ * materializacja nie może po cichu skasować pracy, którą ktoś już wykonał.
+ */
+function masterGrafikMaterializujMiesiac(token, rok, mies, zrodlo, nadpisz) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  const y = parseInt(rok, 10), m = parseInt(mies, 10);
+  if (isNaN(y) || isNaN(m) || m < 1 || m > 12) return { ok: false, msg: 'Nieprawidłowy miesiąc.' };
+  zrodlo = String(zrodlo || 'szablon');
+
+  const ctx = _grafikKontekstDni();
+  const ile = new Date(y, m, 0).getDate();
+  const pfx = y + '-' + String(m).padStart(2, '0') + '-';
+
+  // Źródło wzorca: mapa dzieńTygodnia -> bloki.
+  const wzorzec = {};
+  if (zrodlo === 'poprzedni') {
+    const py = (m === 1) ? y - 1 : y, pm = (m === 1) ? 12 : m - 1;
+    const pIle = new Date(py, pm, 0).getDate();
+    const pPfx = py + '-' + String(pm).padStart(2, '0') + '-';
+    // Bierzemy PIERWSZE wystąpienie każdego dnia tygodnia w poprzednim
+    // miesiącu — to najbliższe „typowemu tygodniowi", jakie mamy pod ręką.
+    for (let d = 1; d <= pIle; d++) {
+      const ds = pPfx + String(d).padStart(2, '0');
+      const dow = new Date(ds + 'T12:00:00').getDay();
+      if (GRAFIK_DAYS.indexOf(dow) === -1 || wzorzec[dow]) continue;
+      const stan = _grafikDzienStan(ds, ctx);
+      if (stan.bloki.length) wzorzec[dow] = stan.bloki;
+    }
+  } else {
+    ctx.szablon.forEach(b => {
+      if (!wzorzec[b.dzien]) wzorzec[b.dzien] = [];
+      wzorzec[b.dzien].push({
+        gabinetId: b.gabinetId, typ: b.typ, osobaId: b.osobaId,
+        od: b.od, do: b.do, asystaWymagana: b.asystaWymagana,
+        asystaUwaga: b.asystaUwaga, asysta: ctx.asystaWg[b.id] || []
+      });
+    });
+  }
+
+  if (!Object.keys(wzorzec).length) {
+    return { ok: false, msg: zrodlo === 'poprzedni'
+      ? 'Poprzedni miesiąc jest pusty — nie ma z czego skopiować.'
+      : 'Wzorcowy tydzień jest pusty — najpierw ustaw obsadę w zakładce Grafik.' };
+  }
+
+  const personel = _grafikPersonel(), gabinety = _gabinetyAll(false);
+  const mapa = {};
+  const pominiete = [];
+  const bledy = [];
+
+  for (let d = 1; d <= ile; d++) {
+    const ds = pfx + String(d).padStart(2, '0');
+    const dow = new Date(ds + 'T12:00:00').getDay();
+    if (GRAFIK_DAYS.indexOf(dow) === -1) continue;
+
+    const juzMa = !!ctx.nadpisane[ds] || ctx.puste.indexOf(ds) !== -1;
+    if (juzMa && !nadpisz) { pominiete.push(ds); continue; }
+
+    const bloki = wzorzec[dow] || [];
+    const w = _walidujDzienGrafiku(ds, bloki, personel, gabinety);
+    if (!w.ok) { bledy.push(ds + ': ' + w.msg); continue; }
+    mapa[ds] = bloki;
+  }
+
+  const r = _zapiszDniGrafikuBatch(mapa);
+  if (!r.ok) return r;
+
+  _logAdmin('MaterializacjaMiesiaca', _grafikZatwKlucz(y, m),
+    'źródło: ' + zrodlo + ', dni: ' + r.dni + ', pominięte: ' + pominiete.length);
+  return { ok: true, rok: y, mies: m, dni: r.dni, bloki: r.bloki,
+           pominiete: pominiete.length, bledy: bledy.slice(0, 15) };
+}
+
+/** Czy miesiąc ma już własną obsadę — do decyzji, czy pokazać zaproszenie do wypełnienia. */
+function masterGrafikStanMiesiaca(token, rok, mies) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  const y = parseInt(rok, 10), m = parseInt(mies, 10);
+  if (isNaN(y) || isNaN(m) || m < 1 || m > 12) return { ok: false, msg: 'Nieprawidłowy miesiąc.' };
+
+  const ctx = _grafikKontekstDni();
+  const ile = new Date(y, m, 0).getDate();
+  const pfx = y + '-' + String(m).padStart(2, '0') + '-';
+  let robocze = 0, wlasne = 0, zBlokami = 0;
+
+  for (let d = 1; d <= ile; d++) {
+    const ds = pfx + String(d).padStart(2, '0');
+    const dow = new Date(ds + 'T12:00:00').getDay();
+    if (GRAFIK_DAYS.indexOf(dow) === -1) continue;
+    robocze++;
+    if (ctx.nadpisane[ds] || ctx.puste.indexOf(ds) !== -1) wlasne++;
+    if ((ctx.nadpisane[ds] || []).length) zBlokami++;
+  }
+
+  return { ok: true, rok: y, mies: m, robocze, wlasne, zBlokami,
+           pusty: wlasne === 0, kompletny: wlasne === robocze };
 }
 
 /**

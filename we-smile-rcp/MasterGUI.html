@@ -26,6 +26,67 @@
 .grl-info small{display:block;font-weight:400;color:var(--c-muted)}
 .grl-brak{color:var(--c-accent);font-weight:700}
 
+/* ── Grafik: miesiąc jako punkt wyjścia (kalendarz całej kliniki) ── */
+.gm-empty{border:1.5px dashed var(--c-border-strong);border-radius:var(--radius-m);padding:20px;text-align:center;background:var(--c-offwhite);margin-bottom:14px}
+.gm-empty-title{font-size:15px;font-weight:800;color:var(--c-ink);margin-bottom:6px}
+.gm-empty-sub{font-size:13px;color:var(--c-muted);margin-bottom:14px;line-height:1.5}
+.gm-empty-btns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.gm-cell{min-height:96px;border-radius:var(--radius-m);border:1.5px solid var(--c-border);background:var(--c-white);padding:6px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:3px;font-family:inherit;width:100%;transition:border-color .15s ease-out,box-shadow .15s ease-out}
+.gm-cell:hover{border-color:var(--c-primary);box-shadow:var(--shadow-s)}
+.gm-cell:active{opacity:.85}
+.gm-cell.off{background:var(--c-offwhite);color:var(--c-muted);border-style:dashed;cursor:default}
+.gm-cell.off:hover{border-color:var(--c-border);box-shadow:none}
+.gm-cell.empty{visibility:hidden;cursor:default}
+.gm-cell.pusty{background:var(--c-offwhite)}
+.gm-head{display:flex;align-items:center;justify-content:space-between;gap:4px}
+.gm-num{font-size:12px;font-weight:800;color:var(--c-ink)}
+.gm-cell.off .gm-num{color:var(--c-muted)}
+.gm-cnt{font-size:9.5px;font-weight:800;color:var(--c-muted)}
+.gm-wpis{font-size:10px;line-height:1.3;font-weight:700;color:var(--c-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gm-wpis small{font-weight:500;color:var(--c-muted)}
+.gm-wpis.brak{color:var(--c-accent)}
+.gm-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:3px;vertical-align:middle}
+.gm-more{font-size:9.5px;color:var(--c-muted);font-weight:700}
+.gm-nic{font-size:10.5px;color:var(--c-muted);font-weight:600}
+
+/* Edytor dnia: unit po unicie, od pory dnia do godzin i asysty */
+.gdz-unit{border:1.5px solid var(--c-border);border-radius:var(--radius-m);padding:12px;margin-bottom:10px;background:var(--c-white)}
+.gdz-unit.on{border-color:var(--c-primary);background:var(--c-primary-tint)}
+.gdz-unit-head{display:flex;align-items:center;gap:10px;margin-bottom:2px}
+.gdz-unit-nazwa{font-size:14px;font-weight:800;color:var(--c-ink);flex:1}
+.gdz-unit-body{margin-top:10px}
+.gdz-pory{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.gdz-pora{flex:1;min-width:88px;padding:8px 6px;border-radius:var(--radius-s);border:1.5px solid var(--c-border);background:var(--c-white);font-size:12px;font-weight:700;color:var(--c-muted);cursor:pointer;font-family:inherit}
+.gdz-pora.on{border-color:var(--c-primary);background:var(--c-primary);color:#fff}
+.gdz-godziny{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.gdz-asysta-box{border-top:1px dashed var(--c-border);padding-top:10px;margin-top:4px}
+.gdz-asysta-row{display:grid;grid-template-columns:1fr 84px 84px 32px;gap:6px;align-items:center;margin-bottom:6px}
+.gdz-hig-note{font-size:12px;color:var(--c-muted);background:var(--c-offwhite);border-radius:var(--radius-s);padding:8px 10px;line-height:1.45}
+
+/* Wydruk A4 — układ wzorcowy kliniki (pasma tygodni × 6 dni) */
+.gwd-page{background:#fff;color:#111;padding:10px}
+.gwd-title{display:flex;align-items:baseline;gap:12px;border-bottom:2px solid #111;padding-bottom:6px;margin-bottom:8px}
+.gwd-rok{font-size:20px;font-weight:800}
+.gwd-mies{font-size:20px;font-weight:800;letter-spacing:.06em}
+.gwd-filtr{font-size:11px;color:#555;margin-left:auto}
+.gwd-tab{width:100%;border-collapse:collapse;table-layout:fixed;font-size:10px}
+.gwd-tab th{border:1px solid #111;padding:3px 2px;font-size:9.5px;font-weight:800;letter-spacing:.04em;background:#f0f0f0;text-align:center}
+.gwd-tab td{border:1px solid #111;padding:3px;vertical-align:top;height:76px}
+.gwd-dnum{font-size:12px;font-weight:800;text-align:center;background:#f7f7f7;padding:2px}
+.gwd-wpis{margin-bottom:3px;line-height:1.25}
+.gwd-op{font-weight:800;text-transform:uppercase;font-size:10px}
+.gwd-godz{float:right;font-weight:700;font-size:10px}
+.gwd-as{font-size:9.5px;padding-left:5px}
+.gwd-brak{color:#b00;font-weight:800;font-size:9px}
+.gwd-adn{font-size:8.5px;font-style:italic;color:#444;border-top:1px dotted #999;margin-top:2px;padding-top:2px}
+@media print{
+  body>*:not(#gwd-modal){display:none !important}
+  #gwd-modal{position:static !important;display:block !important;background:none !important;padding:0 !important}
+  #gwd-modal .modal-card{max-width:none !important;width:auto !important;box-shadow:none !important;border:0 !important;padding:0 !important;max-height:none !important;overflow:visible !important}
+  .gwd-noprint{display:none !important}
+  @page{size:A4 landscape;margin:8mm}
+}
+
 /* ── Obecność zespołu — kalendarz miesiąca, wszyscy pracownicy naraz ── */
 .ob2-cell{min-height:78px;border-radius:var(--radius-m);border:1.5px solid var(--c-border);background:var(--c-white);padding:6px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:4px;font-family:inherit;width:100%}
 .ob2-cell:active{opacity:.8}
@@ -795,12 +856,36 @@
         </div>
       </div>
 
-      <div class="seg" id="gr-view-toggle" style="max-width:260px;margin-bottom:14px">
-        <button type="button" class="seg-btn on" data-grview="tydzien">Tydzień</button>
+      <div class="seg" id="gr-view-toggle" style="max-width:340px;margin-bottom:14px">
+        <button type="button" class="seg-btn on" data-grview="miesiac">Miesiąc</button>
+        <button type="button" class="seg-btn" data-grview="tydzien">Tydzień</button>
         <button type="button" class="seg-btn" data-grview="dzien">Dzień</button>
       </div>
 
-      <div id="gr-week-view">
+      <!-- Miesiąc — punkt wyjścia do budowania grafiku. Każdy dzień ma
+           własną, niezależną obsadę; tydzień i dzień to tylko inne
+           spojrzenia na te same dane. -->
+      <div id="gr-month-view">
+        <div class="month-nav">
+          <button id="gm-prev" class="btn-icon" type="button"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+          <span id="gm-label" class="month-label">—</span>
+          <button id="gm-next" class="btn-icon" type="button"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+        </div>
+
+        <div id="gm-empty-box" style="display:none"></div>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+          <button id="gm-print" class="btn btn-ghost" type="button" style="margin-bottom:0">
+            <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="7" rx="2"/><path d="M6 16h12v5H6z"/></svg>
+            Wydruk A4 (cały miesiąc)
+          </button>
+          <button id="gm-wypelnij" class="btn btn-ghost" type="button" style="margin-bottom:0">Wypełnij brakujące dni</button>
+        </div>
+
+        <div id="gm-kalendarz"><div class="hint">Ładowanie…</div></div>
+      </div>
+
+      <div id="gr-week-view" style="display:none">
         <div class="gr-week-grid" id="gr-week-grid"><div class="hint">Ładowanie…</div></div>
       </div>
 
@@ -1321,6 +1406,45 @@
     <button id="gld-save" class="btn btn-primary" style="margin-top:14px" type="button">Zapisz dzień</button>
     <button id="gld-copy" class="btn btn-ghost" style="margin-top:8px;display:none" type="button">Kopiuj na te same dni tygodnia w tym miesiącu</button>
     <button id="gld-clear" class="btn-link" style="color:var(--c-accent);display:none" type="button">Lekarz nie pracuje w tym dniu</button>
+  </div>
+</div>
+
+<!-- ═══════ MODAL — edytor dnia: unit po unicie ═══════ -->
+<!-- Kolejność pól odzwierciedla sposób, w jaki grafik naprawdę się układa:
+     najpierw które gabinety pracują, potem kto je obsadza, potem pora dnia
+     (która podpowiada godziny), na końcu asysta. Higienistka prowadząca
+     gabinet jest samodzielnym specjalistą — sekcja asysty jej nie dotyczy. -->
+<div id="gdz-modal" class="modal-overlay" style="display:none">
+  <div class="modal-card" style="max-width:720px">
+    <div class="modal-head">
+      <span id="gdz-title">Dzień grafiku</span>
+      <button id="gdz-close" class="btn-icon" aria-label="Zamknij">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="hint" id="gdz-hint">Zaznacz gabinety, które tego dnia pracują, i obsadź każdy z nich.</div>
+
+    <div id="gdz-unity"></div>
+
+    <button id="gdz-save" class="btn btn-primary" style="margin-top:14px" type="button">Zapisz dzień</button>
+    <button id="gdz-copy" class="btn btn-ghost" style="margin-top:8px" type="button">Kopiuj na te same dni tygodnia w tym miesiącu</button>
+    <button id="gdz-reset" class="btn-link" style="color:var(--c-accent)" type="button">Wyczyść cały dzień</button>
+  </div>
+</div>
+
+<!-- ═══════ MODAL — wydruk A4 grafiku miesiąca ═══════ -->
+<div id="gwd-modal" class="modal-overlay" style="display:none">
+  <div class="modal-card" style="max-width:1180px">
+    <div class="modal-head gwd-noprint">
+      <span>Wydruk grafiku — podgląd</span>
+      <button id="gwd-close" class="btn-icon" aria-label="Zamknij">
+        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="hint gwd-noprint" style="margin-bottom:10px">Układ przygotowany pod A4 w poziomie. Sprawdź podgląd, zanim wyślesz na drukarkę.</div>
+    <button id="gwd-print" class="btn btn-primary gwd-noprint" type="button" style="margin-bottom:12px">Drukuj</button>
+    <div id="gwd-page" class="gwd-page"><div class="hint">Ładowanie…</div></div>
   </div>
 </div>
 
@@ -2298,10 +2422,13 @@ function rgWersjeLoad() {
 // tu tylko je pokazujemy, więc podmiana silnika na AI nic tu nie zmieni.
 // ════════════════════════════════════════════════════════════
 
-var GR = { dane: null, dzien: 1, edytowany: null, filtrRek: null, widok: 'tydzien' };
+var GR = { dane: null, dzien: 1, edytowany: null, filtrRek: null, widok: 'miesiac' };
 
 function grInit() {
   grLoad();
+  // Miesiąc jest domyślnym wejściem do grafiku — tydzień i dzień to
+  // powiększenia tego samego miesiąca, nie osobne miejsca pracy.
+  gmLoad();
 }
 
 function grLoad(cb) {
@@ -2335,9 +2462,594 @@ function grSwitchView(widok) {
   document.querySelectorAll('#gr-view-toggle [data-grview]').forEach(function(b) {
     b.className = 'seg-btn' + (b.getAttribute('data-grview') === widok ? ' on' : '');
   });
+  document.getElementById('gr-month-view').style.display = widok === 'miesiac' ? 'block' : 'none';
   document.getElementById('gr-week-view').style.display = widok === 'tydzien' ? 'block' : 'none';
   document.getElementById('gr-day-view').style.display = widok === 'dzien' ? 'block' : 'none';
   if (widok === 'dzien') { grRenderDni(); grRenderDzien(); }
+  if (widok === 'miesiac' && !GM.dane) gmLoad();
+}
+
+// ══════════════════════════════════════════════════════════════
+// GRAFIK — MIESIĄC JAKO PUNKT WYJŚCIA
+// ══════════════════════════════════════════════════════════════
+// Miesiąc jest jedyną jednostką, w której grafik się buduje i przechowuje:
+// każdy dzień ma własne bloki przypisane do konkretnej daty. Dzięki temu
+// lekarz może w jeden poniedziałek pracować do 16, a w kolejny do 18 —
+// wcześniej było to niemożliwe, bo wszystkie poniedziałki miesiąca były
+// dosłownie tym samym wierszem danych.
+
+var GM = { rok: 0, mies: 0, dane: null, stan: null, edytowanaData: null, unity: [] };
+
+var GM_PORY = [
+  { id: 'rano', label: 'Rano' },
+  { id: 'popo', label: 'Popołudnie' },
+  { id: 'caly', label: 'Cały dzień' }
+];
+
+function gmInit() {
+  if (GM.rok) return;
+  var dzis = new Date();
+  GM.rok = dzis.getFullYear();
+  GM.mies = dzis.getMonth() + 1;
+}
+
+document.getElementById('gm-prev').addEventListener('click', function() {
+  GM.mies--; if (GM.mies < 1) { GM.mies = 12; GM.rok--; }
+  gmLoad();
+});
+document.getElementById('gm-next').addEventListener('click', function() {
+  GM.mies++; if (GM.mies > 12) { GM.mies = 1; GM.rok++; }
+  gmLoad();
+});
+
+function gmLoad(cb) {
+  gmInit();
+  document.getElementById('gm-label').textContent = MONTHS[GM.mies - 1] + ' ' + GM.rok;
+  gas('masterGrafikMiesiac', [M.token, GM.rok, GM.mies], function(res) {
+    if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+    if (!res || !res.ok) {
+      document.getElementById('gm-kalendarz').innerHTML =
+        '<div class="hint">' + esc((res && res.msg) || 'Błąd ładowania.') + '</div>';
+      return;
+    }
+    GM.dane = res;
+    gmRysuj();
+    if (cb) cb();
+  });
+  gas('masterGrafikStanMiesiaca', [M.token, GM.rok, GM.mies], function(res) {
+    if (!res || !res.ok) return;
+    GM.stan = res;
+    gmRysujZaproszenie();
+  });
+}
+
+// Pusty miesiąc dostaje jawne zaproszenie do wypełnienia zamiast pustej
+// siatki — budowanie od zera dzień po dniu to najwolniejsza możliwa droga,
+// a prawie zawsze istnieje sensowny punkt startowy.
+function gmRysujZaproszenie() {
+  var box = document.getElementById('gm-empty-box');
+  var przycisk = document.getElementById('gm-wypelnij');
+  if (!GM.stan || !GM.stan.pusty) {
+    box.style.display = 'none';
+    przycisk.style.display = GM.stan && GM.stan.kompletny ? 'none' : '';
+    return;
+  }
+  przycisk.style.display = 'none';
+  box.style.display = 'block';
+  box.innerHTML =
+    '<div class="gm-empty">' +
+      '<div class="gm-empty-title">Ten miesiąc jest jeszcze pusty</div>' +
+      '<div class="gm-empty-sub">Zacznij od gotowej podstawy i popraw tylko wyjątki — ' +
+        'każdy dzień pozostaje w pełni edytowalny niezależnie od pozostałych.</div>' +
+      '<div class="gm-empty-btns">' +
+        '<button type="button" class="btn btn-primary" data-gm-mat="poprzedni" style="margin:0">Skopiuj poprzedni miesiąc</button>' +
+        '<button type="button" class="btn btn-ghost" data-gm-mat="szablon" style="margin:0">Użyj wzorcowego tygodnia</button>' +
+      '</div>' +
+    '</div>';
+  box.querySelectorAll('[data-gm-mat]').forEach(function(b) {
+    b.addEventListener('click', function() { gmMaterializuj(this.getAttribute('data-gm-mat')); });
+  });
+}
+
+function gmMaterializuj(zrodlo) {
+  toast('Wypełnianie miesiąca…', true);
+  gas('masterGrafikMaterializujMiesiac', [M.token, GM.rok, GM.mies, zrodlo, false], function(res) {
+    if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+    if (!res || !res.ok) { toast((res && res.msg) || 'Nie udało się wypełnić miesiąca.', false); return; }
+    wsConfirmPopup('Wypełniono ' + res.dni + ' dni. Każdy z nich możesz teraz zmienić osobno.');
+    gmLoad();
+  });
+}
+
+document.getElementById('gm-wypelnij').addEventListener('click', function() {
+  gmMaterializuj('poprzedni');
+});
+
+function gmRysuj() {
+  var box = document.getElementById('gm-kalendarz');
+  if (!GM.dane) { box.innerHTML = '<div class="hint">Ładowanie…</div>'; return; }
+
+  var pierwszy = new Date(GM.dane.rok, GM.dane.mies - 1, 1);
+  var startOffset = (pierwszy.getDay() + 6) % 7; // Pn=0 … Nd=6
+  var komorki = [];
+  for (var i = 0; i < startOffset; i++) komorki.push(null);
+  GM.dane.dni.forEach(function(d) { komorki.push(d); });
+  while (komorki.length % 7 !== 0) komorki.push(null);
+  var dniTyg = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
+
+  box.innerHTML =
+    '<div class="grl-dow-row">' + dniTyg.map(function(n) { return '<div class="grl-dow">' + n + '</div>'; }).join('') + '</div>' +
+    '<div class="grl-grid">' + komorki.map(function(d) {
+      return d ? gmKomorkaHtml(d) : '<div class="gm-cell empty"></div>';
+    }).join('') + '</div>';
+
+  box.querySelectorAll('[data-gm-dzien]').forEach(function(el) {
+    el.addEventListener('click', function() { gdzOtworz(this.getAttribute('data-gm-dzien')); });
+  });
+}
+
+function gmKolorGrupy(grupa) {
+  return { lekarz: '#2F6FED', asystentka: '#2FA37A', higienistka: '#9B59B6', rejestracja: '#E8912D' }[grupa] || '#8A93A6';
+}
+
+function gmOsoba(id) {
+  return (GM.dane.personel || []).find(function(p) { return p.id === id; });
+}
+
+function gmKomorkaHtml(d) {
+  var nr = parseInt(d.data.slice(8), 10);
+  if (!d.czynny) {
+    return '<div class="gm-cell off"><span class="gm-num">' + nr + '</span><span class="gm-nic">zamknięte</span></div>';
+  }
+  var bloki = d.bloki || [];
+  var widoczne = bloki.slice(0, 3).map(function(b) {
+    var os = gmOsoba(b.osobaId);
+    var nazwa = os ? (os.imie + ' ' + (os.nazwisko || '').charAt(0) + '.') : b.osobaId;
+    var brak = b.typ !== 'Higienizacja' && b.asystaWymagana !== 0 && !(b.asysta || []).length;
+    return '<span class="gm-wpis' + (brak ? ' brak' : '') + '">' +
+      '<span class="gm-dot" style="background:' + gmKolorGrupy(os ? os.grupa : '') + '"></span>' +
+      esc(nazwa) + ' <small>' + esc(b.od) + '–' + esc(b.do) + '</small></span>';
+  }).join('');
+
+  return '<button type="button" class="gm-cell' + (bloki.length ? '' : ' pusty') + '" data-gm-dzien="' + esc(d.data) + '">' +
+    '<span class="gm-head"><span class="gm-num">' + nr + '</span>' +
+      (bloki.length ? '<span class="gm-cnt">' + bloki.length + '</span>' : '') + '</span>' +
+    (bloki.length ? widoczne : '<span class="gm-nic">wolne</span>') +
+    (bloki.length > 3 ? '<span class="gm-more">+' + (bloki.length - 3) + ' więcej</span>' : '') +
+    '</button>';
+}
+
+// ── Edytor dnia: unit → osoba → pora → godziny → asysta ──────
+// Stan trzymamy w GM.unity: po jednym wpisie na gabinet, niezależnie od
+// tego czy jest obsadzony. Dzięki temu odznaczenie i ponowne zaznaczenie
+// gabinetu nie gubi tego, co admin zdążył już w nim ustawić.
+
+function gdzOtworz(data) {
+  var d = (GM.dane.dni || []).find(function(x) { return x.data === data; });
+  if (!d || !d.czynny) return;
+  GM.edytowanaData = data;
+
+  var dt = new Date(data + 'T12:00:00');
+  var dniPl = ['Niedziela','Poniedziałek','Wtorek','Środa','Czwartek','Piątek','Sobota'];
+  document.getElementById('gdz-title').textContent =
+    dniPl[dt.getDay()] + ', ' + dt.getDate() + ' ' + MONTHS[GM.mies - 1].toLowerCase() + ' ' + GM.rok;
+  document.getElementById('gdz-hint').textContent =
+    'Godziny otwarcia tego dnia: ' + (d.godziny ? d.godziny.open + '–' + d.godziny.close : '—') +
+    '. Zaznacz gabinety, które pracują, i obsadź każdy z nich.';
+
+  GM.unity = (GM.dane.gabinety || []).map(function(g) {
+    var blok = (d.bloki || []).find(function(b) { return b.gabinetId === g.id; });
+    return {
+      gabinetId: g.id,
+      nazwa: g.nazwa,
+      aktywny: !!blok,
+      osobaId: blok ? blok.osobaId : '',
+      pora: blok ? '' : 'caly',
+      od: blok ? blok.od : (d.godziny ? d.godziny.open : '09:00'),
+      do: blok ? blok.do : (d.godziny ? d.godziny.close : '20:00'),
+      asystaWymagana: blok ? (blok.asystaWymagana == null ? 1 : blok.asystaWymagana) : 1,
+      asystaUwaga: blok ? (blok.asystaUwaga || '') : '',
+      asysta: blok ? (blok.asysta || []).map(function(a) {
+        return { osobaId: a.osobaId, od: a.od, do: a.do };
+      }) : []
+    };
+  });
+
+  gdzRysuj();
+  document.getElementById('gdz-modal').style.display = 'flex';
+}
+
+function gdzOperatorzy() {
+  return (GM.dane.personel || []).filter(function(p) {
+    return p.grupa === 'lekarz' || p.grupa === 'higienistka';
+  });
+}
+function gdzAsystenci() {
+  var lista = (GM.dane.personel || []).filter(function(p) {
+    return p.grupa === 'asystentka' || p.grupa === 'higienistka';
+  }).map(function(p) { return { id: p.id, nazwa: p.imie + ' ' + p.nazwisko }; });
+  (GM.dane.asystaZew || []).forEach(function(z) { lista.push({ id: z.id, nazwa: z.label }); });
+  return lista;
+}
+
+function gdzGodzinyDnia() {
+  var d = (GM.dane.dni || []).find(function(x) { return x.data === GM.edytowanaData; });
+  return (d && d.godziny) ? d.godziny : { open: '09:00', close: '20:00' };
+}
+
+// Pora dnia to podpowiedź godzin, nie ich zamknięcie — po wybraniu
+// „Rano" godziny wskakują same, ale nadal można je dowolnie poprawić.
+function gdzGodzinyPory(pora) {
+  var h = gdzGodzinyDnia();
+  var podzial = (GM.edytowanaData && new Date(GM.edytowanaData + 'T12:00:00').getDay() === 6) ? '12:30' : '14:00';
+  if (pora === 'rano') return { od: h.open, do: podzial };
+  if (pora === 'popo') return { od: podzial, do: h.close };
+  return { od: h.open, do: h.close };
+}
+
+function gdzRysuj() {
+  var operatorzy = gdzOperatorzy();
+  document.getElementById('gdz-unity').innerHTML = GM.unity.map(function(u, i) {
+    var os = gmOsoba(u.osobaId);
+    var higiena = !!(os && os.grupa === 'higienistka');
+    return '' +
+      '<div class="gdz-unit' + (u.aktywny ? ' on' : '') + '">' +
+        '<div class="gdz-unit-head">' +
+          '<input type="checkbox" data-gdz-on="' + i + '"' + (u.aktywny ? ' checked' : '') + ' aria-label="Gabinet pracuje">' +
+          '<span class="gdz-unit-nazwa">' + esc(u.nazwa) + '</span>' +
+        '</div>' +
+        (u.aktywny ? gdzUnitBodyHtml(u, i, operatorzy, higiena) : '') +
+      '</div>';
+  }).join('');
+  gdzBind();
+}
+
+function gdzUnitBodyHtml(u, i, operatorzy, higiena) {
+  return '' +
+    '<div class="gdz-unit-body">' +
+      '<div class="field" style="margin-bottom:10px">' +
+        '<span class="field-lbl">Kto obsadza</span>' +
+        '<select class="sel" data-gdz-osoba="' + i + '">' +
+          '<option value="">— wybierz —</option>' +
+          operatorzy.map(function(p) {
+            return '<option value="' + esc(p.id) + '"' + (p.id === u.osobaId ? ' selected' : '') + '>' +
+              esc(p.imie + ' ' + p.nazwisko) + ' · ' + esc(p.grupa) + '</option>';
+          }).join('') +
+        '</select>' +
+      '</div>' +
+
+      '<span class="field-lbl">Pora dnia</span>' +
+      '<div class="gdz-pory">' +
+        GM_PORY.map(function(p) {
+          return '<button type="button" class="gdz-pora' + (u.pora === p.id ? ' on' : '') + '" ' +
+            'data-gdz-pora="' + i + '" data-pora="' + p.id + '">' + p.label + '</button>';
+        }).join('') +
+      '</div>' +
+
+      '<div class="gdz-godziny">' +
+        '<div class="field" style="margin-bottom:0"><span class="field-lbl">Od</span>' +
+          '<input type="time" class="inp" step="300" data-gdz-od="' + i + '" value="' + esc(u.od) + '"></div>' +
+        '<div class="field" style="margin-bottom:0"><span class="field-lbl">Do</span>' +
+          '<input type="time" class="inp" step="300" data-gdz-do="' + i + '" value="' + esc(u.do) + '"></div>' +
+      '</div>' +
+
+      '<div class="gdz-asysta-box">' +
+        (higiena
+          ? '<div class="gdz-hig-note">Higienistka prowadzi ten gabinet samodzielnie — asysta jej nie przysługuje. ' +
+            '(Przy lekarzu może występować jako asysta — to inna rola.)</div>'
+          : gdzAsystaHtml(u, i)) +
+      '</div>' +
+    '</div>';
+}
+
+function gdzAsystaHtml(u, i) {
+  var asystenci = gdzAsystenci();
+  var domyslna = 1;
+  return '' +
+    '<div class="field" style="margin-bottom:8px">' +
+      '<span class="field-lbl">Ile asysty wymaga ten gabinet</span>' +
+      '<select class="sel" data-gdz-asn="' + i + '">' +
+        [0,1,2,3,4].map(function(n) {
+          return '<option value="' + n + '"' + (n === u.asystaWymagana ? ' selected' : '') + '>' +
+            n + (n === 1 ? ' — standard' : '') + '</option>';
+        }).join('') +
+      '</select>' +
+    '</div>' +
+    (u.asystaWymagana !== domyslna
+      ? '<div class="field" style="margin-bottom:8px"><span class="field-lbl">Adnotacja — dlaczego odstępstwo</span>' +
+        '<textarea class="ta" data-gdz-asu="' + i + '" placeholder="np. zabieg wymagający dwóch par rąk">' +
+        esc(u.asystaUwaga) + '</textarea></div>'
+      : '') +
+    '<span class="field-lbl">Przypisana asysta</span>' +
+    u.asysta.map(function(a, j) {
+      return '<div class="gdz-asysta-row">' +
+        '<select class="sel" data-gdz-as-osoba="' + i + '" data-j="' + j + '" style="margin:0">' +
+          asystenci.map(function(p) {
+            return '<option value="' + esc(p.id) + '"' + (p.id === a.osobaId ? ' selected' : '') + '>' + esc(p.nazwa) + '</option>';
+          }).join('') +
+        '</select>' +
+        '<input type="time" class="inp" step="300" data-gdz-as-od="' + i + '" data-j="' + j + '" value="' + esc(a.od) + '" style="margin:0">' +
+        '<input type="time" class="inp" step="300" data-gdz-as-do="' + i + '" data-j="' + j + '" value="' + esc(a.do) + '" style="margin:0">' +
+        '<button type="button" class="btn-icon" data-gdz-as-del="' + i + '" data-j="' + j + '" aria-label="Usuń asystę">' +
+          '<svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>' +
+        '</button>' +
+      '</div>';
+    }).join('') +
+    '<button type="button" class="btn-link" data-gdz-as-add="' + i + '" style="margin-top:4px">+ Dodaj asystę</button>';
+}
+
+function gdzBind() {
+  var box = document.getElementById('gdz-unity');
+
+  box.querySelectorAll('[data-gdz-on]').forEach(function(el) {
+    el.addEventListener('change', function() {
+      var i = parseInt(this.getAttribute('data-gdz-on'), 10);
+      GM.unity[i].aktywny = this.checked;
+      gdzRysuj();
+    });
+  });
+
+  box.querySelectorAll('[data-gdz-osoba]').forEach(function(el) {
+    el.addEventListener('change', function() {
+      var i = parseInt(this.getAttribute('data-gdz-osoba'), 10);
+      GM.unity[i].osobaId = this.value;
+      var os = gmOsoba(this.value);
+      // Higienistka prowadząca gabinet nie ma asysty — czyścimy od razu,
+      // żeby po zapisie nie zniknęła po cichu po stronie serwera.
+      if (os && os.grupa === 'higienistka') { GM.unity[i].asysta = []; GM.unity[i].asystaWymagana = 0; }
+      else if (GM.unity[i].asystaWymagana === 0) GM.unity[i].asystaWymagana = 1;
+      gdzRysuj();
+    });
+  });
+
+  box.querySelectorAll('[data-gdz-pora]').forEach(function(el) {
+    el.addEventListener('click', function() {
+      var i = parseInt(this.getAttribute('data-gdz-pora'), 10);
+      var pora = this.getAttribute('data-pora');
+      var g = gdzGodzinyPory(pora);
+      GM.unity[i].pora = pora;
+      GM.unity[i].od = g.od;
+      GM.unity[i].do = g.do;
+      // Asysta domyślnie idzie w parze z operatorem — inaczej po zmianie
+      // pory dnia zostawałaby w starych, już nieaktualnych godzinach.
+      GM.unity[i].asysta.forEach(function(a) { a.od = g.od; a.do = g.do; });
+      gdzRysuj();
+    });
+  });
+
+  // Ręczna zmiana godzin unieważnia wybór pory — od tej chwili obowiązuje
+  // to, co admin wpisał, a nie gotowy wariant.
+  box.querySelectorAll('[data-gdz-od]').forEach(function(el) {
+    el.addEventListener('change', function() {
+      var i = parseInt(this.getAttribute('data-gdz-od'), 10);
+      GM.unity[i].od = this.value; GM.unity[i].pora = '';
+      document.querySelectorAll('[data-gdz-pora="' + i + '"]').forEach(function(b) { b.className = 'gdz-pora'; });
+    });
+  });
+  box.querySelectorAll('[data-gdz-do]').forEach(function(el) {
+    el.addEventListener('change', function() {
+      var i = parseInt(this.getAttribute('data-gdz-do'), 10);
+      GM.unity[i].do = this.value; GM.unity[i].pora = '';
+      document.querySelectorAll('[data-gdz-pora="' + i + '"]').forEach(function(b) { b.className = 'gdz-pora'; });
+    });
+  });
+
+  box.querySelectorAll('[data-gdz-asn]').forEach(function(el) {
+    el.addEventListener('change', function() {
+      var i = parseInt(this.getAttribute('data-gdz-asn'), 10);
+      GM.unity[i].asystaWymagana = parseInt(this.value, 10);
+      gdzRysuj();
+    });
+  });
+  box.querySelectorAll('[data-gdz-asu]').forEach(function(el) {
+    el.addEventListener('input', function() {
+      GM.unity[parseInt(this.getAttribute('data-gdz-asu'), 10)].asystaUwaga = this.value;
+    });
+  });
+
+  box.querySelectorAll('[data-gdz-as-add]').forEach(function(el) {
+    el.addEventListener('click', function() {
+      var i = parseInt(this.getAttribute('data-gdz-as-add'), 10);
+      var lista = gdzAsystenci();
+      if (!lista.length) { toast('Brak osób, które mogą asystować.', false); return; }
+      GM.unity[i].asysta.push({ osobaId: lista[0].id, od: GM.unity[i].od, do: GM.unity[i].do });
+      gdzRysuj();
+    });
+  });
+  box.querySelectorAll('[data-gdz-as-del]').forEach(function(el) {
+    el.addEventListener('click', function() {
+      var i = parseInt(this.getAttribute('data-gdz-as-del'), 10);
+      GM.unity[i].asysta.splice(parseInt(this.getAttribute('data-j'), 10), 1);
+      gdzRysuj();
+    });
+  });
+  box.querySelectorAll('[data-gdz-as-osoba]').forEach(function(el) {
+    el.addEventListener('change', function() {
+      GM.unity[parseInt(this.getAttribute('data-gdz-as-osoba'), 10)]
+        .asysta[parseInt(this.getAttribute('data-j'), 10)].osobaId = this.value;
+    });
+  });
+  box.querySelectorAll('[data-gdz-as-od]').forEach(function(el) {
+    el.addEventListener('change', function() {
+      GM.unity[parseInt(this.getAttribute('data-gdz-as-od'), 10)]
+        .asysta[parseInt(this.getAttribute('data-j'), 10)].od = this.value;
+    });
+  });
+  box.querySelectorAll('[data-gdz-as-do]').forEach(function(el) {
+    el.addEventListener('change', function() {
+      GM.unity[parseInt(this.getAttribute('data-gdz-as-do'), 10)]
+        .asysta[parseInt(this.getAttribute('data-j'), 10)].do = this.value;
+    });
+  });
+}
+
+function gdzZbierzBloki() {
+  var bloki = [];
+  GM.unity.forEach(function(u) {
+    if (!u.aktywny || !u.osobaId) return;
+    var os = gmOsoba(u.osobaId);
+    var higiena = !!(os && os.grupa === 'higienistka');
+    bloki.push({
+      gabinetId: u.gabinetId,
+      typ: higiena ? 'Higienizacja' : 'Lekarz',
+      osobaId: u.osobaId,
+      od: u.od, do: u.do,
+      asystaWymagana: higiena ? 0 : u.asystaWymagana,
+      asystaUwaga: u.asystaUwaga,
+      asysta: higiena ? [] : u.asysta
+    });
+  });
+  return bloki;
+}
+
+document.getElementById('gdz-close').addEventListener('click', function() {
+  document.getElementById('gdz-modal').style.display = 'none';
+});
+document.getElementById('gdz-modal').addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
+
+document.getElementById('gdz-save').addEventListener('click', function() {
+  var bloki = gdzZbierzBloki();
+  var brakOsoby = GM.unity.some(function(u) { return u.aktywny && !u.osobaId; });
+  if (brakOsoby) { toast('Wybierz osobę dla każdego zaznaczonego gabinetu.', false); return; }
+
+  var data = GM.edytowanaData;
+  var btn = this;
+  btn.disabled = true;
+
+  // Optymistycznie: kalendarz pokazuje nowy stan od razu, zapis leci w tle.
+  // Serwer i tak zwraca policzony stan dnia w tej samej odpowiedzi, więc
+  // jedno zapytanie wystarcza — dawniej były trzy pod rząd.
+  var dzien = (GM.dane.dni || []).find(function(x) { return x.data === data; });
+  var poprzednie = dzien ? dzien.bloki : null;
+  if (dzien) { dzien.bloki = bloki; gmRysuj(); }
+
+  gas('masterZapiszDzienGrafikuPelny', [M.token, data, bloki], function(res) {
+    btn.disabled = false;
+    if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+    if (!res || !res.ok) {
+      if (dzien && poprzednie) { dzien.bloki = poprzednie; gmRysuj(); }
+      toast((res && res.msg) || 'Nie udało się zapisać dnia.', false);
+      return;
+    }
+    if (dzien && res.dzien) { dzien.bloki = res.dzien.bloki; gmRysuj(); }
+    document.getElementById('gdz-modal').style.display = 'none';
+    wsConfirmPopup('Zapisano dzień.');
+    gas('masterGrafikStanMiesiaca', [M.token, GM.rok, GM.mies], function(r2) {
+      if (r2 && r2.ok) { GM.stan = r2; gmRysujZaproszenie(); }
+    });
+  });
+});
+
+document.getElementById('gdz-copy').addEventListener('click', function() {
+  var data = GM.edytowanaData;
+  var dow = new Date(data + 'T12:00:00').getDay();
+  var cele = (GM.dane.dni || [])
+    .filter(function(d) { return d.czynny && d.data !== data && new Date(d.data + 'T12:00:00').getDay() === dow; })
+    .map(function(d) { return d.data; });
+  if (!cele.length) { toast('Brak innych takich dni w tym miesiącu.', false); return; }
+
+  var btn = this;
+  if (btn.getAttribute('data-armed') !== '1') {
+    btn.setAttribute('data-armed', '1');
+    btn.textContent = 'Nadpisze ' + cele.length + ' dni — kliknij ponownie';
+    clearTimeout(btn._t);
+    btn._t = setTimeout(function() {
+      btn.removeAttribute('data-armed');
+      btn.textContent = 'Kopiuj na te same dni tygodnia w tym miesiącu';
+    }, 4000);
+    return;
+  }
+  btn.removeAttribute('data-armed');
+  btn.textContent = 'Kopiuj na te same dni tygodnia w tym miesiącu';
+
+  toast('Kopiowanie…', true);
+  gas('masterKopiujDzienGrafiku', [M.token, data, cele], function(res) {
+    if (!res || !res.ok) { toast((res && res.msg) || 'Nie udało się skopiować.', false); return; }
+    document.getElementById('gdz-modal').style.display = 'none';
+    wsConfirmPopup('Skopiowano na ' + res.skopiowano + ' dni.');
+    gmLoad();
+  });
+});
+
+document.getElementById('gdz-reset').addEventListener('click', function() {
+  var btn = this;
+  if (btn.getAttribute('data-armed') !== '1') {
+    btn.setAttribute('data-armed', '1');
+    btn.textContent = 'Na pewno? Kliknij ponownie, żeby wyczyścić';
+    clearTimeout(btn._t);
+    btn._t = setTimeout(function() {
+      btn.removeAttribute('data-armed');
+      btn.textContent = 'Wyczyść cały dzień';
+    }, 4000);
+    return;
+  }
+  btn.removeAttribute('data-armed');
+  btn.textContent = 'Wyczyść cały dzień';
+  gas('masterZapiszDzienGrafikuPelny', [M.token, GM.edytowanaData, []], function(res) {
+    if (!res || !res.ok) { toast((res && res.msg) || 'Nie udało się wyczyścić.', false); return; }
+    document.getElementById('gdz-modal').style.display = 'none';
+    wsConfirmPopup('Dzień wyczyszczony.');
+    gmLoad();
+  });
+});
+
+// ── Wydruk A4 miesiąca ──────────────────────────────────────
+// Układ odwzorowuje papierowy grafik kliniki: pasma tygodni, sześć kolumn
+// dni, operator wersalikami i jego asysta pod spodem.
+
+document.getElementById('gm-print').addEventListener('click', function() {
+  document.getElementById('gwd-page').innerHTML = '<div class="hint">Generowanie…</div>';
+  document.getElementById('gwd-modal').style.display = 'flex';
+  gas('masterGrafikWydrukMiesiac', [M.token, GM.rok, GM.mies, {}], function(res) {
+    if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+    if (!res || !res.ok) {
+      document.getElementById('gwd-page').innerHTML = '<div class="hint">' + esc((res && res.msg) || 'Błąd.') + '</div>';
+      return;
+    }
+    gwdRysuj(res);
+  });
+});
+
+document.getElementById('gwd-close').addEventListener('click', function() {
+  document.getElementById('gwd-modal').style.display = 'none';
+});
+document.getElementById('gwd-print').addEventListener('click', function() { window.print(); });
+
+function gwdRysuj(w) {
+  var html =
+    '<div class="gwd-title">' +
+      '<span class="gwd-rok">' + w.rok + '</span>' +
+      '<span class="gwd-mies">' + esc(w.nazwaMiesiaca) + '</span>' +
+      (w.filtr ? '<span class="gwd-filtr">' + esc(w.filtr) + '</span>' : '') +
+    '</div>' +
+    '<table class="gwd-tab"><thead><tr>' +
+      w.naglowkiDni.map(function(n) { return '<th>' + esc(n) + '</th>'; }).join('') +
+    '</tr></thead><tbody>';
+
+  w.tygodnie.forEach(function(t) {
+    html += '<tr>' + t.dni.map(function(d) {
+      if (!d) return '<td></td>';
+      return '<td><div class="gwd-dnum">' + d.numer + '</div>' +
+        d.wpisy.map(function(wp) {
+          return '<div class="gwd-wpis">' +
+            '<span class="gwd-godz">' + esc(wp.godziny) + '</span>' +
+            '<span class="gwd-op">' + esc(wp.operator) + '</span>' +
+            (wp.brakAsysty ? '<div class="gwd-brak">bez asysty</div>' : '') +
+            wp.asysta.map(function(a) {
+              return '<div class="gwd-as">' + esc(a.nazwa) +
+                '<span class="gwd-godz">' + esc(a.godziny) + '</span></div>';
+            }).join('') +
+          '</div>';
+        }).join('') +
+        (d.adnotacje && d.adnotacje.length
+          ? '<div class="gwd-adn">' + d.adnotacje.map(esc).join(' · ') + '</div>' : '') +
+      '</td>';
+    }).join('') + '</tr>';
+  });
+
+  document.getElementById('gwd-page').innerHTML = html + '</tbody></table>';
 }
 
 function grRenderTydzien() {
