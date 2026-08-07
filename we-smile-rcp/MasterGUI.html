@@ -40,6 +40,24 @@
 .grl2-day.grl2-saved{box-shadow:0 0 0 2px var(--c-success)}
 .grl2-day.grl2-zapisuje{box-shadow:0 0 0 2px var(--c-warn,#e2a03a)}
 .grl2-day.grl2-dirty{border-color:var(--c-warn,#e2a03a)}
+
+/* Pływający przycisk "Zapisz zmiany" — ten sam język wizualny (gradient,
+   cień) co pływający przycisk Pomocy, ale po lewej, żeby oba mogły być
+   widoczne naraz bez nachodzenia na siebie. */
+.grl2-fab{
+  position:fixed;left:18px;bottom:calc(78px + env(safe-area-inset-bottom));z-index:80;
+  align-items:center;gap:8px;padding:12px 18px;border:none;border-radius:999px;
+  background:var(--grad-brand);color:#fff;font-weight:800;font-size:13.5px;
+  font-family:inherit;cursor:pointer;box-shadow:var(--shadow-cta);
+  animation:grl2FabPulse 1.8s ease-in-out infinite;
+}
+.grl2-fab:active{transform:scale(.96)}
+.grl2-fab[disabled]{opacity:.6;pointer-events:none;animation:none}
+.grl2-fab-count{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:rgba(255,255,255,.28)}
+@keyframes grl2FabPulse{
+  0%,100%{box-shadow:var(--shadow-cta)}
+  50%{box-shadow:var(--shadow-cta),0 0 0 6px rgba(123,30,59,.16)}
+}
 .grl2-zapisz{border:1px solid var(--c-border-strong);background:var(--c-white);color:var(--c-muted);font-size:11px;font-weight:700;cursor:pointer;padding:3px 9px;border-radius:var(--radius-s);white-space:nowrap}
 .grl2-day.grl2-dirty .grl2-zapisz{background:var(--c-warn,#e2a03a);border-color:var(--c-warn,#e2a03a);color:#fff}
 .grl2-zapisz:hover{filter:brightness(0.95)}
@@ -1512,6 +1530,17 @@
 
 <div id="toast"></div>
 
+<!-- Pływający przycisk zapisu grafiku — pojawia się po JAKIEJKOLWIEK
+     niezapisanej zmianie w liście grafiku, niezależnie od tego, na
+     jakiej zakładce aktualnie jesteśmy (position:fixed), więc nie trzeba
+     wracać przewijaniem do konkretnego dnia. Zapisuje WSZYSTKIE
+     niezapisane dni jednym wywołaniem (masterZapiszWieleDniGrafiku). -->
+<button type="button" id="grl2-fab-zapisz" class="grl2-fab" style="display:none">
+  <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
+  <span>Zapisz zmiany</span>
+  <span class="grl2-fab-count" id="grl2-fab-count">0</span>
+</button>
+
 <script>
 /* global google */
 var BASE_URL = "<?= BASE_URL ?>";
@@ -2539,6 +2568,7 @@ function grl2Rysuj() {
   var robocze = (GM.dane.dni || []).filter(function(d) { return d.czynny; });
   if (!robocze.length) { box.innerHTML = '<div class="hint">Ten miesiąc nie ma dni roboczych.</div>'; return; }
   box.innerHTML = robocze.map(function(d) { return grl2DzienHtml(d); }).join('');
+  grl2SyncFab(); // świeże renderowanie = żadnych niezapisanych zmian
 }
 
 function grl2DzienHtml(wpis) {
@@ -2720,10 +2750,22 @@ var GM_ZAPIS = {}; // dataStr -> { seq }
 function grl2OznaczNiezapisany(dataStr) {
   var el = document.getElementById('grl2-day-' + dataStr);
   if (el) el.classList.add('grl2-dirty');
+  grl2SyncFab();
 }
 
 function grl2MaNiezapisane() {
   return !!document.querySelector('#grl2-lista .grl2-day.grl2-dirty');
+}
+
+// Pływający przycisk "Zapisz zmiany" — widoczność i licznik śledzą
+// WSZYSTKIE dni oznaczone jako niezapisane, niezależnie od tego, ile ich
+// jest i czy są akurat przewinięte w pole widzenia.
+function grl2SyncFab() {
+  var n = document.querySelectorAll('#grl2-lista .grl2-day.grl2-dirty').length;
+  var btn = document.getElementById('grl2-fab-zapisz');
+  if (!btn) return;
+  document.getElementById('grl2-fab-count').textContent = n;
+  btn.style.display = n > 0 ? 'flex' : 'none';
 }
 
 function grl2Zapisz(dataStr) {
@@ -2756,12 +2798,70 @@ function grl2Zapisz(dataStr) {
         if (f2) f2.classList.remove('grl2-saved');
       }, 1200);
     }
+    grl2SyncFab();
     gas('masterGrafikStanMiesiaca', [M.token, GM.rok, GM.mies], function(r2) {
       if (r2 && r2.ok) { GM.stan = r2; grl2RysujZaproszenie(); }
     });
     grLoadRekomendacje();
   });
 }
+
+// Pływający przycisk zapisuje WSZYSTKIE niezapisane dni jednym
+// wywołaniem (masterZapiszWieleDniGrafiku) — jeden round-trip zamiast
+// klikania "Zapisz dzień" po kolei przy każdym z nich. Podbija seq w
+// GM_ZAPIS dla każdej zapisywanej daty, żeby ewentualny, równolegle w
+// locie będący pojedynczy zapis tego samego dnia (przycisk przy dniu)
+// nie nadpisał tego, co za chwilę wróci stąd.
+function grl2ZapiszWszystkie() {
+  var dirtyEls = document.querySelectorAll('#grl2-lista .grl2-day.grl2-dirty');
+  if (!dirtyEls.length) return;
+  var mapa = {};
+  dirtyEls.forEach(function(el) {
+    var ds = el.getAttribute('data-data');
+    mapa[ds] = grl2ZbierzDzien(ds);
+    if (!GM_ZAPIS[ds]) GM_ZAPIS[ds] = { seq: 0 };
+    GM_ZAPIS[ds].seq++;
+    el.classList.remove('grl2-saved');
+    el.classList.add('grl2-zapisuje');
+  });
+  var btn = document.getElementById('grl2-fab-zapisz');
+  if (btn) btn.disabled = true;
+
+  gas('masterZapiszWieleDniGrafiku', [M.token, mapa], function(res) {
+    if (btn) btn.disabled = false;
+    if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+    if (!res || !res.ok) {
+      toast((res && res.msg) || 'Nie udało się zapisać zmian.', false);
+      Object.keys(mapa).forEach(function(ds) {
+        var el = document.getElementById('grl2-day-' + ds);
+        if (el) el.classList.remove('grl2-zapisuje');
+      });
+      return;
+    }
+    var zapisaneDaty = Object.keys(res.dni);
+    zapisaneDaty.forEach(function(ds) {
+      var idx = (GM.dane.dni || []).findIndex(function(x) { return x.data === ds; });
+      if (idx !== -1) GM.dane.dni[idx] = res.dni[ds];
+      var el = document.getElementById('grl2-day-' + ds);
+      if (el) el.outerHTML = grl2DzienHtml(res.dni[ds]);
+      var fresh = document.getElementById('grl2-day-' + ds);
+      if (fresh) {
+        fresh.classList.add('grl2-saved');
+        setTimeout(function() {
+          var f2 = document.getElementById('grl2-day-' + ds);
+          if (f2) f2.classList.remove('grl2-saved');
+        }, 1200);
+      }
+    });
+    grl2SyncFab();
+    gas('masterGrafikStanMiesiaca', [M.token, GM.rok, GM.mies], function(r2) {
+      if (r2 && r2.ok) { GM.stan = r2; grl2RysujZaproszenie(); }
+    });
+    grLoadRekomendacje();
+    toast('Zapisano ' + zapisaneDaty.length + (zapisaneDaty.length === 1 ? ' dzień.' : ' dni.'), true);
+  });
+}
+document.getElementById('grl2-fab-zapisz').addEventListener('click', grl2ZapiszWszystkie);
 
 function grl2Dodaj(dataStr, gabId) {
   var wpis = grl2DzienWpis(dataStr);

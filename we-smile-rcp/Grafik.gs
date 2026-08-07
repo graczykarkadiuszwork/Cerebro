@@ -3198,13 +3198,21 @@ function _zapiszDniGrafikuBatch(mapa) {
 
   const nowe = [];
   let ileBlokow = 0;
+  // Bloki ze świeżo przydzielonym ID zapamiętujemy do zwrotu — dzięki temu
+  // wołający (np. masterZapiszDzienGrafikuPelny) nie musi PONOWNIE czytać
+  // całego arkusza tylko po to, żeby dowiedzieć się tego, co właśnie sami
+  // zapisaliśmy. Przy arkuszu rosnącym miesiąc po miesiącu to był główny
+  // powód, dla którego zapis pojedynczego dnia z czasem coraz bardziej
+  // zwalniał — dwa pełne odczyty całego GrafikDni zamiast jednego.
+  const zapisane = {};
   daty.forEach(data => {
-    zwalidowane[data].forEach(b => {
+    zapisane[data] = zwalidowane[data].map(b => {
       licznik++;
       ileBlokow++;
-      nowe.push(['D' + String(licznik).padStart(3, '0'), data, b.gabinetId, b.typ,
-                 b.osobaId, b.od, b.do, b.asystaWymagana, b.asystaUwaga,
-                 JSON.stringify(b.asysta), teraz]);
+      const id = 'D' + String(licznik).padStart(3, '0');
+      nowe.push([id, data, b.gabinetId, b.typ, b.osobaId, b.od, b.do,
+                 b.asystaWymagana, b.asystaUwaga, JSON.stringify(b.asysta), teraz]);
+      return Object.assign({ id: id }, b);
     });
   });
 
@@ -3223,7 +3231,25 @@ function _zapiszDniGrafikuBatch(mapa) {
   _zapiszDniPuste(puste);
 
   daty.forEach(d => _grafikZatwCofnijJesliTrzeba(d));
-  return { ok: true, dni: daty.length, bloki: ileBlokow };
+  return { ok: true, dni: daty.length, bloki: ileBlokow, zapisane: zapisane };
+}
+
+// Buduje odpowiedź "stan dnia" wprost z bloków, które WŁAŚNIE zapisaliśmy
+// (mają już przydzielone ID) — bez ponownego czytania arkusza. Ten sam
+// kształt co _grafikDzienStan, więc frontend (grl2DzienHtml) nie widzi
+// różnicy między odpowiedzią po zapisie a odczytem miesiąca.
+function _grafikDzienZBlokow(ds, bloki) {
+  const dow = new Date(ds + 'T12:00:00').getDay();
+  const czynny = GRAFIK_DAYS.indexOf(dow) !== -1;
+  return {
+    data: ds,
+    dzienTygodnia: dow,
+    nazwaDnia: czynny ? GRAFIK_DAY_NAMES[dow] : 'Niedziela',
+    czynny: czynny,
+    zTemplate: false, // to wywołanie zapisuje zawsze jawną, ręczną decyzję
+    godziny: czynny ? { open: _hhmm(GRAFIK_HOURS[dow].open), close: _hhmm(GRAFIK_HOURS[dow].close) } : null,
+    bloki: (bloki || []).slice().sort((a, b) => _t2m(a.od) - _t2m(b.od))
+  };
 }
 
 /**
@@ -3241,20 +3267,48 @@ function masterZapiszDzienGrafiku(token, data, bloki) {
   if (!r.ok) return { ok: false, msg: String(r.msg || '').replace(data + ' — ', '') };
 
   _logAdmin('EdycjaDniaGrafiku', data, r.bloki + ' bloków');
-  return { ok: true, bloki: r.bloki };
+  return { ok: true, bloki: r.bloki, zapisaneBloki: r.zapisane[data] };
 }
 
 /**
  * Zapis dnia + od razu odświeżony stan tego dnia w jednej odpowiedzi.
  * Interfejs po zapisie potrzebuje dokładnie tych danych; osobne dopytanie
  * oznaczałoby drugi round-trip do Apps Script tylko po to, żeby dowiedzieć
- * się tego, co serwer właśnie policzył.
+ * się tego, co serwer właśnie policzył — budujemy więc "dzien" wprost z
+ * bloków zwróconych przez zapis (_grafikDzienZBlokow), bez dodatkowego,
+ * pełnego odczytu arkusza (patrz komentarz w _zapiszDniGrafikuBatch).
  */
 function masterZapiszDzienGrafikuPelny(token, data, bloki) {
   const zapis = masterZapiszDzienGrafiku(token, data, bloki);
   if (!zapis.ok) return zapis;
-  const stan = _grafikDzienStan(String(data).trim(), _grafikKontekstDni());
+  const stan = _grafikDzienZBlokow(String(data).trim(), zapis.zapisaneBloki);
   return { ok: true, bloki: zapis.bloki, dzien: stan };
+}
+
+/**
+ * Zapis WIELU dni jednym wywołaniem — pływający przycisk "Zapisz zmiany"
+ * w liście grafiku. Jeden round-trip do Apps Script i jeden, wspólny
+ * zapis do arkusza (_zapiszDniGrafikuBatch) zamiast osobnego zapytania na
+ * każdy niezapisany dzień z osobna.
+ */
+function masterZapiszWieleDniGrafiku(token, mapa) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  mapa = (mapa && typeof mapa === 'object') ? mapa : {};
+  const daty = Object.keys(mapa);
+  if (!daty.length) return { ok: false, msg: 'Brak dni do zapisania.' };
+  for (let i = 0; i < daty.length; i++) {
+    if (!_dataOk(daty[i])) return { ok: false, msg: 'Nieprawidłowa data: ' + daty[i] };
+    mapa[daty[i]] = Array.isArray(mapa[daty[i]]) ? mapa[daty[i]] : [];
+  }
+
+  const r = _zapiszDniGrafikuBatch(mapa);
+  if (!r.ok) return { ok: false, msg: String(r.msg || 'Nie udało się zapisać.') };
+
+  _logAdmin('EdycjaDniGrafiku', daty.join(', '), r.bloki + ' bloków w ' + daty.length + (daty.length === 1 ? ' dniu' : ' dniach'));
+
+  const dni = {};
+  daty.forEach(function(ds) { dni[ds] = _grafikDzienZBlokow(ds, r.zapisane[ds]); });
+  return { ok: true, bloki: r.bloki, dni: dni };
 }
 
 function _usunDzienGrafiku(data) {
