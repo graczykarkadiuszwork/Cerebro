@@ -3394,6 +3394,42 @@ function masterGrafikMaterializujMiesiac(token, rok, mies, zrodlo, nadpisz) {
            pominiete: pominiete.length, bledy: bledy.slice(0, 15) };
 }
 
+/**
+ * Rekomendacje liczone z REALNEJ obsady bieżąco przeglądanego miesiąca,
+ * nie z martwego, wiecznego szablonu (Grafik/GrafikAsysta) — od kiedy
+ * edytorem jest lista (a nie kafle odwołujące się do szablonu), nic już
+ * nie zasila tamtych arkuszy, więc silnik liczony po staremu zawsze
+ * zwracał pustkę. Silnik nadal rozumie „tydzień" (bloki z polem .dzien
+ * 1–6), więc budujemy taki jednego-tygodnia wycinek z PIERWSZEGO
+ * wystąpienia każdego dnia tygodnia w miesiącu — to najbliższe temu,
+ * co admin faktycznie ustawił jako swój typowy układ.
+ */
+function masterGrafikRekomendacjeMiesiac(token, rok, mies) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  const y = parseInt(rok, 10), m = parseInt(mies, 10);
+  if (isNaN(y) || isNaN(m) || m < 1 || m > 12) return { ok: false, msg: 'Nieprawidłowy miesiąc.' };
+
+  const gabinety = _gabinetyAll(false);
+  const personel = _grafikPersonel();
+  const ctx = _grafikKontekstDni();
+  const ile = new Date(y, m, 0).getDate();
+  const pfx = y + '-' + String(m).padStart(2, '0') + '-';
+
+  const widziane = {};
+  const bloki = [];
+  for (let d = 1; d <= ile; d++) {
+    const ds = pfx + String(d).padStart(2, '0');
+    const dow = new Date(ds + 'T12:00:00').getDay();
+    if (GRAFIK_DAYS.indexOf(dow) === -1 || widziane[dow]) continue;
+    widziane[dow] = true;
+    const stan = _grafikDzienStan(ds, ctx);
+    stan.bloki.forEach(b => bloki.push(Object.assign({ dzien: dow }, b)));
+  }
+
+  const rekomendacje = _grafikRekomendacje({ gabinety, bloki, personel });
+  return { ok: true, rok: y, mies: m, rekomendacje };
+}
+
 /** Czy miesiąc ma już własną obsadę — do decyzji, czy pokazać zaproszenie do wypełnienia. */
 function masterGrafikStanMiesiaca(token, rok, mies) {
   if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };

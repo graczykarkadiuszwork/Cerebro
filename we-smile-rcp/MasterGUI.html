@@ -36,8 +36,13 @@
    wprost w miejscu (bez modali), zapis na „change” tak jak w zakładce
    Miesiąc RCP. Płaskie divy zamiast tabeli z rowspanami, żeby dodawanie
    i usuwanie zmian nie wymagało przeliczania rozpięć wierszy. */
-.grl2-day{border:1.5px solid var(--c-border);border-radius:var(--radius-m);background:var(--c-white);padding:10px 12px;margin-bottom:8px;transition:box-shadow .2s ease-out}
+.grl2-day{border:1.5px solid var(--c-border);border-radius:var(--radius-m);background:var(--c-white);padding:10px 12px;margin-bottom:8px;transition:box-shadow .2s ease-out,border-color .2s ease-out}
 .grl2-day.grl2-saved{box-shadow:0 0 0 2px var(--c-success)}
+.grl2-day.grl2-zapisuje{box-shadow:0 0 0 2px var(--c-warn,#e2a03a)}
+.grl2-day.grl2-dirty{border-color:var(--c-warn,#e2a03a)}
+.grl2-zapisz{border:1px solid var(--c-border-strong);background:var(--c-white);color:var(--c-muted);font-size:11px;font-weight:700;cursor:pointer;padding:3px 9px;border-radius:var(--radius-s);white-space:nowrap}
+.grl2-day.grl2-dirty .grl2-zapisz{background:var(--c-warn,#e2a03a);border-color:var(--c-warn,#e2a03a);color:#fff}
+.grl2-zapisz:hover{filter:brightness(0.95)}
 .grl2-day-head{display:flex;align-items:baseline;gap:8px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px dashed var(--c-border)}
 .grl2-day-num{font-size:15px;font-weight:800;color:var(--c-ink)}
 .grl2-day-name{font-size:12px;color:var(--c-muted);font-weight:600}
@@ -47,10 +52,11 @@
 .grl2-gaby{display:flex;flex-direction:column;gap:10px}
 .grl2-gab-nazwa{font-size:12.5px;font-weight:700;color:var(--c-ink);margin-bottom:4px}
 .grl2-rows{display:flex;flex-direction:column;gap:5px}
-.grl2-row{display:grid;grid-template-columns:78px 14px 78px minmax(140px,1fr) minmax(120px,1fr) auto;gap:6px;align-items:center}
+.grl2-row{display:grid;grid-template-columns:104px 14px 104px minmax(140px,1fr) minmax(120px,1fr) auto;gap:8px;align-items:center}
 .grl2-row .grl2-uwaga{grid-column:4 / span 2}
 .grl2-sep{text-align:center;color:var(--c-muted);font-size:12px}
 .grl2-row input[type=time],.grl2-row select,.grl2-row input[type=text]{margin:0;padding:6px 8px;font-size:12.5px;height:34px}
+.grl2-row input[type=time]{width:100%;min-width:0}
 .grl2-row .grl2-usun{border:0;background:none;color:var(--c-muted);cursor:pointer;padding:6px;border-radius:var(--radius-s);display:flex;align-items:center;justify-content:center}
 .grl2-row .grl2-usun:hover{background:var(--c-offwhite);color:var(--c-accent)}
 .grl2-row .grl2-usun svg{width:15px;height:15px}
@@ -2325,9 +2331,15 @@ function rgWersjeLoad() {
 // tu tylko je pokazujemy, więc podmiana silnika na AI nic tu nie zmieni.
 // ════════════════════════════════════════════════════════════
 
-// GR: rekomendacje, adnotacje, personel/gabinety z osobnego (nadal
-// tygodniowego) silnika rekomendacji — patrz komentarz przy grl2RekDlaDnia.
-var GR = { dane: null, filtrRek: null };
+// GR.dane: adnotacje/personel/gabinety dla Grafiku lekarza, Adnotacji,
+// Szablonów zmian itd. GR.rekomendacje: OSOBNO doładowywane z prawdziwej
+// obsady bieżąco przeglądanego miesiąca (masterGrafikRekomendacjeMiesiac)
+// — silnik rekomendacji rozumie „tydzień", więc dostaje jednotygodniowy
+// wycinek zbudowany z realnych, per-datowych bloków (patrz komentarz przy
+// masterGrafikRekomendacjeMiesiac w Grafik.gs). Stary masterGetGrafik już
+// nie zasila żadnej edycji — nic nie zapisuje do tamtego, martwego
+// szablonu — więc jego pole rekomendacje byłoby zawsze puste.
+var GR = { dane: null, rekomendacje: [], filtrRek: null };
 
 function grInit() {
   grLoad();
@@ -2339,13 +2351,21 @@ function grLoad(cb) {
     if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
     if (!res || !res.ok) return;
     GR.dane = res;
-    grRenderLicznikRek();
     if (cb) cb();
   });
 }
 
+function grLoadRekomendacje() {
+  gmInit();
+  gas('masterGrafikRekomendacjeMiesiac', [M.token, GM.rok, GM.mies], function(res) {
+    if (!res || !res.ok) return;
+    GR.rekomendacje = res.rekomendacje || [];
+    grRenderLicznikRek();
+  });
+}
+
 function grRenderLicznikRek() {
-  var lista = (GR.dane.rekomendacje || []).filter(function(r) { return r.waga !== 'info'; });
+  var lista = (GR.rekomendacje || []).filter(function(r) { return r.waga !== 'info'; });
   var el = document.getElementById('gr-rek-count');
   el.textContent = lista.length;
   el.className = 'gr-badge' + (lista.length === 0 ? ' zero' : '');
@@ -2400,12 +2420,19 @@ function gmOsoba(id) {
 }
 
 document.getElementById('grl2-prev').addEventListener('click', function() {
+  if (grl2MaNiezapisane() && !confirm('Masz niezapisane zmiany w tym miesiącu — zmiana miesiąca je odrzuci. Kontynuować?')) return;
   GM.mies--; if (GM.mies < 1) { GM.mies = 12; GM.rok--; }
   grl2Load();
 });
 document.getElementById('grl2-next').addEventListener('click', function() {
+  if (grl2MaNiezapisane() && !confirm('Masz niezapisane zmiany w tym miesiącu — zmiana miesiąca je odrzuci. Kontynuować?')) return;
   GM.mies++; if (GM.mies > 12) { GM.mies = 1; GM.rok++; }
   grl2Load();
+});
+window.addEventListener('beforeunload', function(e) {
+  if (!grl2MaNiezapisane()) return;
+  e.preventDefault();
+  e.returnValue = '';
 });
 
 function grl2Load(cb) {
@@ -2428,6 +2455,7 @@ function grl2Load(cb) {
     GM.stan = res;
     grl2RysujZaproszenie();
   });
+  grLoadRekomendacje();
 }
 
 // Pusty miesiąc dostaje jawne zaproszenie do wypełnienia zamiast pustej
@@ -2510,6 +2538,7 @@ function grl2DzienHtml(wpis) {
       '<span class="grl2-day-num">' + parseInt(wpis.data.slice(8), 10) + '</span>' +
       '<span class="grl2-day-name">' + esc(wpis.nazwaDnia) + '</span>' +
       '<span class="grl2-day-godz">' + esc(wpis.godziny.open) + '–' + esc(wpis.godziny.close) + '</span>' +
+      '<button type="button" class="grl2-zapisz" data-data="' + esc(wpis.data) + '">Zapisz dzień</button>' +
       (poniedzialek ? '<button type="button" class="grl2-czysc grl2-czysc-tydz" data-data="' + esc(wpis.data) + '">Wyczyść tydzień</button>' : '') +
       '<button type="button" class="grl2-czysc grl2-czysc-dzien" data-data="' + esc(wpis.data) + '">Wyczyść dzień</button>' +
     '</div>' +
@@ -2522,10 +2551,27 @@ function grl2DzienHtml(wpis) {
 // nowa — czyli dokładnie te same godziny co już zajęte, więc dodanie
 // drugiego specjalisty (np. zmiana popołudniowa) wymagałoby ręcznego
 // przestawienia obu godzin, zanim zapis w ogóle by przeszedł.
+// Skoro zapis jest teraz ręczny (przycisk „Zapisz dzień”, nie „change”),
+// wiersze w tym gabinecie mogą mieć NIEZAPISANE jeszcze edycje (np.
+// właśnie skrócone godziny) — jeśli kontener wierszy już istnieje w DOM,
+// liczymy zajętość z JEGO aktualnego stanu, a nie z wpis.bloki (danych
+// sprzed edycji z serwera). Dopiero gdy dzień renderuje się od zera
+// (kontener jeszcze nie istnieje) korzystamy z wpis.bloki.
 function grl2WolneOkno(wpis, gabId) {
-  var zajete = (wpis.bloki || []).filter(function(b) { return b.gabinetId === gabId; })
-    .map(function(b) { return [grT2M(b.od), grT2M(b.do)]; })
-    .sort(function(a, b) { return a[0] - b[0]; });
+  var rowsEl = document.querySelector('.grl2-rows[data-data="' + CSS.escape(wpis.data) + '"][data-gab="' + CSS.escape(gabId) + '"]');
+  var zajete;
+  if (rowsEl) {
+    zajete = [];
+    rowsEl.querySelectorAll('.grl2-row').forEach(function(row) {
+      var osobaId = row.querySelector('.grl2-osoba').value;
+      if (!osobaId) return; // pusty wiersz nie zajmuje żadnych godzin
+      zajete.push([grT2M(row.querySelector('.grl2-od').value), grT2M(row.querySelector('.grl2-do').value)]);
+    });
+  } else {
+    zajete = (wpis.bloki || []).filter(function(b) { return b.gabinetId === gabId; })
+      .map(function(b) { return [grT2M(b.od), grT2M(b.do)]; });
+  }
+  zajete.sort(function(a, b) { return a[0] - b[0]; });
   var otwOd = grT2M(wpis.godziny.open), otwDo = grT2M(wpis.godziny.close);
   var kursor = otwOd;
   for (var i = 0; i < zajete.length; i++) {
@@ -2631,25 +2677,52 @@ function grl2ZbierzDzien(dataStr) {
   return bloki;
 }
 
-// Zapisuje CAŁY dzień jednym wywołaniem, niezależnie od tego, które pole
-// w którym gabinecie się zmieniło — dokładnie tak samo jak edytor miesiąca
-// wcześniej, tylko bez modala pośrodku. Po sukcesie podmienia TYLKO ten
-// jeden dzień (id bloków po zapisie są generowane na nowo po stronie
-// serwera, więc bezpieczniej odtworzyć wiersze z odpowiedzi niż łatać je
-// w miejscu).
+// Zapis WYŁĄCZNIE na wyraźne kliknięcie „Zapisz dzień" — bez zapisu w tle
+// przy każdej zmianie pola. Edycja (osoba/asysta/godziny/uwaga, dodanie
+// czy usunięcie wiersza) tylko oznacza dzień jako mający niezapisane
+// zmiany (obwódka + podświetlony przycisk); dopiero kliknięcie „Zapisz
+// dzień" wysyła CAŁY dzień jednym wywołaniem, tak jak poprzednio. To z
+// zamysłu eliminuje wyścig zapisów w tle: skoro nic nie zapisuje się
+// samo, w danej chwili leci co najwyżej JEDNO zapytanie dla danego dnia,
+// więc starsza odpowiedź nie ma już jak nadpisać nowszej, niezapisanej
+// jeszcze zmiany — dokładnie ten objaw, który wcześniej wyglądał jak
+// "wpisuję coś i wraca do zera". GM_ZAPIS.seq zostaje jako dodatkowy
+// bezpiecznik na wypadek szybkiego podwójnego kliknięcia „Zapisz".
+var GM_ZAPIS = {}; // dataStr -> { seq }
+
+function grl2OznaczNiezapisany(dataStr) {
+  var el = document.getElementById('grl2-day-' + dataStr);
+  if (el) el.classList.add('grl2-dirty');
+}
+
+function grl2MaNiezapisane() {
+  return !!document.querySelector('#grl2-lista .grl2-day.grl2-dirty');
+}
+
 function grl2Zapisz(dataStr) {
   var wpis = grl2DzienWpis(dataStr);
   if (!wpis) return;
+  if (!GM_ZAPIS[dataStr]) GM_ZAPIS[dataStr] = { seq: 0 };
+  var stan = GM_ZAPIS[dataStr];
+  var mojSeq = ++stan.seq;
   var bloki = grl2ZbierzDzien(dataStr);
+  var el = document.getElementById('grl2-day-' + dataStr);
+  if (el) { el.classList.remove('grl2-saved'); el.classList.add('grl2-zapisuje'); }
+
   gas('masterZapiszDzienGrafikuPelny', [M.token, dataStr, bloki], function(res) {
     if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+    if (stan.seq !== mojSeq) return; // przestarzała odpowiedź (podwójne kliknięcie) — pomijamy
+
+    var el = document.getElementById('grl2-day-' + dataStr);
+    if (el) el.classList.remove('grl2-zapisuje');
     if (!res || !res.ok) { toast((res && res.msg) || 'Nie udało się zapisać dnia.', false); return; }
+
     var idx = (GM.dane.dni || []).findIndex(function(x) { return x.data === dataStr; });
     if (idx !== -1) GM.dane.dni[idx] = res.dzien;
-    var el = document.getElementById('grl2-day-' + dataStr);
     if (el) el.outerHTML = grl2DzienHtml(res.dzien);
     var fresh = document.getElementById('grl2-day-' + dataStr);
     if (fresh) {
+      fresh.classList.remove('grl2-dirty');
       fresh.classList.add('grl2-saved');
       setTimeout(function() {
         var f2 = document.getElementById('grl2-day-' + dataStr);
@@ -2659,6 +2732,7 @@ function grl2Zapisz(dataStr) {
     gas('masterGrafikStanMiesiaca', [M.token, GM.rok, GM.mies], function(r2) {
       if (r2 && r2.ok) { GM.stan = r2; grl2RysujZaproszenie(); }
     });
+    grLoadRekomendacje();
   });
 }
 
@@ -2676,7 +2750,7 @@ function grl2Usun(row) {
   var dataStr = rowsEl.getAttribute('data-data');
   var mialBlok = !!row.getAttribute('data-blokid');
   row.remove();
-  if (mialBlok) grl2Zapisz(dataStr);
+  if (mialBlok) grl2OznaczNiezapisany(dataStr);
 }
 
 // ── Wyczyść dzień / tydzień / miesiąc — jednym wywołaniem ───────
@@ -2739,7 +2813,7 @@ document.getElementById('grl2-lista').addEventListener('change', function(e) {
   if (e.target.classList.contains('grl2-osoba')) grl2OnOsobaChange(row);
   if (e.target.classList.contains('grl2-asysta')) grl2OnAsystaChange(row);
   var rowsEl = row.closest('.grl2-rows');
-  if (rowsEl) grl2Zapisz(rowsEl.getAttribute('data-data'));
+  if (rowsEl) grl2OznaczNiezapisany(rowsEl.getAttribute('data-data'));
 });
 
 document.getElementById('grl2-lista').addEventListener('click', function(e) {
@@ -2747,6 +2821,8 @@ document.getElementById('grl2-lista').addEventListener('click', function(e) {
   if (dodaj) { grl2Dodaj(dodaj.getAttribute('data-data'), dodaj.getAttribute('data-gab')); return; }
   var usun = e.target.closest('.grl2-usun');
   if (usun) { grl2Usun(usun.closest('.grl2-row')); return; }
+  var zapisz = e.target.closest('.grl2-zapisz');
+  if (zapisz) { grl2Zapisz(zapisz.getAttribute('data-data')); return; }
 
   var czyscDzien = e.target.closest('.grl2-czysc-dzien');
   if (czyscDzien) {
@@ -2833,7 +2909,7 @@ function grOtworzRek(kontekst) {
 }
 
 function grRenderRek() {
-  var wszystkie = GR.dane ? (GR.dane.rekomendacje || []) : [];
+  var wszystkie = GR.rekomendacje || [];
   var kat = {};
   wszystkie.forEach(function(r) { kat[r.kategoria] = (kat[r.kategoria] || 0) + 1; });
 

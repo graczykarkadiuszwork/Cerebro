@@ -384,6 +384,7 @@ function callRCP(action, argsJson) {
         return masterGrafikWydrukMiesiac(args[0], args[1], args[2], args[3]);
       case 'masterGrafikMiesiac':      return masterGrafikMiesiac(args[0], args[1], args[2]);
       case 'masterGrafikStanMiesiaca': return masterGrafikStanMiesiaca(args[0], args[1], args[2]);
+      case 'masterGrafikRekomendacjeMiesiac': return masterGrafikRekomendacjeMiesiac(args[0], args[1], args[2]);
       case 'masterGrafikWyczyscDaty': return masterGrafikWyczyscDaty(args[0], args[1]);
       case 'masterGrafikMaterializujMiesiac':
         return masterGrafikMaterializujMiesiac(args[0], args[1], args[2], args[3], args[4]);
