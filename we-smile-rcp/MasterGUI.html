@@ -31,37 +31,35 @@
 .gm-empty-title{font-size:15px;font-weight:800;color:var(--c-ink);margin-bottom:6px}
 .gm-empty-sub{font-size:13px;color:var(--c-muted);margin-bottom:14px;line-height:1.5}
 .gm-empty-btns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
-.gm-cell{min-height:96px;border-radius:var(--radius-m);border:1.5px solid var(--c-border);background:var(--c-white);padding:6px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:3px;font-family:inherit;width:100%;transition:border-color .15s ease-out,box-shadow .15s ease-out}
-.gm-cell:hover{border-color:var(--c-primary);box-shadow:var(--shadow-s)}
-.gm-cell:active{opacity:.85}
-.gm-cell.off{background:var(--c-offwhite);color:var(--c-muted);border-style:dashed;cursor:default}
-.gm-cell.off:hover{border-color:var(--c-border);box-shadow:none}
-.gm-cell.empty{visibility:hidden;cursor:default}
-.gm-cell.pusty{background:var(--c-offwhite)}
-.gm-head{display:flex;align-items:center;justify-content:space-between;gap:4px}
-.gm-num{font-size:12px;font-weight:800;color:var(--c-ink)}
-.gm-cell.off .gm-num{color:var(--c-muted)}
-.gm-cnt{font-size:9.5px;font-weight:800;color:var(--c-muted)}
-.gm-wpis{font-size:10px;line-height:1.3;font-weight:700;color:var(--c-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.gm-wpis small{font-weight:500;color:var(--c-muted)}
-.gm-wpis.brak{color:var(--c-accent)}
-.gm-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:3px;vertical-align:middle}
-.gm-more{font-size:9.5px;color:var(--c-muted);font-weight:700}
-.gm-nic{font-size:10.5px;color:var(--c-muted);font-weight:600}
-
-/* Edytor dnia: unit po unicie, od pory dnia do godzin i asysty */
-.gdz-unit{border:1.5px solid var(--c-border);border-radius:var(--radius-m);padding:12px;margin-bottom:10px;background:var(--c-white)}
-.gdz-unit.on{border-color:var(--c-primary);background:var(--c-primary-tint)}
-.gdz-unit-head{display:flex;align-items:center;gap:10px;margin-bottom:2px}
-.gdz-unit-nazwa{font-size:14px;font-weight:800;color:var(--c-ink);flex:1}
-.gdz-unit-body{margin-top:10px}
-.gdz-pory{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
-.gdz-pora{flex:1;min-width:88px;padding:8px 6px;border-radius:var(--radius-s);border:1.5px solid var(--c-border);background:var(--c-white);font-size:12px;font-weight:700;color:var(--c-muted);cursor:pointer;font-family:inherit}
-.gdz-pora.on{border-color:var(--c-primary);background:var(--c-primary);color:#fff}
-.gdz-godziny{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
-.gdz-asysta-box{border-top:1px dashed var(--c-border);padding-top:10px;margin-top:4px}
-.gdz-asysta-row{display:grid;grid-template-columns:1fr 84px 84px 32px;gap:6px;align-items:center;margin-bottom:6px}
-.gdz-hig-note{font-size:12px;color:var(--c-muted);background:var(--c-offwhite);border-radius:var(--radius-s);padding:8px 10px;line-height:1.45}
+/* Lista — jeden ciągły, płaski widok całego miesiąca zamiast siatki
+   kafli. Dzień po dniu, gabinet po gabinecie, wiersz na zmianę — edycja
+   wprost w miejscu (bez modali), zapis na „change” tak jak w zakładce
+   Miesiąc RCP. Płaskie divy zamiast tabeli z rowspanami, żeby dodawanie
+   i usuwanie zmian nie wymagało przeliczania rozpięć wierszy. */
+.grl2-day{border:1.5px solid var(--c-border);border-radius:var(--radius-m);background:var(--c-white);padding:10px 12px;margin-bottom:8px;transition:box-shadow .2s ease-out}
+.grl2-day.grl2-saved{box-shadow:0 0 0 2px var(--c-success)}
+.grl2-day-head{display:flex;align-items:baseline;gap:8px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px dashed var(--c-border)}
+.grl2-day-num{font-size:15px;font-weight:800;color:var(--c-ink)}
+.grl2-day-name{font-size:12px;color:var(--c-muted);font-weight:600}
+.grl2-day-godz{font-size:11px;color:var(--c-muted);margin-left:auto}
+.grl2-gaby{display:flex;flex-direction:column;gap:10px}
+.grl2-gab-nazwa{font-size:12.5px;font-weight:700;color:var(--c-ink);margin-bottom:4px}
+.grl2-rows{display:flex;flex-direction:column;gap:5px}
+.grl2-row{display:grid;grid-template-columns:78px 14px 78px minmax(140px,1fr) minmax(120px,1fr) auto;gap:6px;align-items:center}
+.grl2-row .grl2-uwaga{grid-column:4 / span 2}
+.grl2-sep{text-align:center;color:var(--c-muted);font-size:12px}
+.grl2-row input[type=time],.grl2-row select,.grl2-row input[type=text]{margin:0;padding:6px 8px;font-size:12.5px;height:34px}
+.grl2-row .grl2-usun{border:0;background:none;color:var(--c-muted);cursor:pointer;padding:6px;border-radius:var(--radius-s);display:flex;align-items:center;justify-content:center}
+.grl2-row .grl2-usun:hover{background:var(--c-offwhite);color:var(--c-accent)}
+.grl2-row .grl2-usun svg{width:15px;height:15px}
+.grl2-dodaj{background:none;border:0;color:var(--c-primary);font-size:12px;font-weight:700;cursor:pointer;padding:4px 0;text-align:left}
+.grl2-dodaj:hover{text-decoration:underline}
+@media (max-width:640px){
+  .grl2-row{grid-template-columns:1fr 1fr;grid-template-areas:"od do" "osoba osoba" "asysta usun" "uwaga uwaga"}
+  .grl2-row .grl2-od{grid-area:od}.grl2-row .grl2-sep{display:none}.grl2-row .grl2-do{grid-area:do}
+  .grl2-row .grl2-osoba{grid-area:osoba}.grl2-row .grl2-asysta{grid-area:asysta}
+  .grl2-row .grl2-usun{grid-area:usun;justify-self:end}.grl2-row .grl2-uwaga{grid-area:uwaga}
+}
 
 /* Wydruk A4 — układ wzorcowy kliniki (pasma tygodni × 6 dni) */
 .gwd-page{background:#fff;color:#111;padding:10px}
@@ -859,64 +857,30 @@
         </div>
       </div>
 
-      <div class="seg" id="gr-view-toggle" style="max-width:340px;margin-bottom:14px">
-        <button type="button" class="seg-btn on" data-grview="miesiac">Miesiąc</button>
-        <button type="button" class="seg-btn" data-grview="tydzien">Tydzień</button>
-        <button type="button" class="seg-btn" data-grview="dzien">Dzień</button>
+      <!-- Lista — jedyny, domyślny sposób układania grafiku. Wiersz na
+           każdą zmianę: dzień → gabinet → godziny → osoba → asysta,
+           edytowalne wprost w miejscu (bez modali), zapis po opuszczeniu
+           pola — dokładnie ten sam wzorzec co zakładka „Miesiąc” w RCP
+           (żółte obramowanie = zapisuję, niebieskie = zapisano). Zastąpiła
+           kafelkowy kalendarz: ten sam widok, ale jako płaska, szybka
+           lista zamiast siatki z modalami. -->
+      <div class="month-nav">
+        <button id="grl2-prev" class="btn-icon" type="button"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <span id="grl2-label" class="month-label">—</span>
+        <button id="grl2-next" class="btn-icon" type="button"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
       </div>
 
-      <!-- Miesiąc — punkt wyjścia do budowania grafiku. Każdy dzień ma
-           własną, niezależną obsadę; tydzień i dzień to tylko inne
-           spojrzenia na te same dane. -->
-      <div id="gr-month-view">
-        <div class="month-nav">
-          <button id="gm-prev" class="btn-icon" type="button"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
-          <span id="gm-label" class="month-label">—</span>
-          <button id="gm-next" class="btn-icon" type="button"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
-        </div>
+      <div id="grl2-empty-box" style="display:none"></div>
 
-        <div id="gm-empty-box" style="display:none"></div>
-
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
-          <button id="gm-print" class="btn btn-ghost" type="button" style="margin-bottom:0">
-            <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="7" rx="2"/><path d="M6 16h12v5H6z"/></svg>
-            Wydruk A4 (cały miesiąc)
-          </button>
-          <button id="gm-wypelnij" class="btn btn-ghost" type="button" style="margin-bottom:0">Wypełnij brakujące dni</button>
-        </div>
-
-        <div id="gm-kalendarz"><div class="hint">Ładowanie…</div></div>
-      </div>
-
-      <!-- Tydzień/Dzień to POWIĘKSZENIA tego samego miesiąca — te same,
-           realne daty co w widoku Miesiąc, nie osobny, oderwany od dat
-           szablon. Nawigacja tygodniem/dniem może przejść do sąsiedniego
-           miesiąca — wtedy dociąga jego dane tak samo jak strzałki Miesiąca. -->
-      <div id="gr-week-view" style="display:none">
-        <div class="month-nav">
-          <button id="gr-tyd-prev" class="btn-icon" type="button"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
-          <span id="gr-tyd-label" class="month-label">—</span>
-          <button id="gr-tyd-next" class="btn-icon" type="button"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
-        </div>
-        <div class="gr-week-grid" id="gr-week-grid"><div class="hint">Ładowanie…</div></div>
-      </div>
-
-      <div id="gr-day-view" style="display:none">
-        <button type="button" class="btn-link gr-day-back" id="gr-day-back">
-          <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
-          Tydzień
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+        <button id="grl2-print" class="btn btn-ghost" type="button" style="margin-bottom:0">
+          <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="7" rx="2"/><path d="M6 16h12v5H6z"/></svg>
+          Wydruk A4 (cały miesiąc)
         </button>
-        <div class="month-nav" style="margin-top:8px">
-          <button id="gr-dzien-prev" class="btn-icon" type="button"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
-          <span id="gr-dzien-label" class="month-label">—</span>
-          <button id="gr-dzien-next" class="btn-icon" type="button"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
-        </div>
-        <div class="seg seg-scroll" id="gr-days" style="margin:10px 0 14px"></div>
-
-        <div id="gr-adnot-strip"></div>
-        <div id="gr-day-head" class="gr-day-head"></div>
-        <div id="gr-grid"><div class="hint">Ładowanie…</div></div>
+        <button id="grl2-wypelnij" class="btn btn-ghost" type="button" style="margin-bottom:0;display:none">Wypełnij brakujące dni</button>
       </div>
+
+      <div id="grl2-lista"><div class="hint">Ładowanie…</div></div>
     </div>
 
     <!-- ── WIDOK: ZESPÓŁ (forma zatrudnienia, dodawanie/archiwizacja) ── -->
@@ -1203,68 +1167,6 @@
 </div>
 
 <!-- ═══════ MODAL — blok grafiku ═══════ -->
-<div id="gr-blok-modal" class="modal-overlay" style="display:none">
-  <div class="modal-card">
-    <div class="modal-head">
-      <span id="gr-blok-title">Blok w grafiku</span>
-      <button id="gr-blok-close" class="btn-icon" aria-label="Zamknij">
-        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-      </button>
-    </div>
-
-    <div id="gr-blok-ctx" class="gr-ctx"></div>
-
-    <div class="field">
-      <span class="field-lbl">Typ bloku</span>
-      <select id="gr-blok-typ" class="sel">
-        <option value="Lekarz">Lekarz</option>
-        <option value="Higienizacja">Higienizacja</option>
-      </select>
-    </div>
-
-    <div class="field">
-      <span class="field-lbl" id="gr-blok-osoba-lbl">Lekarz</span>
-      <select id="gr-blok-osoba" class="sel"></select>
-    </div>
-
-    <div class="field-row2">
-      <div class="field">
-        <span class="field-lbl">Od</span>
-        <input type="time" id="gr-blok-od" class="inp">
-      </div>
-      <div class="field">
-        <span class="field-lbl">Do</span>
-        <input type="time" id="gr-blok-do" class="inp">
-      </div>
-    </div>
-
-    <div id="gr-asysta-sekcja" class="section">
-      <div class="section-title">Asysta</div>
-      <div class="field">
-        <span class="field-lbl">Ile osób asysty wymaga ten blok</span>
-        <select id="gr-blok-asysta-n" class="sel">
-          <option value="1">1 — standard (lekarz + asysta)</option>
-          <option value="0">0 — bez asysty</option>
-          <option value="2">2 — dwie asystentki</option>
-          <option value="3">3 — trzy asystentki</option>
-        </select>
-      </div>
-      <div class="field" id="gr-uwaga-field" style="display:none">
-        <span class="field-lbl">Adnotacja — dlaczego odstępstwo od standardu</span>
-        <textarea id="gr-blok-uwaga" class="ta" placeholder="np. zabieg implantologiczny wymagający dwóch par rąk"></textarea>
-      </div>
-      <div class="field" style="margin-bottom:0">
-        <span class="field-lbl">Przypisana asysta</span>
-        <div id="gr-asysta-lista"></div>
-        <button id="gr-asysta-add" class="btn-link" type="button" style="margin-top:6px">+ Dodaj asystę</button>
-      </div>
-    </div>
-
-    <button id="gr-blok-save" class="btn btn-primary" style="margin-top:14px" type="button">Zapisz blok</button>
-    <button id="gr-blok-delete" class="btn-link" style="color:var(--c-accent);display:none" type="button">Usuń blok z grafiku</button>
-  </div>
-</div>
-
 <!-- ═══════ MODAL — rekomendacje ═══════ -->
 <div id="gr-rek-modal" class="modal-overlay" style="display:none">
   <div class="modal-card">
@@ -1423,30 +1325,6 @@
     <button id="gld-save" class="btn btn-primary" style="margin-top:14px" type="button">Zapisz dzień</button>
     <button id="gld-copy" class="btn btn-ghost" style="margin-top:8px;display:none" type="button">Kopiuj na te same dni tygodnia w tym miesiącu</button>
     <button id="gld-clear" class="btn-link" style="color:var(--c-accent);display:none" type="button">Lekarz nie pracuje w tym dniu</button>
-  </div>
-</div>
-
-<!-- ═══════ MODAL — edytor dnia: unit po unicie ═══════ -->
-<!-- Kolejność pól odzwierciedla sposób, w jaki grafik naprawdę się układa:
-     najpierw które gabinety pracują, potem kto je obsadza, potem pora dnia
-     (która podpowiada godziny), na końcu asysta. Higienistka prowadząca
-     gabinet jest samodzielnym specjalistą — sekcja asysty jej nie dotyczy. -->
-<div id="gdz-modal" class="modal-overlay" style="display:none">
-  <div class="modal-card" style="max-width:720px">
-    <div class="modal-head">
-      <span id="gdz-title">Dzień grafiku</span>
-      <button id="gdz-close" class="btn-icon" aria-label="Zamknij">
-        <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-      </button>
-    </div>
-
-    <div class="hint" id="gdz-hint">Zaznacz gabinety, które tego dnia pracują, i obsadź każdy z nich.</div>
-
-    <div id="gdz-unity"></div>
-
-    <button id="gdz-save" class="btn btn-primary" style="margin-top:14px" type="button">Zapisz dzień</button>
-    <button id="gdz-copy" class="btn btn-ghost" style="margin-top:8px" type="button">Kopiuj na te same dni tygodnia w tym miesiącu</button>
-    <button id="gdz-reset" class="btn-link" style="color:var(--c-accent)" type="button">Wyczyść cały dzień</button>
   </div>
 </div>
 
@@ -2444,78 +2322,65 @@ function rgWersjeLoad() {
 // tu tylko je pokazujemy, więc podmiana silnika na AI nic tu nie zmieni.
 // ════════════════════════════════════════════════════════════
 
-// GR.dzien: realna data (YYYY-MM-DD), NIE numer dnia tygodnia — Tydzień
-// i Dzień muszą pokazywać te same, konkretne daty co Miesiąc, inaczej to
-// dwa różne grafiki pod jednym przełącznikiem. GR.dane wciąż niesie
-// rekomendacje/adnotacje/szablon (silnik rekomendacji liczy się z osobnego,
-// wciąż tygodniowego wzorca — patrz komentarz przy grRekDlaDnia), ale
-// źródłem PRAWDY o obsadzie dla Tydzień/Dzień jest już wyłącznie GM (miesiąc).
-var GR = { dane: null, dzien: null, edytowany: null, filtrRek: null, widok: 'miesiac' };
+// GR: rekomendacje, adnotacje, personel/gabinety z osobnego (nadal
+// tygodniowego) silnika rekomendacji — patrz komentarz przy grl2RekDlaDnia.
+var GR = { dane: null, filtrRek: null };
 
 function grInit() {
   grLoad();
-  // Miesiąc jest domyślnym wejściem do grafiku — tydzień i dzień to
-  // powiększenia tego samego miesiąca, nie osobne miejsca pracy.
-  gmLoad(function() { if (GR.widok === 'tydzien') grRenderTydzien(); if (GR.widok === 'dzien') grRenderDniPasek(); });
+  grl2Load();
 }
 
 function grLoad(cb) {
   gas('masterGetGrafik', [M.token], function(res) {
     if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
-    if (!res || !res.ok) {
-      document.getElementById('gr-grid').innerHTML =
-        '<div class="hint">' + esc((res && res.msg) || 'Błąd ładowania grafiku.') + '</div>';
-      return;
-    }
+    if (!res || !res.ok) return;
     GR.dane = res;
     grRenderLicznikRek();
     if (cb) cb();
   });
 }
 
-// ── Widok tygodnia/dnia — te same realne daty co Miesiąc, tylko powiększone ──
+function grRenderLicznikRek() {
+  var lista = (GR.dane.rekomendacje || []).filter(function(r) { return r.waga !== 'info'; });
+  var el = document.getElementById('gr-rek-count');
+  el.textContent = lista.length;
+  el.className = 'gr-badge' + (lista.length === 0 ? ' zero' : '');
+}
 
-document.getElementById('gr-view-toggle').addEventListener('click', function(e) {
-  var btn = e.target.closest('[data-grview]');
-  if (!btn) return;
-  grSwitchView(btn.getAttribute('data-grview'));
-});
-document.getElementById('gr-day-back').addEventListener('click', function() { grSwitchView('tydzien'); });
+function grOsobaNazwa(id) {
+  var p = (GR.dane.personel || []).find(function(x) { return x.id === id; });
+  return p ? (p.imie + ' ' + p.nazwisko) : id;
+}
 
-document.getElementById('gr-tyd-prev').addEventListener('click', function() { grPrzesunDzien(-7, grRenderTydzien); });
-document.getElementById('gr-tyd-next').addEventListener('click', function() { grPrzesunDzien(7, grRenderTydzien); });
-document.getElementById('gr-dzien-prev').addEventListener('click', function() { grPrzesunDzien(-1, function() { grRenderDniPasek(); grRenderDzien(); }); });
-document.getElementById('gr-dzien-next').addEventListener('click', function() { grPrzesunDzien(1, function() { grRenderDniPasek(); grRenderDzien(); }); });
-
-function grSwitchView(widok) {
-  GR.widok = widok;
-  document.querySelectorAll('#gr-view-toggle [data-grview]').forEach(function(b) {
-    b.className = 'seg-btn' + (b.getAttribute('data-grview') === widok ? ' on' : '');
-  });
-  document.getElementById('gr-month-view').style.display = widok === 'miesiac' ? 'block' : 'none';
-  document.getElementById('gr-week-view').style.display = widok === 'tydzien' ? 'block' : 'none';
-  document.getElementById('gr-day-view').style.display = widok === 'dzien' ? 'block' : 'none';
-  if (widok === 'tydzien') grRenderTydzien();
-  if (widok === 'dzien') { grRenderDniPasek(); grRenderDzien(); }
-  if (widok === 'miesiac' && !GM.dane) gmLoad();
+function grT2M(t) {
+  var p = String(t).split(':');
+  return parseInt(p[0], 10) * 60 + parseInt(p[1], 10);
+}
+function grHM(m) {
+  var h = Math.floor(m / 60), mm = m % 60;
+  if (h && mm) return h + ' h ' + mm + ' min';
+  if (h) return h + ' h';
+  return mm + ' min';
 }
 
 // ══════════════════════════════════════════════════════════════
-// GRAFIK — MIESIĄC JAKO PUNKT WYJŚCIA
+// GRAFIK — LISTA: jedyny, domyślny sposób układania grafiku
 // ══════════════════════════════════════════════════════════════
-// Miesiąc jest jedyną jednostką, w której grafik się buduje i przechowuje:
-// każdy dzień ma własne bloki przypisane do konkretnej daty. Dzięki temu
-// lekarz może w jeden poniedziałek pracować do 16, a w kolejny do 18 —
-// wcześniej było to niemożliwe, bo wszystkie poniedziałki miesiąca były
-// dosłownie tym samym wierszem danych.
+// Zastępuje kalendarz kafelkowy (zbyt wolny i zamulony przy edycji) płaską
+// listą wzorowaną na zakładce „Miesiąc” w RCP: dzień → gabinet → wiersz na
+// zmianę, edycja wprost w polu, zapis na „change” (żółte podświetlenie
+// dnia w trakcie zapisu, zielone po sukcesie), bez modali. Miesiąc to
+// nadal jedyna jednostka przechowywania — każdy dzień ma własne bloki
+// przypisane do konkretnej daty — lista jest tylko innym sposobem ich
+// pokazania niż siatka kafli.
+//
+// Wydarzenia (change/click) obsługiwane są przez delegację na kontenerze
+// #grl2-lista, a nie per-wiersz: miesiąc to potencjalnie kilkaset pól,
+// a jedno delegowane wiązanie jest tańsze niż setki osobnych listenerów
+// i przede wszystkim nie wymaga przepinania niczego po każdym re-renderze.
 
-var GM = { rok: 0, mies: 0, dane: null, stan: null, edytowanaData: null, unity: [] };
-
-var GM_PORY = [
-  { id: 'rano', label: 'Rano' },
-  { id: 'popo', label: 'Popołudnie' },
-  { id: 'caly', label: 'Cały dzień' }
-];
+var GM = { rok: 0, mies: 0, dane: null, stan: null };
 
 function gmInit() {
   if (GM.rok) return;
@@ -2524,42 +2389,47 @@ function gmInit() {
   GM.mies = dzis.getMonth() + 1;
 }
 
-document.getElementById('gm-prev').addEventListener('click', function() {
+function gmOsoba(id) {
+  return (GM.dane.personel || []).find(function(p) { return p.id === id; });
+}
+
+document.getElementById('grl2-prev').addEventListener('click', function() {
   GM.mies--; if (GM.mies < 1) { GM.mies = 12; GM.rok--; }
-  gmLoad();
+  grl2Load();
 });
-document.getElementById('gm-next').addEventListener('click', function() {
+document.getElementById('grl2-next').addEventListener('click', function() {
   GM.mies++; if (GM.mies > 12) { GM.mies = 1; GM.rok++; }
-  gmLoad();
+  grl2Load();
 });
 
-function gmLoad(cb) {
+function grl2Load(cb) {
   gmInit();
-  document.getElementById('gm-label').textContent = MONTHS[GM.mies - 1] + ' ' + GM.rok;
+  document.getElementById('grl2-label').textContent = MONTHS[GM.mies - 1] + ' ' + GM.rok;
+  document.getElementById('grl2-lista').innerHTML = '<div class="hint">Ładowanie…</div>';
   gas('masterGrafikMiesiac', [M.token, GM.rok, GM.mies], function(res) {
     if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
     if (!res || !res.ok) {
-      document.getElementById('gm-kalendarz').innerHTML =
+      document.getElementById('grl2-lista').innerHTML =
         '<div class="hint">' + esc((res && res.msg) || 'Błąd ładowania.') + '</div>';
       return;
     }
     GM.dane = res;
-    gmRysuj();
+    grl2Rysuj();
     if (cb) cb();
   });
   gas('masterGrafikStanMiesiaca', [M.token, GM.rok, GM.mies], function(res) {
     if (!res || !res.ok) return;
     GM.stan = res;
-    gmRysujZaproszenie();
+    grl2RysujZaproszenie();
   });
 }
 
 // Pusty miesiąc dostaje jawne zaproszenie do wypełnienia zamiast pustej
-// siatki — budowanie od zera dzień po dniu to najwolniejsza możliwa droga,
-// a prawie zawsze istnieje sensowny punkt startowy.
-function gmRysujZaproszenie() {
-  var box = document.getElementById('gm-empty-box');
-  var przycisk = document.getElementById('gm-wypelnij');
+// listy do ręcznego klikania dzień po dniu — prawie zawsze jest sensowny
+// punkt startowy (poprzedni miesiąc albo wzorcowy tydzień).
+function grl2RysujZaproszenie() {
+  var box = document.getElementById('grl2-empty-box');
+  var przycisk = document.getElementById('grl2-wypelnij');
   if (!GM.stan || !GM.stan.pusty) {
     box.style.display = 'none';
     przycisk.style.display = GM.stan && GM.stan.kompletny ? 'none' : '';
@@ -2578,459 +2448,225 @@ function gmRysujZaproszenie() {
       '</div>' +
     '</div>';
   box.querySelectorAll('[data-gm-mat]').forEach(function(b) {
-    b.addEventListener('click', function() { gmMaterializuj(this.getAttribute('data-gm-mat')); });
+    b.addEventListener('click', function() { grl2Materializuj(this.getAttribute('data-gm-mat')); });
   });
 }
 
-function gmMaterializuj(zrodlo) {
+function grl2Materializuj(zrodlo) {
   toast('Wypełnianie miesiąca…', true);
   gas('masterGrafikMaterializujMiesiac', [M.token, GM.rok, GM.mies, zrodlo, false], function(res) {
     if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
     if (!res || !res.ok) { toast((res && res.msg) || 'Nie udało się wypełnić miesiąca.', false); return; }
     wsConfirmPopup('Wypełniono ' + res.dni + ' dni. Każdy z nich możesz teraz zmienić osobno.');
-    gmLoad();
+    grl2Load();
   });
 }
 
-document.getElementById('gm-wypelnij').addEventListener('click', function() {
-  gmMaterializuj('poprzedni');
+document.getElementById('grl2-wypelnij').addEventListener('click', function() {
+  grl2Materializuj('poprzedni');
 });
 
-function gmRysuj() {
-  var box = document.getElementById('gm-kalendarz');
+// ── Rysowanie listy ────────────────────────────────────────────
+
+function grl2DzienWpis(data) {
+  return GM.dane && (GM.dane.dni || []).find(function(x) { return x.data === data; });
+}
+
+function grl2Rysuj() {
+  var box = document.getElementById('grl2-lista');
   if (!GM.dane) { box.innerHTML = '<div class="hint">Ładowanie…</div>'; return; }
-
-  var pierwszy = new Date(GM.dane.rok, GM.dane.mies - 1, 1);
-  var startOffset = (pierwszy.getDay() + 6) % 7; // Pn=0 … Nd=6
-  var komorki = [];
-  for (var i = 0; i < startOffset; i++) komorki.push(null);
-  GM.dane.dni.forEach(function(d) { komorki.push(d); });
-  while (komorki.length % 7 !== 0) komorki.push(null);
-  var dniTyg = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
-
-  box.innerHTML =
-    '<div class="grl-dow-row">' + dniTyg.map(function(n) { return '<div class="grl-dow">' + n + '</div>'; }).join('') + '</div>' +
-    '<div class="grl-grid">' + komorki.map(function(d) {
-      return d ? gmKomorkaHtml(d) : '<div class="gm-cell empty"></div>';
-    }).join('') + '</div>';
-
-  box.querySelectorAll('[data-gm-dzien]').forEach(function(el) {
-    el.addEventListener('click', function() { gdzOtworz(this.getAttribute('data-gm-dzien')); });
-  });
+  var robocze = (GM.dane.dni || []).filter(function(d) { return d.czynny; });
+  if (!robocze.length) { box.innerHTML = '<div class="hint">Ten miesiąc nie ma dni roboczych.</div>'; return; }
+  box.innerHTML = robocze.map(function(d) { return grl2DzienHtml(d); }).join('');
 }
 
-function gmKolorGrupy(grupa) {
-  return { lekarz: '#2F6FED', asystentka: '#2FA37A', higienistka: '#9B59B6', rejestracja: '#E8912D' }[grupa] || '#8A93A6';
-}
-
-function gmOsoba(id) {
-  return (GM.dane.personel || []).find(function(p) { return p.id === id; });
-}
-
-function gmKomorkaHtml(d) {
-  var nr = parseInt(d.data.slice(8), 10);
-  if (!d.czynny) {
-    return '<div class="gm-cell off"><span class="gm-num">' + nr + '</span><span class="gm-nic">zamknięte</span></div>';
-  }
-  var bloki = d.bloki || [];
-  var widoczne = bloki.slice(0, 3).map(function(b) {
-    var os = gmOsoba(b.osobaId);
-    var nazwa = os ? (os.imie + ' ' + (os.nazwisko || '').charAt(0) + '.') : b.osobaId;
-    var brak = b.typ !== 'Higienizacja' && b.asystaWymagana !== 0 && !(b.asysta || []).length;
-    return '<span class="gm-wpis' + (brak ? ' brak' : '') + '">' +
-      '<span class="gm-dot" style="background:' + gmKolorGrupy(os ? os.grupa : '') + '"></span>' +
-      esc(nazwa) + ' <small>' + esc(b.od) + '–' + esc(b.do) + '</small></span>';
+function grl2DzienHtml(wpis) {
+  var gaby = (GM.dane.gabinety || []).map(function(g) {
+    var lista = (wpis.bloki || []).filter(function(b) { return b.gabinetId === g.id; })
+      .sort(function(a, b) { return grT2M(a.od) - grT2M(b.od); });
+    var wiersze = lista.length
+      ? lista.map(function(b) { return grl2WierszHtml(wpis, g.id, b); }).join('')
+      : grl2WierszHtml(wpis, g.id, null);
+    return '<div class="grl2-gab">' +
+      '<div class="grl2-gab-nazwa">' + esc(g.nazwa) + '</div>' +
+      '<div class="grl2-rows" data-data="' + esc(wpis.data) + '" data-gab="' + esc(g.id) + '">' + wiersze + '</div>' +
+      '<button type="button" class="grl2-dodaj" data-data="' + esc(wpis.data) + '" data-gab="' + esc(g.id) + '">+ dodaj zmianę</button>' +
+    '</div>';
   }).join('');
 
-  return '<button type="button" class="gm-cell' + (bloki.length ? '' : ' pusty') + '" data-gm-dzien="' + esc(d.data) + '">' +
-    '<span class="gm-head"><span class="gm-num">' + nr + '</span>' +
-      (bloki.length ? '<span class="gm-cnt">' + bloki.length + '</span>' : '') + '</span>' +
-    (bloki.length ? widoczne : '<span class="gm-nic">wolne</span>') +
-    (bloki.length > 3 ? '<span class="gm-more">+' + (bloki.length - 3) + ' więcej</span>' : '') +
-    '</button>';
+  return '<div class="grl2-day" id="grl2-day-' + esc(wpis.data) + '" data-data="' + esc(wpis.data) + '">' +
+    '<div class="grl2-day-head">' +
+      '<span class="grl2-day-num">' + parseInt(wpis.data.slice(8), 10) + '</span>' +
+      '<span class="grl2-day-name">' + esc(wpis.nazwaDnia) + '</span>' +
+      '<span class="grl2-day-godz">' + esc(wpis.godziny.open) + '–' + esc(wpis.godziny.close) + '</span>' +
+    '</div>' +
+    '<div class="grl2-gaby">' + gaby + '</div>' +
+  '</div>';
 }
 
-// ── Edytor dnia: unit → osoba → pora → godziny → asysta ──────
-// Stan trzymamy w GM.unity: po jednym wpisie na gabinet, niezależnie od
-// tego czy jest obsadzony. Dzięki temu odznaczenie i ponowne zaznaczenie
-// gabinetu nie gubi tego, co admin zdążył już w nim ustawić.
-
-function gdzOtworz(data) {
-  var d = (GM.dane.dni || []).find(function(x) { return x.data === data; });
-  if (!d || !d.czynny) return;
-  GM.edytowanaData = data;
-
-  var dt = new Date(data + 'T12:00:00');
-  var dniPl = ['Niedziela','Poniedziałek','Wtorek','Środa','Czwartek','Piątek','Sobota'];
-  document.getElementById('gdz-title').textContent =
-    dniPl[dt.getDay()] + ', ' + dt.getDate() + ' ' + MONTHS_DOP[GM.mies - 1] + ' ' + GM.rok;
-  document.getElementById('gdz-hint').textContent =
-    'Godziny otwarcia tego dnia: ' + (d.godziny ? d.godziny.open + '–' + d.godziny.close : '—') +
-    '. Zaznacz gabinety, które pracują, i obsadź każdy z nich.';
-
-  GM.unity = (GM.dane.gabinety || []).map(function(g) {
-    var blok = (d.bloki || []).find(function(b) { return b.gabinetId === g.id; });
-    return {
-      gabinetId: g.id,
-      nazwa: g.nazwa,
-      aktywny: !!blok,
-      osobaId: blok ? blok.osobaId : '',
-      pora: blok ? '' : 'caly',
-      od: blok ? blok.od : (d.godziny ? d.godziny.open : '09:00'),
-      do: blok ? blok.do : (d.godziny ? d.godziny.close : '20:00'),
-      asystaWymagana: blok ? (blok.asystaWymagana == null ? 1 : blok.asystaWymagana) : 1,
-      asystaUwaga: blok ? (blok.asystaUwaga || '') : '',
-      asysta: blok ? (blok.asysta || []).map(function(a) {
-        return { osobaId: a.osobaId, od: a.od, do: a.do };
-      }) : []
-    };
-  });
-
-  gdzRysuj();
-  document.getElementById('gdz-modal').style.display = 'flex';
-}
-
-function gdzOperatorzy() {
-  return (GM.dane.personel || []).filter(function(p) {
+// Jeden wiersz = jedna zmiana. `blok` puste = świeży, niezapisany wiersz
+// do wypełnienia (każdy gabinet ma zawsze co najmniej jeden, żeby nie
+// trzeba było klikać „+ dodaj zmianę”, zanim cokolwiek się wpisze).
+function grl2WierszHtml(wpis, gabId, blok) {
+  var operatorzy = (GM.dane.personel || []).filter(function(p) {
     return p.grupa === 'lekarz' || p.grupa === 'higienistka';
   });
-}
-function gdzAsystenci() {
-  var lista = (GM.dane.personel || []).filter(function(p) {
+  var asystenci = (GM.dane.personel || []).filter(function(p) {
     return p.grupa === 'asystentka' || p.grupa === 'higienistka';
   }).map(function(p) { return { id: p.id, nazwa: p.imie + ' ' + p.nazwisko }; });
-  (GM.dane.asystaZew || []).forEach(function(z) { lista.push({ id: z.id, nazwa: z.label }); });
-  return lista;
+  (GM.dane.asystaZew || []).forEach(function(z) { asystenci.push({ id: z.id, nazwa: z.label }); });
+
+  var osobaId = blok ? blok.osobaId : '';
+  var os = osobaId ? gmOsoba(osobaId) : null;
+  var higiena = !!(os && os.grupa === 'higienistka');
+  var od = blok ? blok.od : wpis.godziny.open;
+  var doo = blok ? blok.do : wpis.godziny.close;
+  var asystaId = (blok && blok.asysta && blok.asysta[0]) ? blok.asysta[0].osobaId : '';
+  var brakAsysty = !!blok && !higiena && blok.asystaWymagana === 0;
+  var uwaga = blok ? (blok.asystaUwaga || '') : '';
+
+  return '<div class="grl2-row"' + (blok ? ' data-blokid="' + esc(blok.id) + '"' : '') + '>' +
+    '<input type="time" class="grl2-od" step="300" value="' + esc(od) + '">' +
+    '<span class="grl2-sep">–</span>' +
+    '<input type="time" class="grl2-do" step="300" value="' + esc(doo) + '">' +
+    '<select class="grl2-osoba">' +
+      '<option value="">— wybierz —</option>' +
+      operatorzy.map(function(p) {
+        return '<option value="' + esc(p.id) + '"' + (p.id === osobaId ? ' selected' : '') + '>' +
+          esc(p.imie + ' ' + p.nazwisko) + ' · ' + esc(p.grupa === 'higienistka' ? 'higienistka' : 'lekarz') + '</option>';
+      }).join('') +
+    '</select>' +
+    '<select class="grl2-asysta"' + (higiena ? ' disabled' : '') + '>' +
+      '<option value="">— brak —</option>' +
+      asystenci.map(function(a) {
+        return '<option value="' + esc(a.id) + '"' + (a.id === asystaId ? ' selected' : '') + '>' + esc(a.nazwa) + '</option>';
+      }).join('') +
+    '</select>' +
+    '<input type="text" class="grl2-uwaga" placeholder="powód braku asysty"' +
+      (brakAsysty ? '' : ' style="display:none"') + ' value="' + esc(uwaga) + '">' +
+    '<button type="button" class="grl2-usun" aria-label="Usuń zmianę">' +
+      '<svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>' +
+    '</button>' +
+  '</div>';
 }
 
-function gdzGodzinyDnia() {
-  var d = (GM.dane.dni || []).find(function(x) { return x.data === GM.edytowanaData; });
-  return (d && d.godziny) ? d.godziny : { open: '09:00', close: '20:00' };
+// ── Interakcja: zaznaczanie osoby/asysty, dodawanie i usuwanie wierszy ──
+
+function grl2OnOsobaChange(row) {
+  var osobaId = row.querySelector('.grl2-osoba').value;
+  var os = osobaId ? gmOsoba(osobaId) : null;
+  var higiena = !!(os && os.grupa === 'higienistka');
+  var asystaSel = row.querySelector('.grl2-asysta');
+  var uwaga = row.querySelector('.grl2-uwaga');
+  asystaSel.disabled = higiena;
+  if (higiena) { asystaSel.value = ''; uwaga.style.display = 'none'; uwaga.value = ''; }
+  else { grl2OnAsystaChange(row); }
 }
 
-// Pora dnia to podpowiedź godzin, nie ich zamknięcie — po wybraniu
-// „Rano" godziny wskakują same, ale nadal można je dowolnie poprawić.
-function gdzGodzinyPory(pora) {
-  var h = gdzGodzinyDnia();
-  var podzial = (GM.edytowanaData && new Date(GM.edytowanaData + 'T12:00:00').getDay() === 6) ? '12:30' : '14:00';
-  if (pora === 'rano') return { od: h.open, do: podzial };
-  if (pora === 'popo') return { od: podzial, do: h.close };
-  return { od: h.open, do: h.close };
+function grl2OnAsystaChange(row) {
+  var asystaSel = row.querySelector('.grl2-asysta');
+  var uwaga = row.querySelector('.grl2-uwaga');
+  var brak = !asystaSel.disabled && !asystaSel.value;
+  uwaga.style.display = brak ? '' : 'none';
+  if (!brak) uwaga.value = '';
 }
 
-function gdzRysuj() {
-  var operatorzy = gdzOperatorzy();
-  document.getElementById('gdz-unity').innerHTML = GM.unity.map(function(u, i) {
-    var os = gmOsoba(u.osobaId);
-    var higiena = !!(os && os.grupa === 'higienistka');
-    return '' +
-      '<div class="gdz-unit' + (u.aktywny ? ' on' : '') + '">' +
-        '<div class="gdz-unit-head">' +
-          '<input type="checkbox" data-gdz-on="' + i + '"' + (u.aktywny ? ' checked' : '') + ' aria-label="Gabinet pracuje">' +
-          '<span class="gdz-unit-nazwa">' + esc(u.nazwa) + '</span>' +
-        '</div>' +
-        (u.aktywny ? gdzUnitBodyHtml(u, i, operatorzy, higiena) : '') +
-      '</div>';
-  }).join('');
-  gdzBind();
-}
-
-function gdzUnitBodyHtml(u, i, operatorzy, higiena) {
-  return '' +
-    '<div class="gdz-unit-body">' +
-      '<div class="field" style="margin-bottom:10px">' +
-        '<span class="field-lbl">Kto obsadza</span>' +
-        '<select class="sel" data-gdz-osoba="' + i + '">' +
-          '<option value="">— wybierz —</option>' +
-          operatorzy.map(function(p) {
-            return '<option value="' + esc(p.id) + '"' + (p.id === u.osobaId ? ' selected' : '') + '>' +
-              esc(p.imie + ' ' + p.nazwisko) + ' · ' + esc(p.grupa) + '</option>';
-          }).join('') +
-        '</select>' +
-      '</div>' +
-
-      '<span class="field-lbl">Pora dnia</span>' +
-      '<div class="gdz-pory">' +
-        GM_PORY.map(function(p) {
-          return '<button type="button" class="gdz-pora' + (u.pora === p.id ? ' on' : '') + '" ' +
-            'data-gdz-pora="' + i + '" data-pora="' + p.id + '">' + p.label + '</button>';
-        }).join('') +
-      '</div>' +
-
-      '<div class="gdz-godziny">' +
-        '<div class="field" style="margin-bottom:0"><span class="field-lbl">Od</span>' +
-          '<input type="time" class="inp" step="300" data-gdz-od="' + i + '" value="' + esc(u.od) + '"></div>' +
-        '<div class="field" style="margin-bottom:0"><span class="field-lbl">Do</span>' +
-          '<input type="time" class="inp" step="300" data-gdz-do="' + i + '" value="' + esc(u.do) + '"></div>' +
-      '</div>' +
-
-      '<div class="gdz-asysta-box">' +
-        (higiena
-          ? '<div class="gdz-hig-note">Higienistka prowadzi ten gabinet samodzielnie — asysta jej nie przysługuje. ' +
-            '(Przy lekarzu może występować jako asysta — to inna rola.)</div>'
-          : gdzAsystaHtml(u, i)) +
-      '</div>' +
-    '</div>';
-}
-
-function gdzAsystaHtml(u, i) {
-  var asystenci = gdzAsystenci();
-  var domyslna = 1;
-  return '' +
-    '<div class="field" style="margin-bottom:8px">' +
-      '<span class="field-lbl">Ile asysty wymaga ten gabinet</span>' +
-      '<select class="sel" data-gdz-asn="' + i + '">' +
-        [0,1,2,3,4].map(function(n) {
-          return '<option value="' + n + '"' + (n === u.asystaWymagana ? ' selected' : '') + '>' +
-            n + (n === 1 ? ' — standard' : '') + '</option>';
-        }).join('') +
-      '</select>' +
-    '</div>' +
-    (u.asystaWymagana !== domyslna
-      ? '<div class="field" style="margin-bottom:8px"><span class="field-lbl">Adnotacja — dlaczego odstępstwo</span>' +
-        '<textarea class="ta" data-gdz-asu="' + i + '" placeholder="np. zabieg wymagający dwóch par rąk">' +
-        esc(u.asystaUwaga) + '</textarea></div>'
-      : '') +
-    '<span class="field-lbl">Przypisana asysta</span>' +
-    u.asysta.map(function(a, j) {
-      return '<div class="gdz-asysta-row">' +
-        '<select class="sel" data-gdz-as-osoba="' + i + '" data-j="' + j + '" style="margin:0">' +
-          asystenci.map(function(p) {
-            return '<option value="' + esc(p.id) + '"' + (p.id === a.osobaId ? ' selected' : '') + '>' + esc(p.nazwa) + '</option>';
-          }).join('') +
-        '</select>' +
-        '<input type="time" class="inp" step="300" data-gdz-as-od="' + i + '" data-j="' + j + '" value="' + esc(a.od) + '" style="margin:0">' +
-        '<input type="time" class="inp" step="300" data-gdz-as-do="' + i + '" data-j="' + j + '" value="' + esc(a.do) + '" style="margin:0">' +
-        '<button type="button" class="btn-icon" data-gdz-as-del="' + i + '" data-j="' + j + '" aria-label="Usuń asystę">' +
-          '<svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>' +
-        '</button>' +
-      '</div>';
-    }).join('') +
-    '<button type="button" class="btn-link" data-gdz-as-add="' + i + '" style="margin-top:4px">+ Dodaj asystę</button>';
-}
-
-function gdzBind() {
-  var box = document.getElementById('gdz-unity');
-
-  box.querySelectorAll('[data-gdz-on]').forEach(function(el) {
-    el.addEventListener('change', function() {
-      var i = parseInt(this.getAttribute('data-gdz-on'), 10);
-      GM.unity[i].aktywny = this.checked;
-      gdzRysuj();
-    });
-  });
-
-  box.querySelectorAll('[data-gdz-osoba]').forEach(function(el) {
-    el.addEventListener('change', function() {
-      var i = parseInt(this.getAttribute('data-gdz-osoba'), 10);
-      GM.unity[i].osobaId = this.value;
-      var os = gmOsoba(this.value);
-      // Higienistka prowadząca gabinet nie ma asysty — czyścimy od razu,
-      // żeby po zapisie nie zniknęła po cichu po stronie serwera.
-      if (os && os.grupa === 'higienistka') { GM.unity[i].asysta = []; GM.unity[i].asystaWymagana = 0; }
-      else if (GM.unity[i].asystaWymagana === 0) GM.unity[i].asystaWymagana = 1;
-      gdzRysuj();
-    });
-  });
-
-  box.querySelectorAll('[data-gdz-pora]').forEach(function(el) {
-    el.addEventListener('click', function() {
-      var i = parseInt(this.getAttribute('data-gdz-pora'), 10);
-      var pora = this.getAttribute('data-pora');
-      var g = gdzGodzinyPory(pora);
-      GM.unity[i].pora = pora;
-      GM.unity[i].od = g.od;
-      GM.unity[i].do = g.do;
-      // Asysta domyślnie idzie w parze z operatorem — inaczej po zmianie
-      // pory dnia zostawałaby w starych, już nieaktualnych godzinach.
-      GM.unity[i].asysta.forEach(function(a) { a.od = g.od; a.do = g.do; });
-      gdzRysuj();
-    });
-  });
-
-  // Ręczna zmiana godzin unieważnia wybór pory — od tej chwili obowiązuje
-  // to, co admin wpisał, a nie gotowy wariant.
-  box.querySelectorAll('[data-gdz-od]').forEach(function(el) {
-    el.addEventListener('change', function() {
-      var i = parseInt(this.getAttribute('data-gdz-od'), 10);
-      GM.unity[i].od = this.value; GM.unity[i].pora = '';
-      document.querySelectorAll('[data-gdz-pora="' + i + '"]').forEach(function(b) { b.className = 'gdz-pora'; });
-    });
-  });
-  box.querySelectorAll('[data-gdz-do]').forEach(function(el) {
-    el.addEventListener('change', function() {
-      var i = parseInt(this.getAttribute('data-gdz-do'), 10);
-      GM.unity[i].do = this.value; GM.unity[i].pora = '';
-      document.querySelectorAll('[data-gdz-pora="' + i + '"]').forEach(function(b) { b.className = 'gdz-pora'; });
-    });
-  });
-
-  box.querySelectorAll('[data-gdz-asn]').forEach(function(el) {
-    el.addEventListener('change', function() {
-      var i = parseInt(this.getAttribute('data-gdz-asn'), 10);
-      GM.unity[i].asystaWymagana = parseInt(this.value, 10);
-      gdzRysuj();
-    });
-  });
-  box.querySelectorAll('[data-gdz-asu]').forEach(function(el) {
-    el.addEventListener('input', function() {
-      GM.unity[parseInt(this.getAttribute('data-gdz-asu'), 10)].asystaUwaga = this.value;
-    });
-  });
-
-  box.querySelectorAll('[data-gdz-as-add]').forEach(function(el) {
-    el.addEventListener('click', function() {
-      var i = parseInt(this.getAttribute('data-gdz-as-add'), 10);
-      var lista = gdzAsystenci();
-      if (!lista.length) { toast('Brak osób, które mogą asystować.', false); return; }
-      GM.unity[i].asysta.push({ osobaId: lista[0].id, od: GM.unity[i].od, do: GM.unity[i].do });
-      gdzRysuj();
-    });
-  });
-  box.querySelectorAll('[data-gdz-as-del]').forEach(function(el) {
-    el.addEventListener('click', function() {
-      var i = parseInt(this.getAttribute('data-gdz-as-del'), 10);
-      GM.unity[i].asysta.splice(parseInt(this.getAttribute('data-j'), 10), 1);
-      gdzRysuj();
-    });
-  });
-  box.querySelectorAll('[data-gdz-as-osoba]').forEach(function(el) {
-    el.addEventListener('change', function() {
-      GM.unity[parseInt(this.getAttribute('data-gdz-as-osoba'), 10)]
-        .asysta[parseInt(this.getAttribute('data-j'), 10)].osobaId = this.value;
-    });
-  });
-  box.querySelectorAll('[data-gdz-as-od]').forEach(function(el) {
-    el.addEventListener('change', function() {
-      GM.unity[parseInt(this.getAttribute('data-gdz-as-od'), 10)]
-        .asysta[parseInt(this.getAttribute('data-j'), 10)].od = this.value;
-    });
-  });
-  box.querySelectorAll('[data-gdz-as-do]').forEach(function(el) {
-    el.addEventListener('change', function() {
-      GM.unity[parseInt(this.getAttribute('data-gdz-as-do'), 10)]
-        .asysta[parseInt(this.getAttribute('data-j'), 10)].do = this.value;
-    });
-  });
-}
-
-function gdzZbierzBloki() {
+function grl2ZbierzDzien(dataStr) {
   var bloki = [];
-  GM.unity.forEach(function(u) {
-    if (!u.aktywny || !u.osobaId) return;
-    var os = gmOsoba(u.osobaId);
-    var higiena = !!(os && os.grupa === 'higienistka');
-    bloki.push({
-      gabinetId: u.gabinetId,
-      typ: higiena ? 'Higienizacja' : 'Lekarz',
-      osobaId: u.osobaId,
-      od: u.od, do: u.do,
-      asystaWymagana: higiena ? 0 : u.asystaWymagana,
-      asystaUwaga: u.asystaUwaga,
-      asysta: higiena ? [] : u.asysta
+  document.querySelectorAll('.grl2-rows[data-data="' + CSS.escape(dataStr) + '"]').forEach(function(rowsEl) {
+    var gabId = rowsEl.getAttribute('data-gab');
+    rowsEl.querySelectorAll('.grl2-row').forEach(function(row) {
+      var osobaId = row.querySelector('.grl2-osoba').value;
+      if (!osobaId) return; // pusty wiersz — pomijamy, nic nie wysyłamy
+      var od = row.querySelector('.grl2-od').value;
+      var doo = row.querySelector('.grl2-do').value;
+      var os = gmOsoba(osobaId);
+      var higiena = !!(os && os.grupa === 'higienistka');
+      var asystaVal = row.querySelector('.grl2-asysta').value;
+      var asysta = (!higiena && asystaVal) ? [{ osobaId: asystaVal, od: od, do: doo }] : [];
+      var asystaWymagana = higiena ? 0 : (asystaVal ? 1 : 0);
+      bloki.push({
+        gabinetId: gabId, typ: higiena ? 'Higienizacja' : 'Lekarz',
+        osobaId: osobaId, od: od, do: doo,
+        asystaWymagana: asystaWymagana, asystaUwaga: row.querySelector('.grl2-uwaga').value || '',
+        asysta: asysta
+      });
     });
   });
   return bloki;
 }
 
-document.getElementById('gdz-close').addEventListener('click', function() {
-  document.getElementById('gdz-modal').style.display = 'none';
-});
-document.getElementById('gdz-modal').addEventListener('click', function(e) {
-  if (e.target === this) this.style.display = 'none';
-});
-
-document.getElementById('gdz-save').addEventListener('click', function() {
-  var bloki = gdzZbierzBloki();
-  var brakOsoby = GM.unity.some(function(u) { return u.aktywny && !u.osobaId; });
-  if (brakOsoby) { toast('Wybierz osobę dla każdego zaznaczonego gabinetu.', false); return; }
-
-  var data = GM.edytowanaData;
-  var btn = this;
-  btn.disabled = true;
-
-  // Optymistycznie: kalendarz pokazuje nowy stan od razu, zapis leci w tle.
-  // Serwer i tak zwraca policzony stan dnia w tej samej odpowiedzi, więc
-  // jedno zapytanie wystarcza — dawniej były trzy pod rząd.
-  var dzien = (GM.dane.dni || []).find(function(x) { return x.data === data; });
-  var poprzednie = dzien ? dzien.bloki : null;
-  if (dzien) { dzien.bloki = bloki; gmRysuj(); }
-
-  gas('masterZapiszDzienGrafikuPelny', [M.token, data, bloki], function(res) {
-    btn.disabled = false;
+// Zapisuje CAŁY dzień jednym wywołaniem, niezależnie od tego, które pole
+// w którym gabinecie się zmieniło — dokładnie tak samo jak edytor miesiąca
+// wcześniej, tylko bez modala pośrodku. Po sukcesie podmienia TYLKO ten
+// jeden dzień (id bloków po zapisie są generowane na nowo po stronie
+// serwera, więc bezpieczniej odtworzyć wiersze z odpowiedzi niż łatać je
+// w miejscu).
+function grl2Zapisz(dataStr) {
+  var wpis = grl2DzienWpis(dataStr);
+  if (!wpis) return;
+  var bloki = grl2ZbierzDzien(dataStr);
+  gas('masterZapiszDzienGrafikuPelny', [M.token, dataStr, bloki], function(res) {
     if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
-    if (!res || !res.ok) {
-      if (dzien && poprzednie) { dzien.bloki = poprzednie; gmRysuj(); }
-      toast((res && res.msg) || 'Nie udało się zapisać dnia.', false);
-      return;
+    if (!res || !res.ok) { toast((res && res.msg) || 'Nie udało się zapisać dnia.', false); return; }
+    var idx = (GM.dane.dni || []).findIndex(function(x) { return x.data === dataStr; });
+    if (idx !== -1) GM.dane.dni[idx] = res.dzien;
+    var el = document.getElementById('grl2-day-' + dataStr);
+    if (el) el.outerHTML = grl2DzienHtml(res.dzien);
+    var fresh = document.getElementById('grl2-day-' + dataStr);
+    if (fresh) {
+      fresh.classList.add('grl2-saved');
+      setTimeout(function() {
+        var f2 = document.getElementById('grl2-day-' + dataStr);
+        if (f2) f2.classList.remove('grl2-saved');
+      }, 1200);
     }
-    if (dzien && res.dzien) { dzien.bloki = res.dzien.bloki; gmRysuj(); }
-    document.getElementById('gdz-modal').style.display = 'none';
-    wsConfirmPopup('Zapisano dzień.');
     gas('masterGrafikStanMiesiaca', [M.token, GM.rok, GM.mies], function(r2) {
-      if (r2 && r2.ok) { GM.stan = r2; gmRysujZaproszenie(); }
+      if (r2 && r2.ok) { GM.stan = r2; grl2RysujZaproszenie(); }
     });
   });
+}
+
+function grl2Dodaj(dataStr, gabId) {
+  var wpis = grl2DzienWpis(dataStr);
+  if (!wpis) return;
+  var rowsEl = document.querySelector('.grl2-rows[data-data="' + CSS.escape(dataStr) + '"][data-gab="' + CSS.escape(gabId) + '"]');
+  if (!rowsEl) return;
+  rowsEl.insertAdjacentHTML('beforeend', grl2WierszHtml(wpis, gabId, null));
+}
+
+function grl2Usun(row) {
+  if (!row) return;
+  var rowsEl = row.closest('.grl2-rows');
+  var dataStr = rowsEl.getAttribute('data-data');
+  var mialBlok = !!row.getAttribute('data-blokid');
+  row.remove();
+  if (mialBlok) grl2Zapisz(dataStr);
+}
+
+// ── Delegacja zdarzeń — jedno wiązanie zamiast setek ────────────
+
+document.getElementById('grl2-lista').addEventListener('change', function(e) {
+  var row = e.target.closest('.grl2-row');
+  if (!row) return;
+  if (e.target.classList.contains('grl2-osoba')) grl2OnOsobaChange(row);
+  if (e.target.classList.contains('grl2-asysta')) grl2OnAsystaChange(row);
+  var rowsEl = row.closest('.grl2-rows');
+  if (rowsEl) grl2Zapisz(rowsEl.getAttribute('data-data'));
 });
 
-document.getElementById('gdz-copy').addEventListener('click', function() {
-  var data = GM.edytowanaData;
-  var dow = new Date(data + 'T12:00:00').getDay();
-  var cele = (GM.dane.dni || [])
-    .filter(function(d) { return d.czynny && d.data !== data && new Date(d.data + 'T12:00:00').getDay() === dow; })
-    .map(function(d) { return d.data; });
-  if (!cele.length) { toast('Brak innych takich dni w tym miesiącu.', false); return; }
-
-  var btn = this;
-  if (btn.getAttribute('data-armed') !== '1') {
-    btn.setAttribute('data-armed', '1');
-    btn.textContent = 'Nadpisze ' + cele.length + ' dni — kliknij ponownie';
-    clearTimeout(btn._t);
-    btn._t = setTimeout(function() {
-      btn.removeAttribute('data-armed');
-      btn.textContent = 'Kopiuj na te same dni tygodnia w tym miesiącu';
-    }, 4000);
-    return;
-  }
-  btn.removeAttribute('data-armed');
-  btn.textContent = 'Kopiuj na te same dni tygodnia w tym miesiącu';
-
-  toast('Kopiowanie…', true);
-  gas('masterKopiujDzienGrafiku', [M.token, data, cele], function(res) {
-    if (!res || !res.ok) { toast((res && res.msg) || 'Nie udało się skopiować.', false); return; }
-    document.getElementById('gdz-modal').style.display = 'none';
-    wsConfirmPopup('Skopiowano na ' + res.skopiowano + ' dni.');
-    gmLoad();
-  });
-});
-
-document.getElementById('gdz-reset').addEventListener('click', function() {
-  var btn = this;
-  if (btn.getAttribute('data-armed') !== '1') {
-    btn.setAttribute('data-armed', '1');
-    btn.textContent = 'Na pewno? Kliknij ponownie, żeby wyczyścić';
-    clearTimeout(btn._t);
-    btn._t = setTimeout(function() {
-      btn.removeAttribute('data-armed');
-      btn.textContent = 'Wyczyść cały dzień';
-    }, 4000);
-    return;
-  }
-  btn.removeAttribute('data-armed');
-  btn.textContent = 'Wyczyść cały dzień';
-  gas('masterZapiszDzienGrafikuPelny', [M.token, GM.edytowanaData, []], function(res) {
-    if (!res || !res.ok) { toast((res && res.msg) || 'Nie udało się wyczyścić.', false); return; }
-    document.getElementById('gdz-modal').style.display = 'none';
-    wsConfirmPopup('Dzień wyczyszczony.');
-    gmLoad();
-  });
+document.getElementById('grl2-lista').addEventListener('click', function(e) {
+  var dodaj = e.target.closest('.grl2-dodaj');
+  if (dodaj) { grl2Dodaj(dodaj.getAttribute('data-data'), dodaj.getAttribute('data-gab')); return; }
+  var usun = e.target.closest('.grl2-usun');
+  if (usun) grl2Usun(usun.closest('.grl2-row'));
 });
 
 // ── Wydruk A4 miesiąca ──────────────────────────────────────
 // Układ odwzorowuje papierowy grafik kliniki: pasma tygodni, sześć kolumn
 // dni, operator wersalikami i jego asysta pod spodem.
 
-document.getElementById('gm-print').addEventListener('click', function() {
+document.getElementById('grl2-print').addEventListener('click', function() {
   document.getElementById('gwd-page').innerHTML = '<div class="hint">Generowanie…</div>';
   document.getElementById('gwd-modal').style.display = 'flex';
   gas('masterGrafikWydrukMiesiac', [M.token, GM.rok, GM.mies, {}], function(res) {
@@ -3081,549 +2717,6 @@ function gwdRysuj(w) {
   });
 
   document.getElementById('gwd-page').innerHTML = html + '</tbody></table>';
-}
-
-// ── Tydzień/Dzień: te same realne daty co Miesiąc (GM), tylko powiększone ──
-
-function grDzienWpis(data) {
-  return GM.dane && (GM.dane.dni || []).find(function(x) { return x.data === data; });
-}
-
-// Ustala/waliduje kotwicę dnia dla Tydzień/Dzień: musi być realną datą
-// z AKTUALNIE załadowanego miesiąca GM. Domyślnie dzisiaj (jeśli mieści
-// się w tym miesiącu), inaczej pierwszy dzień roboczy miesiąca.
-function grDzienAnchor() {
-  if (!GM.dane) return null;
-  if (GR.dzien && grDzienWpis(GR.dzien)) return GR.dzien;
-  var dzis = todayStr();
-  if (grDzienWpis(dzis)) { GR.dzien = dzis; return GR.dzien; }
-  var pierwszyRob = (GM.dane.dni || []).find(function(d) { return d.czynny; });
-  GR.dzien = pierwszyRob ? pierwszyRob.data : ((GM.dane.dni || [])[0] || {}).data || null;
-  return GR.dzien;
-}
-
-function grNazwaKrotka(ds) {
-  var nazwy = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So'];
-  return nazwy[new Date(ds + 'T12:00:00').getDay()];
-}
-
-// 6 kolejnych dat (Pn–Sb) obejmujących kotwicę — z ich realnymi wpisami
-// z GM, o ile mieszczą się w załadowanym miesiącu (skrajne tygodnie mogą
-// wystawać poza niego — te komórki są nieinteraktywne).
-function grTydzienZakres(anchor) {
-  var dt = new Date(anchor + 'T12:00:00');
-  var offset = (dt.getDay() + 6) % 7; // Pn = 0
-  var poniedzialek = new Date(dt); poniedzialek.setDate(dt.getDate() - offset);
-  var out = [];
-  for (var i = 0; i < 6; i++) {
-    var d = new Date(poniedzialek); d.setDate(poniedzialek.getDate() + i);
-    var ds = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-    out.push({ data: ds, wpis: grDzienWpis(ds) });
-  }
-  return out;
-}
-
-// Przesuwa kotwicę o `dni` dni; jeśli ląduje w innym miesiącu, dociąga go
-// dokładnie tak samo jak strzałki widoku Miesiąc.
-function grPrzesunDzien(dni, cb) {
-  var anchor = grDzienAnchor();
-  if (!anchor) return;
-  var dt = new Date(anchor + 'T12:00:00');
-  dt.setDate(dt.getDate() + dni);
-  var ds = dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
-  var r = dt.getFullYear(), m = dt.getMonth() + 1;
-  GR.dzien = ds;
-  if (r !== GM.rok || m !== GM.mies) {
-    GM.rok = r; GM.mies = m;
-    gmLoad(function() { if (cb) cb(); });
-  } else if (cb) cb();
-}
-
-function grRenderTydzien() {
-  var box = document.getElementById('gr-week-grid');
-  var anchor = grDzienAnchor();
-  if (!anchor) { box.innerHTML = '<div class="hint">Ładowanie…</div>'; return; }
-  var tydz = grTydzienZakres(anchor);
-  document.getElementById('gr-tyd-label').textContent =
-    parseInt(tydz[0].data.slice(8), 10) + '–' + parseInt(tydz[5].data.slice(8), 10) + ' ' + MONTHS[GM.mies - 1] + ' ' + GM.rok;
-  box.innerHTML = tydz.map(function(t) { return grTydzienKomorkaHtml(t); }).join('');
-  box.querySelectorAll('[data-gr-tyd-dzien]').forEach(function(el) {
-    el.addEventListener('click', function(e) {
-      if (e.target.closest('.gr-rek-ic')) return;
-      GR.dzien = this.getAttribute('data-gr-tyd-dzien');
-      grSwitchView('dzien');
-    });
-  });
-  grBindRekIkony();
-}
-
-function grTydzienKomorkaHtml(t) {
-  var nr = parseInt(t.data.slice(8), 10);
-  if (!t.wpis) {
-    return '<div class="gr-tyd-cell gr-tyd-poza"><span class="gr-tyd-nazwa">' + grNazwaKrotka(t.data) + ' ' + nr + '</span>' +
-      '<span class="gr-tyd-puste">poza miesiącem</span></div>';
-  }
-  var d = t.wpis;
-  if (!d.czynny) {
-    return '<div class="gr-tyd-cell gr-tyd-off"><span class="gr-tyd-nazwa">' + esc(d.nazwaDnia) + ' ' + nr + '</span>' +
-      '<span class="gr-tyd-puste">zamknięte</span></div>';
-  }
-  var bloki = d.bloki || [];
-  var rek = grRekDlaDnia(d);
-  var brakAsysty = bloki.filter(function(b) {
-    return b.typ !== 'Higienizacja' && !(b.asysta || []).length && !/BRAK ASYSTY/.test(b.asystaUwaga || '');
-  }).length;
-
-  var perGab = {};
-  bloki.forEach(function(b) { (perGab[b.gabinetId] = perGab[b.gabinetId] || []).push(b); });
-  var wiersze = (GM.dane.gabinety || []).map(function(gab) {
-    var lista = (perGab[gab.id] || []).sort(function(a, b) { return grT2M(a.od) - grT2M(b.od); });
-    if (!lista.length) return '';
-    var chipy = lista.map(function(b) {
-      var os = gmOsoba(b.osobaId);
-      var kolor = os ? _rolaKolor(os) : '#8A93A6';
-      var inicjaly = os ? ((os.imie[0] || '') + (os.nazwisko[0] || '')) : '?';
-      return '<span class="gr-tyd-chip" style="background:' + kolor + '26;color:' + kolor + '" title="' +
-        esc(os ? (os.imie + ' ' + os.nazwisko) : b.osobaId) + ' · ' + esc(gab.nazwa) + ' ' + esc(b.od) + '–' + esc(b.do) + '">' +
-        esc(inicjaly) + '</span>';
-    }).join('');
-    return '<div class="gr-tyd-gab"><span class="gr-tyd-gab-nazwa">' + esc(gab.nazwa) + '</span>' +
-      '<span class="gr-tyd-chips">' + chipy + '</span></div>';
-  }).join('');
-
-  // Div, nie button: kafel zawiera przycisk ikony rekomendacji (grIkonaRek) —
-  // button-w-buttonie jest nieprawidłowym HTML-em i przeglądarka po cichu
-  // domyka zewnętrzny element przy parsowaniu, ucinając resztę kafelka.
-  return '<div class="gr-tyd-cell" data-gr-tyd-dzien="' + esc(d.data) + '">' +
-    '<div class="gr-tyd-head"><span class="gr-tyd-nazwa">' + esc(d.nazwaDnia) + ' ' + nr + '</span>' + grIkonaRek(rek, d.nazwaDnia) + '</div>' +
-    '<span class="gr-tyd-godz">' + esc(d.godziny.open) + '–' + esc(d.godziny.close) + '</span>' +
-    (wiersze || '<span class="gr-tyd-puste">brak obsady</span>') +
-    (brakAsysty ? '<span class="gr-tyd-brak">' + brakAsysty + '× brak asysty</span>' : '') +
-    '</div>';
-}
-
-function grRenderDniPasek() {
-  var wrap = document.getElementById('gr-days');
-  var anchor = grDzienAnchor();
-  if (!anchor) { wrap.innerHTML = ''; return; }
-  var tydz = grTydzienZakres(anchor);
-  wrap.innerHTML = tydz.map(function(t) {
-    var nr = parseInt(t.data.slice(8), 10);
-    var krot = t.wpis ? t.wpis.nazwaDnia.slice(0, 3) : grNazwaKrotka(t.data);
-    var ile = t.wpis ? grRekDlaDnia(t.wpis).length : 0;
-    return '<button type="button" class="seg-btn' + (t.data === anchor ? ' on' : '') +
-      (t.wpis && !t.wpis.czynny ? ' seg-off' : '') + '" data-dzien="' + esc(t.data) + '">' +
-      esc(krot) + ' ' + nr + (ile ? ' <span class="gr-badge">' + ile + '</span>' : '') + '</button>';
-  }).join('');
-  wrap.querySelectorAll('[data-dzien]').forEach(function(b) {
-    b.addEventListener('click', function() {
-      GR.dzien = this.getAttribute('data-dzien');
-      grRenderDniPasek();
-      grRenderDzien();
-    });
-  });
-}
-
-// Rekomendacje wciąż liczy osobny, tygodniowy silnik (nieprzeliczany per
-// realny dzień miesiąca) — dopasowanie po dniu tygodnia jest sygnałem
-// orientacyjnym ("ten dzień tygodnia zwykle ma tu problem"), nie precyzyjną
-// informacją o TEJ dacie, jeśli już ją ręcznie zmieniono.
-function grRekDlaDnia(wpis) {
-  if (!GR.dane || !wpis) return [];
-  return (GR.dane.rekomendacje || []).filter(function(r) { return r.dzien === wpis.dzienTygodnia; });
-}
-
-function grRenderLicznikRek() {
-  var lista = (GR.dane.rekomendacje || []).filter(function(r) { return r.waga !== 'info'; });
-  var el = document.getElementById('gr-rek-count');
-  el.textContent = lista.length;
-  el.className = 'gr-badge' + (lista.length === 0 ? ' zero' : '');
-}
-
-function grOsobaNazwa(id) {
-  var p = (GR.dane.personel || []).find(function(x) { return x.id === id; });
-  return p ? (p.imie + ' ' + p.nazwisko) : id;
-}
-
-function grIkonaRek(lista, tytul) {
-  if (!lista.length) return '';
-  var rank = { krytyczna: 0, wazna: 1, sugestia: 2, info: 3 };
-  var naj = lista.slice().sort(function(a, b) { return rank[a.waga] - rank[b.waga]; })[0];
-  var znak = naj.waga === 'info' ? 'i' : '!';
-  return '<button type="button" class="gr-rek-ic ' + naj.waga +
-    '" data-rek="' + esc(tytul) + '" title="' + esc(naj.tytul) + '">' + znak + '</button>';
-}
-
-function grRenderDzien() {
-  var anchor = grDzienAnchor();
-  if (!anchor) { document.getElementById('gr-grid').innerHTML = '<div class="hint">Ładowanie…</div>'; return; }
-  var d = grDzienWpis(anchor);
-  if (!d) { document.getElementById('gr-grid').innerHTML = '<div class="hint">Brak danych dla tego dnia.</div>'; return; }
-
-  var etykieta = d.nazwaDnia + ', ' + parseInt(d.data.slice(8), 10) + ' ' + MONTHS_DOP[GM.mies - 1] + ' ' + GM.rok;
-  document.getElementById('gr-dzien-label').textContent = etykieta;
-  adStrip();
-
-  if (!d.czynny) {
-    document.getElementById('gr-day-head').innerHTML =
-      '<span class="gr-day-name">' + esc(etykieta) + '</span><span class="gr-day-okno">klinika nieczynna</span>';
-    document.getElementById('gr-grid').innerHTML = '<div class="hint">Klinika jest w tym dniu zamknięta.</div>';
-    return;
-  }
-
-  var g = d.godziny;
-  document.getElementById('gr-day-head').innerHTML =
-    '<span class="gr-day-name">' + esc(etykieta) + '</span>' +
-    '<span class="gr-day-okno">klinika czynna ' + esc(g.open) + '–' + esc(g.close) + '</span>' +
-    grIkonaRek(grRekDlaDnia(d), d.nazwaDnia);
-
-  var gabinety = GM.dane.gabinety || [];
-  if (!gabinety.length) {
-    document.getElementById('gr-grid').innerHTML =
-      '<div class="hint">Brak gabinetów. Dodaj je przyciskiem „Gabinety".</div>';
-    grBindRekIkony();
-    return;
-  }
-
-  var html = gabinety.map(function(gab) {
-    var bloki = (d.bloki || []).filter(function(b) {
-      return b.gabinetId === gab.id;
-    }).sort(function(a, b) { return grT2M(a.od) - grT2M(b.od); });
-
-    var oknoOd = grT2M(g.open), oknoDo = grT2M(g.close);
-    var praca = 0;
-    bloki.forEach(function(b) { praca += grT2M(b.do) - grT2M(b.od); });
-    var wyk = Math.round(praca / (oknoDo - oknoOd) * 100);
-
-    var rows = '';
-    var kursor = oknoOd;
-    bloki.forEach(function(b) {
-      if (grT2M(b.od) > kursor) rows += grLukaHtml(gab.id, kursor, grT2M(b.od));
-      rows += grBlokHtml(b, gab);
-      kursor = Math.max(kursor, grT2M(b.do));
-    });
-    if (kursor < oknoDo) rows += grLukaHtml(gab.id, kursor, oknoDo);
-
-    return '<div class="gr-gab">' +
-      '<div class="gr-gab-head">' +
-        '<span class="gr-gab-nazwa">' + esc(gab.nazwa) + '</span>' +
-        '<span class="gr-gab-wyk">' + wyk + '% obsady</span>' +
-      '</div>' +
-      '<div class="gr-gab-body">' + rows + '</div>' +
-    '</div>';
-  }).join('');
-
-  document.getElementById('gr-grid').innerHTML = html;
-
-  document.getElementById('gr-grid').querySelectorAll('[data-blok]').forEach(function(el) {
-    el.addEventListener('click', function(e) {
-      if (e.target.closest('.gr-rek-ic')) return;
-      grOtworzBlok(this.getAttribute('data-blok'), null, null, null);
-    });
-  });
-  document.getElementById('gr-grid').querySelectorAll('[data-luka]').forEach(function(el) {
-    el.addEventListener('click', function() {
-      var p = this.getAttribute('data-luka').split('|');
-      grOtworzBlok(null, p[0], p[1], p[2]);
-    });
-  });
-  grBindRekIkony();
-}
-
-function grLukaHtml(gabinetId, od, do_) {
-  var odT = grM2T(od), doT = grM2T(do_);
-  var mins = do_ - od;
-  return '<button type="button" class="gr-luka" data-luka="' + esc(gabinetId) + '|' + odT + '|' + doT + '">' +
-    '<span class="gr-luka-czas">' + odT + '–' + doT + '</span>' +
-    '<span class="gr-luka-lbl">wolne (' + grHM(mins) + ') — kliknij, żeby obsadzić</span>' +
-    '</button>';
-}
-
-function grBlokHtml(b, gab) {
-  var rek = (GR.dane.rekomendacje || []).filter(function(r) { return r.blokId === b.id; });
-  var asysta = b.asysta || [];
-  var meta, klasaMeta = 'gr-blok-meta';
-
-  // Świadomie zatwierdzony brak asysty dostaje osobną, jaskrawą plakietkę —
-  // decyzja nie może wyglądać tak samo jak przeoczenie.
-  var swiadomyBrak = /BRAK ASYSTY/.test(b.asystaUwaga || '');
-
-  if (b.typ === 'Higienizacja') {
-    meta = 'Higienizacja';
-  } else if (asysta.length === 0) {
-    meta = swiadomyBrak ? esc(String(b.asystaUwaga).replace(/^BRAK ASYSTY[^:]*:?\s*/, '')) : 'Brak asysty';
-    klasaMeta += ' brak';
-  } else {
-    meta = 'Asysta: ' + asysta.map(function(a) {
-      var sameGodz = (a.od === b.od && a.do === b.do);
-      return esc(grOsobaNazwa(a.osobaId)) + (sameGodz ? '' : ' (' + esc(a.od) + '–' + esc(a.do) + ')');
-    }).join(', ');
-  }
-  if (b.asystaUwaga && !swiadomyBrak) meta += ' · ' + esc(b.asystaUwaga);
-
-  var plakietka = (b.typ !== 'Higienizacja' && asysta.length === 0)
-    ? '<span class="brak-asysty-tag">' +
-      '<svg class="ic-sm" style="width:12px;height:12px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>' +
-      'BRAK ASYSTY</span>'
-    : '';
-
-  return '<button type="button" class="gr-blok' + (b.typ === 'Higienizacja' ? ' higiena' : '') +
-    '" data-blok="' + esc(b.id) + '">' +
-    '<span class="gr-blok-czas">' + esc(b.od) + '–' + esc(b.do) + '</span>' +
-    '<span class="gr-blok-body">' +
-      '<span class="gr-blok-osoba">' + esc(grOsobaNazwa(b.osobaId)) + '</span>' +
-      '<span class="' + klasaMeta + '">' + meta + '</span>' + plakietka +
-    '</span>' +
-    grIkonaRek(rek, gab.nazwa + ' ' + b.od + '–' + b.do) +
-    '</button>';
-}
-
-function grBindRekIkony() {
-  document.querySelectorAll('.gr-rek-ic[data-rek]').forEach(function(el) {
-    el.addEventListener('click', function(e) {
-      e.stopPropagation();
-      grOtworzRek(this.getAttribute('data-rek'));
-    });
-  });
-}
-
-function grT2M(t) {
-  var p = String(t).split(':');
-  return parseInt(p[0], 10) * 60 + parseInt(p[1], 10);
-}
-function grM2T(m) {
-  return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
-}
-function grHM(m) {
-  var h = Math.floor(m / 60), mm = m % 60;
-  if (h && mm) return h + ' h ' + mm + ' min';
-  if (h) return h + ' h';
-  return mm + ' min';
-}
-
-// ── Edytor bloku ──────────────────────────────────────────────
-
-function grOtworzBlok(blokId, gabinetId, od, do_) {
-  var d = grDzienWpis(GR.dzien);
-  if (!d) return;
-  var blok = blokId ? (d.bloki || []).find(function(b) { return b.id === blokId; }) : null;
-  GR.edytowany = blok ? blok.id : null;
-
-  var gabId = blok ? blok.gabinetId : gabinetId;
-  var gab = (GM.dane.gabinety || []).find(function(g) { return g.id === gabId; });
-  var g = d.godziny;
-
-  document.getElementById('gr-blok-title').textContent = blok ? 'Edytuj blok' : 'Nowy blok';
-  document.getElementById('gr-blok-ctx').textContent =
-    (gab ? gab.nazwa : '—') + ' · ' + d.nazwaDnia + ' ' + parseInt(d.data.slice(8), 10) + ' ' +
-    MONTHS[GM.mies - 1] + ' ' + GM.rok + ' · klinika ' + g.open + '–' + g.close;
-  document.getElementById('gr-blok-modal').setAttribute('data-gabinet', gabId || '');
-
-  document.getElementById('gr-blok-typ').value = blok ? blok.typ : 'Lekarz';
-  document.getElementById('gr-blok-od').value = blok ? blok.od : (od || g.open);
-  document.getElementById('gr-blok-do').value = blok ? blok.do : (do_ || g.close);
-  document.getElementById('gr-blok-asysta-n').value =
-    (blok && blok.asystaWymagana !== null && blok.asystaWymagana !== undefined)
-      ? String(blok.asystaWymagana) : '1';
-  document.getElementById('gr-blok-uwaga').value = blok ? (blok.asystaUwaga || '') : '';
-
-  grWypelnijOsoby();
-  if (blok) document.getElementById('gr-blok-osoba').value = blok.osobaId;
-
-  grRenderAsysta(blok ? (blok.asysta || []) : []);
-  grOnTypChange();
-
-  document.getElementById('gr-blok-delete').style.display = blok ? 'block' : 'none';
-  document.getElementById('gr-blok-modal').style.display = 'flex';
-}
-
-function grWypelnijOsoby() {
-  var typ = document.getElementById('gr-blok-typ').value;
-  var grupa = (typ === 'Higienizacja') ? 'higienistka' : 'lekarz';
-  var sel = document.getElementById('gr-blok-osoba');
-  var lista = (GR.dane.personel || []).filter(function(p) { return p.grupa === grupa; });
-
-  document.getElementById('gr-blok-osoba-lbl').textContent =
-    (typ === 'Higienizacja') ? 'Higienistka' : 'Lekarz';
-
-  if (!lista.length) {
-    sel.innerHTML = '<option value="">— brak osób z tą rolą w zespole —</option>';
-    return;
-  }
-  sel.innerHTML = '<option value="">— wybierz —</option>' + lista.map(function(p) {
-    var tagi = (p.tagi || []).length ? ' — ' + p.tagi.slice(0, 2).join(', ') : '';
-    return '<option value="' + esc(p.id) + '">' + esc(p.imie + ' ' + p.nazwisko + tagi) + '</option>';
-  }).join('');
-}
-
-function grOnTypChange() {
-  var typ = document.getElementById('gr-blok-typ').value;
-  var higiena = (typ === 'Higienizacja');
-  document.getElementById('gr-asysta-sekcja').style.display = higiena ? 'none' : 'block';
-  grOnAsystaNChange();
-}
-
-function grOnAsystaNChange() {
-  var n = document.getElementById('gr-blok-asysta-n').value;
-  document.getElementById('gr-uwaga-field').style.display = (n === '1') ? 'none' : 'block';
-}
-
-function grRenderAsysta(lista) {
-  var wrap = document.getElementById('gr-asysta-lista');
-  var asystentki = (GR.dane.personel || []).filter(function(p) { return p.grupa === 'asystentka' || p.grupa === 'higienistka'; });
-
-  if (!asystentki.length) {
-    wrap.innerHTML = '<div class="hint" style="padding:6px 0">Brak osób do asysty (asystentek ani higienistek) w zespole — dodaj je w zakładce Zespół.</div>';
-    return;
-  }
-  if (!lista.length) {
-    wrap.innerHTML = '<div class="hint" style="padding:6px 0">Nikt jeszcze nie przypisany.</div>';
-    return;
-  }
-
-  wrap.innerHTML = lista.map(function(a, i) {
-    var opts = asystentki.map(function(p) {
-      return '<option value="' + esc(p.id) + '"' + (p.id === a.osobaId ? ' selected' : '') + '>' +
-        esc(p.imie + ' ' + p.nazwisko) + '</option>';
-    }).join('');
-    return '<div class="gr-asysta-row" data-i="' + i + '">' +
-      '<select class="sel gr-as-osoba">' + opts + '</select>' +
-      '<input type="time" class="inp gr-as-od" value="' + esc(a.od) + '">' +
-      '<input type="time" class="inp gr-as-do" value="' + esc(a.do) + '">' +
-      '<button type="button" class="btn-icon gr-as-del" aria-label="Usuń asystę">' +
-      '<svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>' +
-      '</div>';
-  }).join('');
-
-  wrap.querySelectorAll('.gr-as-del').forEach(function(b) {
-    b.addEventListener('click', function() {
-      var i = parseInt(this.closest('[data-i]').getAttribute('data-i'), 10);
-      var cur = grZbierzAsyste();
-      cur.splice(i, 1);
-      grRenderAsysta(cur);
-    });
-  });
-}
-
-function grZbierzAsyste() {
-  var out = [];
-  document.querySelectorAll('#gr-asysta-lista .gr-asysta-row').forEach(function(row) {
-    var id = row.querySelector('.gr-as-osoba').value;
-    if (!id) return;
-    out.push({
-      osobaId: id,
-      od: row.querySelector('.gr-as-od').value,
-      do: row.querySelector('.gr-as-do').value
-    });
-  });
-  return out;
-}
-
-document.getElementById('gr-blok-typ').addEventListener('change', function() {
-  grWypelnijOsoby();
-  grOnTypChange();
-});
-document.getElementById('gr-blok-asysta-n').addEventListener('change', grOnAsystaNChange);
-
-document.getElementById('gr-asysta-add').addEventListener('click', function() {
-  var cur = grZbierzAsyste();
-  cur.push({
-    osobaId: '',
-    od: document.getElementById('gr-blok-od').value,
-    do: document.getElementById('gr-blok-do').value
-  });
-  var asystentki = (GR.dane.personel || []).filter(function(p) { return p.grupa === 'asystentka' || p.grupa === 'higienistka'; });
-  if (asystentki.length) cur[cur.length - 1].osobaId = asystentki[0].id;
-  grRenderAsysta(cur);
-});
-
-document.getElementById('gr-blok-close').addEventListener('click', function() {
-  document.getElementById('gr-blok-modal').style.display = 'none';
-});
-document.getElementById('gr-blok-modal').addEventListener('click', function(e) {
-  if (e.target === this) this.style.display = 'none';
-});
-
-// Zapisuje CAŁY dzień jednym wywołaniem (masterZapiszDzienGrafikuPelny) —
-// bierze pozostałe, niezmienione bloki tej realnej daty i dokłada/zamienia
-// ten jeden edytowany. Wcześniej blok i jego asysta szły dwoma osobnymi
-// zapytaniami, a potem doklejał się jeszcze reload całego (abstrakcyjnego)
-// szablonu — teraz to jedno zapytanie, tak samo jak w edytorze miesiąca.
-document.getElementById('gr-blok-save').addEventListener('click', function() {
-  var modal = document.getElementById('gr-blok-modal');
-  var typ = document.getElementById('gr-blok-typ').value;
-  var osobaId = document.getElementById('gr-blok-osoba').value;
-  if (!osobaId) { toast('Wybierz osobę.', false); return; }
-
-  var d = grDzienWpis(GR.dzien);
-  if (!d) { toast('Nie udało się ustalić dnia.', false); return; }
-
-  var blok = {
-    id: GR.edytowany || '',
-    gabinetId: modal.getAttribute('data-gabinet'),
-    typ: typ,
-    osobaId: osobaId,
-    od: document.getElementById('gr-blok-od').value,
-    do: document.getElementById('gr-blok-do').value,
-    asystaWymagana: (typ === 'Higienizacja') ? 0 : parseInt(document.getElementById('gr-blok-asysta-n').value, 10),
-    asystaUwaga: document.getElementById('gr-blok-uwaga').value,
-    asysta: (typ === 'Higienizacja') ? [] : grZbierzAsyste()
-  };
-
-  var pozostale = (d.bloki || []).filter(function(b) { return b.id !== GR.edytowany; });
-  var wszystkie = pozostale.concat([blok]);
-
-  gas('masterZapiszDzienGrafikuPelny', [M.token, GR.dzien, wszystkie], function(res) {
-    if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
-    if (!res || !res.ok) { toast((res && res.msg) || 'Nie udało się zapisać bloku.', false); return; }
-    modal.style.display = 'none';
-    wsConfirmPopup(GR.edytowany ? 'Zmieniono blok w grafiku.' : 'Dodano blok do grafiku.');
-    grZapiszWynikDnia(res.dzien);
-  });
-});
-
-document.getElementById('gr-blok-delete').addEventListener('click', function() {
-  var btn = this;
-  if (btn.getAttribute('data-armed') !== '1') {
-    btn.setAttribute('data-armed', '1');
-    btn.textContent = 'Na pewno? Kliknij ponownie, żeby usunąć';
-    clearTimeout(btn._t);
-    btn._t = setTimeout(function() {
-      btn.removeAttribute('data-armed');
-      btn.textContent = 'Usuń blok z grafiku';
-    }, 4000);
-    return;
-  }
-  btn.removeAttribute('data-armed');
-  btn.textContent = 'Usuń blok z grafiku';
-
-  var d = grDzienWpis(GR.dzien);
-  if (!d) return;
-  var pozostale = (d.bloki || []).filter(function(b) { return b.id !== GR.edytowany; });
-
-  gas('masterZapiszDzienGrafikuPelny', [M.token, GR.dzien, pozostale], function(res) {
-    if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
-    if (!res || !res.ok) { toast((res && res.msg) || 'Nie udało się usunąć.', false); return; }
-    document.getElementById('gr-blok-modal').style.display = 'none';
-    wsConfirmPopup('Usunięto blok z grafiku.');
-    grZapiszWynikDnia(res.dzien);
-  });
-});
-
-// Aktualizuje w pamięci realny stan dnia po zapisie/usunięciu i odświeża
-// wszystkie widoki, które mogą go pokazywać — Tydzień, Dzień i Miesiąc
-// to jedne i te same dane, więc zmiana w jednym musi być widoczna wszędzie.
-function grZapiszWynikDnia(dzienStan) {
-  if (!dzienStan || !GM.dane) return;
-  var idx = (GM.dane.dni || []).findIndex(function(x) { return x.data === dzienStan.data; });
-  if (idx !== -1) GM.dane.dni[idx] = dzienStan;
-  grRenderDzien();
-  if (GR.widok === 'tydzien') grRenderTydzien();
-  grRenderDniPasek();
-  gmRysuj();
-  gas('masterGrafikStanMiesiaca', [M.token, GM.rok, GM.mies], function(r2) {
-    if (r2 && r2.ok) { GM.stan = r2; gmRysujZaproszenie(); }
-  });
 }
 
 // ── Rekomendacje ──────────────────────────────────────────────
@@ -4544,25 +3637,6 @@ function adKontekst(a) {
 }
 
 // Pasek adnotacji obowiązujących w najbliższym wystąpieniu wybranego dnia.
-function adStrip() {
-  var wrap = document.getElementById('gr-adnot-strip');
-  if (!wrap || !GR.dane || !GR.dzien) return;
-  var lista = GR.dane.adnotacje || [];
-  if (!lista.length) { wrap.innerHTML = ''; return; }
-
-  // GR.dzien jest teraz realną datą (nie numerem dnia tygodnia) —
-  // bez przybliżania „najbliższej pasującej daty".
-  var ds = GR.dzien;
-
-  var akt = lista.filter(function(a) { return a.od <= ds && ds <= a.do; });
-  if (!akt.length) { wrap.innerHTML = ''; return; }
-
-  wrap.innerHTML = '<div class="ad-strip">' + akt.map(function(a) {
-    return '<div class="ad-item ' + esc(a.typ) + '"><div class="ad-item-b">' +
-      '<div class="ad-zakres">' + esc(ds) + adKontekst(a) + '</div>' + esc(a.tresc) + '</div></div>';
-  }).join('') + '</div>';
-}
-
 // ── Wydruk: zakres dat + filtry ───────────────────────────────
 
 document.getElementById('gr-print').addEventListener('click', function() {
