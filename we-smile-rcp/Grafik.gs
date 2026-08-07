@@ -3458,6 +3458,19 @@ function masterGrafikMaterializujMiesiac(token, rok, mies, zrodlo, nadpisz) {
  * wystąpienia każdego dnia tygodnia w miesiącu — to najbliższe temu,
  * co admin faktycznie ustawił jako swój typowy układ.
  */
+/**
+ * Rekomendacje z REALNEJ obsady, przypisane do KONKRETNYCH dat — od kiedy
+ * edytorem jest lista (a nie kafle odwołujące się do wiecznego szablonu),
+ * jedynym źródłem prawdy jest GrafikDni. Silnik rekomendacji rozumie tylko
+ * „tydzień" (bloki z polem .dzien 1–6), więc miesiąc dzielimy na PRAWDZIWE
+ * tygodnie kalendarzowe (poniedziałek–sobota) i dla KAŻDEGO z nich liczymy
+ * osobny komplet rekomendacji z JEGO WŁASNYCH, realnych danych — nie z
+ * jednego wzorca powielanego na cały miesiąc (tak jak wcześniej, z
+ * pierwszego wystąpienia każdego dnia tygodnia). Dzięki temu rekomendacja
+ * przy 14. dniu miesiąca naprawdę opisuje 14., a nie przypadkowo
+ * pierwszy poniedziałek — i różne tygodnie tego samego miesiąca mogą mieć
+ * zupełnie inne rekomendacje, tak jak różni się ich realna obsada.
+ */
 function masterGrafikRekomendacjeMiesiac(token, rok, mies) {
   if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
   const y = parseInt(rok, 10), m = parseInt(mies, 10);
@@ -3469,18 +3482,35 @@ function masterGrafikRekomendacjeMiesiac(token, rok, mies) {
   const ile = new Date(y, m, 0).getDate();
   const pfx = y + '-' + String(m).padStart(2, '0') + '-';
 
-  const widziane = {};
-  const bloki = [];
+  // klucz tygodnia (data poniedziałku, jako string — tylko do grupowania)
+  // -> { dzienTygodnia(1-6): data }
+  const tygodnie = {};
   for (let d = 1; d <= ile; d++) {
     const ds = pfx + String(d).padStart(2, '0');
-    const dow = new Date(ds + 'T12:00:00').getDay();
-    if (GRAFIK_DAYS.indexOf(dow) === -1 || widziane[dow]) continue;
-    widziane[dow] = true;
-    const stan = _grafikDzienStan(ds, ctx);
-    stan.bloki.forEach(b => bloki.push(Object.assign({ dzien: dow }, b)));
+    const dt = new Date(ds + 'T12:00:00');
+    const dow = dt.getDay();
+    if (GRAFIK_DAYS.indexOf(dow) === -1) continue;
+    const pon = new Date(dt);
+    pon.setDate(pon.getDate() - (dow - 1));
+    const klucz = pon.getFullYear() + '-' + String(pon.getMonth() + 1).padStart(2, '0') + '-' + String(pon.getDate()).padStart(2, '0');
+    if (!tygodnie[klucz]) tygodnie[klucz] = {};
+    tygodnie[klucz][dow] = ds;
   }
 
-  const rekomendacje = _grafikRekomendacje({ gabinety, bloki, personel });
+  const rekomendacje = [];
+  Object.keys(tygodnie).forEach(klucz => {
+    const dniTygodnia = tygodnie[klucz];
+    const bloki = [];
+    Object.keys(dniTygodnia).forEach(dowStr => {
+      const dow = parseInt(dowStr, 10);
+      const stan = _grafikDzienStan(dniTygodnia[dowStr], ctx);
+      stan.bloki.forEach(b => bloki.push(Object.assign({ dzien: dow }, b)));
+    });
+    _grafikRekomendacje({ gabinety, bloki, personel }).forEach(r => {
+      rekomendacje.push(Object.assign({}, r, { data: (r.dzien != null) ? (dniTygodnia[r.dzien] || null) : null }));
+    });
+  });
+
   return { ok: true, rok: y, mies: m, rekomendacje };
 }
 

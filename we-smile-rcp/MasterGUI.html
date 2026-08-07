@@ -65,6 +65,11 @@
 .grl2-day-num{font-size:15px;font-weight:800;color:var(--c-ink)}
 .grl2-day-name{font-size:12px;color:var(--c-muted);font-weight:600}
 .grl2-day-godz{font-size:11px;color:var(--c-muted);margin-left:auto}
+.grl2-rek-slot:empty{display:none}
+.grl2-rek-ikona{border:0;background:none;padding:1px;cursor:pointer;color:var(--c-accent);
+  display:inline-flex;align-items:center;animation:grl2RekPuls 1.6s ease-in-out infinite}
+.grl2-rek-ikona svg{width:17px;height:17px}
+@keyframes grl2RekPuls{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.18)}}
 .grl2-czysc{border:0;background:none;color:var(--c-muted);font-size:11px;font-weight:600;cursor:pointer;padding:2px 6px;border-radius:var(--radius-s);white-space:nowrap}
 .grl2-czysc:hover{background:var(--c-offwhite);color:var(--c-accent)}
 .grl2-gaby{display:flex;flex-direction:column;gap:10px}
@@ -2390,12 +2395,15 @@ function rgWersjeLoad() {
 // GR.dane: adnotacje/personel/gabinety dla Grafiku lekarza, Adnotacji,
 // Szablonów zmian itd. GR.rekomendacje: OSOBNO doładowywane z prawdziwej
 // obsady bieżąco przeglądanego miesiąca (masterGrafikRekomendacjeMiesiac)
-// — silnik rekomendacji rozumie „tydzień", więc dostaje jednotygodniowy
-// wycinek zbudowany z realnych, per-datowych bloków (patrz komentarz przy
-// masterGrafikRekomendacjeMiesiac w Grafik.gs). Stary masterGetGrafik już
-// nie zasila żadnej edycji — nic nie zapisuje do tamtego, martwego
+// — silnik rekomendacji rozumie „tydzień", więc dostaje realne tygodnie
+// kalendarzowe zbudowane z realnych, per-datowych bloków, a każda
+// rekomendacja wraca już przypisana do KONKRETNEJ daty (patrz komentarz
+// przy masterGrafikRekomendacjeMiesiac w Grafik.gs). Stary masterGetGrafik
+// już nie zasila żadnej edycji — nic nie zapisuje do tamtego, martwego
 // szablonu — więc jego pole rekomendacje byłoby zawsze puste.
-var GR = { dane: null, rekomendacje: [], filtrRek: null };
+// GR.rekomendacjeWgDaty grupuje to samo po dacie — pulsująca ikonka przy
+// każdym dniu w liście czyta wyłącznie stąd, bez przeglądania całej listy.
+var GR = { dane: null, rekomendacje: [], rekomendacjeWgDaty: {}, filtrRek: null };
 
 function grInit() {
   grLoad();
@@ -2416,7 +2424,14 @@ function grLoadRekomendacje() {
   gas('masterGrafikRekomendacjeMiesiac', [M.token, GM.rok, GM.mies], function(res) {
     if (!res || !res.ok) return;
     GR.rekomendacje = res.rekomendacje || [];
+    GR.rekomendacjeWgDaty = {};
+    GR.rekomendacje.forEach(function(r) {
+      if (!r.data) return;
+      if (!GR.rekomendacjeWgDaty[r.data]) GR.rekomendacjeWgDaty[r.data] = [];
+      GR.rekomendacjeWgDaty[r.data].push(r);
+    });
     grRenderLicznikRek();
+    grl2RysujIkonyRek();
   });
 }
 
@@ -2594,6 +2609,7 @@ function grl2DzienHtml(wpis) {
     '<div class="grl2-day-head">' +
       '<span class="grl2-day-num">' + parseInt(wpis.data.slice(8), 10) + '</span>' +
       '<span class="grl2-day-name">' + esc(wpis.nazwaDnia) + '</span>' +
+      '<span class="grl2-rek-slot">' + grl2RekIkonaHtml(wpis.data) + '</span>' +
       '<span class="grl2-day-godz">' + esc(wpis.godziny.open) + '–' + esc(wpis.godziny.close) + '</span>' +
       '<button type="button" class="grl2-zapisz" data-data="' + esc(wpis.data) + '">Zapisz dzień</button>' +
       (poniedzialek ? '<button type="button" class="grl2-czysc grl2-czysc-tydz" data-data="' + esc(wpis.data) + '">Wyczyść tydzień</button>' : '') +
@@ -2951,6 +2967,15 @@ document.getElementById('grl2-lista').addEventListener('click', function(e) {
   var zapisz = e.target.closest('.grl2-zapisz');
   if (zapisz) { grl2Zapisz(zapisz.getAttribute('data-data')); return; }
 
+  var rekIkona = e.target.closest('.grl2-rek-ikona');
+  if (rekIkona) {
+    var ds = rekIkona.getAttribute('data-data');
+    var wpis = grl2DzienWpis(ds);
+    var etykieta = wpis ? (parseInt(ds.slice(8), 10) + ' ' + wpis.nazwaDnia) : ds;
+    grOtworzRek({ dzien: ds, etykieta: etykieta });
+    return;
+  }
+
   var czyscDzien = e.target.closest('.grl2-czysc-dzien');
   if (czyscDzien) {
     grl2ArmowanaAkcja(czyscDzien, 'Na pewno?', function() {
@@ -3027,23 +3052,51 @@ function gwdRysuj(w) {
 
 // ── Rekomendacje ──────────────────────────────────────────────
 
+// Pulsująca, bordowa ikonka przy dniu w liście — jedyny wskaźnik, że
+// TEN KONKRETNY dzień ma otwarte sprawy (bez liczenia rekomendacji
+// kategorii "info", tak samo jak licznik na przycisku globalnym).
+// Kliknięcie otwiera ten sam modal co przycisk "Rekomendacje" u góry,
+// ale zawężony wyłącznie do tego dnia.
+function grl2RekIkonaHtml(ds) {
+  var lista = (GR.rekomendacjeWgDaty[ds] || []).filter(function(r) { return r.waga !== 'info'; });
+  if (!lista.length) return '';
+  var opis = lista.length + (lista.length === 1 ? ' rekomendacja na ten dzień' : ' rekomendacje na ten dzień');
+  return '<button type="button" class="grl2-rek-ikona" data-data="' + esc(ds) + '" aria-label="' + esc(opis) + '" title="' + esc(opis) + '">' +
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M12 7.5v5.5"/><path d="M12 16.7h.01"/></svg>' +
+  '</button>';
+}
+
+// Po każdym doładowaniu rekomendacji (zmiana miesiąca, zapis dnia/wielu
+// dni) odświeżamy TYLKO ikonki w już wyrenderowanej liście — bez
+// przebudowy całych dni, żeby nie tracić np. aktualnie otwartego stanu
+// edycji gdzie indziej na liście.
+function grl2RysujIkonyRek() {
+  document.querySelectorAll('#grl2-lista .grl2-day').forEach(function(el) {
+    var slot = el.querySelector('.grl2-rek-slot');
+    if (slot) slot.innerHTML = grl2RekIkonaHtml(el.getAttribute('data-data'));
+  });
+}
+
 function grOtworzRek(kontekst) {
   GR.filtrRek = kontekst || null;
+  GR.katRek = null;
   document.getElementById('gr-rek-title').textContent =
-    kontekst ? ('Rekomendacje — ' + kontekst) : 'Rekomendacje';
+    kontekst ? ('Rekomendacje — ' + kontekst.etykieta) : 'Rekomendacje';
   grRenderRek();
   document.getElementById('gr-rek-modal').style.display = 'flex';
 }
 
 function grRenderRek() {
-  var wszystkie = GR.rekomendacje || [];
+  var zakres = GR.filtrRek
+    ? (GR.rekomendacje || []).filter(function(r) { return r.data === GR.filtrRek.dzien; })
+    : (GR.rekomendacje || []);
   var kat = {};
-  wszystkie.forEach(function(r) { kat[r.kategoria] = (kat[r.kategoria] || 0) + 1; });
+  zakres.forEach(function(r) { kat[r.kategoria] = (kat[r.kategoria] || 0) + 1; });
 
   var aktywna = GR.katRek || null;
   var filtry = document.getElementById('gr-rek-filtry');
   filtry.innerHTML = '<button type="button" class="faq-cat-btn' + (!aktywna ? ' on' : '') +
-    '" data-kat="">Wszystko (' + wszystkie.length + ')</button>' +
+    '" data-kat="">Wszystko (' + zakres.length + ')</button>' +
     Object.keys(kat).map(function(k) {
       return '<button type="button" class="faq-cat-btn' + (aktywna === k ? ' on' : '') +
         '" data-kat="' + esc(k) + '">' + esc(k) + ' (' + kat[k] + ')</button>';
@@ -3055,13 +3108,13 @@ function grRenderRek() {
     });
   });
 
-  var lista = wszystkie.filter(function(r) {
+  var lista = zakres.filter(function(r) {
     return !aktywna || r.kategoria === aktywna;
   });
 
   var out = document.getElementById('gr-rek-lista');
   if (!lista.length) {
-    out.innerHTML = '<div class="faq-empty">Brak rekomendacji — grafik nie wymaga tu żadnej korekty.</div>';
+    out.innerHTML = '<div class="faq-empty">Brak rekomendacji' + (GR.filtrRek ? ' na ten dzień' : '') + ' — grafik nie wymaga tu żadnej korekty.</div>';
     return;
   }
   out.innerHTML = lista.map(function(r) {
