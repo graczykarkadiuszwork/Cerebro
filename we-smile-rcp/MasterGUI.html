@@ -274,6 +274,9 @@
 .gr-tyd-chip{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 4px;border-radius:999px;font-size:10px;font-weight:800}
 .gr-tyd-puste{font-size:11px;color:var(--c-muted);font-weight:600}
 .gr-tyd-brak{font-size:10.5px;color:var(--c-accent);font-weight:700;margin-top:auto}
+.gr-tyd-off,.gr-tyd-poza{cursor:default;background:var(--c-offwhite);border-style:dashed}
+.gr-tyd-poza{opacity:.55}
+.seg-btn.seg-off{opacity:.55}
 
 .gr-gab{background:var(--c-white);border:1px solid var(--c-border);border-radius:var(--radius-m);margin-bottom:12px;overflow:hidden}
 .gr-gab-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 14px;background:var(--c-offwhite);border-bottom:1px solid var(--c-border)}
@@ -885,7 +888,16 @@
         <div id="gm-kalendarz"><div class="hint">Ładowanie…</div></div>
       </div>
 
+      <!-- Tydzień/Dzień to POWIĘKSZENIA tego samego miesiąca — te same,
+           realne daty co w widoku Miesiąc, nie osobny, oderwany od dat
+           szablon. Nawigacja tygodniem/dniem może przejść do sąsiedniego
+           miesiąca — wtedy dociąga jego dane tak samo jak strzałki Miesiąca. -->
       <div id="gr-week-view" style="display:none">
+        <div class="month-nav">
+          <button id="gr-tyd-prev" class="btn-icon" type="button"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+          <span id="gr-tyd-label" class="month-label">—</span>
+          <button id="gr-tyd-next" class="btn-icon" type="button"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+        </div>
         <div class="gr-week-grid" id="gr-week-grid"><div class="hint">Ładowanie…</div></div>
       </div>
 
@@ -894,6 +906,11 @@
           <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
           Tydzień
         </button>
+        <div class="month-nav" style="margin-top:8px">
+          <button id="gr-dzien-prev" class="btn-icon" type="button"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+          <span id="gr-dzien-label" class="month-label">—</span>
+          <button id="gr-dzien-next" class="btn-icon" type="button"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+        </div>
         <div class="seg seg-scroll" id="gr-days" style="margin:10px 0 14px"></div>
 
         <div id="gr-adnot-strip"></div>
@@ -1595,6 +1612,11 @@ var M = { token: null, empId: null, mmEmpId: null, rgEmpId: null, mmYear: new Da
 
 var MONTHS = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec',
               'Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
+// Dopełniacz — jedyna poprawna forma po numerze dnia ("5 sierpnia", nie
+// "5 Sierpień"). MONTHS samo w sobie jest mianownikiem (nagłówki "Sierpień
+// 2026"), więc te dwie listy celowo się różnią.
+var MONTHS_DOP = ['stycznia','lutego','marca','kwietnia','maja','czerwca',
+                   'lipca','sierpnia','września','października','listopada','grudnia'];
 
 var ICO = {
   warn: '<svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>'
@@ -2422,13 +2444,19 @@ function rgWersjeLoad() {
 // tu tylko je pokazujemy, więc podmiana silnika na AI nic tu nie zmieni.
 // ════════════════════════════════════════════════════════════
 
-var GR = { dane: null, dzien: 1, edytowany: null, filtrRek: null, widok: 'miesiac' };
+// GR.dzien: realna data (YYYY-MM-DD), NIE numer dnia tygodnia — Tydzień
+// i Dzień muszą pokazywać te same, konkretne daty co Miesiąc, inaczej to
+// dwa różne grafiki pod jednym przełącznikiem. GR.dane wciąż niesie
+// rekomendacje/adnotacje/szablon (silnik rekomendacji liczy się z osobnego,
+// wciąż tygodniowego wzorca — patrz komentarz przy grRekDlaDnia), ale
+// źródłem PRAWDY o obsadzie dla Tydzień/Dzień jest już wyłącznie GM (miesiąc).
+var GR = { dane: null, dzien: null, edytowany: null, filtrRek: null, widok: 'miesiac' };
 
 function grInit() {
   grLoad();
   // Miesiąc jest domyślnym wejściem do grafiku — tydzień i dzień to
   // powiększenia tego samego miesiąca, nie osobne miejsca pracy.
-  gmLoad();
+  gmLoad(function() { if (GR.widok === 'tydzien') grRenderTydzien(); if (GR.widok === 'dzien') grRenderDniPasek(); });
 }
 
 function grLoad(cb) {
@@ -2440,15 +2468,12 @@ function grLoad(cb) {
       return;
     }
     GR.dane = res;
-    grRenderDni();
-    grRenderDzien();
-    grRenderTydzien();
     grRenderLicznikRek();
     if (cb) cb();
   });
 }
 
-// ── Widok tygodnia — kafle Pn-So, wejście domyślne do zakładki Grafik ──
+// ── Widok tygodnia/dnia — te same realne daty co Miesiąc, tylko powiększone ──
 
 document.getElementById('gr-view-toggle').addEventListener('click', function(e) {
   var btn = e.target.closest('[data-grview]');
@@ -2456,6 +2481,11 @@ document.getElementById('gr-view-toggle').addEventListener('click', function(e) 
   grSwitchView(btn.getAttribute('data-grview'));
 });
 document.getElementById('gr-day-back').addEventListener('click', function() { grSwitchView('tydzien'); });
+
+document.getElementById('gr-tyd-prev').addEventListener('click', function() { grPrzesunDzien(-7, grRenderTydzien); });
+document.getElementById('gr-tyd-next').addEventListener('click', function() { grPrzesunDzien(7, grRenderTydzien); });
+document.getElementById('gr-dzien-prev').addEventListener('click', function() { grPrzesunDzien(-1, function() { grRenderDniPasek(); grRenderDzien(); }); });
+document.getElementById('gr-dzien-next').addEventListener('click', function() { grPrzesunDzien(1, function() { grRenderDniPasek(); grRenderDzien(); }); });
 
 function grSwitchView(widok) {
   GR.widok = widok;
@@ -2465,7 +2495,8 @@ function grSwitchView(widok) {
   document.getElementById('gr-month-view').style.display = widok === 'miesiac' ? 'block' : 'none';
   document.getElementById('gr-week-view').style.display = widok === 'tydzien' ? 'block' : 'none';
   document.getElementById('gr-day-view').style.display = widok === 'dzien' ? 'block' : 'none';
-  if (widok === 'dzien') { grRenderDni(); grRenderDzien(); }
+  if (widok === 'tydzien') grRenderTydzien();
+  if (widok === 'dzien') { grRenderDniPasek(); grRenderDzien(); }
   if (widok === 'miesiac' && !GM.dane) gmLoad();
 }
 
@@ -2632,7 +2663,7 @@ function gdzOtworz(data) {
   var dt = new Date(data + 'T12:00:00');
   var dniPl = ['Niedziela','Poniedziałek','Wtorek','Środa','Czwartek','Piątek','Sobota'];
   document.getElementById('gdz-title').textContent =
-    dniPl[dt.getDay()] + ', ' + dt.getDate() + ' ' + MONTHS[GM.mies - 1].toLowerCase() + ' ' + GM.rok;
+    dniPl[dt.getDay()] + ', ' + dt.getDate() + ' ' + MONTHS_DOP[GM.mies - 1] + ' ' + GM.rok;
   document.getElementById('gdz-hint').textContent =
     'Godziny otwarcia tego dnia: ' + (d.godziny ? d.godziny.open + '–' + d.godziny.close : '—') +
     '. Zaznacz gabinety, które pracują, i obsadź każdy z nich.';
@@ -3052,36 +3083,104 @@ function gwdRysuj(w) {
   document.getElementById('gwd-page').innerHTML = html + '</tbody></table>';
 }
 
+// ── Tydzień/Dzień: te same realne daty co Miesiąc (GM), tylko powiększone ──
+
+function grDzienWpis(data) {
+  return GM.dane && (GM.dane.dni || []).find(function(x) { return x.data === data; });
+}
+
+// Ustala/waliduje kotwicę dnia dla Tydzień/Dzień: musi być realną datą
+// z AKTUALNIE załadowanego miesiąca GM. Domyślnie dzisiaj (jeśli mieści
+// się w tym miesiącu), inaczej pierwszy dzień roboczy miesiąca.
+function grDzienAnchor() {
+  if (!GM.dane) return null;
+  if (GR.dzien && grDzienWpis(GR.dzien)) return GR.dzien;
+  var dzis = todayStr();
+  if (grDzienWpis(dzis)) { GR.dzien = dzis; return GR.dzien; }
+  var pierwszyRob = (GM.dane.dni || []).find(function(d) { return d.czynny; });
+  GR.dzien = pierwszyRob ? pierwszyRob.data : ((GM.dane.dni || [])[0] || {}).data || null;
+  return GR.dzien;
+}
+
+function grNazwaKrotka(ds) {
+  var nazwy = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So'];
+  return nazwy[new Date(ds + 'T12:00:00').getDay()];
+}
+
+// 6 kolejnych dat (Pn–Sb) obejmujących kotwicę — z ich realnymi wpisami
+// z GM, o ile mieszczą się w załadowanym miesiącu (skrajne tygodnie mogą
+// wystawać poza niego — te komórki są nieinteraktywne).
+function grTydzienZakres(anchor) {
+  var dt = new Date(anchor + 'T12:00:00');
+  var offset = (dt.getDay() + 6) % 7; // Pn = 0
+  var poniedzialek = new Date(dt); poniedzialek.setDate(dt.getDate() - offset);
+  var out = [];
+  for (var i = 0; i < 6; i++) {
+    var d = new Date(poniedzialek); d.setDate(poniedzialek.getDate() + i);
+    var ds = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    out.push({ data: ds, wpis: grDzienWpis(ds) });
+  }
+  return out;
+}
+
+// Przesuwa kotwicę o `dni` dni; jeśli ląduje w innym miesiącu, dociąga go
+// dokładnie tak samo jak strzałki widoku Miesiąc.
+function grPrzesunDzien(dni, cb) {
+  var anchor = grDzienAnchor();
+  if (!anchor) return;
+  var dt = new Date(anchor + 'T12:00:00');
+  dt.setDate(dt.getDate() + dni);
+  var ds = dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
+  var r = dt.getFullYear(), m = dt.getMonth() + 1;
+  GR.dzien = ds;
+  if (r !== GM.rok || m !== GM.mies) {
+    GM.rok = r; GM.mies = m;
+    gmLoad(function() { if (cb) cb(); });
+  } else if (cb) cb();
+}
+
 function grRenderTydzien() {
   var box = document.getElementById('gr-week-grid');
-  if (!GR.dane) { box.innerHTML = '<div class="hint">Ładowanie…</div>'; return; }
-  box.innerHTML = GR.dane.dni.map(function(nr) { return grTydzienKomorkaHtml(nr); }).join('');
+  var anchor = grDzienAnchor();
+  if (!anchor) { box.innerHTML = '<div class="hint">Ładowanie…</div>'; return; }
+  var tydz = grTydzienZakres(anchor);
+  document.getElementById('gr-tyd-label').textContent =
+    parseInt(tydz[0].data.slice(8), 10) + '–' + parseInt(tydz[5].data.slice(8), 10) + ' ' + MONTHS[GM.mies - 1] + ' ' + GM.rok;
+  box.innerHTML = tydz.map(function(t) { return grTydzienKomorkaHtml(t); }).join('');
   box.querySelectorAll('[data-gr-tyd-dzien]').forEach(function(el) {
     el.addEventListener('click', function(e) {
       if (e.target.closest('.gr-rek-ic')) return;
-      GR.dzien = parseInt(this.getAttribute('data-gr-tyd-dzien'), 10);
+      GR.dzien = this.getAttribute('data-gr-tyd-dzien');
       grSwitchView('dzien');
     });
   });
   grBindRekIkony();
 }
 
-function grTydzienKomorkaHtml(nr) {
-  var d = GR.dane;
-  var g = d.godziny[nr];
-  var bloki = (d.bloki || []).filter(function(b) { return b.dzien === nr; });
-  var rek = grRekDlaDnia(nr);
+function grTydzienKomorkaHtml(t) {
+  var nr = parseInt(t.data.slice(8), 10);
+  if (!t.wpis) {
+    return '<div class="gr-tyd-cell gr-tyd-poza"><span class="gr-tyd-nazwa">' + grNazwaKrotka(t.data) + ' ' + nr + '</span>' +
+      '<span class="gr-tyd-puste">poza miesiącem</span></div>';
+  }
+  var d = t.wpis;
+  if (!d.czynny) {
+    return '<div class="gr-tyd-cell gr-tyd-off"><span class="gr-tyd-nazwa">' + esc(d.nazwaDnia) + ' ' + nr + '</span>' +
+      '<span class="gr-tyd-puste">zamknięte</span></div>';
+  }
+  var bloki = d.bloki || [];
+  var rek = grRekDlaDnia(d);
   var brakAsysty = bloki.filter(function(b) {
     return b.typ !== 'Higienizacja' && !(b.asysta || []).length && !/BRAK ASYSTY/.test(b.asystaUwaga || '');
   }).length;
 
   var perGab = {};
   bloki.forEach(function(b) { (perGab[b.gabinetId] = perGab[b.gabinetId] || []).push(b); });
-  var wiersze = (d.gabinety || []).map(function(gab) {
+  var wiersze = (GM.dane.gabinety || []).map(function(gab) {
     var lista = (perGab[gab.id] || []).sort(function(a, b) { return grT2M(a.od) - grT2M(b.od); });
     if (!lista.length) return '';
     var chipy = lista.map(function(b) {
-      var os = (d.personel || []).find(function(p) { return p.id === b.osobaId; });
+      var os = gmOsoba(b.osobaId);
       var kolor = os ? _rolaKolor(os) : '#8A93A6';
       var inicjaly = os ? ((os.imie[0] || '') + (os.nazwisko[0] || '')) : '?';
       return '<span class="gr-tyd-chip" style="background:' + kolor + '26;color:' + kolor + '" title="' +
@@ -3095,36 +3194,43 @@ function grTydzienKomorkaHtml(nr) {
   // Div, nie button: kafel zawiera przycisk ikony rekomendacji (grIkonaRek) —
   // button-w-buttonie jest nieprawidłowym HTML-em i przeglądarka po cichu
   // domyka zewnętrzny element przy parsowaniu, ucinając resztę kafelka.
-  return '<div class="gr-tyd-cell" data-gr-tyd-dzien="' + nr + '">' +
-    '<div class="gr-tyd-head"><span class="gr-tyd-nazwa">' + esc(g.nazwa) + '</span>' + grIkonaRek(rek, g.nazwa) + '</div>' +
-    '<span class="gr-tyd-godz">' + esc(g.open) + '–' + esc(g.close) + '</span>' +
+  return '<div class="gr-tyd-cell" data-gr-tyd-dzien="' + esc(d.data) + '">' +
+    '<div class="gr-tyd-head"><span class="gr-tyd-nazwa">' + esc(d.nazwaDnia) + ' ' + nr + '</span>' + grIkonaRek(rek, d.nazwaDnia) + '</div>' +
+    '<span class="gr-tyd-godz">' + esc(d.godziny.open) + '–' + esc(d.godziny.close) + '</span>' +
     (wiersze || '<span class="gr-tyd-puste">brak obsady</span>') +
     (brakAsysty ? '<span class="gr-tyd-brak">' + brakAsysty + '× brak asysty</span>' : '') +
     '</div>';
 }
 
-function grRenderDni() {
+function grRenderDniPasek() {
   var wrap = document.getElementById('gr-days');
-  var d = GR.dane;
-  wrap.innerHTML = d.dni.map(function(nr) {
-    var krot = d.godziny[nr].nazwa.slice(0, 3);
-    var ile = grRekDlaDnia(nr).length;
-    return '<button type="button" class="seg-btn' + (nr === GR.dzien ? ' on' : '') +
-      '" data-dzien="' + nr + '">' + esc(krot) +
-      (ile ? ' <span class="gr-badge">' + ile + '</span>' : '') + '</button>';
+  var anchor = grDzienAnchor();
+  if (!anchor) { wrap.innerHTML = ''; return; }
+  var tydz = grTydzienZakres(anchor);
+  wrap.innerHTML = tydz.map(function(t) {
+    var nr = parseInt(t.data.slice(8), 10);
+    var krot = t.wpis ? t.wpis.nazwaDnia.slice(0, 3) : grNazwaKrotka(t.data);
+    var ile = t.wpis ? grRekDlaDnia(t.wpis).length : 0;
+    return '<button type="button" class="seg-btn' + (t.data === anchor ? ' on' : '') +
+      (t.wpis && !t.wpis.czynny ? ' seg-off' : '') + '" data-dzien="' + esc(t.data) + '">' +
+      esc(krot) + ' ' + nr + (ile ? ' <span class="gr-badge">' + ile + '</span>' : '') + '</button>';
   }).join('');
   wrap.querySelectorAll('[data-dzien]').forEach(function(b) {
     b.addEventListener('click', function() {
-      GR.dzien = parseInt(this.getAttribute('data-dzien'), 10);
-      grRenderDni();
+      GR.dzien = this.getAttribute('data-dzien');
+      grRenderDniPasek();
       grRenderDzien();
     });
   });
 }
 
-function grRekDlaDnia(nr) {
-  if (!GR.dane) return [];
-  return (GR.dane.rekomendacje || []).filter(function(r) { return r.dzien === nr; });
+// Rekomendacje wciąż liczy osobny, tygodniowy silnik (nieprzeliczany per
+// realny dzień miesiąca) — dopasowanie po dniu tygodnia jest sygnałem
+// orientacyjnym ("ten dzień tygodnia zwykle ma tu problem"), nie precyzyjną
+// informacją o TEJ dacie, jeśli już ją ręcznie zmieniono.
+function grRekDlaDnia(wpis) {
+  if (!GR.dane || !wpis) return [];
+  return (GR.dane.rekomendacje || []).filter(function(r) { return r.dzien === wpis.dzienTygodnia; });
 }
 
 function grRenderLicznikRek() {
@@ -3149,26 +3255,39 @@ function grIkonaRek(lista, tytul) {
 }
 
 function grRenderDzien() {
-  var d = GR.dane;
-  var nr = GR.dzien;
-  var g = d.godziny[nr];
+  var anchor = grDzienAnchor();
+  if (!anchor) { document.getElementById('gr-grid').innerHTML = '<div class="hint">Ładowanie…</div>'; return; }
+  var d = grDzienWpis(anchor);
+  if (!d) { document.getElementById('gr-grid').innerHTML = '<div class="hint">Brak danych dla tego dnia.</div>'; return; }
 
+  var etykieta = d.nazwaDnia + ', ' + parseInt(d.data.slice(8), 10) + ' ' + MONTHS_DOP[GM.mies - 1] + ' ' + GM.rok;
+  document.getElementById('gr-dzien-label').textContent = etykieta;
   adStrip();
-  document.getElementById('gr-day-head').innerHTML =
-    '<span class="gr-day-name">' + esc(g.nazwa) + '</span>' +
-    '<span class="gr-day-okno">klinika czynna ' + esc(g.open) + '–' + esc(g.close) + '</span>' +
-    grIkonaRek(grRekDlaDnia(nr), g.nazwa);
 
-  if (!d.gabinety.length) {
+  if (!d.czynny) {
+    document.getElementById('gr-day-head').innerHTML =
+      '<span class="gr-day-name">' + esc(etykieta) + '</span><span class="gr-day-okno">klinika nieczynna</span>';
+    document.getElementById('gr-grid').innerHTML = '<div class="hint">Klinika jest w tym dniu zamknięta.</div>';
+    return;
+  }
+
+  var g = d.godziny;
+  document.getElementById('gr-day-head').innerHTML =
+    '<span class="gr-day-name">' + esc(etykieta) + '</span>' +
+    '<span class="gr-day-okno">klinika czynna ' + esc(g.open) + '–' + esc(g.close) + '</span>' +
+    grIkonaRek(grRekDlaDnia(d), d.nazwaDnia);
+
+  var gabinety = GM.dane.gabinety || [];
+  if (!gabinety.length) {
     document.getElementById('gr-grid').innerHTML =
       '<div class="hint">Brak gabinetów. Dodaj je przyciskiem „Gabinety".</div>';
     grBindRekIkony();
     return;
   }
 
-  var html = d.gabinety.map(function(gab) {
+  var html = gabinety.map(function(gab) {
     var bloki = (d.bloki || []).filter(function(b) {
-      return b.dzien === nr && b.gabinetId === gab.id;
+      return b.gabinetId === gab.id;
     }).sort(function(a, b) { return grT2M(a.od) - grT2M(b.od); });
 
     var oknoOd = grT2M(g.open), oknoDo = grT2M(g.close);
@@ -3285,17 +3404,19 @@ function grHM(m) {
 // ── Edytor bloku ──────────────────────────────────────────────
 
 function grOtworzBlok(blokId, gabinetId, od, do_) {
-  var d = GR.dane;
+  var d = grDzienWpis(GR.dzien);
+  if (!d) return;
   var blok = blokId ? (d.bloki || []).find(function(b) { return b.id === blokId; }) : null;
   GR.edytowany = blok ? blok.id : null;
 
   var gabId = blok ? blok.gabinetId : gabinetId;
-  var gab = d.gabinety.find(function(g) { return g.id === gabId; });
-  var g = d.godziny[GR.dzien];
+  var gab = (GM.dane.gabinety || []).find(function(g) { return g.id === gabId; });
+  var g = d.godziny;
 
   document.getElementById('gr-blok-title').textContent = blok ? 'Edytuj blok' : 'Nowy blok';
   document.getElementById('gr-blok-ctx').textContent =
-    (gab ? gab.nazwa : '—') + ' · ' + g.nazwa + ' · klinika ' + g.open + '–' + g.close;
+    (gab ? gab.nazwa : '—') + ' · ' + d.nazwaDnia + ' ' + parseInt(d.data.slice(8), 10) + ' ' +
+    MONTHS[GM.mies - 1] + ' ' + GM.rok + ' · klinika ' + g.open + '–' + g.close;
   document.getElementById('gr-blok-modal').setAttribute('data-gabinet', gabId || '');
 
   document.getElementById('gr-blok-typ').value = blok ? blok.typ : 'Lekarz';
@@ -3423,36 +3544,41 @@ document.getElementById('gr-blok-modal').addEventListener('click', function(e) {
   if (e.target === this) this.style.display = 'none';
 });
 
+// Zapisuje CAŁY dzień jednym wywołaniem (masterZapiszDzienGrafikuPelny) —
+// bierze pozostałe, niezmienione bloki tej realnej daty i dokłada/zamienia
+// ten jeden edytowany. Wcześniej blok i jego asysta szły dwoma osobnymi
+// zapytaniami, a potem doklejał się jeszcze reload całego (abstrakcyjnego)
+// szablonu — teraz to jedno zapytanie, tak samo jak w edytorze miesiąca.
 document.getElementById('gr-blok-save').addEventListener('click', function() {
   var modal = document.getElementById('gr-blok-modal');
   var typ = document.getElementById('gr-blok-typ').value;
   var osobaId = document.getElementById('gr-blok-osoba').value;
   if (!osobaId) { toast('Wybierz osobę.', false); return; }
 
+  var d = grDzienWpis(GR.dzien);
+  if (!d) { toast('Nie udało się ustalić dnia.', false); return; }
+
   var blok = {
     id: GR.edytowany || '',
     gabinetId: modal.getAttribute('data-gabinet'),
-    dzien: GR.dzien,
     typ: typ,
     osobaId: osobaId,
     od: document.getElementById('gr-blok-od').value,
     do: document.getElementById('gr-blok-do').value,
     asystaWymagana: (typ === 'Higienizacja') ? 0 : parseInt(document.getElementById('gr-blok-asysta-n').value, 10),
-    asystaUwaga: document.getElementById('gr-blok-uwaga').value
+    asystaUwaga: document.getElementById('gr-blok-uwaga').value,
+    asysta: (typ === 'Higienizacja') ? [] : grZbierzAsyste()
   };
 
-  var asysta = (typ === 'Higienizacja') ? [] : grZbierzAsyste();
+  var pozostale = (d.bloki || []).filter(function(b) { return b.id !== GR.edytowany; });
+  var wszystkie = pozostale.concat([blok]);
 
-  gas('masterSaveGrafikBlok', [M.token, blok], function(res) {
+  gas('masterZapiszDzienGrafikuPelny', [M.token, GR.dzien, wszystkie], function(res) {
     if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
     if (!res || !res.ok) { toast((res && res.msg) || 'Nie udało się zapisać bloku.', false); return; }
-
-    gas('masterSetGrafikAsysta', [M.token, res.id, asysta], function(r2) {
-      if (r2 && !r2.ok && r2.msg) { toast(r2.msg, false); }
-      modal.style.display = 'none';
-      wsConfirmPopup(GR.edytowany ? 'Zmieniono blok w grafiku.' : 'Dodano blok do grafiku.');
-      grLoad();
-    });
+    modal.style.display = 'none';
+    wsConfirmPopup(GR.edytowany ? 'Zmieniono blok w grafiku.' : 'Dodano blok do grafiku.');
+    grZapiszWynikDnia(res.dzien);
   });
 });
 
@@ -3470,14 +3596,35 @@ document.getElementById('gr-blok-delete').addEventListener('click', function() {
   }
   btn.removeAttribute('data-armed');
   btn.textContent = 'Usuń blok z grafiku';
-  gas('masterDeleteGrafikBlok', [M.token, GR.edytowany], function(res) {
+
+  var d = grDzienWpis(GR.dzien);
+  if (!d) return;
+  var pozostale = (d.bloki || []).filter(function(b) { return b.id !== GR.edytowany; });
+
+  gas('masterZapiszDzienGrafikuPelny', [M.token, GR.dzien, pozostale], function(res) {
     if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
     if (!res || !res.ok) { toast((res && res.msg) || 'Nie udało się usunąć.', false); return; }
     document.getElementById('gr-blok-modal').style.display = 'none';
     wsConfirmPopup('Usunięto blok z grafiku.');
-    grLoad();
+    grZapiszWynikDnia(res.dzien);
   });
 });
+
+// Aktualizuje w pamięci realny stan dnia po zapisie/usunięciu i odświeża
+// wszystkie widoki, które mogą go pokazywać — Tydzień, Dzień i Miesiąc
+// to jedne i te same dane, więc zmiana w jednym musi być widoczna wszędzie.
+function grZapiszWynikDnia(dzienStan) {
+  if (!dzienStan || !GM.dane) return;
+  var idx = (GM.dane.dni || []).findIndex(function(x) { return x.data === dzienStan.data; });
+  if (idx !== -1) GM.dane.dni[idx] = dzienStan;
+  grRenderDzien();
+  if (GR.widok === 'tydzien') grRenderTydzien();
+  grRenderDniPasek();
+  gmRysuj();
+  gas('masterGrafikStanMiesiaca', [M.token, GM.rok, GM.mies], function(r2) {
+    if (r2 && r2.ok) { GM.stan = r2; gmRysujZaproszenie(); }
+  });
+}
 
 // ── Rekomendacje ──────────────────────────────────────────────
 
@@ -4399,18 +4546,13 @@ function adKontekst(a) {
 // Pasek adnotacji obowiązujących w najbliższym wystąpieniu wybranego dnia.
 function adStrip() {
   var wrap = document.getElementById('gr-adnot-strip');
-  if (!wrap || !GR.dane) return;
+  if (!wrap || !GR.dane || !GR.dzien) return;
   var lista = GR.dane.adnotacje || [];
   if (!lista.length) { wrap.innerHTML = ''; return; }
 
-  // Najbliższa data odpowiadająca wybranemu dniowi tygodnia.
-  var d = new Date();
-  for (var i = 0; i < 7; i++) {
-    if (d.getDay() === GR.dzien) break;
-    d.setDate(d.getDate() + 1);
-  }
-  var ds = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') +
-           '-' + String(d.getDate()).padStart(2, '0');
+  // GR.dzien jest teraz realną datą (nie numerem dnia tygodnia) —
+  // bez przybliżania „najbliższej pasującej daty".
+  var ds = GR.dzien;
 
   var akt = lista.filter(function(a) { return a.od <= ds && ds <= a.do; });
   if (!akt.length) { wrap.innerHTML = ''; return; }

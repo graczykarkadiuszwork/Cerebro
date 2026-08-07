@@ -2180,17 +2180,14 @@ function masterGrafikWydruk(token, opts) {
   personel.forEach(p => { osobaMap[p.id] = p.imie + ' ' + p.nazwisko; });
   const nazwaOsoby = id => osobaMap[id] || (_czyAsystaZew(id) ? _labelAsystaZew(id) : id);
 
-  const bloki = _grafikBlokiAll();
-  const asysta = _grafikAsystaAll();
-  const asystaWg = {};
-  asysta.forEach(a => {
-    if (!asystaWg[a.blokId]) asystaWg[a.blokId] = [];
-    asystaWg[a.blokId].push(a);
-  });
-
+  // Realny stan KAŻDEJ daty (bloki nadpisane per dzień albo, tylko gdy
+  // dzień nie był jeszcze ruszany, wzorcowy szablon) — dokładnie to samo
+  // źródło prawdy co edytor miesiąca. Wcześniej ten wydruk czytał wprost
+  // z wiecznego szablonu tygodniowego, więc pokazywałby co innego niż
+  // faktyczny grafik, gdy tydzień 2 różni się od tygodnia 1.
+  const ctx = _grafikKontekstDni();
   const adnotacje = _adnotacjeAll();
 
-  // Rzutowanie szablonu tygodniowego na kolejne daty zakresu.
   const dni = [];
   const kursor = new Date(od + 'T12:00:00');
   const koniec = new Date(do_ + 'T12:00:00');
@@ -2203,8 +2200,8 @@ function masterGrafikWydruk(token, opts) {
     kursor.setDate(kursor.getDate() + 1);
     if (GRAFIK_DAYS.indexOf(dow) === -1) continue; // niedziela — klinika nieczynna
 
-    const wDniu = bloki
-      .filter(b => b.dzien === dow)
+    const stan = _grafikDzienStan(ds, ctx);
+    const wDniu = stan.bloki
       .filter(b => !filtrGab || filtrGab.indexOf(b.gabinetId) !== -1)
       .filter(b => !filtrOsob || filtrOsob.indexOf(b.osobaId) !== -1)
       .filter(b => !godzOd || !godzDo || _zakresyNachodza(b.od, b.do, godzOd, godzDo))
@@ -2217,8 +2214,8 @@ function masterGrafikWydruk(token, opts) {
         osobaId: b.osobaId,
         typ: b.typ,
         od: b.od, do: b.do,
-        asysta: (asystaWg[b.id] || []).map(a => nazwaOsoby(a.osobaId)),
-        brakAsysty: b.typ === BLOK_LEKARZ && !(asystaWg[b.id] || []).length,
+        asysta: (b.asysta || []).map(a => nazwaOsoby(a.osobaId)),
+        brakAsysty: b.typ === BLOK_LEKARZ && !(b.asysta || []).length,
         uwaga: b.asystaUwaga || ''
       }));
 
