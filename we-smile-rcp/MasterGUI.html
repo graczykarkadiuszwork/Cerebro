@@ -149,6 +149,29 @@
 .hd-trend-bar:hover{background:var(--c-accent)}
 .hd-trend-empty{color:var(--c-muted);font-size:12.5px;align-self:center}
 
+.hd-subtabs{display:flex;gap:8px;margin-bottom:16px}
+.hd-subtab{flex:1;padding:11px 14px;border-radius:var(--radius-m);border:1.5px solid var(--c-border);background:var(--c-white);color:var(--c-muted);font-weight:700;font-size:13.5px;cursor:pointer;font-family:inherit}
+.hd-subtab.on{border-color:var(--c-primary);color:var(--c-primary);background:var(--c-primary-tint)}
+
+/* Listy "Dodatkowe informacje" — ten sam język co gr-rek-item
+   (obwódka po lewej wg wagi), żeby Strona główna wizualnie pasowała do
+   reszty aplikacji zamiast wprowadzać osobny system. */
+.hd-insighty{display:flex;flex-direction:column;gap:6px}
+.hd-insight{padding:9px 12px;border-radius:var(--radius-s);border-left:3px solid var(--c-border);background:var(--c-offwhite);font-size:13px;line-height:1.45;color:var(--c-ink)}
+.hd-insight.krytyczna{border-left-color:var(--c-accent);background:var(--c-accent-tint)}
+.hd-insight.wazna{border-left-color:#B8860B}
+.hd-insight.sugestia{border-left-color:var(--c-primary)}
+.hd-insight.info{border-left-color:var(--c-success)}
+
+/* Paski obłożenia (gabinety / dni tygodnia) w "Grafik — podsumowanie". */
+.hd-bars{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.hd-bar-row{display:flex;align-items:center;gap:10px}
+.hd-bar-lbl{width:120px;flex-shrink:0;font-size:12.5px;font-weight:700;color:var(--c-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hd-bar-track{flex:1;height:12px;border-radius:999px;background:var(--c-field);overflow:hidden}
+.hd-bar-fill{height:100%;border-radius:999px;width:0;background:var(--c-primary);transition:width .6s var(--ease-snap,cubic-bezier(.4,0,.2,1))}
+.hd-bar-fill.low{background:var(--c-accent)}
+.hd-bar-val{width:44px;flex-shrink:0;text-align:right;font-size:12px;font-weight:700;color:var(--c-muted);font-variant-numeric:tabular-nums}
+
 /* ── Raporty: kopia zapasowa (Dysk Google) ── */
 .rp-backup-card{border:1px solid var(--c-border);border-radius:var(--radius-m);background:var(--c-offwhite);padding:12px 14px;margin-bottom:16px;display:flex;flex-direction:column;gap:8px}
 .rp-backup-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
@@ -566,43 +589,99 @@
 
     <!-- ── WIDOK: STRONA GŁÓWNA (kliknięcie w logo, domyślny widok po zalogowaniu) ── -->
     <div id="view-home">
-      <div class="hd-card" id="hd-card">
-        <div class="hd-head">
-          <div class="section-title" style="margin-bottom:0">Zespół w skrócie</div>
-          <div class="month-nav" style="margin:0">
-            <button id="hd-prev" class="btn-icon" type="button" aria-label="Poprzedni miesiąc"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
-            <span id="hd-label" class="month-label">—</span>
-            <button id="hd-next" class="btn-icon" type="button" aria-label="Następny miesiąc"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+
+      <div class="hd-subtabs" id="hd-subtabs">
+        <button type="button" class="hd-subtab on" id="hd-subtab-zespol" data-panel="zespol">Zespół</button>
+        <button type="button" class="hd-subtab" id="hd-subtab-grafik" data-panel="grafik">Grafik — podsumowanie</button>
+      </div>
+
+      <div id="hd-panel-zespol">
+        <div class="hd-card" id="hd-card">
+          <div class="hd-head">
+            <div class="section-title" style="margin-bottom:0">Zespół w skrócie</div>
+            <div class="month-nav" style="margin:0">
+              <button id="hd-prev" class="btn-icon" type="button" aria-label="Poprzedni miesiąc"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+              <span id="hd-label" class="month-label">—</span>
+              <button id="hd-next" class="btn-icon" type="button" aria-label="Następny miesiąc"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+            </div>
           </div>
+
+          <div class="hd-tiles" id="hd-tiles">
+            <div class="hd-tile">
+              <span class="hd-tile-num" id="hd-num-godziny">0</span>
+              <span class="hd-tile-lbl">godzin zespołu</span>
+            </div>
+            <div class="hd-tile">
+              <span class="hd-tile-num" id="hd-num-srednia">0</span>
+              <span class="hd-tile-lbl">śr. godz./osobę</span>
+            </div>
+            <div class="hd-tile">
+              <span class="hd-tile-num" id="hd-num-aktywni">0</span>
+              <span class="hd-tile-lbl">aktywnych teraz</span>
+            </div>
+            <div class="hd-tile">
+              <span class="hd-tile-num" id="hd-num-urlop">0</span>
+              <span class="hd-tile-lbl">na urlopie dziś</span>
+            </div>
+            <div class="hd-tile hd-tile-warn">
+              <span class="hd-tile-num" id="hd-num-ovr">0</span>
+              <span class="hd-tile-lbl">dni z nadgodzinami</span>
+            </div>
+          </div>
+
+          <div class="hd-chart-title">Godziny zespołu dzień po dniu</div>
+          <div id="hd-trend" class="hd-trend"><div class="hint">Ładowanie…</div></div>
+
+          <button id="hd-details" class="btn-link" type="button" style="margin-top:4px">Zobacz pełną obecność zespołu →</button>
         </div>
 
-        <div class="hd-tiles" id="hd-tiles">
-          <div class="hd-tile">
-            <span class="hd-tile-num" id="hd-num-godziny">0</span>
-            <span class="hd-tile-lbl">godzin zespołu</span>
+        <div class="hd-card">
+          <div class="section-title" style="margin-bottom:10px">Dodatkowe informacje</div>
+          <div id="hd-insighty-zespol" class="hd-insighty"><div class="hint">Ładowanie…</div></div>
+        </div>
+      </div>
+
+      <div id="hd-panel-grafik" style="display:none">
+        <div class="hd-card">
+          <div class="hd-head">
+            <div class="section-title" style="margin-bottom:0">Grafik — podsumowanie</div>
+            <div class="month-nav" style="margin:0">
+              <button id="gp-prev" class="btn-icon" type="button" aria-label="Poprzedni miesiąc"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+              <span id="gp-label" class="month-label">—</span>
+              <button id="gp-next" class="btn-icon" type="button" aria-label="Następny miesiąc"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+            </div>
           </div>
-          <div class="hd-tile">
-            <span class="hd-tile-num" id="hd-num-srednia">0</span>
-            <span class="hd-tile-lbl">śr. godz./osobę</span>
+
+          <div class="hd-tiles" id="gp-tiles">
+            <div class="hd-tile">
+              <span class="hd-tile-num" id="gp-num-dni">0</span>
+              <span class="hd-tile-lbl">dni roboczych</span>
+            </div>
+            <div class="hd-tile">
+              <span class="hd-tile-num" id="gp-num-kompletne">0</span>
+              <span class="hd-tile-lbl">dni w pełni obsadzonych</span>
+            </div>
+            <div class="hd-tile">
+              <span class="hd-tile-num" id="gp-num-higiena">0</span>
+              <span class="hd-tile-lbl">dni z higienizacją</span>
+            </div>
+            <div class="hd-tile hd-tile-warn">
+              <span class="hd-tile-num" id="gp-num-puste">0</span>
+              <span class="hd-tile-lbl">pustych przelotów</span>
+            </div>
           </div>
-          <div class="hd-tile">
-            <span class="hd-tile-num" id="hd-num-aktywni">0</span>
-            <span class="hd-tile-lbl">aktywnych teraz</span>
-          </div>
-          <div class="hd-tile">
-            <span class="hd-tile-num" id="hd-num-urlop">0</span>
-            <span class="hd-tile-lbl">na urlopie dziś</span>
-          </div>
-          <div class="hd-tile hd-tile-warn">
-            <span class="hd-tile-num" id="hd-num-ovr">0</span>
-            <span class="hd-tile-lbl">dni z nadgodzinami</span>
-          </div>
+
+          <div class="hd-chart-title">Obłożenie gabinetów</div>
+          <div id="gp-gabinety" class="hd-bars"><div class="hint">Ładowanie…</div></div>
+
+          <div class="hd-chart-title">Obłożenie wg dnia tygodnia</div>
+          <div id="gp-dni-tygodnia" class="hd-bars"></div>
         </div>
 
-        <div class="hd-chart-title">Godziny zespołu dzień po dniu</div>
-        <div id="hd-trend" class="hd-trend"><div class="hint">Ładowanie…</div></div>
-
-        <button id="hd-details" class="btn-link" type="button" style="margin-top:4px">Zobacz pełną obecność zespołu →</button>
+        <div class="hd-card">
+          <div class="section-title" style="margin-bottom:10px">Dodatkowe informacje</div>
+          <div id="hd-insighty-grafik" class="hd-insighty"><div class="hint">Ładowanie…</div></div>
+        </div>
       </div>
 
       <div class="section-title" style="margin-bottom:12px">Menu</div>
@@ -1950,19 +2029,38 @@ buildQuickNav();
 // spójność z resztą aplikacji zamiast osobnej, nowej palety.
 
 var HD = { rok: new Date().getFullYear(), mies: new Date().getMonth() + 1 };
-var HD_KOLORY_ROLA = { asystentka: '#2FA37A', higienistka: '#9B59B6', inne: '#E8912D' };
+// GP: druga, siostrzana zakładka Strony głównej ("Grafik — podsumowanie",
+// #67) — osobny miesiąc/rok i osobne dane, ładowane leniwie (dopiero przy
+// pierwszym przełączeniu na tę zakładkę), żeby nie dublować zapytań przy
+// każdym wejściu na Stronę główną, skoro większość wizyt dotyczy Zespołu.
+var GP = { rok: new Date().getFullYear(), mies: new Date().getMonth() + 1, zaladowany: false };
 
-function hdInit() { hdLoad(); }
+function hdInit() {
+  hdLoad();
+  hdLoadInsighty();
+}
+
+document.querySelectorAll('.hd-subtab').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    var panel = this.getAttribute('data-panel');
+    document.querySelectorAll('.hd-subtab').forEach(function(b) { b.classList.toggle('on', b === btn); });
+    document.getElementById('hd-panel-zespol').style.display = panel === 'zespol' ? '' : 'none';
+    document.getElementById('hd-panel-grafik').style.display = panel === 'grafik' ? '' : 'none';
+    if (panel === 'grafik' && !GP.zaladowany) gpLoad();
+  });
+});
 
 document.getElementById('hd-prev').addEventListener('click', function(e) {
   e.stopPropagation();
   HD.mies--; if (HD.mies < 1) { HD.mies = 12; HD.rok--; }
   hdLoad();
+  hdLoadInsighty();
 });
 document.getElementById('hd-next').addEventListener('click', function(e) {
   e.stopPropagation();
   HD.mies++; if (HD.mies > 12) { HD.mies = 1; HD.rok++; }
   hdLoad();
+  hdLoadInsighty();
 });
 document.getElementById('hd-details').addEventListener('click', function(e) {
   e.stopPropagation();
@@ -1984,6 +2082,75 @@ function hdLoad() {
     hdAnimujLiczbe('hd-num-ovr', res.ovrDni, '');
     hdRysujTrend(res.trend || []);
     HD.perRola = res.perRola || [];
+  });
+}
+
+// ── Dodatkowe informacje (#68) — silnik reguł po stronie serwera, jeden
+// wspólny renderer dla obu zakładek Strony głównej (Zespół i Grafik).
+function hdLoadInsighty() {
+  var box = document.getElementById('hd-insighty-zespol');
+  box.innerHTML = '<div class="hint">Ładowanie…</div>';
+  gas('masterHomeInsighty', [M.token, HD.rok, HD.mies], function(res) {
+    if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+    if (!res || !res.ok) { box.innerHTML = '<div class="hint">' + esc((res && res.msg) || 'Błąd ładowania.') + '</div>'; return; }
+    hdRysujInsighty(box, res.insighty || []);
+  });
+}
+
+function hdRysujInsighty(box, lista) {
+  if (!lista.length) { box.innerHTML = '<div class="hint">Brak dodatkowych informacji dla tego miesiąca.</div>'; return; }
+  box.innerHTML = lista.map(function(i) {
+    return '<div class="hd-insight ' + esc(i.waga) + '">' + esc(i.tekst) + '</div>';
+  }).join('');
+}
+
+// ── "Grafik — podsumowanie" (#67): wizualne obłożenie + własne insighty ──
+document.getElementById('gp-prev').addEventListener('click', function(e) {
+  e.stopPropagation();
+  GP.mies--; if (GP.mies < 1) { GP.mies = 12; GP.rok--; }
+  gpLoad();
+});
+document.getElementById('gp-next').addEventListener('click', function(e) {
+  e.stopPropagation();
+  GP.mies++; if (GP.mies > 12) { GP.mies = 1; GP.rok++; }
+  gpLoad();
+});
+
+function gpLoad() {
+  GP.zaladowany = true;
+  document.getElementById('gp-label').textContent = MONTHS[GP.mies - 1] + ' ' + GP.rok;
+  document.getElementById('gp-gabinety').innerHTML = '<div class="hint">Ładowanie…</div>';
+  var boxIns = document.getElementById('hd-insighty-grafik');
+  boxIns.innerHTML = '<div class="hint">Ładowanie…</div>';
+  gas('masterGrafikPodsumowanie', [M.token, GP.rok, GP.mies], function(res) {
+    if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+    if (!res || !res.ok) {
+      document.getElementById('gp-gabinety').innerHTML = '<div class="hint">' + esc((res && res.msg) || 'Błąd ładowania.') + '</div>';
+      boxIns.innerHTML = '';
+      return;
+    }
+    hdAnimujLiczbe('gp-num-dni', res.dniRobocze, '');
+    hdAnimujLiczbe('gp-num-kompletne', res.kompletnychDni, '');
+    hdAnimujLiczbe('gp-num-higiena', res.higienizacjeDni, '');
+    hdAnimujLiczbe('gp-num-puste', res.pustychPrzelotow, '');
+    gpRysujBary('gp-gabinety', (res.gabinety || []).map(function(g) { return { lbl: g.nazwa, proc: g.oblozenieProc }; }));
+    gpRysujBary('gp-dni-tygodnia', (res.dniTygodnia || []).map(function(d) { return { lbl: d.nazwa, proc: d.oblozenieProc }; }));
+    hdRysujInsighty(boxIns, res.insighty || []);
+  });
+}
+
+function gpRysujBary(containerId, dane) {
+  var box = document.getElementById(containerId);
+  if (!dane.length) { box.innerHTML = '<div class="hint">Brak danych.</div>'; return; }
+  box.innerHTML = dane.map(function(d) {
+    return '<div class="hd-bar-row">' +
+      '<span class="hd-bar-lbl">' + esc(d.lbl) + '</span>' +
+      '<span class="hd-bar-track"><span class="hd-bar-fill' + (d.proc < 40 ? ' low' : '') + '" data-pct="' + d.proc + '"></span></span>' +
+      '<span class="hd-bar-val">' + d.proc + '%</span>' +
+      '</div>';
+  }).join('');
+  requestAnimationFrame(function() {
+    box.querySelectorAll('.hd-bar-fill').forEach(function(el) { el.style.width = el.getAttribute('data-pct') + '%'; });
   });
 }
 

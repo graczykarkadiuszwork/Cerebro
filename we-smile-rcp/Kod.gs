@@ -424,6 +424,8 @@ function callRCP(action, argsJson) {
       case 'masterGetRaportObecnosci': return masterGetRaportObecnosci(args[0], args[1], args[2]);
       case 'masterGetObecnoscMiesiac': return masterGetObecnoscMiesiac(args[0], args[1], args[2]);
       case 'masterGetHomeDashboard': return masterGetHomeDashboard(args[0], args[1], args[2]);
+      case 'masterHomeInsighty': return masterHomeInsighty(args[0], args[1], args[2]);
+      case 'masterGrafikPodsumowanie': return masterGrafikPodsumowanie(args[0], args[1], args[2]);
       case 'masterBackupTeraz':      return masterBackupTeraz(args[0]);
       case 'masterBackupStatus':     return masterBackupStatus(args[0]);
       case 'masterWlaczAutoBackup':  return masterWlaczAutoBackup(args[0]);

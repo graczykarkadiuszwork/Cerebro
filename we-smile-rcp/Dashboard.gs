@@ -1794,3 +1794,233 @@ function masterGetHomeDashboard(token, rok, mies) {
     trend
   };
 }
+
+// ── Strona główna: dodatkowe informacje/rekomendacje (#68) ─────────
+// Nie jeden statyczny tekst, tylko silnik reguł nad realnymi danymi
+// zespołu (bieżący miesiąc + porównanie do średniej z ostatnich 3) —
+// każda reguła osobno decyduje, czy ma coś do powiedzenia w TYM
+// konkretnym miesiącu, więc lista pokazuje tylko to, co faktycznie się
+// wydarzyło, a nie 30 pustych "wszystko w normie". Część reguł jest
+// sparametryzowana po roli/dniu tygodnia, więc jedna reguła w kodzie
+// realnie generuje kilka niezależnych, konkretnych komunikatów.
+function masterHomeInsighty(token, rok, mies) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  const y = parseInt(rok, 10), m = parseInt(mies, 10);
+  if (isNaN(y) || isNaN(m) || m < 1 || m > 12) return { ok: false, msg: 'Nieprawidłowy miesiąc.' };
+
+  const dane = _dashboardData(y, m);
+  if (!dane.ok) return dane;
+
+  // Trzy poprzednie miesiące — jedyne źródło porównań "vs średnia".
+  const historia = [];
+  let hy = y, hm = m;
+  for (let i = 0; i < 3; i++) {
+    hm--; if (hm < 1) { hm = 12; hy--; }
+    const d = _dashboardData(hy, hm);
+    if (d.ok) historia.push(d);
+  }
+
+  const out = [];
+  function dodaj(tekst, waga) { out.push({ tekst: tekst, waga: waga || 'info' }); }
+  const h1 = n => Math.round(n * 10) / 10;
+  function sredniaHist(fn) {
+    if (!historia.length) return null;
+    return historia.reduce((s, d) => s + fn(d), 0) / historia.length;
+  }
+  function sumaGodzMies(d) { return d.employees.reduce((s, p) => s + p.totalMinutes, 0) / 60; }
+  function sumaOvrDniMies(d) { return d.employees.reduce((s, p) => s + p.ovrDays, 0); }
+
+  const grupaById = {};
+  _getWorkers().forEach(w => { grupaById[String(w[0])] = _grupaZawodowa(w[3]); });
+  const GRUPA_LABEL = { lekarz: 'Lekarze', asystentka: 'Asystentki', higienistka: 'Higienistki', inne: 'Rejestracja / pozostali' };
+
+  const perRolaMin = {}, perRolaOsob = {};
+  dane.employees.forEach(p => {
+    const g = grupaById[p.id] || 'inne';
+    perRolaMin[g] = (perRolaMin[g] || 0) + p.totalMinutes;
+    perRolaOsob[g] = (perRolaOsob[g] || 0) + 1;
+  });
+  const sumaMin = dane.employees.reduce((s, p) => s + p.totalMinutes, 0);
+  const sumaGodz = h1(sumaMin / 60);
+  const sumaOvrDni = dane.employees.reduce((s, p) => s + p.ovrDays, 0);
+  const sumaOvrMin = dane.employees.reduce((s, p) => s + p.ovrMinutes, 0);
+  const liczbaOsob = dane.employees.length;
+
+  // 1) Suma godzin zespołu vs średnia z ostatnich 3 mies.
+  const histSumaGodz = sredniaHist(sumaGodzMies);
+  if (histSumaGodz != null && histSumaGodz > 1) {
+    const roznica = sumaGodz - histSumaGodz;
+    if (Math.abs(roznica) >= 5) {
+      const proc = Math.round(Math.abs(roznica) / histSumaGodz * 100);
+      dodaj(sumaGodz + 'h zespołu — to ' + (roznica > 0 ? 'o ' + h1(roznica) + 'h więcej' : 'o ' + h1(-roznica) + 'h mniej') +
+        ' niż średnia z ostatnich ' + historia.length + ' mies. (' + proc + '%).',
+        Math.abs(roznica) > histSumaGodz * 0.25 ? 'wazna' : 'info');
+    }
+  }
+
+  // 2) Per rola: godziny tej roli vs średnia z ostatnich 3 mies. TEJ SAMEJ roli.
+  Object.keys(perRolaMin).forEach(g => {
+    const godzTejRoli = h1(perRolaMin[g] / 60);
+    const histTejRoli = sredniaHist(d => {
+      let suma = 0;
+      d.employees.forEach(p => { if ((grupaById[p.id] || 'inne') === g) suma += p.totalMinutes; });
+      return suma / 60;
+    });
+    if (histTejRoli != null && histTejRoli > 1) {
+      const roznica = godzTejRoli - histTejRoli;
+      if (Math.abs(roznica) >= 3) {
+        dodaj((GRUPA_LABEL[g] || g) + ': ' + godzTejRoli + 'h w tym miesiącu, ' +
+          (roznica > 0 ? 'o ' + h1(roznica) + 'h więcej' : 'o ' + h1(-roznica) + 'h mniej') + ' niż zwykle.', 'info');
+      }
+    }
+  });
+
+  // 3) Per rola: udział % w całości godzin zespołu.
+  Object.keys(perRolaMin).forEach(g => {
+    if (sumaMin <= 0) return;
+    const proc = Math.round(perRolaMin[g] / sumaMin * 100);
+    dodaj((GRUPA_LABEL[g] || g) + ' odpowiadają za ' + proc + '% wszystkich przepracowanych godzin zespołu w tym miesiącu.', 'info');
+  });
+
+  // 4) Per rola: średnia godzin na osobę w tej roli.
+  Object.keys(perRolaMin).forEach(g => {
+    if (!perRolaOsob[g]) return;
+    dodaj('Średnio ' + h1(perRolaMin[g] / 60 / perRolaOsob[g]) + 'h/osobę wśród: ' + (GRUPA_LABEL[g] || g).toLowerCase() + '.', 'info');
+  });
+
+  // 5) Liczba dni z nadgodzinami vs średnia z 3 mies.
+  const histOvrDni = sredniaHist(sumaOvrDniMies);
+  if (histOvrDni != null) {
+    const roznica = sumaOvrDni - histOvrDni;
+    if (Math.abs(roznica) >= 2) {
+      dodaj(sumaOvrDni + ' dni z nadgodzinami w tym miesiącu — ' +
+        (roznica > 0 ? 'o ' + Math.round(roznica) + ' więcej' : 'o ' + Math.round(-roznica) + ' mniej') + ' niż średnio.',
+        roznica > 0 ? 'wazna' : 'info');
+    }
+  }
+
+  // 6) Nadgodziny jako % wszystkich przepracowanych godzin.
+  if (sumaMin > 0 && sumaOvrMin > 0) {
+    const proc = Math.round(sumaOvrMin / sumaMin * 100);
+    if (proc >= 3) dodaj('Nadgodziny stanowią ' + proc + '% wszystkich przepracowanych godzin zespołu.', proc >= 10 ? 'krytyczna' : 'wazna');
+  }
+
+  // 7) Osoba z największą liczbą nadgodzin.
+  const topOvr = dane.employees.slice().sort((a, b) => b.ovrMinutes - a.ovrMinutes)[0];
+  if (topOvr && topOvr.ovrMinutes > 0) {
+    dodaj(topOvr.imie + ' ' + topOvr.nazwisko + ' ma najwięcej nadgodzin w zespole: ' + topOvr.ovrHours + 'h (' + topOvr.ovrDays + ' dni).',
+      topOvr.ovrHours >= 10 ? 'krytyczna' : 'info');
+  }
+
+  // 8) Osoba z najwyższą liczbą przepracowanych godzin.
+  const topGodz = dane.employees.slice().sort((a, b) => b.totalMinutes - a.totalMinutes)[0];
+  if (topGodz && topGodz.totalMinutes > 0) {
+    dodaj(topGodz.imie + ' ' + topGodz.nazwisko + ' przepracował(a) najwięcej godzin w tym miesiącu: ' + topGodz.totalHours + 'h.', 'info');
+  }
+
+  // 9) Osoby z zerową liczbą godzin mimo braku nieobecności (możliwy błąd danych).
+  const zeroBezAbsencji = dane.employees.filter(p => p.totalMinutes === 0 && p.absDays === 0);
+  if (zeroBezAbsencji.length) {
+    dodaj(zeroBezAbsencji.length + ' ' + (zeroBezAbsencji.length === 1 ? 'osoba nie ma' : 'osób nie ma') +
+      ' zarejestrowanych godzin ani nieobecności w tym miesiącu (' +
+      zeroBezAbsencji.slice(0, 3).map(p => p.imie + ' ' + p.nazwisko).join(', ') + (zeroBezAbsencji.length > 3 ? '…' : '') + ').', 'wazna');
+  }
+
+  // 10) Liczba osób bez ani jednej nieobecności (perfect attendance).
+  const bezNieobecnosci = dane.employees.filter(p => p.absDays === 0 && p.totalMinutes > 0).length;
+  if (liczbaOsob > 0) {
+    dodaj(bezNieobecnosci + ' z ' + liczbaOsob + ' osób nie miało w tym miesiącu ani jednej nieobecności.', 'info');
+  }
+
+  // 11) Dzień tygodnia (uśredniony po wszystkich wystąpieniach) z najwyższym obciążeniem.
+  const DOW_LABEL = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota'];
+  const perDow = {};
+  dane.employees.forEach(p => p.days.forEach(d => {
+    if (!d.mins) return;
+    const dow = new Date(d.date + 'T12:00:00').getDay();
+    if (!perDow[dow]) perDow[dow] = { suma: 0, ile: 0 };
+    perDow[dow].suma += d.mins; perDow[dow].ile++;
+  }));
+  const dowKeys = Object.keys(perDow);
+  if (dowKeys.length >= 2) {
+    const srednie = dowKeys.map(k => ({ dow: parseInt(k, 10), sr: perDow[k].suma / perDow[k].ile }));
+    srednie.sort((a, b) => b.sr - a.sr);
+    dodaj(DOW_LABEL[srednie[0].dow] + ' to zwykle najbardziej obciążony dzień tygodnia (śr. ' + h1(srednie[0].sr / 60) + 'h/zmianę).', 'info');
+    const najspokojniejszy = srednie[srednie.length - 1];
+    if (najspokojniejszy.dow !== srednie[0].dow) {
+      dodaj(DOW_LABEL[najspokojniejszy.dow] + ' to zwykle najspokojniejszy dzień tygodnia (śr. ' + h1(najspokojniejszy.sr / 60) + 'h/zmianę).', 'info');
+    }
+  }
+
+  // 12) Dzień z najwyższym sumarycznym obciążeniem w tym miesiącu (peak day).
+  const perDzien = {};
+  dane.employees.forEach(p => p.days.forEach(d => { if (d.mins) perDzien[d.date] = (perDzien[d.date] || 0) + d.mins; }));
+  const dniPosortowane = Object.keys(perDzien).sort((a, b) => perDzien[b] - perDzien[a]);
+  if (dniPosortowane.length) {
+    const nr = parseInt(dniPosortowane[0].slice(8), 10);
+    dodaj(nr + '. dzień miesiąca miał najwięcej łącznych godzin pracy zespołu: ' + h1(perDzien[dniPosortowane[0]] / 60) + 'h.', 'info');
+  }
+
+  // 13) Ile dni roboczych minęło vs jaki % typowej normy już wypracowano (pacing).
+  const dzisiaj = _todayPL();
+  if (dzisiaj.slice(0, 7) === (y + '-' + String(m).padStart(2, '0'))) {
+    const dzienDzis = parseInt(dzisiaj.slice(8), 10);
+    const dniWMiesiacu = new Date(y, m, 0).getDate();
+    const procCzasu = Math.round(dzienDzis / dniWMiesiacu * 100);
+    if (histSumaGodz != null && histSumaGodz > 1) {
+      const procNormy = Math.round(sumaGodz / histSumaGodz * 100);
+      if (Math.abs(procNormy - procCzasu) >= 15) {
+        dodaj('Minęło ' + procCzasu + '% miesiąca, a zespół wypracował już ' + procNormy +
+          '% typowej miesięcznej sumy godzin — ' + (procNormy > procCzasu ? 'tempo wyższe niż zwykle.' : 'tempo niższe niż zwykle.'),
+          Math.abs(procNormy - procCzasu) >= 30 ? 'wazna' : 'info');
+      }
+    }
+  }
+
+  // 14) Liczba osób aktywnych dziś vs cały zespół.
+  const aktywniDzis = _activeNowData().active.length;
+  if (liczbaOsob > 0) {
+    dodaj(aktywniDzis + ' z ' + liczbaOsob + ' osób jest aktywnych teraz (' + Math.round(aktywniDzis / liczbaOsob * 100) + '%).', 'info');
+  }
+
+  // 15) Liczba osób na urlopie/nieobecności dziś.
+  const absMap = _absenceMapAll();
+  const naUrlopieDzis = dane.employees.filter(p => absMap[p.id + '_' + dzisiaj]).length;
+  if (naUrlopieDzis > 0) {
+    dodaj(naUrlopieDzis + ' ' + (naUrlopieDzis === 1 ? 'osoba jest' : 'osób jest') + ' dziś nieobecna/na urlopie.',
+      naUrlopieDzis >= Math.ceil(liczbaOsob * 0.3) ? 'wazna' : 'info');
+  }
+
+  // 16) Wielkość zespołu vs średnia z 3 mies. (rotacja).
+  const histLiczbaOsob = sredniaHist(d => d.employees.length);
+  if (histLiczbaOsob != null && Math.abs(liczbaOsob - histLiczbaOsob) >= 1) {
+    const roznica = liczbaOsob - histLiczbaOsob;
+    dodaj('Zespół liczy ' + liczbaOsob + ' ' + (liczbaOsob === 1 ? 'osobę' : 'osób') + ' — ' +
+      (roznica > 0 ? 'o ' + Math.round(roznica) + ' więcej' : 'o ' + Math.round(-roznica) + ' mniej') + ' niż średnio ostatnio.', 'info');
+  }
+
+  // 17) Który z ostatnich 3 miesięcy był najsilniejszy/najsłabszy godzinowo — kontekst.
+  if (historia.length >= 2) {
+    const zSumami = historia.map(d => ({ etykieta: _miesiacKrotko(d.month, d.year), suma: sumaGodzMies(d) }));
+    zSumami.sort((a, b) => b.suma - a.suma);
+    dodaj('Najmocniejszy z ostatnich ' + historia.length + ' miesięcy pod względem godzin: ' + zSumami[0].etykieta + ' (' + h1(zSumami[0].suma) + 'h).', 'info');
+  }
+
+  // 18) Notatki miesiąca — ile osób ma zapisaną notatkę (uwaga administracyjna).
+  const zNotatka = dane.employees.filter(p => p.note && p.note.trim()).length;
+  if (zNotatka > 0) {
+    dodaj(zNotatka + ' ' + (zNotatka === 1 ? 'osoba ma' : 'osób ma') + ' zapisaną notatkę administracyjną w tym miesiącu.', 'info');
+  }
+
+  // 19) Liczba unikalnych ról obecnych w zespole.
+  const liczbaRol = Object.keys(perRolaOsob).length;
+  dodaj('Zespół obejmuje ' + liczbaRol + ' ' + (liczbaRol === 1 ? 'kategorię ról' : 'kategorie ról') + ': ' +
+    Object.keys(perRolaOsob).map(g => GRUPA_LABEL[g] || g).join(', ') + '.', 'info');
+
+  return { ok: true, rok: y, mies: m, insighty: out };
+}
+
+function _miesiacKrotko(m, y) {
+  const N = ['sty', 'lut', 'mar', 'kwi', 'maj', 'cze', 'lip', 'sie', 'wrz', 'paź', 'lis', 'gru'];
+  return N[m - 1] + ' ' + y;
+}

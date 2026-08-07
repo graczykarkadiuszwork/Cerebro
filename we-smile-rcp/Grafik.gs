@@ -3514,6 +3514,166 @@ function masterGrafikRekomendacjeMiesiac(token, rok, mies) {
   return { ok: true, rok: y, mies: m, rekomendacje };
 }
 
+// ── Dashboard: "Grafik — podsumowanie" (#67/#68) ────────────────────
+// Wizualne statystyki obłożenia + własny silnik dodatkowych informacji,
+// liczone z REALNEJ obsady KAŻDEGO dnia roboczego miesiąca (nie próbki
+// jednego tygodnia jak masterGrafikRekomendacjeMiesiac) — tu potrzebne są
+// właśnie sumy za cały miesiąc, np. "obłożenie gabinetów w soboty: X%".
+function masterGrafikPodsumowanie(token, rok, mies) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  const y = parseInt(rok, 10), m = parseInt(mies, 10);
+  if (isNaN(y) || isNaN(m) || m < 1 || m > 12) return { ok: false, msg: 'Nieprawidłowy miesiąc.' };
+
+  const gabinety = _gabinetyAll(false);
+  const ctx = _grafikKontekstDni();
+  const ile = new Date(y, m, 0).getDate();
+  const pfx = y + '-' + String(m).padStart(2, '0') + '-';
+
+  const dni = [];
+  for (let d = 1; d <= ile; d++) {
+    const ds = pfx + String(d).padStart(2, '0');
+    const dow = new Date(ds + 'T12:00:00').getDay();
+    if (GRAFIK_DAYS.indexOf(dow) === -1) continue;
+    const stan = _grafikDzienStan(ds, ctx);
+    dni.push({ data: ds, dow: dow, bloki: stan.bloki, godziny: stan.godziny });
+  }
+
+  const DOW_LABEL = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota'];
+  const perGab = {};
+  gabinety.forEach(g => { perGab[g.id] = { nazwa: g.nazwa, zajeteMin: 0, dostepneMin: 0, pustychDni: 0 }; });
+  const perDow = {}; // dow -> { zajeteMin, dostepneMin }
+  let higienizacjeDni = 0;
+  let kompletnychDni = 0;
+  let pustychPrzelotow = 0; // (gabinet, dzień) bez ani jednego bloku
+  let bezOtwarciaDni = 0, bezZamknieciaDni = 0;
+  const osobyMiesiac = {};
+  let sumaSpecjalistowDziennie = 0;
+
+  dni.forEach(dzien => {
+    const otwOd = _t2m(dzien.godziny.open), otwDo = _t2m(dzien.godziny.close);
+    const oknoMin = Math.max(0, otwDo - otwOd);
+    if (!perDow[dzien.dow]) perDow[dzien.dow] = { zajeteMin: 0, dostepneMin: 0 };
+
+    let maHigienizacje = false;
+    let wszystkiePelne = gabinety.length > 0;
+    const osobyDzien = {};
+    let najwczesniejszy = null, najpozniejszy = null;
+
+    gabinety.forEach(g => {
+      perGab[g.id].dostepneMin += oknoMin;
+      perDow[dzien.dow].dostepneMin += oknoMin;
+      const lista = dzien.bloki.filter(b => b.gabinetId === g.id);
+      let zajeteMin = 0;
+      lista.forEach(b => {
+        const od = _t2m(b.od), doo = _t2m(b.do);
+        zajeteMin += Math.max(0, doo - od);
+        if (b.typ === BLOK_HIGIENA) maHigienizacje = true;
+        osobyDzien[b.osobaId] = true;
+        (b.asysta || []).forEach(a => { osobyDzien[a.osobaId] = true; });
+        if (najwczesniejszy === null || od < najwczesniejszy) najwczesniejszy = od;
+        if (najpozniejszy === null || doo > najpozniejszy) najpozniejszy = doo;
+      });
+      perGab[g.id].zajeteMin += zajeteMin;
+      perDow[dzien.dow].zajeteMin += zajeteMin;
+      if (!lista.length) { perGab[g.id].pustychDni++; pustychPrzelotow++; wszystkiePelne = false; }
+      else if (zajeteMin < oknoMin) wszystkiePelne = false;
+    });
+
+    if (maHigienizacje) higienizacjeDni++;
+    if (wszystkiePelne) kompletnychDni++;
+    if (najwczesniejszy === null || najwczesniejszy > otwOd) bezOtwarciaDni++;
+    if (najpozniejszy === null || najpozniejszy < otwDo) bezZamknieciaDni++;
+    Object.keys(osobyDzien).forEach(id => { osobyMiesiac[id] = true; });
+    sumaSpecjalistowDziennie += Object.keys(osobyDzien).length;
+  });
+
+  const proc = (zajete, dostepne) => dostepne > 0 ? Math.round(zajete / dostepne * 100) : 0;
+
+  const statGabinety = gabinety.map(g => ({
+    id: g.id, nazwa: g.nazwa,
+    oblozenieProc: proc(perGab[g.id].zajeteMin, perGab[g.id].dostepneMin),
+    pustychDni: perGab[g.id].pustychDni
+  }));
+  const statDni = GRAFIK_DAYS.map(dow => ({
+    dow: dow, nazwa: DOW_LABEL[dow],
+    oblozenieProc: perDow[dow] ? proc(perDow[dow].zajeteMin, perDow[dow].dostepneMin) : 0
+  }));
+
+  const out = [];
+  function dodaj(tekst, waga) { out.push({ tekst: tekst, waga: waga || 'info' }); }
+  const h1 = n => Math.round(n * 10) / 10;
+
+  // 1) Obłożenie per gabinet.
+  statGabinety.forEach(g => {
+    dodaj('Obłożenie ' + g.nazwa + ': ' + g.oblozenieProc + '%' + (g.pustychDni > 0 ? ' (' + g.pustychDni + ' pustych dni w miesiącu)' : '.'),
+      g.oblozenieProc < 40 ? 'wazna' : 'info');
+  });
+
+  // 2) Obłożenie per dzień tygodnia (bezpośrednio: "soboty: X%" itp.).
+  statDni.forEach(d => {
+    if (!perDow[d.dow]) return;
+    dodaj('Obłożenie gabinetów w ' + (d.dow === 6 ? 'soboty' : d.nazwa.toLowerCase() + 'y') + ': ' + d.oblozenieProc + '%.',
+      d.oblozenieProc < 30 ? 'wazna' : 'info');
+  });
+
+  // 3) Weekend (sobota) vs dni robocze (Pn-Pt).
+  if (perDow[6] && GRAFIK_DAYS.filter(d => d !== 6).some(d => perDow[d])) {
+    const oknoSob = perDow[6];
+    let zajRob = 0, dostRob = 0;
+    GRAFIK_DAYS.filter(d => d !== 6).forEach(d => { if (perDow[d]) { zajRob += perDow[d].zajeteMin; dostRob += perDow[d].dostepneMin; } });
+    const procSob = proc(oknoSob.zajeteMin, oknoSob.dostepneMin), procRob = proc(zajRob, dostRob);
+    if (Math.abs(procSob - procRob) >= 10) {
+      dodaj('Soboty mają ' + procSob + '% obłożenia, dni robocze (Pn–Pt) ' + procRob + '% — ' +
+        (procSob < procRob ? 'sobota wyraźnie słabiej obsadzona.' : 'sobota obsadzona mocniej niż dni robocze.'), 'info');
+    }
+  }
+
+  // 4) Higienizacje: ile dni w miesiącu je mają.
+  const dniRobocze = dni.length;
+  if (dniRobocze > 0) {
+    const procHig = Math.round(higienizacjeDni / dniRobocze * 100);
+    dodaj('Higienizacje występują tylko w ' + higienizacjeDni + ' z ' + dniRobocze + ' dni roboczych (' + procHig + '%)' +
+      (procHig <= 20 ? ' — gabinety stoją puste w pozostałe dni zamiast przyjmować higienizacje.' : '.'),
+      procHig <= 20 ? 'wazna' : 'info');
+  }
+
+  // 5) Puste przeloty — (gabinet, dzień) bez ani jednego bloku mimo otwartej kliniki.
+  if (pustychPrzelotow > 0) {
+    dodaj(pustychPrzelotow + ' pustych "przelotów" gabinet-dzień w tym miesiącu — gabinet otwarty, ale bez ani jednego zaplanowanego bloku.',
+      pustychPrzelotow >= dniRobocze ? 'krytyczna' : 'wazna');
+  }
+
+  // 6) Dni w pełni obsadzone (wszystkie gabinety od otwarcia do zamknięcia).
+  if (dniRobocze > 0) {
+    dodaj(kompletnychDni + ' z ' + dniRobocze + ' dni roboczych ma w pełni obsadzone wszystkie gabinety (' +
+      Math.round(kompletnychDni / dniRobocze * 100) + '%).', 'info');
+  }
+
+  // 7) Dni bez nikogo na otwarciu / zamknięciu.
+  if (bezOtwarciaDni > 0) dodaj(bezOtwarciaDni + ' dni w miesiącu zaczyna się bez nikogo na godzinie otwarcia kliniki.', bezOtwarciaDni > dniRobocze * 0.3 ? 'wazna' : 'info');
+  if (bezZamknieciaDni > 0) dodaj(bezZamknieciaDni + ' dni w miesiącu kończy się bez nikogo na godzinie zamknięcia kliniki.', bezZamknieciaDni > dniRobocze * 0.3 ? 'wazna' : 'info');
+
+  // 8) Najbardziej i najmniej obłożony gabinet.
+  if (statGabinety.length >= 2) {
+    const posort = statGabinety.slice().sort((a, b) => b.oblozenieProc - a.oblozenieProc);
+    dodaj('Najbardziej obłożony gabinet: ' + posort[0].nazwa + ' (' + posort[0].oblozenieProc + '%).', 'info');
+    dodaj('Najmniej obłożony gabinet: ' + posort[posort.length - 1].nazwa + ' (' + posort[posort.length - 1].oblozenieProc + '%) — warto rozważyć przeniesienie części zabiegów.',
+      posort[posort.length - 1].oblozenieProc < 30 ? 'wazna' : 'info');
+  }
+
+  // 9) Liczba unikalnych osób zaplanowanych w miesiącu + średnio specjalistów dziennie.
+  dodaj(Object.keys(osobyMiesiac).length + ' różnych osób pojawia się w grafiku tego miesiąca.', 'info');
+  if (dniRobocze > 0) dodaj('Średnio ' + h1(sumaSpecjalistowDziennie / dniRobocze) + ' specjalistów zaplanowanych dziennie.', 'info');
+
+  return {
+    ok: true, rok: y, mies: m,
+    gabinety: statGabinety, dniTygodnia: statDni,
+    dniRobocze: dniRobocze, higienizacjeDni: higienizacjeDni, kompletnychDni: kompletnychDni,
+    pustychPrzelotow: pustychPrzelotow,
+    insighty: out
+  };
+}
+
 /** Czy miesiąc ma już własną obsadę — do decyzji, czy pokazać zaproszenie do wypełnienia. */
 function masterGrafikStanMiesiaca(token, rok, mies) {
   if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
