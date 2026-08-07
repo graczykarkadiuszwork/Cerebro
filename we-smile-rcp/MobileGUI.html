@@ -1762,6 +1762,9 @@ function renderMore() {
   });
 
   document.getElementById('m-more-sys').innerHTML =
+    '<a class="m-item" href="' + esc(BASE_URL) + '?page=dashboard" target="_blank" rel="noopener" style="text-decoration:none">' +
+      '<span class="m-item-body"><span class="m-item-t">Panel Raportowy</span>' +
+      '<span class="m-item-s">Zbiorczy dashboard — statystyki i wykresy</span></span></a>' +
     '<a class="m-item" href="' + esc(BASE_URL) + '?page=worker" target="_blank" rel="noopener" style="text-decoration:none">' +
       '<span class="m-item-body"><span class="m-item-t">Ekran odbić</span>' +
       '<span class="m-item-s">Pełnoekranowy kiosk pracownika</span></span></a>' +

@@ -103,6 +103,7 @@
 .ob2-chip{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 3px;border-radius:999px;font-size:9px;font-weight:800}
 .ob2-chip.abs{background:var(--c-field);color:var(--c-muted)}
 .ob2-more{font-size:9.5px;color:var(--c-muted);font-weight:700}
+.ob2-nieobecni{font-size:9.5px;color:var(--c-muted);font-weight:700;margin-left:auto}
 .ob2-puste{font-size:10.5px;color:var(--c-muted);font-weight:600}
 .ob2-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border-radius:var(--radius-s);border-left:3px solid var(--c-border);margin-bottom:6px;font-size:13px}
 .ob2-row.abs{border-left-color:var(--c-muted);background:var(--c-offwhite)}
@@ -124,12 +125,6 @@
 .hd-trend-bar{flex:1;min-width:2px;background:var(--c-primary);border-radius:3px 3px 0 0;height:0;transition:height .5s var(--ease-snap,cubic-bezier(.4,0,.2,1));cursor:pointer}
 .hd-trend-bar:hover{background:var(--c-accent)}
 .hd-trend-empty{color:var(--c-muted);font-size:12.5px;align-self:center}
-.hd-role{display:flex;flex-direction:column;gap:8px}
-.hd-role-row{display:flex;align-items:center;gap:10px}
-.hd-role-lbl{width:120px;flex-shrink:0;font-size:12.5px;font-weight:700;color:var(--c-ink)}
-.hd-role-track{flex:1;height:10px;border-radius:999px;background:var(--c-field);overflow:hidden}
-.hd-role-fill{height:100%;border-radius:999px;width:0;transition:width .6s var(--ease-snap,cubic-bezier(.4,0,.2,1))}
-.hd-role-val{width:56px;flex-shrink:0;text-align:right;font-size:12px;font-weight:700;color:var(--c-muted);font-variant-numeric:tabular-nums}
 
 /* ── Raporty: kopia zapasowa (Dysk Google) ── */
 .rp-backup-card{border:1px solid var(--c-border);border-radius:var(--radius-m);background:var(--c-offwhite);padding:12px 14px;margin-bottom:16px;display:flex;flex-direction:column;gap:8px}
@@ -169,6 +164,27 @@
   color:var(--c-ink);padding:14px 8px;text-align:center}
 .home-tile svg{width:26px;height:26px;flex-shrink:0}
 .home-tile:active{background:var(--c-primary-tint);border-color:var(--c-primary)}
+
+/* Belka górna pływająca (#8) — hamburger + pasek obecności + kompaktowa
+   nawigacja trzymane RAZEM jako jeden sticky blok, żeby nie liczyć w JS
+   wysokości nagłówka do podpięcia kolejnych elementów pod nim. */
+.app-topbar{position:sticky;top:0;z-index:40}
+
+/* Kompaktowy pasek szybkiej nawigacji (#6) — te same pozycje co hamburger
+   i home-grid, ale widoczny z KAŻDEJ zakładki, od razu pod paskiem
+   obecności. Zawijanie ograniczone do ~2 linii (reszta osiągalna
+   pionowym przewinięciem w obrębie samego paska), żeby nie zajmował
+   więcej miejsca niż potrzeba nad właściwą treścią zakładki. */
+.quick-nav{display:flex;flex-wrap:wrap;gap:6px;max-height:66px;overflow-y:auto;
+  padding:6px 12px;background:var(--c-white);border-bottom:1px solid var(--c-border)}
+.quick-nav:empty{display:none}
+.quick-nav-item{display:flex;align-items:center;gap:5px;flex-shrink:0;padding:5px 10px;
+  border-radius:999px;border:1px solid var(--c-border);background:var(--c-offwhite);
+  color:var(--c-muted);font-size:11.5px;font-weight:700;white-space:nowrap;cursor:pointer;
+  font-family:inherit;line-height:1.3}
+.quick-nav-item svg{width:14px;height:14px;flex-shrink:0}
+.quick-nav-item.on{background:var(--c-primary-tint);border-color:var(--c-primary);color:var(--c-primary)}
+.quick-nav-item:active{opacity:.7}
 
 /* Przegląd importu grafiku — grupy wg daty, wiersz na wpis. */
 .gli-dzien{font-weight:700;font-size:13px;color:var(--c-ink);margin:14px 0 6px;padding-top:10px;border-top:1px solid var(--c-border)}
@@ -477,6 +493,7 @@
 
 <!-- PANEL -->
 <div id="s-panel" style="display:none">
+  <div id="app-topbar" class="app-topbar">
   <header class="hero">
     <div class="hero-row">
       <button id="m-hamburger" class="hamburger-btn" aria-label="Menu">
@@ -505,6 +522,9 @@
 
   <div id="m-presence-bar" class="presence-bar" style="display:none">
     <div class="presence-track" id="m-presence-track"></div>
+  </div>
+
+  <div id="quick-nav" class="quick-nav"></div>
   </div>
 
   <div id="norma-bar" class="norma-bar">
@@ -558,9 +578,6 @@
 
         <div class="hd-chart-title">Godziny zespołu dzień po dniu</div>
         <div id="hd-trend" class="hd-trend"><div class="hint">Ładowanie…</div></div>
-
-        <div class="hd-chart-title">Godziny wg roli</div>
-        <div id="hd-role" class="hd-role"></div>
 
         <button id="hd-details" class="btn-link" type="button" style="margin-top:4px">Zobacz pełną obecność zespołu →</button>
       </div>
@@ -1117,6 +1134,10 @@
         <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
       </button>
     </div>
+    <button class="seg-btn" id="tab-home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>
+      <span>Strona główna</span>
+    </button>
     <button class="seg-btn" id="tab-day">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18"/><path d="M8 3v4M16 3v4"/><path d="M12 14v4M10 16h4"/></svg>
       <span>Dzień</span>
@@ -1850,6 +1871,7 @@ function buildHomeGrid() {
   var grid = document.getElementById('home-grid');
   if (grid.childElementCount) return;
   document.querySelectorAll('.tabbar .seg-btn').forEach(function(btn) {
+    if (btn.id === 'tab-home') return; // tu jesteśmy już — kafel do samego siebie byłby bez sensu
     var tile = document.createElement('button');
     tile.type = 'button';
     tile.className = 'home-tile';
@@ -1858,6 +1880,34 @@ function buildHomeGrid() {
     grid.appendChild(tile);
   });
 }
+
+// Kompaktowy pasek szybkiej nawigacji pod paskiem obecności (marquee) —
+// w odróżnieniu od home-grid (tylko na Stronie głównej) jest częścią
+// stałej belki górnej (#app-topbar), więc widać go z KAŻDEJ zakładki, nie
+// trzeba wracać do Strony głównej ani otwierać hamburgera, żeby
+// przeskoczyć gdzie indziej. Też klonuje przyciski nawigacji, więc lista
+// pozycji menu wciąż żyje w jednym miejscu.
+function buildQuickNav() {
+  var box = document.getElementById('quick-nav');
+  if (box.childElementCount) return;
+  document.querySelectorAll('.tabbar .seg-btn').forEach(function(btn) {
+    var item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'quick-nav-item';
+    item.id = 'qn-' + btn.id;
+    item.innerHTML = btn.innerHTML;
+    item.addEventListener('click', function() { btn.click(); });
+    box.appendChild(item);
+  });
+  qnSyncAktywny(currentTab);
+}
+
+function qnSyncAktywny(tabId) {
+  document.querySelectorAll('#quick-nav .quick-nav-item').forEach(function(el) {
+    el.classList.toggle('on', el.id === 'qn-' + tabId);
+  });
+}
+buildQuickNav();
 
 // ── Strona główna: dashboard zbiorczy zespołu (#62) ──────────────
 // Zbiorcze dane całego zespołu za miesiąc, z prostymi animowanymi
@@ -1891,7 +1941,6 @@ function hdLoad() {
     if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
     if (!res || !res.ok) {
       document.getElementById('hd-trend').innerHTML = '<div class="hint">' + esc((res && res.msg) || 'Błąd ładowania.') + '</div>';
-      document.getElementById('hd-role').innerHTML = '';
       return;
     }
     hdAnimujLiczbe('hd-num-godziny', res.sumaGodzin, ' h');
@@ -1900,7 +1949,7 @@ function hdLoad() {
     hdAnimujLiczbe('hd-num-urlop', res.naUrlopieDzis, '');
     hdAnimujLiczbe('hd-num-ovr', res.ovrDni, '');
     hdRysujTrend(res.trend || []);
-    hdRysujRole(res.perRola || []);
+    HD.perRola = res.perRola || [];
   });
 }
 
@@ -1940,26 +1989,6 @@ function hdRysujTrend(trend) {
   });
 }
 
-function hdRysujRole(perRola) {
-  var box = document.getElementById('hd-role');
-  if (!perRola.length) { box.innerHTML = '<div class="hint">Brak danych za ten miesiąc.</div>'; return; }
-  var max = Math.max.apply(null, perRola.map(function(r) { return r.godziny; }).concat([0.01]));
-  box.innerHTML = perRola.map(function(r) {
-    var kolor = HD_KOLORY_ROLA[r.grupa] || '#8A93A6';
-    var pct = Math.round((r.godziny / max) * 100);
-    return '<div class="hd-role-row">' +
-      '<span class="hd-role-lbl">' + esc(r.label) + ' (' + r.osob + ')</span>' +
-      '<span class="hd-role-track"><span class="hd-role-fill" data-pct="' + pct + '" style="background:' + kolor + '"></span></span>' +
-      '<span class="hd-role-val">' + r.godziny + ' h</span>' +
-      '</div>';
-  }).join('');
-  requestAnimationFrame(function() {
-    box.querySelectorAll('.hd-role-fill').forEach(function(el) {
-      el.style.width = el.getAttribute('data-pct') + '%';
-    });
-  });
-}
-
 // Logo w górnym pasku (nie ten na ekranie logowania — tamten ma dodatkową
 // klasę wm-logo-lg) prowadzi do strony głównej.
 (function () {
@@ -1983,12 +2012,11 @@ function activateTab(tabId, opts) {
   }
   currentTab = tabId;
   Object.keys(TABS).forEach(function(id) {
-    // "tab-home" nie ma własnego przycisku w hamburgerze (do strony głównej
-    // trafia się przez logo, nie przez pozycję w menu) — stąd brak elementu.
     var btn = document.getElementById(id);
     if (btn) btn.className = 'seg-btn' + (id === tabId ? ' on' : '');
     document.getElementById(TABS[id]).style.display = (id === tabId) ? 'block' : 'none';
   });
+  qnSyncAktywny(tabId);
   // Jeśli zakładka mieszka w rozwijanej grupie (np. Kod/Odbicia pod
   // "Ekrany pracowników"), rozwiń ją — inaczej podświetlenie "on"
   // byłoby niewidoczne pod zwiniętym rozwijaczem.
@@ -2017,7 +2045,6 @@ window.addEventListener('popstate', function (e) {
 mBack.addEventListener('click', goBack);
 
 Object.keys(TABS).forEach(function(tabId) {
-  // "tab-home" nie ma własnego przycisku w hamburgerze — patrz activateTab().
   var btnEl = document.getElementById(tabId);
   if (!btnEl) return;
   btnEl.addEventListener('click', function() {
@@ -3295,21 +3322,33 @@ function ob2KomorkaHtml(d) {
     return '<div class="ob2-cell" data-ob2-dzien="' + esc(d.data) + '"><span class="ob2-num">' + nr + '</span><span class="ob2-puste">—</span></div>';
   }
 
-  var widoczne = d.osoby.slice(0, OB2_MAX_CHIPS);
+  // Inicjały na kaflu tylko dla osób, które FAKTYCZNIE tego dnia pracowały —
+  // pokazywanie inicjałów kogoś na urlopie/zwolnieniu tylko po to, żeby
+  // zaraz obok napisać "nieobecny", nie niesie żadnej informacji o obsadzie.
+  // Liczbę nieobecnych i tak widać po otwarciu dnia (modal), tu wystarczy
+  // sam licznik, bez wskazywania kto konkretnie.
+  var obecni = d.osoby.filter(function(o) { return !o.absencja; });
+  var nieobecni = d.osoby.length - obecni.length;
+  var widoczne = obecni.slice(0, OB2_MAX_CHIPS);
   var chipy = widoczne.map(function(o) {
-    if (o.absencja) {
-      return '<span class="ob2-chip abs" title="' + esc(o.imie + ' ' + o.nazwisko + ' — ' + o.absencja.typ) + '">' + esc(o.inicjaly) + '</span>';
-    }
     var kolor = _rolaKolor(o);
     var godz = o.minutyPracy != null ? grHM(o.minutyPracy) : 'w trakcie';
     var tytul = o.imie + ' ' + o.nazwisko + ' · ' + (o.wejscie || '?') + '–' + (o.wyjscie || '?') + ' · ' + godz;
-    return '<span class="ob2-chip" style="background:' + kolor + '26;color:' + kolor + '" title="' + esc(tytul) + '">' + esc(o.inicjaly) + '</span>';
+    return '<span class="ob2-chip" style="background:' + kolor + '26;color:' + kolor + ';border:1px solid ' + kolor + '4d" title="' + esc(tytul) + '">' + esc(o.inicjaly) + '</span>';
   }).join('');
-  var wiecej = d.osoby.length > OB2_MAX_CHIPS ? '<span class="ob2-more">+' + (d.osoby.length - OB2_MAX_CHIPS) + '</span>' : '';
+  var wiecej = obecni.length > OB2_MAX_CHIPS ? '<span class="ob2-more">+' + (obecni.length - OB2_MAX_CHIPS) + '</span>' : '';
+  var nieobecniLbl = nieobecni > 0 ? '<span class="ob2-nieobecni" title="' + nieobecni + ' ' + (nieobecni === 1 ? 'osoba nieobecna' : 'osób nieobecnych') + '">−' + nieobecni + '</span>' : '';
+
+  if (!obecni.length) {
+    return '<div class="ob2-cell" data-ob2-dzien="' + esc(d.data) + '">' +
+      '<span class="ob2-num">' + nr + '</span>' +
+      '<span class="ob2-puste">nikt nie pracował' + (nieobecni ? ' (' + nieobecni + ' nieobecnych)' : '') + '</span>' +
+      '</div>';
+  }
 
   return '<div class="ob2-cell" data-ob2-dzien="' + esc(d.data) + '">' +
     '<span class="ob2-num">' + nr + '</span>' +
-    '<div class="ob2-chips">' + chipy + wiecej + '</div>' +
+    '<div class="ob2-chips">' + chipy + wiecej + nieobecniLbl + '</div>' +
     '</div>';
 }
 
@@ -4126,15 +4165,19 @@ function tagStyl(t) {
   return ' style="background:rgba(' + r + ',' + g + ',' + b + ',.16);color:' + hex + '"';
 }
 
-// Kolor wg roli — czysto wizualna kategoryzacja listy Zespołu (lekarz /
-// asystentka / higienistka / rejestracja / pozostali), niezwiązana z grupą
-// zawodową używaną do logiki RCP/grafiku.
+// Kolor wg roli — spójna kategoryzacja w całym RCP (kafle Obecności
+// zespołu, lista Zespołu): lekarze na zielono, asysta (asystentka i
+// higienistka — obie mogą pełnić funkcję asysty w Grafiku) na niebiesko,
+// rejestracja/admin/pozostali na biało. Czysta biel (#FFF) na białym tle
+// kart byłaby niewidoczna jako obwódka/tło chipa, więc dla tej grupy
+// używamy jasnoszarego odcienia — funkcjonalnie "brak koloru", czyli to
+// samo, co chciano wyrazić bielą, tylko faktycznie widoczne w UI. Te same
+// barwy co --c-success/--c-primary z Styles.html, żeby nie wprowadzać
+// osobnej palety.
 function _rolaKolor(e) {
-  if (e.grupa === 'lekarz') return '#2F6FED';
-  if (e.grupa === 'asystentka') return '#2FA37A';
-  if (e.grupa === 'higienistka') return '#9B59B6';
-  if (String(e.rola || '').toLowerCase().indexOf('rejestr') !== -1) return '#E8912D';
-  return '#8A93A6';
+  if (e.grupa === 'lekarz') return '#1E8E5A';
+  if (e.grupa === 'asystentka' || e.grupa === 'higienistka') return '#1B6FB5';
+  return '#B9BEC7';
 }
 
 var _tagiOtwarte = {};
