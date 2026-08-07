@@ -3419,6 +3419,27 @@ function masterGrafikStanMiesiaca(token, rok, mies) {
 }
 
 /**
+ * Czyści wskazane daty — wszystkie na raz, jednym przepisaniem arkusza
+ * (przez _zapiszDniGrafikuBatch), a nie osobnym zapytaniem na dzień.
+ * Używane przez „Wyczyść dzień" / „Wyczyść tydzień" / „Wyczyść miesiąc" —
+ * różnica jest tylko w tym, ile dat frontend prześle w jednym wywołaniu.
+ */
+function masterGrafikWyczyscDaty(token, daty) {
+  if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  daty = Array.isArray(daty) ? daty.filter(_dataOk) : [];
+  if (!daty.length) return { ok: false, msg: 'Brak dat do wyczyszczenia.' };
+
+  const mapa = {};
+  daty.forEach(d => { mapa[d] = []; });
+  const r = _zapiszDniGrafikuBatch(mapa);
+  if (!r.ok) return r;
+
+  _logAdmin('WyczyszczenieDatGrafiku', daty[0] + (daty.length > 1 ? '…' + daty[daty.length - 1] : ''),
+    daty.length + ' dni');
+  return { ok: true, dni: r.dni };
+}
+
+/**
  * Kopiuje wzorzec obsady JEDNEGO lekarza z dnia źródłowego na wskazane dni
  * docelowe — bez ruszania bloków pozostałych osób w te dni. To odpowiednik
  * masterKopiujDzienGrafiku, ale skoped do jednego lekarza: używa edytor
