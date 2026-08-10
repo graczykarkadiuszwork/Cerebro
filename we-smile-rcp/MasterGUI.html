@@ -271,7 +271,10 @@
 .sesja-usun:hover{background:var(--c-offwhite);color:var(--c-accent)}
 .sesja-usun svg{width:16px;height:16px}
 .sesja-usun.pusty{visibility:hidden}
+/* .btn-link jest domyślnie pełnej szerokości i wyśrodkowany (używany jako
+   akcja pod formularzem) — tutaj ma stać po lewej, obok sumy godzin. */
 .sesje-stopka{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:4px}
+.sesje-stopka .btn-link{width:auto;text-align:left;padding:8px 0;color:var(--c-primary);font-weight:700}
 .sesje-suma{font-size:12.5px;font-weight:700;color:var(--c-ink);font-variant-numeric:tabular-nums}
 .sesje-suma.dzielony{color:var(--c-primary)}
 /* Znacznik dnia dzielonego w tabeli Miesiąc — wiersz nie jest edytowalny
@@ -2358,6 +2361,11 @@ document.getElementById('m-sesje').addEventListener('click', function(e) {
 });
 
 document.getElementById('m-sesje').addEventListener('change', mSesjeSuma);
+
+// Pierwsze wyrysowanie od razu przy starcie — bez tego zakładka Dzień
+// pokazywałaby pusty odstęp pod nagłówkiem "Czas pracy" aż do wczytania
+// konkretnego dnia, choć wcześniej pola Wejście/Wyjście były tam zawsze.
+mSesjeRysuj([]);
 
 function fillDayForm(res) {
   mSesjeRysuj(res.sesje && res.sesje.length
