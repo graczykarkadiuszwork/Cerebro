@@ -88,19 +88,27 @@ function _ramaDnia(sesje) {
   return { wejscie: we, wyjscie: wy };
 }
 
-// Czy dzień (na podstawie pierwszego wejścia / ostatniego wyjścia)
-// wykracza poza regularne godziny Kliniki.
+// Czy dzień wykracza poza regularne godziny Kliniki.
+// KAŻDE odbicie poza oknem [otwarcie, zamknięcie] się liczy — także
+// wejście PO zamknięciu (ktoś przychodzi o 21:04, gdy Klinika zamyka o
+// 21:00) i wyjście PRZED otwarciem. Wcześniej warunek był niesymetryczny
+// (tylko wejście przed otwarciem i wyjście po zamknięciu), więc pracownik
+// odbijający wejście późnym wieczorem nie dostawał popupu o uzasadnienie.
 function _dayOutsideClinic(ds, wejscie, wyjscie) {
   if (!wejscie && !wyjscie) return false;
   const h = _clinicHoursFor(ds);
-  if (!h) return true; // niedziela
-  if (wejscie && _t2m(wejscie) < h.open)  return true;
-  if (wyjscie && _t2m(wyjscie) > h.close) return true;
+  if (!h) return true; // niedziela — Klinika zamknięta, każde odbicie jest poza
+  const poza = t => _t2m(t) < h.open || _t2m(t) > h.close;
+  if (wejscie && poza(wejscie)) return true;
+  if (wyjscie && poza(wyjscie)) return true;
   return false;
 }
 
 // Ile minut danego dnia wypadło poza godzinami otwarcia Kliniki
 // (a nie tylko czy w ogóle — do sumowania miesięcznego w godzinach).
+// Liczone jako czas pracy MINUS część mieszcząca się w oknie Kliniki —
+// dzięki temu zmiana w całości poza godzinami (21:04–22:00) liczy się w
+// całości, a nie tylko jej „ogon” po zamknięciu.
 function _overtimeMinutes(ds, wejscie, wyjscie) {
   if (!wejscie && !wyjscie) return 0;
   const h = _clinicHoursFor(ds);
@@ -108,10 +116,17 @@ function _overtimeMinutes(ds, wejscie, wyjscie) {
     if (wejscie && wyjscie) return Math.max(0, _t2m(wyjscie) - _t2m(wejscie));
     return 0;
   }
-  let mins = 0;
-  if (wejscie && _t2m(wejscie) < h.open)  mins += h.open - _t2m(wejscie);
-  if (wyjscie && _t2m(wyjscie) > h.close) mins += _t2m(wyjscie) - h.close;
-  return mins;
+  // Sesja jeszcze otwarta (jest wejście, brak wyjścia): nie znamy długości
+  // pracy, więc liczymy tylko to, co da się już stwierdzić — czas przed
+  // otwarciem. Reszta doliczy się przy odbiciu wyjścia.
+  if (!wejscie || !wyjscie) {
+    const t = wejscie || wyjscie;
+    return _t2m(t) < h.open ? h.open - _t2m(t) : 0;
+  }
+  const od = _t2m(wejscie), do_ = _t2m(wyjscie);
+  const dlugosc = Math.max(0, do_ - od);
+  const wOknie = Math.max(0, Math.min(do_, h.close) - Math.max(od, h.open));
+  return Math.max(0, dlugosc - wOknie);
 }
 
 // Warianty świadome sesji. Dla dnia z jedną sesją dają dokładnie to samo
