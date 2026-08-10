@@ -2202,8 +2202,15 @@ function modDzien(){
     var os=document.getElementById('d-os').value, dt=document.getElementById('d-data').value;
     gas('masterGetDay',[S.token,os,dt],function(r){
       if(!r||!r.ok) return;
-      document.getElementById('d-we').value=r.wejscie||'';
-      document.getElementById('d-wy').value=r.wyjscie||'';
+      // Dzień dzielony (kilka sesji) ma pełny edytor w Panelu Właściciela;
+      // tu blokujemy pola godzin, bo zapis jedną parą skasowałby resztę sesji.
+      S.dzienDzielony = !!(r.sesje && r.sesje.length>1);
+      var we=document.getElementById('d-we'), wy=document.getElementById('d-wy');
+      we.value=r.wejscie||''; wy.value=r.wyjscie||'';
+      we.disabled=S.dzienDzielony; wy.disabled=S.dzienDzielony;
+      we.title=wy.title=S.dzienDzielony
+        ? 'Dzielony czas pracy ('+r.sesje.map(function(s){return (s.od||'?')+'-'+(s.do||'?');}).join(' + ')+') — edytuj w Panelu Właściciela'
+        : '';
       document.getElementById('d-abs').value=r.absence?r.absence.code:'';
       document.getElementById('d-note').value=r.absence?(r.absence.note||''):'';
     });
@@ -2256,14 +2263,19 @@ function modDzien(){
 
   document.getElementById('d-zapisz').addEventListener('click',function(){
     var os=document.getElementById('d-os').value,dt=document.getElementById('d-data').value;
-    gas('masterSetDay',[S.token,os,dt,document.getElementById('d-we').value,
-        document.getElementById('d-wy').value],function(r1){
-      if(!r1||!r1.ok){ showErr((r1&&r1.msg)||'Błąd.'); return; }
+    function zapiszReszte(){
       gas('masterSetAbsence',[S.token,os,dt,document.getElementById('d-abs').value,
           document.getElementById('d-note').value],function(){
         showOk('Zapisano dzień.');
         wczytajTimeline();
       });
+    }
+    // Dzień dzielony: godziny zostają nietknięte (patrz wczytaj()).
+    if(S.dzienDzielony){ zapiszReszte(); return; }
+    gas('masterSetDay',[S.token,os,dt,document.getElementById('d-we').value,
+        document.getElementById('d-wy').value],function(r1){
+      if(!r1||!r1.ok){ showErr((r1&&r1.msg)||'Błąd.'); return; }
+      zapiszReszte();
     });
   });
 

@@ -262,6 +262,24 @@
 .norma-hist-row input{width:88px;margin:0}
 .norma-hist-row button{width:auto;margin:0;padding:0 12px;min-height:38px}
 
+/* ── Dzielony czas pracy: sesje wejście-wyjście w zakładce Dzień ── */
+.sesja-row{display:grid;grid-template-columns:auto 1fr auto 1fr auto;gap:8px;align-items:center;margin-bottom:8px}
+.sesja-nr{font-size:11px;font-weight:800;color:var(--c-muted);min-width:18px}
+.sesja-row input[type=time]{margin:0;width:100%}
+.sesja-sep{color:var(--c-muted);font-size:13px}
+.sesja-usun{border:0;background:none;color:var(--c-muted);cursor:pointer;padding:6px;border-radius:var(--radius-s);display:flex;align-items:center;justify-content:center}
+.sesja-usun:hover{background:var(--c-offwhite);color:var(--c-accent)}
+.sesja-usun svg{width:16px;height:16px}
+.sesja-usun.pusty{visibility:hidden}
+.sesje-stopka{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:4px}
+.sesje-suma{font-size:12.5px;font-weight:700;color:var(--c-ink);font-variant-numeric:tabular-nums}
+.sesje-suma.dzielony{color:var(--c-primary)}
+/* Znacznik dnia dzielonego w tabeli Miesiąc — wiersz nie jest edytowalny
+   w miejscu (jedna para pól nie pomieściłaby kilku sesji), więc odsyła
+   do zakładki Dzień zamiast po cichu skasować pozostałe sesje. */
+.mm-dzielony{display:inline-flex;align-items:center;gap:4px;background:var(--c-primary-tint);color:var(--c-primary);border:1px solid var(--c-primary);border-radius:var(--radius-pill);font-size:10px;font-weight:800;padding:2px 8px;cursor:pointer;font-family:inherit}
+.mm-dzielony:hover{filter:brightness(.95)}
+
 .ovr-flag{display:none;align-items:flex-start;gap:10px;background:var(--c-accent-tint);border:1px solid rgba(123,30,59,.22);border-radius:var(--radius-m);padding:12px 14px;font-size:13px;line-height:1.5;color:var(--c-accent-dark);font-weight:600;margin-bottom:10px}
 .ovr-flag.on{display:flex}
 
@@ -711,14 +729,18 @@
 
       <button id="m-load" class="btn btn-ghost">Wczytaj istniejące dane</button>
 
-      <div class="field-row2" style="margin-top:14px">
-        <div class="field">
-          <span class="field-lbl">Wejście</span>
-          <input type="time" id="m-in" class="inp">
+      <!-- Czas pracy: jedna lub kilka sesji. Dzielony dzień (pracownik
+           wychodzi i wraca, np. 9:00-15:00 i 17:00-18:00) to osobne
+           wiersze — godziny liczą się jako SUMA sesji, bez przerwy. -->
+      <div class="section" style="margin-top:14px">
+        <div class="section-title" style="margin-bottom:8px">
+          <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          Czas pracy
         </div>
-        <div class="field">
-          <span class="field-lbl">Wyjście</span>
-          <input type="time" id="m-out" class="inp">
+        <div id="m-sesje"></div>
+        <div class="sesje-stopka">
+          <button type="button" id="m-sesja-dodaj" class="btn-link">+ dodaj kolejne wejście (dzielony czas pracy)</button>
+          <span id="m-sesje-suma" class="sesje-suma"></span>
         </div>
       </div>
 
@@ -2261,9 +2283,86 @@ Object.keys(TABS).forEach(function(tabId) {
 
 // ── Widok: szybka edycja dnia ─────────────────────
 
+// ── Dzielony czas pracy ────────────────────────────────────────
+// Dzień może mieć kilka sesji: pracownik wychodzi i wraca (np. 9:00–15:00,
+// potem 17:00–18:00). Każda sesja to osobny wiersz; godziny liczą się
+// jako SUMA sesji, więc przerwa między nimi nie wchodzi do czasu pracy.
+// Zawsze pokazujemy co najmniej jeden wiersz — dzień bez odbić wygląda
+// wtedy tak samo jak wcześniej pojedyncza para pól.
+
+function mSesjeRysuj(sesje) {
+  var lista = (sesje && sesje.length) ? sesje : [{ od: '', do: '' }];
+  document.getElementById('m-sesje').innerHTML = lista.map(function(s, i) {
+    return mSesjaWierszHtml(s, i, lista.length);
+  }).join('');
+  mSesjeSuma();
+}
+
+function mSesjaWierszHtml(s, i, ile) {
+  return '<div class="sesja-row">' +
+    '<span class="sesja-nr">' + (ile > 1 ? (i + 1) + '.' : '') + '</span>' +
+    '<input type="time" class="inp sesja-od" value="' + esc(s.od || '') + '" aria-label="Wejście ' + (i + 1) + '">' +
+    '<span class="sesja-sep">–</span>' +
+    '<input type="time" class="inp sesja-do" value="' + esc(s.do || '') + '" aria-label="Wyjście ' + (i + 1) + '">' +
+    '<button type="button" class="sesja-usun' + (ile > 1 ? '' : ' pusty') + '" aria-label="Usuń sesję ' + (i + 1) + '">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>' +
+    '</button>' +
+  '</div>';
+}
+
+function mSesjeZbierz() {
+  var out = [];
+  document.querySelectorAll('#m-sesje .sesja-row').forEach(function(row) {
+    out.push({
+      od: row.querySelector('.sesja-od').value,
+      do: row.querySelector('.sesja-do').value
+    });
+  });
+  return out;
+}
+
+// Podgląd sumy liczonej dokładnie tak jak backend — żeby było widać od
+// razu, że dzień 9–15 + 17–18 to 7h, a nie 9h.
+function mSesjeSuma() {
+  var sesje = mSesjeZbierz();
+  var suma = 0, pelnych = 0;
+  sesje.forEach(function(s) {
+    if (!s.od || !s.do) return;
+    var d = grT2M(s.do) - grT2M(s.od);
+    if (d > 0) { suma += d; pelnych++; }
+  });
+  var el = document.getElementById('m-sesje-suma');
+  if (!pelnych) { el.textContent = ''; el.className = 'sesje-suma'; return; }
+  el.textContent = 'Razem: ' + grHM(suma) + (pelnych > 1 ? ' (' + pelnych + ' sesje, bez przerw)' : '');
+  el.className = 'sesje-suma' + (pelnych > 1 ? ' dzielony' : '');
+}
+
+document.getElementById('m-sesja-dodaj').addEventListener('click', function() {
+  var sesje = mSesjeZbierz();
+  // Domyślne godziny nowej sesji: start od końca ostatniej wypełnionej —
+  // typowy powrót po przerwie, a nie pusty wiersz do wypełnienia od zera.
+  var ostatnia = sesje.filter(function(s) { return s.do; }).pop();
+  sesje.push({ od: ostatnia ? ostatnia.do : '', do: '' });
+  mSesjeRysuj(sesje);
+});
+
+document.getElementById('m-sesje').addEventListener('click', function(e) {
+  var usun = e.target.closest('.sesja-usun');
+  if (!usun) return;
+  var wiersze = Array.from(document.querySelectorAll('#m-sesje .sesja-row'));
+  if (wiersze.length <= 1) return;
+  var idx = wiersze.indexOf(usun.closest('.sesja-row'));
+  var sesje = mSesjeZbierz();
+  sesje.splice(idx, 1);
+  mSesjeRysuj(sesje);
+});
+
+document.getElementById('m-sesje').addEventListener('change', mSesjeSuma);
+
 function fillDayForm(res) {
-  document.getElementById('m-in').value  = res.wejscie || '';
-  document.getElementById('m-out').value = res.wyjscie || '';
+  mSesjeRysuj(res.sesje && res.sesje.length
+    ? res.sesje
+    : ((res.wejscie || res.wyjscie) ? [{ od: res.wejscie, do: res.wyjscie }] : []));
   document.getElementById('m-abs').value = res.absence ? res.absence.code : '';
   document.getElementById('m-abs-note').value = res.absence ? (res.absence.note || '') : '';
   document.getElementById('m-ovr-note').value = res.overtimeNote || '';
@@ -2307,8 +2406,7 @@ document.getElementById('m-save').addEventListener('click', function() {
   if (!M.empId) { toast('Wybierz pracownika z listy.', false); return; }
   var date = document.getElementById('m-date').value;
   if (!date) { toast('Wybierz datę.', false); return; }
-  var wejscie = document.getElementById('m-in').value;
-  var wyjscie = document.getElementById('m-out').value;
+  var sesje = mSesjeZbierz();
   var absCode = document.getElementById('m-abs').value;
   var absNote = document.getElementById('m-abs-note').value;
   var ovrNote = document.getElementById('m-ovr-note').value;
@@ -2316,7 +2414,7 @@ document.getElementById('m-save').addEventListener('click', function() {
   var urlopGodz = document.getElementById('m-urlop-godz').value;
 
   toast('Zapisywanie…', true);
-  gas('masterSetDay', [M.token, M.empId, date, wejscie, wyjscie], function(res) {
+  gas('masterSetDay', [M.token, M.empId, date, null, null, sesje], function(res) {
     if (res && res.errorType === 'UNAUTHORIZED') { location.reload(); return; }
     if (!res || !res.ok) { toast((res && res.msg) || 'Błąd zapisu godzin.', false); return; }
     document.getElementById('m-ovr-flag').className = 'ovr-flag' + (res.overtime ? ' on' : '');
@@ -2343,8 +2441,7 @@ document.getElementById('m-save').addEventListener('click', function() {
 
 document.getElementById('m-clear').addEventListener('click', function() {
   document.getElementById('m-emp-input').value = '';
-  document.getElementById('m-in').value = '';
-  document.getElementById('m-out').value = '';
+  mSesjeRysuj([]);
   document.getElementById('m-abs').value = '';
   document.getElementById('m-abs-note').value = '';
   document.getElementById('m-ovr-note').value = '';
@@ -2403,8 +2500,19 @@ function renderMonthTable(days) {
             ' <small>' + esc(d.dow) + '</small>' +
             (d.absence ? '<span class="mm-abs" title="' + esc(d.absence.typ) + '">' + esc(d.absence.code) + '</span>' : '') +
             '</td>';
-    html += '<td><input type="time" class="mm-in" value="' + esc(d.wejscie || '') + '"></td>';
-    html += '<td><input type="time" class="mm-out" value="' + esc(d.wyjscie || '') + '"></td>';
+    // Dzień dzielony (kilka sesji) nie mieści się w jednej parze pól —
+    // pokazujemy go w całości i odsyłamy do zakładki Dzień. Edycja w
+    // miejscu skasowałaby pozostałe sesje, bo zapis zastępuje cały dzień.
+    if (d.dzielony) {
+      html += '<td colspan="2" class="mm-dzielony-cell">' +
+        '<button type="button" class="mm-dzielony" data-date="' + esc(d.date) + '" ' +
+        'title="Dzielony czas pracy — kliknij, żeby edytować w zakładce Dzień">' +
+        esc(d.sesje.map(function(s) { return (s.od || '?') + '–' + (s.do || '?'); }).join('  |  ')) +
+        ' · ' + esc(grHM(d.mins || 0)) + '</button></td>';
+    } else {
+      html += '<td><input type="time" class="mm-in" value="' + esc(d.wejscie || '') + '"></td>';
+      html += '<td><input type="time" class="mm-out" value="' + esc(d.wyjscie || '') + '"></td>';
+    }
     html += '</tr>';
   });
   html += '</tbody></table></div>';
@@ -2413,11 +2521,15 @@ function renderMonthTable(days) {
   document.querySelectorAll('#mm-table-wrap .mm-day').forEach(function(td) {
     td.addEventListener('click', function() { gotoDay(td.getAttribute('data-date')); });
   });
+  document.querySelectorAll('#mm-table-wrap .mm-dzielony').forEach(function(btn) {
+    btn.addEventListener('click', function() { gotoDay(btn.getAttribute('data-date')); });
+  });
 
   document.querySelectorAll('#mm-table-wrap tr[data-date]').forEach(function(tr) {
     var date = tr.getAttribute('data-date');
     var inEl  = tr.querySelector('.mm-in');
     var outEl = tr.querySelector('.mm-out');
+    if (!inEl || !outEl) return; // dzień dzielony — edytowany w zakładce Dzień
 
     function saveRow() {
       inEl.classList.remove('saved'); outEl.classList.remove('saved');
@@ -3689,7 +3801,12 @@ function ob2OtworzDzien(data) {
         prawa = '<span class="ob2-row-czas">' + esc(o.absencja.typ) + '</span>';
       } else {
         var godz = o.minutyPracy != null ? ' (' + grHM(o.minutyPracy) + ')' : (o.wejscie && !o.wyjscie ? ' (w trakcie)' : '');
-        prawa = '<span class="ob2-row-czas">' + esc(o.wejscie || '—') + '–' + esc(o.wyjscie || '—') + esc(godz) +
+        // Dzień dzielony rozpisujemy na sesje — sam zapis "9:00–18:00"
+        // sugerowałby ciągłą pracę, a przerwa nie liczy się do godzin.
+        var zakres = (o.dzielony && o.sesje && o.sesje.length)
+          ? o.sesje.map(function(s) { return (s.od || '—') + '–' + (s.do || '…'); }).join(' + ')
+          : (o.wejscie || '—') + '–' + (o.wyjscie || '—');
+        prawa = '<span class="ob2-row-czas">' + esc(zakres) + esc(godz) +
           (o.overtime ? ' ⚠' : '') + '</span>';
       }
       return '<div class="ob2-row ' + klasa + '">' +

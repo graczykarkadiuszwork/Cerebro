@@ -642,10 +642,16 @@ function openDaySheet() {
     '<div class="m-card"><div class="m-card-t">' + esc(empName(S.dayEmp)) + '</div>' +
     '<div class="m-field"><span class="m-lbl">Data</span>' +
     '<input type="date" id="ds-date" class="m-inp" value="' + todayStr() + '"></div>' +
-    '<div class="m-row2">' +
+    '<div class="m-row2" id="ds-godziny">' +
       '<div class="m-field" style="margin-bottom:0"><span class="m-lbl">Wejście</span><input type="time" id="ds-in" class="m-inp"></div>' +
       '<div class="m-field" style="margin-bottom:0"><span class="m-lbl">Wyjście</span><input type="time" id="ds-out" class="m-inp"></div>' +
-    '</div></div>' +
+    '</div>' +
+    // Dzielony czas pracy (kilka sesji w dniu) nie mieści się w jednej
+    // parze pól. Zamiast po cichu skasować pozostałe sesje przy zapisie,
+    // pokazujemy je i odsyłamy do wersji desktopowej — tam jest pełny
+    // edytor sesji. Nieobecność i uzasadnienie zostają edytowalne.
+    '<div id="ds-dzielony" class="m-note" style="display:none"></div>' +
+    '</div>' +
     '<div class="m-card"><div class="m-card-t">Nieobecność</div>' +
     '<div class="m-field"><span class="m-lbl">Typ</span><select id="ds-abs" class="m-sel">' +
       '<option value="">— brak —</option>' +
@@ -668,8 +674,18 @@ function loadDaySheet() {
   if (!date) return;
   gas('masterGetDay', [S.token, S.dayEmp, date], function(res) {
     if (!res || !res.ok) return;
+    S.dayDzielony = !!(res.sesje && res.sesje.length > 1);
     document.getElementById('ds-in').value = res.wejscie || '';
     document.getElementById('ds-out').value = res.wyjscie || '';
+    document.getElementById('ds-godziny').style.display = S.dayDzielony ? 'none' : '';
+    var box = document.getElementById('ds-dzielony');
+    box.style.display = S.dayDzielony ? 'block' : 'none';
+    if (S.dayDzielony) {
+      box.innerHTML = '<b>Dzielony czas pracy:</b> ' +
+        esc(res.sesje.map(function(s) { return (s.od || '?') + '–' + (s.do || '?'); }).join('  +  ')) +
+        ' · razem ' + esc(hm(res.minutyPracy || 0)) +
+        '<br>Godziny tego dnia edytuj w wersji desktopowej (zakładka Dzień) — tutaj zmienisz tylko nieobecność i uzasadnienie.';
+    }
     document.getElementById('ds-abs').value = res.absence ? res.absence.code : '';
     document.getElementById('ds-absnote').value = res.absence ? (res.absence.note || '') : '';
     document.getElementById('ds-ovrnote').value = res.overtimeNote || '';
@@ -686,9 +702,9 @@ function saveDaySheet() {
   var absNote = document.getElementById('ds-absnote').value;
   var ovrNote = document.getElementById('ds-ovrnote').value;
 
-  gas('masterSetDay', [S.token, S.dayEmp, date, wej, wyj], function(r1) {
-    if (r1 && r1.errorType === 'UNAUTHORIZED') { location.reload(); return; }
-    if (!r1 || !r1.ok) { toast((r1 && r1.msg) || 'Błąd zapisu godzin.', false); return; }
+  // Dzień dzielony: pomijamy zapis godzin, bo jedna para pól zastąpiłaby
+  // wszystkie sesje. Reszta (nieobecność, uzasadnienie) zapisuje się normalnie.
+  function dalej() {
     gas('masterSetAbsence', [S.token, S.dayEmp, date, abs, absNote], function(r2) {
       if (r2 && !r2.ok && r2.msg) { toast(r2.msg, false); return; }
       gas('masterSetOvertimeNote', [S.token, S.dayEmp, date, ovrNote], function() {
@@ -697,6 +713,14 @@ function saveDaySheet() {
         loadPresence();
       });
     });
+  }
+
+  if (S.dayDzielony) { dalej(); return; }
+
+  gas('masterSetDay', [S.token, S.dayEmp, date, wej, wyj], function(r1) {
+    if (r1 && r1.errorType === 'UNAUTHORIZED') { location.reload(); return; }
+    if (!r1 || !r1.ok) { toast((r1 && r1.msg) || 'Błąd zapisu godzin.', false); return; }
+    dalej();
   });
 }
 
@@ -1619,11 +1643,20 @@ function mmLoad() {
           '<div class="m-day-h"><span class="m-day-n">' + dn + '</span>' +
           '<span class="m-day-d">' + esc(d.dow) + '</span>' +
           (d.absence ? '<span class="m-badge">' + esc(d.absence.code) + '</span>' : '') +
-          (d.overtime ? '<span class="m-badge ovr">poza godz.</span>' : '') + '</div>' +
-          '<div class="m-day-b">' +
-          '<input type="time" class="m-time mm-in" value="' + esc(d.wejscie || '') + '">' +
-          '<input type="time" class="m-time mm-out" value="' + esc(d.wyjscie || '') + '">' +
-          '</div></div>';
+          (d.overtime ? '<span class="m-badge ovr">poza godz.</span>' : '') +
+          (d.dzielony ? '<span class="m-badge">dzielony</span>' : '') + '</div>' +
+          // Dzień dzielony pokazujemy tylko do odczytu — jedna para pól
+          // nie pomieści kilku sesji, a zapis zastępuje CAŁY dzień, więc
+          // edycja w miejscu skasowałaby pozostałe sesje.
+          (d.dzielony
+            ? '<div class="m-day-b" style="font-size:12px;color:var(--c-muted);font-weight:600">' +
+              esc(d.sesje.map(function(s) { return (s.od || '?') + '–' + (s.do || '?'); }).join('  +  ')) +
+              ' · ' + esc(hm(d.minutyPracy || 0)) + '</div>'
+            : '<div class="m-day-b">' +
+              '<input type="time" class="m-time mm-in" value="' + esc(d.wejscie || '') + '">' +
+              '<input type="time" class="m-time mm-out" value="' + esc(d.wyjscie || '') + '">' +
+              '</div>') +
+          '</div>';
       }).join('');
 
     document.querySelectorAll('#m-mm-body [data-date]').forEach(function(row) {

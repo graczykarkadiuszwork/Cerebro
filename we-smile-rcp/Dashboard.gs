@@ -333,19 +333,18 @@ function _dashboardData(year, month) {
           const key = id + '_' + ds;
           const rcp = rcpMap[key];
 
-          let wejscie = null, wyjscie = null, mins = null;
-          if (rcp) {
-            if (rcp.e.length) wejscie = rcp.e.slice().sort()[0];
-            if (rcp.x.length) wyjscie = rcp.x.slice().sort().reverse()[0];
-            if (wejscie && wyjscie) {
-              const diff = _t2m(wyjscie) - _t2m(wejscie);
-              if (diff > 0) { mins = diff; totalMins += diff; }
-            }
-          }
+          // Dzień może mieć kilka sesji (wyjście i powrót w ciągu dnia) —
+          // godziny to SUMA sesji, nie rozpiętość od pierwszego wejścia do
+          // ostatniego wyjścia (ta doliczałaby przerwę jako czas pracy).
+          const sesje = _sesjeZOdbic(rcp);
+          const rama = _ramaDnia(sesje);
+          let wejscie = rama.wejscie, wyjscie = rama.wyjscie, mins = null;
+          const przepracowane = _minutyZSesji(sesje);
+          if (przepracowane > 0) { mins = przepracowane; totalMins += przepracowane; }
 
           const absence  = absMap[key] || null;
-          const overtime = _dayOutsideClinic(ds, wejscie, wyjscie);
-          const overtimeMinutes = _overtimeMinutes(ds, wejscie, wyjscie);
+          const overtime = _dayOutsideClinicSesje(ds, sesje);
+          const overtimeMinutes = _overtimeMinutesSesje(ds, sesje);
           const overtimeNote = ovrNotes[key] || '';
           if (absence)  absDays++;
           if (overtime) { ovrDays++; ovrMinutes += overtimeMinutes; }
@@ -368,6 +367,8 @@ function _dashboardData(year, month) {
           const dow = DOW[new Date(ds + 'T12:00:00').getDay()];
           days.push({
             date: ds, dow, wejscie, wyjscie, mins, absence, overtime, overtimeMinutes, overtimeNote,
+            sesje: sesje,
+            dzielony: sesje.length > 1, // dzień z przerwą — patrz _sesjeZOdbic
             urlopKredytGodz: urlopKredytMin !== null ? Math.round((urlopKredytMin / 60) * 100) / 100 : null,
             urlopReczny
           });
@@ -448,12 +449,10 @@ function _urlopGodzinyUoPDomyslne(empId, forma, rok, mies, rcpMapCaly, absMapCal
     const key = empId + '_' + ds;
     const abs = absMapCaly[key] || null;
     if (abs && PAID_8H_CODES.indexOf(abs.code) !== -1) { dniUrlopowe.push(ds); continue; }
-    const rcp = rcpMapCaly[key];
-    if (rcp && rcp.e.length && rcp.x.length) {
-      const we = rcp.e.slice().sort()[0], wy = rcp.x.slice().sort().reverse()[0];
-      const diff = _t2m(wy) - _t2m(we);
-      if (diff > 0) zarejestrowaneMin += diff;
-    }
+    // Suma sesji, nie rozpiętość dnia — dzień dzielony (np. 9-15 i 17-18)
+    // ma wnieść 7h, inaczej zaniżyłby brakujące godziny do rozdzielenia
+    // na dni urlopowe.
+    zarejestrowaneMin += _minutyZSesji(_sesjeZOdbic(rcpMapCaly[key]));
   }
   if (!dniUrlopowe.length) return {};
 
@@ -718,19 +717,15 @@ function _dashExportXlsxData(opts) {
     const end = new Date(toStr + 'T12:00:00');
     while (cursor <= end) {
       const ds = Utilities.formatDate(cursor, 'Europe/Warsaw', 'yyyy-MM-dd');
-      const rcp = map[id + '_' + ds];
-      let wejscie = '', wyjscie = '', godzTxt = '';
-      let we = null, wy = null;
-      if (rcp) {
-        we = rcp.e.length ? rcp.e.slice().sort()[0] : null;
-        wy = rcp.x.length ? rcp.x.slice().sort().reverse()[0] : null;
-        wejscie = we || '';
-        wyjscie = wy || '';
-        if (we && wy) {
-          const diff = _t2m(wy) - _t2m(we);
-          if (diff > 0) { totalMins += diff; godzTxt = _fmtHM(diff); }
-        }
-      }
+      // Dzień dzielony (wyjście i powrót) rozpisujemy jako "9:00, 17:00" /
+       // "15:00, 18:00" w kolumnach Wejście/Wyjście, a Godziny to suma
+      // sesji — inaczej eksport pokazywałby 9h zamiast faktycznych 7h.
+      const sesje = _sesjeZOdbic(map[id + '_' + ds]);
+      const wejscie = sesje.map(s => s.od).join(', ');
+      const wyjscie = sesje.filter(s => s.do).map(s => s.do).join(', ');
+      let godzTxt = '';
+      const przepracowane = _minutyZSesji(sesje);
+      if (przepracowane > 0) { totalMins += przepracowane; godzTxt = _fmtHM(przepracowane); }
 
       const abs = absMap[id + '_' + ds] || null;
       if (abs) dniNieobecnosci++;
@@ -750,7 +745,8 @@ function _dashExportXlsxData(opts) {
       }
       const uwagi = [];
       if (abs && abs.note) uwagi.push(abs.note);
-      if (_dayOutsideClinic(ds, we, wy)) {
+      if (sesje.length > 1) uwagi.push('Dzielony czas pracy (' + sesje.length + ' sesje)');
+      if (_dayOutsideClinicSesje(ds, sesje)) {
         dniPozaGodzinami++;
         const ovrNote = ovrNotes[id + '_' + ds] || '';
         uwagi.push('Poza godzinami Kliniki' + (ovrNote ? ': ' + ovrNote : ' (brak uzasadnienia)'));
@@ -1211,20 +1207,27 @@ function masterGetDay(token, empId, date) {
   }
   const ewidSh = _ss().getSheetByName('Ewidencja');
   const rows = (ewidSh && ewidSh.getLastRow() >= 2) ? ewidSh.getDataRange().getValues().slice(1) : [];
-  let wejscie = '', wyjscie = '';
+  const rec = { e: [], x: [] };
   rows.forEach(r => {
     if (String(r[1]) !== String(empId)) return;
     if (_sheetDate(r[5]) !== date) return;
     const akcja = String(r[4]).trim();
     const godz  = _sheetTime(r[6]);
-    if (akcja === 'WEJSCIE') wejscie = godz;
-    else if (akcja === 'WYJSCIE') wyjscie = godz;
+    if (akcja === 'WEJSCIE') rec.e.push(godz);
+    else if (akcja === 'WYJSCIE') rec.x.push(godz);
   });
+
+  // Dzień może mieć kilka sesji (wyjście i powrót) — zwracamy pełną listę,
+  // a wejscie/wyjscie zostają jako rama dnia dla widoków pokazujących
+  // jedną, zbiorczą godzinę od-do.
+  const sesje = _sesjeZOdbic(rec);
+  const rama = _ramaDnia(sesje);
+  const wejscie = rama.wejscie || '', wyjscie = rama.wyjscie || '';
 
   const key = String(empId) + '_' + date;
   const absence  = _absenceMapAll()[key] || null;
   const ovrNote  = _overtimeNotesAll()[key] || '';
-  const overtime = _dayOutsideClinic(date, wejscie || null, wyjscie || null);
+  const overtime = _dayOutsideClinicSesje(date, sesje);
 
   const worker = _getWorkers().find(r => String(r[0]) === String(empId));
   const forma = worker ? String(worker[6] || '') : '';
@@ -1240,22 +1243,60 @@ function masterGetDay(token, empId, date) {
   }
 
   return {
-    ok: true, wejscie, wyjscie, absence, overtime, overtimeNote: ovrNote,
+    ok: true, wejscie, wyjscie, sesje, absence, overtime, overtimeNote: ovrNote,
+    minutyPracy: _minutyZSesji(sesje),
     formaUoP: forma === FORMA_UOP, urlopKredytGodz, urlopReczny
   };
 }
 
-function masterSetDay(token, empId, date, wejscie, wyjscie) {
+/**
+ * Zapisuje czas pracy dnia. Obsługuje DZIELONY czas pracy: `sesje` to
+ * lista par [{od, do}] — np. 9:00–15:00 i 17:00–18:00 to dwie sesje w
+ * jednym dniu. Gdy `sesje` nie podano, działa po staremu (jedna para
+ * wejscie/wyjscie) — zachowuje zgodność ze starszymi wywołaniami.
+ *
+ * UWAGA: zapis ZASTĘPUJE wszystkie odbicia tego dnia. Wywołanie z jedną
+ * parą dla dnia, który ma kilka sesji, skasowałoby pozostałe — dlatego
+ * interfejsy edytujące pojedynczą parę (wiersz w Miesiącu) muszą najpierw
+ * sprawdzić `dzielony` i odesłać do zakładki Dzień zamiast nadpisywać.
+ */
+function masterSetDay(token, empId, date, wejscie, wyjscie, sesje) {
   if (!_masterOk(token)) return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
   if (!empId || !/^\d{4}-\d{2}-\d{2}$/.test(String(date))) {
     return { ok: false, msg: 'Nieprawidłowe dane.' };
   }
 
   const timeRe = /^([01]\d|2[0-3]):[0-5]\d$/;
-  wejscie = String(wejscie || '').trim();
-  wyjscie = String(wyjscie || '').trim();
-  if (wejscie && !timeRe.test(wejscie)) return { ok: false, msg: 'Nieprawidłowy format wejścia (HH:MM).' };
-  if (wyjscie && !timeRe.test(wyjscie)) return { ok: false, msg: 'Nieprawidłowy format wyjścia (HH:MM).' };
+  const doZapisu = [];
+
+  if (Array.isArray(sesje)) {
+    for (let i = 0; i < sesje.length; i++) {
+      const od = String((sesje[i] && sesje[i].od) || '').trim();
+      const do_ = String((sesje[i] && sesje[i].do) || '').trim();
+      if (!od && !do_) continue; // pusty wiersz — po prostu pomijamy
+      if (od && !timeRe.test(od)) return { ok: false, msg: 'Sesja ' + (i + 1) + ': nieprawidłowy format wejścia (HH:MM).' };
+      if (do_ && !timeRe.test(do_)) return { ok: false, msg: 'Sesja ' + (i + 1) + ': nieprawidłowy format wyjścia (HH:MM).' };
+      if (od && do_ && _t2m(do_) <= _t2m(od)) {
+        return { ok: false, msg: 'Sesja ' + (i + 1) + ': wyjście musi być późniejsze niż wejście.' };
+      }
+      doZapisu.push({ od: od, do: do_ });
+    }
+    // Sesje nie mogą na siebie nachodzić — inaczej ten sam czas liczyłby
+    // się podwójnie w sumie godzin.
+    const posort = doZapisu.filter(s => s.od).slice().sort((a, b) => _t2m(a.od) - _t2m(b.od));
+    for (let i = 1; i < posort.length; i++) {
+      const poprz = posort[i - 1];
+      if (poprz.do && _t2m(posort[i].od) < _t2m(poprz.do)) {
+        return { ok: false, msg: 'Sesje nachodzą na siebie (' + poprz.od + '–' + poprz.do + ' i ' + posort[i].od + '–' + (posort[i].do || '…') + ').' };
+      }
+    }
+  } else {
+    wejscie = String(wejscie || '').trim();
+    wyjscie = String(wyjscie || '').trim();
+    if (wejscie && !timeRe.test(wejscie)) return { ok: false, msg: 'Nieprawidłowy format wejścia (HH:MM).' };
+    if (wyjscie && !timeRe.test(wyjscie)) return { ok: false, msg: 'Nieprawidłowy format wyjścia (HH:MM).' };
+    if (wejscie || wyjscie) doZapisu.push({ od: wejscie, do: wyjscie });
+  }
 
   const worker = _getWorkers().find(r => String(r[0]) === String(empId));
   if (!worker) return { ok: false, msg: 'Pracownik nie istnieje.' };
@@ -1274,19 +1315,26 @@ function masterSetDay(token, empId, date, wejscie, wyjscie) {
     }
   }
 
-  if (wejscie) {
-    ewidSh.appendRow([new Date().toISOString(), String(empId), String(worker[1]), String(worker[2]), 'WEJSCIE', date, wejscie, 'admin_override']);
-  }
-  if (wyjscie) {
-    ewidSh.appendRow([new Date().toISOString(), String(empId), String(worker[1]), String(worker[2]), 'WYJSCIE', date, wyjscie, 'admin_override']);
-  }
+  const teraz = new Date().toISOString();
+  doZapisu.forEach(s => {
+    if (s.od) ewidSh.appendRow([teraz, String(empId), String(worker[1]), String(worker[2]), 'WEJSCIE', date, s.od, 'admin_override']);
+    if (s.do) ewidSh.appendRow([teraz, String(empId), String(worker[1]), String(worker[2]), 'WYJSCIE', date, s.do, 'admin_override']);
+  });
 
-  _logAdmin('MasterEdit', String(empId), date + ' → wejście=' + (wejscie || '—') + ' wyjście=' + (wyjscie || '—'));
+  const opis = doZapisu.length
+    ? doZapisu.map(s => (s.od || '—') + '-' + (s.do || '—')).join(', ')
+    : 'wyczyszczono';
+  _logAdmin('MasterEdit', String(empId), date + ' → ' + opis);
 
-  // Zwróć aktualny stan flagi przekroczenia po edycji
-  const overtime = _dayOutsideClinic(date, wejscie || null, wyjscie || null);
-
-  return { ok: true, overtime };
+  // Zwróć aktualny stan po edycji — flagę przekroczenia godzin Kliniki
+  // i sumę faktycznie przepracowanych minut (suma sesji, bez przerw).
+  const zapisaneSesje = doZapisu.map(s => ({ od: s.od || null, do: s.do || null }));
+  return {
+    ok: true,
+    overtime: _dayOutsideClinicSesje(date, zapisaneSesje),
+    minutyPracy: _minutyZSesji(zapisaneSesje),
+    sesje: zapisaneSesje
+  };
 }
 
 // ── Notatki sesji ──────────────────────────────────────────────
@@ -1658,16 +1706,18 @@ function masterGetMonth(token, empId, year, month) {
   const days = [];
   for (let d = 1; d <= daysInMonth; d++) {
     const ds  = pfx + '-' + String(d).padStart(2, '0');
-    const rcp = map[ds];
-    const wejscie = (rcp && rcp.e.length) ? rcp.e.slice().sort()[0] : '';
-    const wyjscie = (rcp && rcp.x.length) ? rcp.x.slice().sort().reverse()[0] : '';
+    const sesje = _sesjeZOdbic(map[ds]);
+    const rama = _ramaDnia(sesje);
+    const wejscie = rama.wejscie || '', wyjscie = rama.wyjscie || '';
     const dow = DOW[new Date(ds + 'T12:00:00').getDay()];
     const key = String(empId) + '_' + ds;
     days.push({
       date: ds, dow, wejscie, wyjscie,
+      sesje: sesje, dzielony: sesje.length > 1,
+      minutyPracy:     _minutyZSesji(sesje),
       absence:         absMap[key] || null,
-      overtime:        _dayOutsideClinic(ds, wejscie || null, wyjscie || null),
-      overtimeMinutes: _overtimeMinutes(ds, wejscie || null, wyjscie || null),
+      overtime:        _dayOutsideClinicSesje(ds, sesje),
+      overtimeMinutes: _overtimeMinutesSesje(ds, sesje),
       overtimeNote:    ovrNotes[key] || ''
     });
   }
@@ -1704,20 +1754,22 @@ function masterGetObecnoscMiesiac(token, rok, mies) {
     const osoby = [];
 
     pracownicy.forEach(p => {
-      const rec = ewid[p.id + '_' + ds];
       const absencja = absMap[p.id + '_' + ds] || null;
-      const wejscie = (rec && rec.e.length) ? rec.e.slice().sort()[0] : null;
-      const wyjscie = (rec && rec.x.length) ? rec.x.slice().sort().reverse()[0] : null;
+      const sesje = _sesjeZOdbic(ewid[p.id + '_' + ds]);
+      const rama = _ramaDnia(sesje);
+      const wejscie = rama.wejscie, wyjscie = rama.wyjscie;
       if (!wejscie && !wyjscie && !absencja) return; // nic do pokazania dla tej osoby tego dnia
 
+      const przepracowane = _minutyZSesji(sesje);
       osoby.push({
         empId: p.id, imie: p.imie, nazwisko: p.nazwisko,
         inicjaly: (p.imie.charAt(0) || '') + (p.nazwisko.charAt(0) || ''),
         grupa: p.grupa,
         wejscie, wyjscie,
-        minutyPracy: (wejscie && wyjscie) ? Math.max(0, _t2m(wyjscie) - _t2m(wejscie)) : null,
+        sesje: sesje, dzielony: sesje.length > 1,
+        minutyPracy: przepracowane > 0 ? przepracowane : null,
         absencja: absencja ? { code: absencja.code, typ: absencja.typ } : null,
-        overtime: _dayOutsideClinic(ds, wejscie, wyjscie)
+        overtime: _dayOutsideClinicSesje(ds, sesje)
       });
     });
 

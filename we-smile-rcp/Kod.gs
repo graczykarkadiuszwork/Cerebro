@@ -35,6 +35,59 @@ function _clinicHoursFor(ds) {
   return { open: 8 * 60, close: 21 * 60 };
 }
 
+// ── Dzielony czas pracy: sesje zamiast jednej pary wejście-wyjście ──
+// Pracownik może w ciągu dnia wyjść i wrócić (np. 9:00–15:00, potem
+// 17:00–18:00). Surowe odbicia w Ewidencji to płaska lista zdarzeń, więc
+// wszędzie, gdzie liczymy czas pracy, najpierw parujemy je w SESJE.
+//
+// To jest różnica merytoryczna, nie kosmetyczna: dzień 9–15 + 17–18 to
+// 7 godzin pracy, a nie 9 godzin rozpiętości od pierwszego wejścia do
+// ostatniego wyjścia. Liczenie "od pierwszego do ostatniego" doliczałoby
+// pracownikowi przerwę jako czas pracy.
+//
+// Parowanie: wejścia i wyjścia sortujemy rosnąco i łączymy po kolei —
+// każde wejście z najbliższym późniejszym wyjściem. Wyjście bez
+// wcześniejszego wejścia (np. ktoś zapomniał odbić rano) jest tu
+// pomijane; braki odbić wykrywa osobno _najnowszyBrakOdbicia.
+function _sesjeZOdbic(rec) {
+  if (!rec) return [];
+  const we = (rec.e || []).slice().sort();
+  const wy = (rec.x || []).slice().sort();
+  const sesje = [];
+  let j = 0;
+  for (let i = 0; i < we.length; i++) {
+    while (j < wy.length && _t2m(wy[j]) <= _t2m(we[i])) j++;
+    if (j < wy.length) { sesje.push({ od: we[i], do: wy[j] }); j++; }
+    else sesje.push({ od: we[i], do: null }); // sesja w toku (jeszcze w pracy)
+  }
+  return sesje;
+}
+
+// Suma FAKTYCZNIE przepracowanych minut — same sesje, bez przerw między nimi.
+function _minutyZSesji(sesje) {
+  let suma = 0;
+  (sesje || []).forEach(s => {
+    if (!s || !s.od || !s.do) return;
+    const d = _t2m(s.do) - _t2m(s.od);
+    if (d > 0) suma += d;
+  });
+  return suma;
+}
+
+// Pierwsze wejście i ostatnie wyjście dnia — do widoków, które pokazują
+// jedną, zbiorczą ramę dnia (np. "9:00–18:00"), oraz do wykrywania pracy
+// poza godzinami Kliniki (skrajne odbicia są tu jedyne, co się liczy).
+function _ramaDnia(sesje) {
+  const lista = (sesje || []).filter(s => s && s.od);
+  if (!lista.length) return { wejscie: null, wyjscie: null };
+  let we = lista[0].od, wy = null;
+  lista.forEach(s => {
+    if (_t2m(s.od) < _t2m(we)) we = s.od;
+    if (s.do && (wy === null || _t2m(s.do) > _t2m(wy))) wy = s.do;
+  });
+  return { wejscie: we, wyjscie: wy };
+}
+
 // Czy dzień (na podstawie pierwszego wejścia / ostatniego wyjścia)
 // wykracza poza regularne godziny Kliniki.
 function _dayOutsideClinic(ds, wejscie, wyjscie) {
@@ -59,6 +112,21 @@ function _overtimeMinutes(ds, wejscie, wyjscie) {
   if (wejscie && _t2m(wejscie) < h.open)  mins += h.open - _t2m(wejscie);
   if (wyjscie && _t2m(wyjscie) > h.close) mins += _t2m(wyjscie) - h.close;
   return mins;
+}
+
+// Warianty świadome sesji. Dla dnia z jedną sesją dają dokładnie to samo
+// co wersje powyżej; różnią się dopiero przy dniu dzielonym — niedziela
+// liczy wtedy sumę sesji, a nie rozpiętość obejmującą przerwę.
+function _dayOutsideClinicSesje(ds, sesje) {
+  const r = _ramaDnia(sesje);
+  return _dayOutsideClinic(ds, r.wejscie, r.wyjscie);
+}
+
+function _overtimeMinutesSesje(ds, sesje) {
+  const h = _clinicHoursFor(ds);
+  if (!h) return _minutyZSesji(sesje); // niedziela — cała praca poza godzinami
+  const r = _ramaDnia(sesje);
+  return _overtimeMinutes(ds, r.wejscie, r.wyjscie);
 }
 
 // ── Grafik obsady gabinetów ──────────────────────────────────
@@ -346,7 +414,7 @@ function callRCP(action, argsJson) {
       case 'masterLogin':           return masterLogin(args[0]);
       case 'masterGetEmployees':    return masterGetEmployees(args[0]);
       case 'masterGetDay':          return masterGetDay(args[0], args[1], args[2]);
-      case 'masterSetDay':          return masterSetDay(args[0], args[1], args[2], args[3], args[4]);
+      case 'masterSetDay':          return masterSetDay(args[0], args[1], args[2], args[3], args[4], args[5]);
       case 'masterGetMonth':        return masterGetMonth(args[0], args[1], args[2], args[3]);
       case 'masterGetNotatkiDnia':   return masterGetNotatkiDnia(args[0], args[1], args[2]);
       case 'masterAddNotatkaDnia':   return masterAddNotatkaDnia(args[0], args[1], args[2], args[3]);
@@ -619,9 +687,12 @@ const ZRODLO_UZUPELNIENIE = 'worker-manual';
 const BRAKI_DNI_WSTECZ = 30;
 
 /**
- * Najnowszy niedomknięty dzień pracownika: dzień z samym WEJŚCIEM bez
- * WYJŚCIA albo z samym WYJŚCIEM bez WEJŚCIA. Bieżący dzień jest pomijany —
- * trwająca praca to nie jest brak odbicia.
+ * Najnowszy niedomknięty dzień pracownika. Przy dzielonym czasie pracy
+ * (kilka sesji w jednym dniu) nie wystarczy sprawdzić, CZY tego dnia było
+ * jakieś wejście i jakieś wyjście — dzień 9:00, 15:00, 17:00 ma jedno i
+ * drugie, a mimo to brakuje w nim wyjścia z drugiej sesji. Dlatego
+ * porównujemy LICZBĘ wejść i wyjść: różnica oznacza brak.
+ * Bieżący dzień jest pomijany — trwająca praca to nie jest brak odbicia.
  */
 function _najnowszyBrakOdbicia(empId, dzisiaj) {
   const ewidSh = _ss().getSheetByName('Ewidencja');
@@ -638,18 +709,18 @@ function _najnowszyBrakOdbicia(empId, dzisiaj) {
     if (!ds || ds >= dzisiaj || ds < odKiedy) return;
     const akcja = String(r[4]);
     if (akcja !== 'WEJSCIE' && akcja !== 'WYJSCIE') return;
-    if (!poDniach[ds]) poDniach[ds] = { wejscie: false, wyjscie: false };
-    if (akcja === 'WEJSCIE') poDniach[ds].wejscie = true;
-    else poDniach[ds].wyjscie = true;
+    if (!poDniach[ds]) poDniach[ds] = { wejscia: 0, wyjscia: 0 };
+    if (akcja === 'WEJSCIE') poDniach[ds].wejscia++;
+    else poDniach[ds].wyjscia++;
   });
 
   const braki = Object.keys(poDniach)
-    .filter(ds => !poDniach[ds].wejscie || !poDniach[ds].wyjscie)
+    .filter(ds => poDniach[ds].wejscia !== poDniach[ds].wyjscia)
     .sort();
   if (!braki.length) return null;
 
   const ds = braki[braki.length - 1]; // najnowszy
-  return { data: ds, brakuje: poDniach[ds].wejscie ? 'WYJSCIE' : 'WEJSCIE' };
+  return { data: ds, brakuje: poDniach[ds].wejscia > poDniach[ds].wyjscia ? 'WYJSCIE' : 'WEJSCIE' };
 }
 
 /**
