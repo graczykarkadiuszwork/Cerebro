@@ -175,9 +175,15 @@ function _activeNowData() {
     const w = workers.find(row => String(row[0]) === empId);
     if (!w) return;
     const rec = byEmp[empId];
-    const wejscie = rec.e.length ? rec.e.slice().sort()[0] : null;
-    const wyjscie = rec.x.length ? rec.x.slice().sort().reverse()[0] : null;
-    const entry = { id: empId, imie: String(w[1]), nazwisko: String(w[2]), wejscie, wyjscie };
+    // Dzień dzielony: pasek obecności musi pokazać sesje, bo sama rama
+    // "09:00–18:00" sugerowałaby ciągłą pracę i zawyżała czas o przerwę.
+    const sesje = _sesjeZOdbic(rec);
+    const rama = _ramaDnia(sesje);
+    const wejscie = rama.wejscie, wyjscie = rama.wyjscie;
+    const entry = {
+      id: empId, imie: String(w[1]), nazwisko: String(w[2]), wejscie, wyjscie,
+      sesje: sesje, dzielony: sesje.length > 1, minutyPracy: _minutyZSesji(sesje)
+    };
 
     if (rec.last === 'WEJSCIE') {
       active.push(entry);

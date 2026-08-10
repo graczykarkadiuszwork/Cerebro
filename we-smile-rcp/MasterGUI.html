@@ -1793,13 +1793,31 @@ function mRenderPresenceBar(active, finished) {
     return;
   }
 
+  // Dzień dzielony rozpisujemy na sesje i dokładamy sumę godzin. Sama
+  // rama "09:00–18:00" sugerowałaby ciągłą pracę i zawyżała czas o
+  // przerwę — czyli dokładnie wprowadzała Właściciela w błąd.
+  function mZakresDnia(p) {
+    if (p.dzielony && p.sesje && p.sesje.length) {
+      return p.sesje.map(function(s) { return (s.od || '—') + '–' + (s.do || '…'); }).join(' + ') +
+        ' (' + grHM(p.minutyPracy || 0) + ')';
+    }
+    return (p.wejscie || '?') + '–' + (p.wyjscie || '?') +
+      (p.minutyPracy ? ' (' + grHM(p.minutyPracy) + ')' : '');
+  }
+
   var itemsHtml = active.map(function(p) {
+    // Osoba w trakcie pracy po przerwie: pokazujemy, że wcześniej już
+    // dziś pracowała, żeby "od 17:00" nie wyglądało na cały jej dzień.
+    var wczesniej = (p.sesje || []).filter(function(s) { return s.do; });
     return '<span class="presence-item"><span class="p-dot"></span>' +
-      esc(p.imie + ' ' + p.nazwisko) + ' — od ' + esc(p.wejscie) + '</span>';
+      esc(p.imie + ' ' + p.nazwisko) + ' — od ' + esc(p.wejscie) +
+      (wczesniej.length
+        ? esc(' (wcześniej dziś ' + wczesniej.map(function(s) { return s.od + '–' + s.do; }).join(' + ') + ')')
+        : '') +
+      '</span>';
   }).join('') + finished.map(function(p) {
     return '<span class="presence-item done"><span class="p-dot done"></span>' +
-      esc(p.imie + ' ' + p.nazwisko) + ' — zakończono ' +
-      esc((p.wejscie || '?') + '–' + (p.wyjscie || '?')) + '</span>';
+      esc(p.imie + ' ' + p.nazwisko) + ' — zakończono ' + esc(mZakresDnia(p)) + '</span>';
   }).join('');
 
   track.className = 'presence-track';
@@ -1828,18 +1846,28 @@ function mRenderModalList(active, finished) {
   if (active.length > 0) {
     html += '<div class="modal-sec">W pracy</div>';
     html += active.map(function(p) {
+      var wczesniej = (p.sesje || []).filter(function(s) { return s.do; });
       return '<div class="modal-row"><span class="modal-row-name"><span class="p-dot"></span>' +
-        esc(p.imie + ' ' + p.nazwisko) + '</span>' +
+        esc(p.imie + ' ' + p.nazwisko) +
+        (wczesniej.length
+          ? '<small style="display:block;color:var(--c-muted);font-weight:600">wcześniej dziś: ' +
+            esc(wczesniej.map(function(s) { return s.od + '–' + s.do; }).join(' + ')) + '</small>'
+          : '') +
+        '</span>' +
         '<span style="color:var(--c-primary);font-weight:700;font-family:ui-monospace,monospace">od ' + esc(p.wejscie) + '</span></div>';
     }).join('');
   }
   if (finished.length > 0) {
     html += '<div class="modal-sec">Zakończyli dziś</div>';
     html += finished.map(function(p) {
+      // Dzień dzielony: pełny rozkład sesji + suma, zamiast mylącej ramy dnia.
+      var zakres = (p.dzielony && p.sesje && p.sesje.length)
+        ? p.sesje.map(function(s) { return (s.od || '—') + '–' + (s.do || '…'); }).join(' + ')
+        : (p.wejscie || '?') + '–' + (p.wyjscie || '?');
       return '<div class="modal-row done"><span class="modal-row-name"><span class="p-dot done"></span>' +
         esc(p.imie + ' ' + p.nazwisko) + '</span>' +
         '<span style="color:var(--c-muted);font-weight:700;font-family:ui-monospace,monospace">' +
-        esc((p.wejscie || '?') + '–' + (p.wyjscie || '?')) + '</span></div>';
+        esc(zakres) + (p.minutyPracy ? esc(' · ' + grHM(p.minutyPracy)) : '') + '</span></div>';
     }).join('');
   }
   el.innerHTML = html;
@@ -2516,7 +2544,7 @@ function renderMonthTable(days) {
         '<button type="button" class="mm-dzielony" data-date="' + esc(d.date) + '" ' +
         'title="Dzielony czas pracy — kliknij, żeby edytować w zakładce Dzień">' +
         esc(d.sesje.map(function(s) { return (s.od || '?') + '–' + (s.do || '?'); }).join('  |  ')) +
-        ' · ' + esc(grHM(d.mins || 0)) + '</button></td>';
+        ' · ' + esc(grHM(d.minutyPracy || 0)) + '</button></td>';
     } else {
       html += '<td><input type="time" class="mm-in" value="' + esc(d.wejscie || '') + '"></td>';
       html += '<td><input type="time" class="mm-out" value="' + esc(d.wyjscie || '') + '"></td>';
