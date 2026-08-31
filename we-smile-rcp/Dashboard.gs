@@ -634,7 +634,7 @@ function _exportMetaData() {
   };
 }
 
-// ── Eksport Excel (arkusz na pracownika, zakres + filtr) ───────
+// ── Eksport Excel (lista obecności — zakres + filtr) ───────────
 
 function dashExportXlsx(token, opts) {
   if (!_dashOk(token)) {
@@ -701,34 +701,47 @@ function _dashExportXlsxData(opts) {
   const urlopDomyslneCache = {}; // 'empId_rok_mies' -> mapa dnia->minuty, liczona raz na parę
   const DOW = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'];
 
+  // Kolejność alfabetyczna (nazwisko, imię) — tak wygląda klasyczna lista
+  // obecności, niezależnie od kolejności w arkuszu Pracownicy.
+  selected.sort((a, b) => {
+    const na = String(a[2]) + ' ' + String(a[1]);
+    const nb = String(b[2]) + ' ' + String(b[1]);
+    return na.localeCompare(nb, 'pl');
+  });
+
   const tmpName = 'WeSMILE_Raport_' + fromStr + '_' + toStr + '_' + Utilities.getUuid().slice(0, 8);
   const tmpSs = SpreadsheetApp.create(tmpName);
   const defaultSheet = tmpSs.getSheets()[0];
 
+  // ── Arkusz „Lista obecności" — jedna płaska tabela dla wszystkich
+  // wybranych osób, w formacie klasycznej listy obecności: imię, nazwisko,
+  // wejście, wyjście, godziny danego dnia, adnotacja, oznaczenie dnia
+  // (dzień tygodnia). Świadomie BEZ rozbicia dnia dzielonego na
+  // poszczególne sesje (to są „szczegóły", których raport ma unikać) —
+  // Wejście/Wyjście to pierwsze wejście i ostatnie wyjście danego dnia,
+  // a Godziny to zawsze poprawna suma sesji (patrz _minutyZSesji), więc
+  // liczba się zgadza, nawet jeśli sama rama dnia obejmuje przerwę.
+  const listaSh = tmpSs.insertSheet('Lista obecności');
+  const listaHeader = ['Imię', 'Nazwisko', 'Data', 'Dzień', 'Wejście', 'Wyjście', 'Godziny', 'Adnotacja'];
+  listaSh.appendRow(listaHeader);
+
   // Zbiorcze wiersze do arkusza "Podsumowanie" — jeden wgląd na cały wybór
   // naraz, zamiast otwierania każdego arkusza osobno, żeby wyciągnąć wnioski.
   const podsumowanie = [];
+  let wierszNr = 1; // ostatni dopisany wiersz (nagłówek = wiersz 1)
 
   selected.forEach(w => {
     const id = String(w[0]);
     const forma = String(w[6] || '');
-    const rawName = String(w[1]) + ' ' + String(w[2]);
-    const safeName = rawName.replace(/[\\\/\?\*\[\]:]/g, ' ').slice(0, 90) || id;
-    const sh = tmpSs.insertSheet(safeName);
-    const header = ['Data', 'Dzień', 'Wejście', 'Wyjście', 'Godziny', 'Nieobecność', 'Uwagi'];
-    sh.appendRow(header);
+    const imie = String(w[1]), nazwisko = String(w[2]);
 
     let totalMins = 0, dniNieobecnosci = 0, dniPozaGodzinami = 0;
     const cursor = new Date(fromStr + 'T12:00:00');
     const end = new Date(toStr + 'T12:00:00');
     while (cursor <= end) {
       const ds = Utilities.formatDate(cursor, 'Europe/Warsaw', 'yyyy-MM-dd');
-      // Dzień dzielony (wyjście i powrót) rozpisujemy jako "9:00, 17:00" /
-       // "15:00, 18:00" w kolumnach Wejście/Wyjście, a Godziny to suma
-      // sesji — inaczej eksport pokazywałby 9h zamiast faktycznych 7h.
       const sesje = _sesjeZOdbic(map[id + '_' + ds]);
-      const wejscie = sesje.map(s => s.od).join(', ');
-      const wyjscie = sesje.filter(s => s.do).map(s => s.do).join(', ');
+      const rama = _ramaDnia(sesje);
       let godzTxt = '';
       const przepracowane = _minutyZSesji(sesje);
       if (przepracowane > 0) { totalMins += przepracowane; godzTxt = _fmtHM(przepracowane); }
@@ -749,26 +762,42 @@ function _dashExportXlsxData(opts) {
         totalMins += kredytMin;
         godzTxt = _fmtHM(kredytMin);
       }
-      const uwagi = [];
-      if (abs && abs.note) uwagi.push(abs.note);
-      if (sesje.length > 1) uwagi.push('Dzielony czas pracy (' + sesje.length + ' sesje)');
+
+      // Adnotacja — jedno pole łączące nieobecność, dzielony czas pracy i
+      // przekroczenie godzin Kliniki, żeby lista miała jedną prostą
+      // kolumnę "co warto wiedzieć o tym dniu" zamiast kilku osobnych.
+      const adnotacja = [];
+      if (abs) adnotacja.push(abs.typ + (abs.note ? ' (' + abs.note + ')' : ''));
+      if (sesje.length > 1) adnotacja.push('Dzielony czas pracy');
       if (_dayOutsideClinicSesje(ds, sesje)) {
         dniPozaGodzinami++;
         const ovrNote = ovrNotes[id + '_' + ds] || '';
-        uwagi.push('Poza godzinami Kliniki' + (ovrNote ? ': ' + ovrNote : ' (brak uzasadnienia)'));
+        adnotacja.push('Poza godzinami Kliniki' + (ovrNote ? ': ' + ovrNote : ' (brak uzasadnienia)'));
       }
 
-      sh.appendRow([ds, DOW[cursor.getDay()], wejscie, wyjscie, godzTxt,
-                    abs ? abs.typ : '', uwagi.join(' | ')]);
+      const dow = DOW[cursor.getDay()];
+      listaSh.appendRow([imie, nazwisko, ds, dow, rama.wejscie || '—', rama.wyjscie || '—', godzTxt, adnotacja.join(' | ')]);
+      wierszNr++;
+      // Oznaczenie dnia — sobota/niedziela z jasnym tłem, żeby dni wolne
+      // było widać na pierwszy rzut oka bez wczytywania się w kolumnę.
+      if (dow === 'Sb' || dow === 'Nd') {
+        listaSh.getRange(wierszNr, 1, 1, listaHeader.length).setBackground('#f4f4f4');
+      }
       cursor.setDate(cursor.getDate() + 1);
     }
 
-    sh.appendRow(['', '', '', 'RAZEM', _fmtHM(totalMins), '', '']);
-    sh.getRange(1, 1, 1, header.length).setFontWeight('bold');
-    sh.autoResizeColumns(1, header.length);
+    // Wiersz z sumą miesięczną od razu pod danymi tej osoby — widoczna
+    // w kontekście, bez przełączania się na arkusz Podsumowanie.
+    listaSh.appendRow(['', '', '', '', '', 'RAZEM ' + imie + ' ' + nazwisko, _fmtHM(totalMins), '']);
+    wierszNr++;
+    listaSh.getRange(wierszNr, 1, 1, listaHeader.length).setFontWeight('bold');
 
-    podsumowanie.push([rawName, w[3] || '', forma || '—', _fmtHM(totalMins), dniNieobecnosci, dniPozaGodzinami]);
+    podsumowanie.push([imie + ' ' + nazwisko, w[3] || '', forma || '—', _fmtHM(totalMins), dniNieobecnosci, dniPozaGodzinami]);
   });
+
+  listaSh.getRange(1, 1, 1, listaHeader.length).setFontWeight('bold');
+  listaSh.setFrozenRows(1);
+  listaSh.autoResizeColumns(1, listaHeader.length);
 
   const podsumowaniaSh = tmpSs.insertSheet('Podsumowanie', 0);
   const podsumowanieHeader = ['Pracownik', 'Rola', 'Forma zatrudnienia', 'Suma godzin', 'Dni z nieobecnością', 'Dni poza godzinami Kliniki'];
