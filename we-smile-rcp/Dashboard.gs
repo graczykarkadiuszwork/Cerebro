@@ -599,6 +599,45 @@ function getExportMeta(token) {
   return _exportMetaData();
 }
 
+// ── Odrzucone próby odbicia (Anomalie) ──────────────────────────
+// Kiosk odrzuca odbicie (limit prób, zły/wygasły kod, zdarzenie
+// niezgodne z sekwencją dnia) BEZ zapisu do Ewidencji — pracownik stał
+// przy kiosku, ale nic się nie zarejestrowało. Do tej pory trafiało to
+// wyłącznie do osobnego arkusza „Anomalie”, którego żaden panel nie
+// pokazywał — właściciel nie miał jak się dowiedzieć, że coś odpadło.
+function masterGetAnomalie(token, dni) {
+  if (!_masterOk(token)) {
+    return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  }
+  const limit = Math.max(1, Math.min(90, parseInt(dni, 10) || 14));
+  const sh = _ss().getSheetByName('Anomalie');
+  const rows = (sh && sh.getLastRow() >= 2) ? sh.getDataRange().getValues().slice(1) : [];
+
+  const workers = {};
+  _getWorkers().forEach(w => { workers[String(w[0])] = String(w[1]) + ' ' + String(w[2]); });
+
+  const graniczna = new Date();
+  graniczna.setDate(graniczna.getDate() - limit);
+
+  const wpisy = rows
+    .map(r => ({ timestamp: r[0], empId: String(r[1]), opis: String(r[2] || '') }))
+    .filter(w => {
+      const d = w.timestamp instanceof Date ? w.timestamp : new Date(w.timestamp);
+      return !isNaN(d) && d >= graniczna;
+    })
+    .map(w => ({
+      czas: Utilities.formatDate(
+        w.timestamp instanceof Date ? w.timestamp : new Date(w.timestamp),
+        'Europe/Warsaw', 'yyyy-MM-dd HH:mm'
+      ),
+      pracownik: workers[w.empId] || w.empId,
+      opis: w.opis
+    }))
+    .reverse(); // najnowsze pierwsze
+
+  return { ok: true, dni: limit, wpisy };
+}
+
 function masterGetExportMeta(token) {
   if (!_masterOk(token)) {
     return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };

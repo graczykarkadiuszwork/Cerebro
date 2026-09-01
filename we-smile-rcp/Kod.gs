@@ -518,6 +518,7 @@ function callRCP(action, argsJson) {
       case 'masterSetNote':        return masterSetNote(args[0], args[1], args[2], args[3], args[4]);
       case 'masterGetExportMeta':  return masterGetExportMeta(args[0]);
       case 'masterDashExportXlsx': return masterDashExportXlsx(args[0], args[1]);
+      case 'masterGetAnomalie':    return masterGetAnomalie(args[0], args[1]);
       default:               return { ok: false, msg: 'Nieznana akcja.' };
     }
   } catch (err) {
@@ -799,6 +800,14 @@ function uzupelnijBrakOdbicia(pin, tokenCode, data, akcja, godzina) {
 
 // ── clock — rejestracja zdarzenia (krok 2) ───────────────────
 
+function _logAnomalie(empId, opis) {
+  try {
+    _arkusz('Anomalie', ['Timestamp', 'EmpID', 'Opis']).appendRow([new Date().toISOString(), empId, opis]);
+  } catch (e) {
+    Logger.log('Anomalie log error: ' + e);
+  }
+}
+
 function clock(pin, tokenCode, action) {
   if (!pin || !tokenCode) {
     return { ok: false, msg: 'Brak wymaganych danych.' };
@@ -808,12 +817,18 @@ function clock(pin, tokenCode, action) {
   if (!worker) return { ok: false, msg: 'Pracownik nie istnieje.' };
 
   const empId = String(worker[0]);
+  const pelneImie = worker[1] + ' ' + worker[2];
 
   if (!_checkRate('clk_' + empId)) {
+    // Odbicie ODRZUCONE — pracownik stał przy kiosku i nic się nie
+    // zapisało. Bez tego wpisu do Anomalie taka próba byłaby niewidoczna
+    // dla właściciela (panel jej nigdzie nie pokazywał).
+    _logAnomalie(empId, 'Limit prób (' + action + '): ' + pelneImie);
     return { ok: false, msg: 'Zbyt wiele prób. Odczekaj 5 minut.' };
   }
 
   if (!_verifyToken(String(tokenCode))) {
+    _logAnomalie(empId, 'Nieprawidłowy/wygasły kod (' + action + '): ' + pelneImie);
     return { ok: false, msg: 'Nieprawidłowy kod autoryzacyjny lub wygasł.' };
   }
 
@@ -823,30 +838,49 @@ function clock(pin, tokenCode, action) {
   }
   _cache().put(dedupKey, '1', DEDUP_SEC);
 
-  const today   = _todayPL();
-  const ewidSh  = _ss().getSheetByName('Ewidencja');
-  const allRows = (ewidSh && ewidSh.getLastRow() >= 2)
-    ? ewidSh.getDataRange().getValues().slice(1) : [];
-  const todayEmp = allRows.filter(r => String(r[1]) === empId && String(r[5]) === today);
-
-  if (todayEmp.length > 0) {
-    const lastAction = String(todayEmp[todayEmp.length - 1][4]);
-    if (lastAction === action) {
-      _arkusz('Anomalie', ['Timestamp', 'EmpID', 'Opis']).appendRow([
-        new Date().toISOString(), empId,
-        'Duplikacja ' + action + ': ' + worker[1] + ' ' + worker[2]
-      ]);
-      const label = action === 'WEJSCIE' ? 'WEJŚCIE' : 'WYJŚCIE';
-      return { ok: false, msg: 'Błąd sekwencji: ostatnie zdarzenie to już ' + label + '.' };
-    }
+  // Sekcja krytyczna (odczyt ostatniego zdarzenia dnia → decyzja → zapis)
+  // pod blokadą — bez niej dwa prawie równoczesne odbicia (dwóch
+  // pracowników na tym samym kiosku, albo podwójne kliknięcie) mogłyby
+  // obydwa odczytać ten sam stan "przed" i albo zapisać sprzeczną
+  // sekwencję, albo błędnie odrzucić prawidłowe zdarzenie.
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+  } catch (e) {
+    _logAnomalie(empId, 'System zajęty (' + action + '): ' + pelneImie);
+    return { ok: false, msg: 'System zajęty, spróbuj ponownie za chwilę.' };
   }
 
-  const godzina = _nowPL();
-  ewidSh.appendRow([
-    new Date().toISOString(), empId,
-    String(worker[1]), String(worker[2]),
-    action, today, godzina, 'worker'
-  ]);
+  let today, ewidSh, allRows, todayEmp, godzina;
+  try {
+    today   = _todayPL();
+    ewidSh  = _ss().getSheetByName('Ewidencja');
+    allRows = (ewidSh && ewidSh.getLastRow() >= 2)
+      ? ewidSh.getDataRange().getValues().slice(1) : [];
+    todayEmp = allRows.filter(r => String(r[1]) === empId && String(r[5]) === today);
+
+    if (todayEmp.length > 0) {
+      const lastAction = String(todayEmp[todayEmp.length - 1][4]);
+      if (lastAction === action) {
+        // Odbicie ODRZUCONE — nic nie trafia do Ewidencji. Najczęstsza
+        // przyczyna nie jest podwójnym kliknięciem, tylko wcześniejszym
+        // niekompletnym wpisem (ręczna korekta z jedną wypełnioną
+        // godziną) — pracownikowi wygląda to na "nie zarejestrowało się".
+        _logAnomalie(empId, 'Duplikacja ' + action + ': ' + pelneImie);
+        const label = action === 'WEJSCIE' ? 'WEJŚCIE' : 'WYJŚCIE';
+        return { ok: false, msg: 'Błąd sekwencji: ostatnie zdarzenie to już ' + label + '.' };
+      }
+    }
+
+    godzina = _nowPL();
+    ewidSh.appendRow([
+      new Date().toISOString(), empId,
+      String(worker[1]), String(worker[2]),
+      action, today, godzina, 'worker'
+    ]);
+  } finally {
+    lock.releaseLock();
+  }
 
   _resetRate('clk_' + empId);
 

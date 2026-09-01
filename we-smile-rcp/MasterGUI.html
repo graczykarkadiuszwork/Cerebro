@@ -305,6 +305,12 @@
 .confirm-row .btn{width:auto;flex:1}
 .info-box{display:flex;gap:10px;background:var(--c-navy-tint);border:1px solid var(--c-border);border-radius:var(--radius-m);padding:12px 14px;font-size:13px;line-height:1.5;color:var(--c-navy)}
 .info-box .ic{flex-shrink:0;margin-top:1px}
+.info-box.warn{background:var(--c-accent-tint);border-color:rgba(123,30,59,.22);color:var(--c-accent-dark)}
+.info-box.warn .ic{color:var(--c-accent)}
+.rp-anomalie-list{margin-top:8px;display:flex;flex-direction:column;gap:6px}
+.rp-anomalie-row{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:6px 0;border-top:1px solid rgba(123,30,59,.14)}
+.rp-anomalie-row:first-child{border-top:none;padding-top:0}
+.rp-anomalie-czas{font-family:ui-monospace,monospace;white-space:nowrap;color:var(--c-accent-dark);opacity:.8}
 
 /* Domykalny baner ze wskazówką — u góry widoku (nie na dole strony,
    gdzie ginął przy długiej treści). Zamknięcie zapamiętywane w
@@ -1123,6 +1129,7 @@
       </div>
 
       <div id="rp-presence" class="info-box" style="display:none;margin-bottom:14px"></div>
+      <div id="rp-anomalie" class="info-box warn" style="display:none;margin-bottom:14px;flex-direction:column"></div>
       <div id="rp-data"><div class="hint">Wybierz pracownika, żeby wczytać dane.</div></div>
     </div>
 
@@ -4912,7 +4919,30 @@ var RP = { empId: null, year: new Date().getFullYear(), month: new Date().getMon
 function initEmbeddedReports() {
   updateRPLabel();
   rpLoadPresence();
+  rpLoadAnomalie();
   setInterval(rpLoadPresence, 60000);
+  setInterval(rpLoadAnomalie, 60000);
+}
+
+// ── Odrzucone próby odbicia (Anomalie) — kiosk czasem odrzuca odbicie
+// (limit prób, zły/wygasły kod, sekwencja niezgodna z dniem) i NIC nie
+// trafia do Ewidencji — bez tego panelu właściciel nie miał jak się
+// dowiedzieć, że pracownik w ogóle próbował się odbić.
+function rpLoadAnomalie() {
+  if (!M.token) return;
+  gas('masterGetAnomalie', [M.token, 14], function(res) {
+    var box = document.getElementById('rp-anomalie');
+    if (!res || !res.ok || !res.wpisy || !res.wpisy.length) { box.style.display = 'none'; return; }
+    var head = '<div style="display:flex;gap:10px;align-items:flex-start">' +
+      '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>' +
+      '<span><strong>' + res.wpisy.length + '</strong> odrzucona' + (res.wpisy.length === 1 ? '' : (res.wpisy.length < 5 ? 'e' : 'ych')) +
+      ' prób' + (res.wpisy.length === 1 ? 'a' : ' odbicia') + ' w ostatnich ' + res.dni + ' dniach — nic z nich nie trafiło do Ewidencji.</span></div>';
+    var lista = '<div class="rp-anomalie-list">' + res.wpisy.slice(0, 20).map(function(w) {
+      return '<div class="rp-anomalie-row"><span>' + esc(w.pracownik) + ' — ' + esc(w.opis) + '</span><span class="rp-anomalie-czas">' + esc(w.czas) + '</span></div>';
+    }).join('') + '</div>';
+    box.innerHTML = head + lista;
+    box.style.display = 'flex';
+  });
 }
 
 // ── Kopia zapasowa (Dysk Google) — #59 ────────────────────────
