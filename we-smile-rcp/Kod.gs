@@ -21,7 +21,7 @@
 const SS_ID          = '1wI3ysrolzGea5nNi7GYBo09t38y8oUgPoqGG3wn-ZsA';
 const TOKEN_WIN_SEC  = 30;
 const TOKEN_GRACE    = 1;    // ±1 okno tolerancji
-const DEDUP_SEC      = 90;
+const DEDUP_SEC      = 180;  // okno powtórki tego samego zdarzenia — patrz clock()
 const RATE_MAX       = 5;
 const RATE_WIN_SEC   = 300;
 
@@ -519,6 +519,7 @@ function callRCP(action, argsJson) {
       case 'masterGetExportMeta':  return masterGetExportMeta(args[0]);
       case 'masterDashExportXlsx': return masterDashExportXlsx(args[0], args[1]);
       case 'masterGetAnomalie':    return masterGetAnomalie(args[0], args[1]);
+      case 'masterGetNiesparowane': return masterGetNiesparowane(args[0], args[1]);
       default:               return { ok: false, msg: 'Nieznana akcja.' };
     }
   } catch (err) {
@@ -566,8 +567,38 @@ function _verifyToken(code) {
 
 // ── Helpers ──────────────────────────────────────────────────
 
-function _ss()     { return SpreadsheetApp.openById(SS_ID); }
+// Uchwyt na Arkusz zapamiętany na czas jednego wykonania — pojedyncze
+// żądanie (np. wczytanie Miesiąca) potrafi wołać _ss() kilkanaście razy
+// przez różne funkcje pomocnicze; SpreadsheetApp.openById() za każdym
+// razem od nowa otwiera ten sam, statyczny arkusz (SS_ID się nie zmienia),
+// więc cache'owanie samego UCHWYTU jest bezpieczne — każdy odczyt danych
+// (getValues() itd.) i tak zawsze trafia po świeże wartości z Arkusza.
+let _ssCache = null;
+function _ss() {
+  if (!_ssCache) _ssCache = SpreadsheetApp.openById(SS_ID);
+  return _ssCache;
+}
 function _cache()  { return CacheService.getScriptCache(); }
+
+// Odczyt tylko OSTATNICH wierszy Ewidencji zamiast całej historii.
+// Zapisy zawsze trafiają na koniec arkusza (appendRow) — nawet ręczna
+// korekta wstecznej daty w masterSetDay dopisuje nowy wiersz na końcu,
+// tylko z inną wartością w kolumnie Data — więc "dziś" i "ostatnie N dni"
+// są ZAWSZE w ogonie arkusza, niezależnie jak długa jest cała historia.
+// Używane tam, gdzie funkcja z natury potrzebuje tylko świeżych danych
+// (kiosk, pasek obecności) — NIE nadaje się tam, gdzie trzeba znaleźć
+// konkretny, dowolnie odległy dzień (np. edycja Dnia z przeszłości).
+// maxRows dobrany z hojnym zapasem względem realnej liczby odbić, jakie
+// klinika generuje w danym oknie czasu.
+function _ewidTailRows(maxRows) {
+  const ewidSh = _ss().getSheetByName('Ewidencja');
+  if (!ewidSh) return { sh: null, rows: [] };
+  const lastRow = ewidSh.getLastRow();
+  if (lastRow < 2) return { sh: ewidSh, rows: [] };
+  const startRow = Math.max(2, lastRow - maxRows + 1);
+  const numRows = lastRow - startRow + 1;
+  return { sh: ewidSh, rows: ewidSh.getRange(startRow, 1, numRows, 8).getValues() };
+}
 function _nowPL()  { return Utilities.formatDate(new Date(), 'Europe/Warsaw', 'HH:mm'); }
 function _todayPL(){ return Utilities.formatDate(new Date(), 'Europe/Warsaw', 'yyyy-MM-dd'); }
 
@@ -672,9 +703,9 @@ function checkPin(pin) {
 // przerwę. Współdzielone przez checkPin (żeby kiosk pokazał właściwy
 // przycisk przerwy) i clockPrzerwa (do walidacji sekwencji zdarzeń).
 function _stanDniaPracownika(empId, today) {
-  const ewidSh = _ss().getSheetByName('Ewidencja');
-  const allRows = (ewidSh && ewidSh.getLastRow() >= 2)
-    ? ewidSh.getDataRange().getValues().slice(1) : [];
+  // Potrzebujemy tylko DZISIEJSZYCH wierszy — patrz komentarz przy
+  // _ewidTailRows. 400 to hojny zapas na cały dzień całej kliniki.
+  const allRows = _ewidTailRows(400).rows;
   const todayEmp = allRows.filter(r => String(r[1]) === empId && String(r[5]) === today);
 
   const wejWyj = todayEmp.filter(r => r[4] === 'WEJSCIE' || r[4] === 'WYJSCIE');
@@ -711,15 +742,14 @@ const BRAKI_DNI_WSTECZ = 30;
  * Bieżący dzień jest pomijany — trwająca praca to nie jest brak odbicia.
  */
 function _najnowszyBrakOdbicia(empId, dzisiaj) {
-  const ewidSh = _ss().getSheetByName('Ewidencja');
-  if (!ewidSh || ewidSh.getLastRow() < 2) return null;
-
   const granica = new Date(dzisiaj + 'T12:00:00');
   granica.setDate(granica.getDate() - BRAKI_DNI_WSTECZ);
   const odKiedy = Utilities.formatDate(granica, 'Europe/Warsaw', 'yyyy-MM-dd');
 
+  // Potrzebujemy tylko ostatnich BRAKI_DNI_WSTECZ dni — patrz komentarz
+  // przy _ewidTailRows. 3000 to hojny zapas na 30 dni całej kliniki.
   const poDniach = {};
-  ewidSh.getDataRange().getValues().slice(1).forEach(r => {
+  _ewidTailRows(3000).rows.forEach(r => {
     if (String(r[1]) !== String(empId)) return;
     const ds = _sheetDate(r[5]);
     if (!ds || ds >= dzisiaj || ds < odKiedy) return;
@@ -774,9 +804,11 @@ function uzupelnijBrakOdbicia(pin, tokenCode, data, akcja, godzina) {
     return { ok: false, msg: 'Ten brak został już uzupełniony. Odśwież ekran.' };
   }
 
-  // Kolejność musi mieć sens: wejście przed wyjściem.
-  const ewidSh = _ss().getSheetByName('Ewidencja');
-  const tegoDnia = ewidSh.getDataRange().getValues().slice(1)
+  // Kolejność musi mieć sens: wejście przed wyjściem. `data` jest z
+  // definicji w ostatnich BRAKI_DNI_WSTECZ dniach (patrz walidacja wyżej),
+  // więc ogon Ewidencji (patrz _ewidTailRows) w zupełności wystarczy.
+  const { sh: ewidSh, rows: ewidTail } = _ewidTailRows(3000);
+  const tegoDnia = ewidTail
     .filter(r => String(r[1]) === empId && _sheetDate(r[5]) === data)
     .map(r => ({ akcja: String(r[4]), godz: _sheetTime(r[6]) }));
 
@@ -832,11 +864,22 @@ function clock(pin, tokenCode, action) {
     return { ok: false, msg: 'Nieprawidłowy kod autoryzacyjny lub wygasł.' };
   }
 
-  const dedupKey = 'dup_' + empId;
-  if (_cache().get(dedupKey)) {
-    return { ok: false, msg: 'Zdarzenie już zarejestrowane. Chwilę odczekaj.' };
+  // Klucz deduplikacji zawiera AKCJĘ, nie tylko pracownika — inaczej
+  // WEJŚCIE natychmiast po nim WYJŚCIE (albo odwrotnie) też wpadłoby w to
+  // samo okno i drugie, prawdziwe zdarzenie zostałoby błędnie zablokowane.
+  const dedupKey = 'dup_' + empId + '_' + action;
+  const cached = _cache().get(dedupKey);
+  if (cached) {
+    // Powtórzone tapnięcie TEJ SAMEJ akcji w krótkim oknie — najczęstszy
+    // powód to niepewność pracownika, czy poprzednie się zarejestrowało
+    // (wolny ekran, brak wyraźnego potwierdzenia). Zamiast odrzucać to
+    // (co i tak nic by nie zepsuło — patrz sekwencja niżej) odtwarzamy
+    // DOKŁADNIE ten sam wynik sukcesu: drugie kliknięcie wygląda dla
+    // pracownika identycznie jak poprawne zarejestrowanie, i przede
+    // wszystkim w Ewidencji NIC nowego nie powstaje — zero ryzyka
+    // osieroconego wpisu z tego źródła.
+    try { return JSON.parse(cached); } catch (e) { /* stara wersja klucza — kontynuuj normalnie */ }
   }
-  _cache().put(dedupKey, '1', DEDUP_SEC);
 
   // Sekcja krytyczna (odczyt ostatniego zdarzenia dnia → decyzja → zapis)
   // pod blokadą — bez niej dwa prawie równoczesne odbicia (dwóch
@@ -853,22 +896,31 @@ function clock(pin, tokenCode, action) {
 
   let today, ewidSh, allRows, todayEmp, godzina;
   try {
-    today   = _todayPL();
-    ewidSh  = _ss().getSheetByName('Ewidencja');
-    allRows = (ewidSh && ewidSh.getLastRow() >= 2)
-      ? ewidSh.getDataRange().getValues().slice(1) : [];
+    today = _todayPL();
+    // Potrzebujemy tylko DZISIEJSZYCH wierszy tego pracownika — patrz
+    // komentarz przy _ewidTailRows. Najgorętsza ścieżka w całej apce
+    // (każde tapnięcie na kiosku), więc to największa korzyść z tej
+    // optymalizacji: bez niej rosła z każdym dniem używania systemu.
+    const tail = _ewidTailRows(400);
+    ewidSh = tail.sh;
+    allRows = tail.rows;
     todayEmp = allRows.filter(r => String(r[1]) === empId && String(r[5]) === today);
 
     if (todayEmp.length > 0) {
       const lastAction = String(todayEmp[todayEmp.length - 1][4]);
       if (lastAction === action) {
-        // Odbicie ODRZUCONE — nic nie trafia do Ewidencji. Najczęstsza
-        // przyczyna nie jest podwójnym kliknięciem, tylko wcześniejszym
-        // niekompletnym wpisem (ręczna korekta z jedną wypełnioną
-        // godziną) — pracownikowi wygląda to na "nie zarejestrowało się".
+        // Odbicie ODRZUCONE — nic nie trafia do Ewidencji, więc żaden
+        // osierocony wpis tu nie powstaje. Poza oknem deduplikacji (wyżej)
+        // to najczęściej ten sam scenariusz — pracownik nie jest pewien,
+        // czy poprzednie tapnięcie się zapisało — więc komunikat od razu
+        // uspokaja, podając, KIEDY to zdarzenie już zostało zarejestrowane.
         _logAnomalie(empId, 'Duplikacja ' + action + ': ' + pelneImie);
         const label = action === 'WEJSCIE' ? 'WEJŚCIE' : 'WYJŚCIE';
-        return { ok: false, msg: 'Błąd sekwencji: ostatnie zdarzenie to już ' + label + '.' };
+        const ostatniaGodz = _sheetTime(todayEmp[todayEmp.length - 1][6]);
+        return {
+          ok: false,
+          msg: label + ' o ' + ostatniaGodz + ' jest już zarejestrowane — nic więcej nie musisz robić.'
+        };
       }
     }
 
@@ -906,7 +958,10 @@ function clock(pin, tokenCode, action) {
   // tego, po co pracownik faktycznie przyszedł do kiosku.
   const brakOdbicia = _najnowszyBrakOdbicia(empId, today);
 
-  return { ok: true, imie: String(worker[1]), godzina, overtime, brakOdbicia };
+  const wynik = { ok: true, imie: String(worker[1]), godzina, overtime, brakOdbicia };
+  // Zapamiętane pod kluczem deduplikacji — patrz komentarz na górze funkcji.
+  _cache().put(dedupKey, JSON.stringify(wynik), DEDUP_SEC);
+  return wynik;
 }
 
 // ── clockPrzerwa — start/koniec przerwy w trakcie dnia pracy ─
@@ -935,7 +990,9 @@ function clockPrzerwa(pin, tokenCode, kierunek, uzasadnienie) {
     return { ok: false, msg: 'Nieprawidłowy kod autoryzacyjny lub wygasł.' };
   }
 
-  const dedupKey = 'dupbrk_' + empId;
+  // Klucz zawiera kierunek — START i KONIEC to różne zdarzenia i nie mogą
+  // się nawzajem blokować, gdyby ktoś zdążył zrobić oba w tym samym oknie.
+  const dedupKey = 'dupbrk_' + empId + '_' + kierunek;
   if (_cache().get(dedupKey)) {
     return { ok: false, msg: 'Zdarzenie już zarejestrowane. Chwilę odczekaj.' };
   }

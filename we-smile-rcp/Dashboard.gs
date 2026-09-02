@@ -142,9 +142,9 @@ function masterGetActive(token) {
 
 function _activeNowData() {
   const today = _todayPL();
-  const ewidSh = _ss().getSheetByName('Ewidencja');
-  const rows = (ewidSh && ewidSh.getLastRow() >= 2)
-    ? ewidSh.getDataRange().getValues().slice(1) : [];
+  // Pasek obecności potrzebuje tylko DZISIEJSZYCH wierszy, a jest odpytywany
+  // co 60s z kilku ekranów naraz — patrz komentarz przy _ewidTailRows.
+  const rows = _ewidTailRows(400).rows;
 
   const byEmp = {};
   rows.forEach(r => {
@@ -636,6 +636,67 @@ function masterGetAnomalie(token, dni) {
     .reverse(); // najnowsze pierwsze
 
   return { ok: true, dni: limit, wpisy };
+}
+
+// ── Dni z niesparowanym odbiciem ─────────────────────────────────
+// Uzupełnia Anomalie: ta funkcja szuka dni, gdzie liczba WEJŚĆ i WYJŚĆ
+// się nie zgadza — bez względu na to, skąd taki dzień się wziął (kiosk,
+// ręczna korekta administratora, cokolwiek sprzed tej wersji). Dotąd
+// jedyny sposób, żeby to zauważyć, to przejrzenie każdego dnia z osobna
+// w zakładce Dzień — stąd ten widok zbiorczy dla całego zespołu naraz.
+function masterGetNiesparowane(token, dni) {
+  if (!_masterOk(token)) {
+    return { ok: false, errorType: 'UNAUTHORIZED', msg: 'Sesja wygasła.' };
+  }
+  const limit = Math.max(1, Math.min(90, parseInt(dni, 10) || 30));
+  const dzisiaj = _todayPL();
+  const graniczna = new Date(dzisiaj + 'T12:00:00');
+  graniczna.setDate(graniczna.getDate() - limit);
+  const odKiedy = Utilities.formatDate(graniczna, 'Europe/Warsaw', 'yyyy-MM-dd');
+
+  const ewidSh = _ss().getSheetByName('Ewidencja');
+  const rows = (ewidSh && ewidSh.getLastRow() >= 2) ? ewidSh.getDataRange().getValues().slice(1) : [];
+
+  const workers = {};
+  _getWorkers().forEach(w => { workers[String(w[0])] = String(w[1]) + ' ' + String(w[2]); });
+
+  // klucz 'empId_data' -> { wejscia, wyjscia }
+  const poDniach = {};
+  rows.forEach(r => {
+    const akcja = String(r[4]).trim();
+    if (akcja !== 'WEJSCIE' && akcja !== 'WYJSCIE') return;
+    const ds = _sheetDate(r[5]);
+    if (!ds || ds < odKiedy || ds > dzisiaj) return;
+    const empId = String(r[1]);
+    const k = empId + '_' + ds;
+    if (!poDniach[k]) poDniach[k] = { empId, ds, wejscia: 0, wyjscia: 0 };
+    if (akcja === 'WEJSCIE') poDniach[k].wejscia++; else poDniach[k].wyjscia++;
+  });
+
+  const problemy = Object.values(poDniach)
+    .filter(d => {
+      if (d.wejscia === d.wyjscia) return false;
+      // Dziś dokładnie jedna otwarta sesja (o jedno WEJŚCIE więcej niż
+      // WYJŚĆ) to normalny stan „jeszcze w pracy" — nie zgłaszamy tego
+      // jako problem, bo nic nie jest jeszcze złe.
+      if (d.ds === dzisiaj && d.wejscia - d.wyjscia === 1) return false;
+      return true;
+    })
+    .map(d => ({
+      empId: d.empId,
+      pracownik: workers[d.empId] || d.empId,
+      data: d.ds,
+      wejscia: d.wejscia,
+      wyjscia: d.wyjscia,
+      opis: d.wyjscia > d.wejscia
+        ? 'nadmiarowe WYJŚCIE bez pary (' + d.wyjscia + ' wyjść, ' + d.wejscia + ' wejść)'
+        : (d.ds === dzisiaj
+          ? 'więcej niż jedna otwarta sesja (' + d.wejscia + ' wejść, ' + d.wyjscia + ' wyjść)'
+          : 'brakuje WYJŚCIA (' + d.wejscia + ' wejść, ' + d.wyjscia + ' wyjść)')
+    }))
+    .sort((a, b) => b.data.localeCompare(a.data) || a.pracownik.localeCompare(b.pracownik, 'pl'));
+
+  return { ok: true, dni: limit, problemy };
 }
 
 function masterGetExportMeta(token) {
@@ -1353,6 +1414,13 @@ function masterSetDay(token, empId, date, wejscie, wyjscie, sesje) {
       if (od && do_ && _t2m(do_) <= _t2m(od)) {
         return { ok: false, msg: 'Sesja ' + (i + 1) + ': wyjście musi być późniejsze niż wejście.' };
       }
+      // Wyjście bez wejścia nigdy nie jest poprawnym zapisem — takie
+      // wiersze osierocały odbicia w Ewidencji (WYJŚCIE bez pary), co
+      // dawało "widmowe" dodatkowe sesje w widokach dnia. Wejście bez
+      // wyjścia jest za to legalne — to sesja w toku (jeszcze w pracy).
+      if (do_ && !od) {
+        return { ok: false, msg: 'Sesja ' + (i + 1) + ': brakuje wejścia — samo wyjście nie ma sensu (uzupełnij godzinę wejścia albo wyczyść wiersz).' };
+      }
       doZapisu.push({ od: od, do: do_ });
     }
     // Sesje nie mogą na siebie nachodzić — inaczej ten sam czas liczyłby
@@ -1369,6 +1437,14 @@ function masterSetDay(token, empId, date, wejscie, wyjscie, sesje) {
     wyjscie = String(wyjscie || '').trim();
     if (wejscie && !timeRe.test(wejscie)) return { ok: false, msg: 'Nieprawidłowy format wejścia (HH:MM).' };
     if (wyjscie && !timeRe.test(wyjscie)) return { ok: false, msg: 'Nieprawidłowy format wyjścia (HH:MM).' };
+    if (wejscie && wyjscie && _t2m(wyjscie) <= _t2m(wejscie)) {
+      return { ok: false, msg: 'Wyjście musi być późniejsze niż wejście.' };
+    }
+    // Ta sama reguła co przy sesjach — wyjście bez wejścia osierocałoby
+    // odbicie w Ewidencji.
+    if (wyjscie && !wejscie) {
+      return { ok: false, msg: 'Brakuje wejścia — samo wyjście nie ma sensu (uzupełnij godzinę wejścia albo wyczyść oba pola).' };
+    }
     if (wejscie || wyjscie) doZapisu.push({ od: wejscie, do: wyjscie });
   }
 

@@ -311,6 +311,8 @@
 .rp-anomalie-row{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:6px 0;border-top:1px solid rgba(123,30,59,.14)}
 .rp-anomalie-row:first-child{border-top:none;padding-top:0}
 .rp-anomalie-czas{font-family:ui-monospace,monospace;white-space:nowrap;color:var(--c-accent-dark);opacity:.8}
+.rp-anomalie-row.klik{cursor:pointer}
+.rp-anomalie-row.klik:hover{text-decoration:underline}
 
 /* Domykalny baner ze wskazówką — u góry widoku (nie na dole strony,
    gdzie ginął przy długiej treści). Zamknięcie zapamiętywane w
@@ -1130,6 +1132,7 @@
 
       <div id="rp-presence" class="info-box" style="display:none;margin-bottom:14px"></div>
       <div id="rp-anomalie" class="info-box warn" style="display:none;margin-bottom:14px;flex-direction:column"></div>
+      <div id="rp-niesparowane" class="info-box warn" style="display:none;margin-bottom:14px;flex-direction:column"></div>
       <div id="rp-data"><div class="hint">Wybierz pracownika, żeby wczytać dane.</div></div>
     </div>
 
@@ -1777,12 +1780,17 @@ document.getElementById('tab-mobile').addEventListener('click', function() {
 
 // ── Kto jest w pracy / kto skończył — pasek, zawsze widoczny ──────
 var _mActiveTimer;
+// Jedno źródło prawdy dla "kto jest w pracy teraz" — zasila i pasek u
+// góry panelu, i kartę w zakładce Raporty (rpRenderPresence). Wcześniej
+// obie miały OSOBNY timer co 60s i osobno odpytywały masterGetActive —
+// dokładnie ten sam odczyt Ewidencji robiony dwa razy w tle bez powodu.
 function mPollActive() {
   if (!M.token) return;
   gas('masterGetActive', [M.token], function(res) {
     if (!res || !res.ok) return;
     mRenderPresenceBar(res.active, res.finished);
     mRenderModalList(res.active, res.finished);
+    rpRenderPresence(res.active, res.finished);
   });
 }
 
@@ -2523,10 +2531,16 @@ function loadMonthTable() {
 
 // Przejście z wiersza miesiąca do szybkiej edycji dnia
 function gotoDay(date) {
+  gotoDayFor(M.mmEmpId, date);
+}
+
+// Wariant ogólny — przejście do edycji dnia dowolnej osoby (nie tylko tej
+// aktualnie wybranej w zakładce Miesiąc), np. z listy niesparowanych odbić.
+function gotoDayFor(empId, date) {
   document.getElementById('m-date').value = date;
-  M.empId = M.mmEmpId;
+  M.empId = empId;
   var emp = null;
-  _emps.forEach(function(e){ if (e.id === M.mmEmpId) emp = e; });
+  _emps.forEach(function(e){ if (e.id === empId) emp = e; });
   if (emp) document.getElementById('m-emp-input').value = emp.imie + ' ' + emp.nazwisko;
   document.getElementById('tab-day').click();
   loadDay();
@@ -4918,10 +4932,13 @@ var RP = { empId: null, year: new Date().getFullYear(), month: new Date().getMon
 
 function initEmbeddedReports() {
   updateRPLabel();
-  rpLoadPresence();
+  // Obecność NIE jest tu odpytywana osobno — karta w Raporty (#rp-presence)
+  // jest odświeżana przez wspólny poll mPollActive() (patrz login handler),
+  // żeby nie robić tego samego odczytu Ewidencji dwa razy co minutę.
   rpLoadAnomalie();
-  setInterval(rpLoadPresence, 60000);
+  rpLoadNiesparowane();
   setInterval(rpLoadAnomalie, 60000);
+  setInterval(rpLoadNiesparowane, 60000);
 }
 
 // ── Odrzucone próby odbicia (Anomalie) — kiosk czasem odrzuca odbicie
@@ -4942,6 +4959,33 @@ function rpLoadAnomalie() {
     }).join('') + '</div>';
     box.innerHTML = head + lista;
     box.style.display = 'flex';
+  });
+}
+
+// ── Dni z niesparowanym odbiciem — niezależnie od źródła (kiosk sprzed
+// tej wersji, ręczna korekta) niektóre dni mają inną liczbę WEJŚĆ niż
+// WYJŚĆ. Zamiast szukać tego dzień po dniu w zakładce Dzień, tu jest
+// zbiorcza lista dla całego zespołu — kliknięcie wiersza przenosi od
+// razu do edycji tego dnia tej osoby.
+function rpLoadNiesparowane() {
+  if (!M.token) return;
+  gas('masterGetNiesparowane', [M.token, 30], function(res) {
+    var box = document.getElementById('rp-niesparowane');
+    if (!res || !res.ok || !res.problemy || !res.problemy.length) { box.style.display = 'none'; return; }
+    var head = '<div style="display:flex;gap:10px;align-items:flex-start">' +
+      '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>' +
+      '<span><strong>' + res.problemy.length + '</strong> dzień/dni z niesparowanym odbiciem w ostatnich ' + res.dni + ' dniach — kliknij, żeby poprawić.</span></div>';
+    var lista = '<div class="rp-anomalie-list">' + res.problemy.slice(0, 30).map(function(p) {
+      return '<div class="rp-anomalie-row klik" data-emp="' + esc(p.empId) + '" data-date="' + esc(p.data) + '">' +
+        '<span>' + esc(p.pracownik) + ' — ' + esc(p.opis) + '</span><span class="rp-anomalie-czas">' + esc(p.data) + '</span></div>';
+    }).join('') + '</div>';
+    box.innerHTML = head + lista;
+    box.style.display = 'flex';
+    box.querySelectorAll('.rp-anomalie-row.klik').forEach(function(row) {
+      row.addEventListener('click', function() {
+        gotoDayFor(row.getAttribute('data-emp'), row.getAttribute('data-date'));
+      });
+    });
   });
 }
 
@@ -5008,18 +5052,17 @@ bindEmpSelector('rp-emp-input', 'rp-emp-dropdown', function(id) {
   if (id) rpLoadMonth();
 });
 
-function rpLoadPresence() {
-  if (!M.token) return;
-  gas('masterGetActive', [M.token], function(res) {
-    if (!res || !res.ok) return;
-    var box = document.getElementById('rp-presence');
-    var active = res.active || [], finished = res.finished || [];
-    if (active.length === 0 && finished.length === 0) { box.style.display = 'none'; return; }
-    var names = active.map(function(p){ return esc(p.imie + ' ' + p.nazwisko) + ' (od ' + esc(p.wejscie) + ')'; });
-    box.innerHTML = '<svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>' +
-      '<span>W pracy teraz: ' + (names.length ? names.join(', ') : 'nikt') + '. Zakończyło dziś: ' + finished.length + '.</span>';
-    box.style.display = 'flex';
-  });
+// Czyste renderowanie (bez własnego zapytania) — dane dostarcza mPollActive,
+// żeby nie odpytywać masterGetActive drugi raz dla tych samych informacji.
+function rpRenderPresence(active, finished) {
+  var box = document.getElementById('rp-presence');
+  if (!box) return;
+  active = active || []; finished = finished || [];
+  if (active.length === 0 && finished.length === 0) { box.style.display = 'none'; return; }
+  var names = active.map(function(p){ return esc(p.imie + ' ' + p.nazwisko) + ' (od ' + esc(p.wejscie) + ')'; });
+  box.innerHTML = '<svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>' +
+    '<span>W pracy teraz: ' + (names.length ? names.join(', ') : 'nikt') + '. Zakończyło dziś: ' + finished.length + '.</span>';
+  box.style.display = 'flex';
 }
 
 function rpFmtHM(mins) {
