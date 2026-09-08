@@ -1,0 +1,108 @@
+tresc;kategoria;warunek_wyswietlenia;priorytet
+"Kreatyna czeka. Dziś priorytet: z posiłkiem, nie na czczo.";suplementy;dzien_treningowy=nie AND kreatyna_zaznaczona=nie;2
+"Vita Pak, Kolagen, Omega 3 — trzy małe kroki, jeden odhaczony dzień.";suplementy;pora=rano AND suplementy_rdzenne_procent<100;2
+"Melatonina jest tu, gdy jej potrzebujesz. Nie wcześniej.";suplementy;pora=wieczor;1
+"Gainer czeka zaraz po treningu — nie zostawiaj go na później.";suplementy;dzien_treningowy=tak AND trening_zakonczony=tak AND gainer_zaznaczony=nie;2
+"Nawodnienie to nie szczegół — to fundament reszty dnia.";suplementy;pora=popoludnie AND nawodnienie_zaznaczone=nie;1
+"Sto dni suplementacji zaczyna się od jednego zaznaczonego dziś.";suplementy;streak_suplementy=0;1
+"Posiłek 1: dziś stawiasz na białko, nie na przypadek.";dieta;posilek=1 AND wykonany=nie;2
+"Kolejny posiłek, kolejny punkt dla Dyscypliny.";dieta;pora_posilku_zbliza_sie=tak;1
+"Gainer to nie dodatek — w dzień treningowy to pełnoprawny posiłek.";dieta;dzien_treningowy=tak;1
+"Zjedz coś lekkiego przed treningiem — żołądek podziękuje później.";dieta;dzien_treningowy=tak AND godzina<trening_start-1h;1
+"5 posiłków. Nie liczysz kalorii, liczysz obecność.";dieta;pora=poludnie;1
+"Aldi ma dziś nową gazetkę — sprawdź, zanim wyjdziesz.";dieta;dzien_zakupowy=tak;1
+"Za chwilę trening. Ciało pamięta więcej, niż myślisz.";trening;dzien_treningowy=tak AND godzina<trening_start-30min;2
+"Trzy sesje bez progresu na tym ćwiczeniu? To sygnał, nie porażka.";trening;plateau_aktywny=tak;3
+"Nowy rekord czeka na te same serie, które robisz co tydzień.";trening;dzien_treningowy=tak AND trening_typ=plan-AB;1
+"Rozgrzewka to nie formalność — to bilet wstępu do reszty sesji.";trening;trening_w_toku=tak AND rozgrzewka_zaznaczona=nie;2
+"Zły dzień na trening pełną parą? Zmodyfikowany też się liczy.";trening;dzien_treningowy=tak AND mood_rano<=4;2
+"Kettle po treningu pracuje na biodra, których jeszcze nie znasz.";trening;trening_w_toku=tak AND etap=kardio;1
+"1h15 dziś należy do Ciebie. Reszta poczeka.";trening;dzien_treningowy=tak AND godzina=trening_start;2
+"Osiem tygodni FBW za Tobą — czas na przegląd, nie na rutynę.";trening;tydzien_planu=8;2
+"Za godzinę gasną światła — telefon już może zwolnić tempo.";sen;godzina=cisza_nocna-1h;2
+"Ekran teraz to pożyczka od jutrzejszej koncentracji.";sen;pora=wieczor AND higiena_swiatla_zaznaczona=nie;2
+"Dzień B kończy się późno — dziś sen jest ważniejszy niż jeszcze jeden odcinek.";sen;typ_dnia=B AND godzina>20:00;1
+"Siedem do dziewięciu godzin. Reszta to szczegóły.";sen;pora=wieczor;1
+"Rytm zmianowy szanuje regularność bardziej niż długość snu jednej nocy.";sen;typ_dnia_zmienil_sie=tak;1
+"Jak się obudziłeś, tak zaczyna się cała reszta dnia — zapisz to szczerze.";mood;pora=rano AND mood_rano_wypelniony=nie;2
+"Wieczorny check to nie ocena dnia — to dane dla jutra.";mood;pora=wieczor AND mood_wieczor_wypelniony=nie;2
+"Brzuch mówi coś ważnego — zapisz, co jadłeś ostatnie 48h.";mood;gi_wynik<=4;3
+"Skupienie dziś niżej niż zwykle? To też jest informacja, nie wyrok.";mood;skupienie<=4;1
+"Cztery kategorie rano, pięć wieczorem — mniej niż minuta, więcej niż zgadywanie.";mood;pora=rano_lub_wieczor;1
+"Dziesięć minut czytania to już więcej niż zero.";czytelnictwo;minuty_dzis=0 AND godzina>18:00;2
+"Audiobook i dojazd do pracy pasują do siebie lepiej niż myślisz.";czytelnictwo;dojazd_w_toku=tak;1
+"Średnia tygodniowa trzyma się dobrze — dzisiejsze 20 minut to nie porażka.";czytelnictwo;minuty_dzis<60 AND srednia_7dni>=55;1
+"Skończona książka to nie tylko odznaka — to dowód, że dowozisz.";czytelnictwo;strona_ostatnia=tak;1
+"Krem do twarzy czeka w tym samym miejscu co zawsze — 15 sekund, nie 15 minut.";pielegnacja;slot_poranny_aktywny=tak;1
+"Środa i niedziela to dni Nizoralu — dziś jeden z nich.";pielegnacja;dzien_tygodnia=sroda_lub_niedziela;2
+"Fryzjer czeka od trzech tygodni — to już nie przypomnienie, to termin.";pielegnacja;dni_od_fryzjera>=21;2
+"Ręce dwa razy dziennie, twarz rano i wieczorem — bez presji, ale bez zapominania.";pielegnacja;pora=dowolna;1
+"Łazienka dziś czeka na Ciebie — reszta stref poczeka do swojego dnia.";sprzatanie;strefa_dnia=lazienka;1
+"Piętnaście minut w tagu #sprzątanie to floor, nie sufit.";sprzatanie;czas_sprzatania_dzis<15 AND godzina>18:00;2
+"Robot zrobił podłogi — Ty zajmij się tym, czego on nie widzi.";sprzatanie;robot_zakonczyl_cykl=tak;1
+"Filtr robota czeka na czyszczenie raz w miesiącu — dziś może być ten dzień.";sprzatanie;dni_od_czyszczenia_robota>=30;1
+"Pies czeka przy drzwiach — to też jest kontakt z naturą.";spacer_natura;pora=popoludnie AND spacery_dzis=0;1
+"Trzy dni bez wyjścia na zewnątrz — organizm to zauważa, nawet jeśli Ty nie.";spacer_natura;dni_bez_natury>=3;2
+"Statyw stoi przy stanowisku nie bez powodu — dziś też może nagrywać.";portfolio;sesja_malarska_w_toku=tak AND nagrywanie_aktywne=nie;2
+"Zdjęcie zrobione to połowa checklisty. Opis i publikacja czekają na drugą.";portfolio;projekt_ukonczony=tak AND checklist_publikacji<100;2
+"Regularność bije tempo — trzy posty tygodniowo przez rok, nie siedem przez miesiąc.";portfolio;tydzien_bez_publikacji=tak;1
+"Kolorowanka też się liczy jako trening ręki i oka.";portfolio;czas_wolny_aktywny=tak;1
+"Trend marki w tym tygodniu spada — to sygnał, nie kara.";portfolio;rolling_average_portfolio_spada=tak;2
+"Pierwsza publikacja niezależna od Neon Forge Studio to inny rodzaj kamienia milowego.";portfolio;pierwsze_zlecenie_niezalezne=tak;3
+"Reddit i Discord płacą się uwagą, nie ogłoszeniami — dziś warto tylko poczytać.";portfolio;pora=wieczor AND dzien_publikacji=nie;1
+"Putty & Paint czeka z inną publicznością niż Instagram.";portfolio;kanal_putty_paint_aktywny=tak;1
+"HP na dziś zaczyna się od zera złych decyzji — masz pełną pulę.";hp_ogolne;pora=rano;1
+"Piętnaście minut do zamknięcia dnia — sprawdź, co jeszcze czeka.";hp_ogolne;godzina=cisza_nocna-15min AND dzien_niedomkniety=tak;3
+"Perfect Day nie wymaga perfekcji — wymaga domknięcia listy.";hp_ogolne;procent_dnia>=90;1
+"Atrybut Ciało rośnie wolniej niż Dyscyplina w tym tygodniu — to tylko obserwacja.";hp_ogolne;atrybut_najslabszy=cialo;1
+"Streak siedmiu dni jest bliżej, niż się wydaje.";hp_ogolne;streak_aktualny=6;2
+"Dolina cienia w historii postaci to dowód, że wracasz, nie że przegrywasz.";hp_ogolne;smierc_wystapila_wczoraj=tak;2
+"GOD_MODE_24H nadal aktywny — przypomnienia zostają, presja nie.";god_mode;god_mode_aktywny=tak;1
+"Dwa dni ochronne z rzędu — Tryb Regeneracji czeka na Twoją decyzję.";god_mode;dni_god_mode_z_rzedu=2;3
+"W Trybie Regeneracji liczy się powrót, nie tempo.";god_mode;tryb_regeneracji_aktywny=tak;1
+"Trzy aktywacje w tym miesiącu — jedna jeszcze zostaje, jeśli będzie potrzebna.";god_mode;aktywacje_w_miesiacu=3;1
+"Setka Perfect Days nie bierze się z jednego dobrego tygodnia.";odznaki;perfect_days_total>=90;1
+"Feniks czeka na tych, którzy wracają po zerwanym streaku — nie na tych, którzy nie upadają.";odznaki;streak_zerwany_ostatnio=tak;2
+"Sekretna odznaka nie pokazuje się na liście — pojawi się, kiedy na nią zapracujesz.";odznaki;pora=dowolna;1
+"Poziom 10 to połowa drogi na krzywej, którą sam sobie wybrałeś.";odznaki;poziom_postaci=9;1
+"Przegląd auta czeka od miesiąca — poziomy płynów same się nie sprawdzą.";pojazdy;dni_od_przegladu_auta>=30;1
+"Wiosna budzi motocykl z zimowego snu — akumulator i opony najpierw.";pojazdy;sezon=wiosna AND motocykl_przygotowany=nie;2
+"Łańcuch i ciśnienie w oponach — trzydzieści dni minęło od ostatniej kontroli.";pojazdy;dni_od_kontroli_motocykla>=30 AND sezon_motocyklowy=tak;1
+"Jesień to sygnał, żeby odłożyć motocykl porządnie, nie na chybił trafił.";pojazdy;sezon=jesien AND motocykl_odlozony=nie;2
+"70% sprawdzone, 30% nowe — dziś lista zakupów ma dla Ciebie propozycję.";zakupy;dzien_zakupowy=tak;1
+"Tofu zamiast kurczaka raz na tydzień nie zaszkodzi rutynie.";zakupy;kategoria_rotacyjna_dostepna=tak;1
+"Kwartał minął — to dobry moment, żeby pomyśleć o badaniach kontrolnych.";badania;dni_od_ostatnich_badan>=90;1
+"Kontrola nie musi być pilna, żeby być ważna.";badania;reminder_kwartalny_aktywny=tak;1
+"Dziesięć minut rozciągania zaraz po przebudzeniu — zanim dzień nabierze tempa.";rozciaganie;pora=rano AND rozciaganie_zaznaczone=nie;2
+"Pielęgnacja się nie odbyła? Rozciąganie i tak czeka w tym samym miejscu.";rozciaganie;pielegnacja_poranna=nie AND rozciaganie_zaznaczone=nie;2
+"Czas wolny nie potrzebuje uzasadnienia — należy Ci się po prostu dlatego, że domknąłeś dzień.";czas_wolny;wszystkie_obowiazkowe_zrobione=tak;1
+"Nic nierobienie to też pozycja w harmonogramie, nie luka w nim.";czas_wolny;czas_wolny_aktywny=tak;1
+"Dzień skompresowany przez nadgodziny? Wydłużony sen liczy się bardziej niż zaległy odcinek.";czas_wolny;dzien_skompresowany=tak;2
+"Dzień dobry. System czeka, żebyś zaczął dzień na swoich warunkach.";ogolne;pora=start_dnia;1
+"Nadgodziny przesunęły popołudnie — HP tego nie zauważy.";ogolne;nadgodziny_wykryte=tak;1
+"Kalendarz zaktualizował się sam — sprawdź, czy godziny się zgadzają.";ogolne;sync_kalendarza_wykonany=tak;1
+"Dzień się kończy. To, co zostało niedomknięte, zaczeka do jutra bez odsetek.";ogolne;godzina=cisza_nocna;1
+"Grafik na przyszły miesiąc jeszcze nie doszedł — czas przypomnieć pracodawcy.";ogolne;dzien_miesiaca=ostatni;2
+"Niedzielny przegląd trwa piętnaście minut i mówi więcej niż tydzień domysłów.";ogolne;dzien_tygodnia=niedziela AND godzina=13:00;2
+"Trend, nie pojedynczy dzień, mówi prawdę o tym, jak Ci idzie.";ogolne;widok=dashboard;1
+"Rok z systemem nie liczy się jakością, tylko samym faktem, że nadal tu jesteś.";ogolne;dni_od_startu=365;1
+"Poduszka bezpieczeństwa rośnie po trochu, nie od razu.";finanse;modul_21_aktywny=tak;1
+"Rezerwa podatkowa i rezerwa osobista to dwa różne cele — oba warte pilnowania.";finanse;modul_21_aktywny=tak AND przeglad_miesieczny=tak;1
+"Licznik, nie checkbox — dziś warto zerknąć, ile realnie odłożone.";finanse;modul_21_aktywny=tak AND dzien_miesiaca=1;1
+"Trzy posiłki za Tobą, dwa przed Tobą — dzień trzyma się planu.";dieta;posilki_wykonane=3;1
+"Białko w pierwszym posiłku pracuje na skupienie, nie tylko na mięśnie.";dieta;posilek=1;1
+"Kolejna seria, ten sam ciężar, inny dzień — progres bywa cichy.";trening;trening_w_toku=tak AND seria_bez_progresu=tak;1
+"Mobilność barków i bioder dziś pracuje na coś, czego jeszcze nie zacząłeś.";trening;etap=kardio_mobilnosc;1
+"Higiena światła to jedyny obowiązkowy punkt wieczoru, który nie wymaga wysiłku.";sen;pora=wieczor AND higiena_swiatla_zaznaczona=nie;2
+"Dwa wpisy dziennie budują obraz, którego jeden nigdy by nie pokazał.";mood;liczba_wpisow_dzis=1;1
+"Setka spacerów bez jednego przypomnienia — to Twoja własna konsekwencja, nie systemowa.";spacer_natura;spacery_total>=100;1
+"Kwadrat na liście sprzątania nie musi być idealny — musi być zrobiony.";sprzatanie;strefa_dnia_aktywna=tak;1
+"Trzy wystąpienia tego ćwiczenia bez progresu — może czas na zamianę, nie na upór.";trening;wystapienia_bez_progresu=3;3
+"RCP zaktualizował dzisiejszy koniec pracy — popołudnie przesunęło się razem z nim.";ogolne;rcp_odczyt_wykonany=tak;1
+"Cotygodniowy eksport danych właśnie się zakończył — miesiące pracy mają teraz kopię.";ogolne;backup_wykonany=tak;1
+"Cytat na dziś już czeka na pierwszym ekranie — czasem to wystarczy na start.";ogolne;pora=start_dnia;1
+"Konflikt zapisu wykryty między telefonem a komputerem — nowsza wersja wygrała, reszta widoczna w historii.";ogolne;konflikt_sync_wykryty=tak;2
+"Onboarding to jednorazowa rozmowa z systemem — reszta już się dzieje sama.";ogolne;pierwsze_uruchomienie=tak;1
+"Dashboard pokazuje więcej niż dzisiejszy dzień — czasem warto spojrzeć szerzej.";ogolne;widok=dashboard AND wizyt_w_tygodniu=1;1
+"Token wykorzystany mądrze to nie porażka — to dokładnie to, po co powstał.";god_mode;god_mode_uzyty_dzis=tak;1
+"Pięć Atrybutów, jeden dzień — nie muszą rosnąć równo, żeby się liczyć.";hp_ogolne;widok=karta_postaci;1

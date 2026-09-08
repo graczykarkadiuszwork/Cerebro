@@ -3,8 +3,8 @@
 
 **Nazwa projektu:** Pip-Boy (w oryginalnym angielskim brzmieniu, bez polskiej transkrypcji)
 **Data utworzenia:** 2026-09-02
-**Ostatnia aktualizacja:** 2026-09-08 (wersja 15 — pełne wdrożenie Rundy #17: wywiad doprecyzowujący złożony z 32 pytań, patrz nowa sekcja 0.12)
-**Status:** Faza konceptu — przed implementacją, wszystkie kluczowe pytania z wywiadu #17 domknięte
+**Ostatnia aktualizacja:** 2026-09-08 (wersja 16 — Runda #18: domknięcie sekcji 0.11.1 (środowiska/budżet/wersjonowanie), zebrana baza 107 komunikatów Marquee (sekcja 6.12), Putty & Paint w trakcie wyjaśniania Arkowi)
+**Status:** Faza konceptu — przed implementacją. Otwarte: autentykacja (0.11.1, pkt 1), baza 300 cytatów motywacyjnych (sekcja 5.4 — zablokowana ograniczeniami sieciowymi środowiska deweloperskiego, patrz uwaga niżej), decyzja o Putty & Paint
 **Właściciel:** Arek
 **Cel dokumentu:** Kompletna specyfikacja funkcjonalna i techniczna umożliwiająca budowę systemu bez dalszych pytań doprecyzowujących — napisana z założeniem, że czyta ją deweloper bez wcześniejszego kontaktu z Arkiem i bez znajomości historii powstania tego dokumentu.
 
@@ -246,13 +246,13 @@ Ten dokument był pierwotnie pisany iteracyjnie, w rozmowie, bez pełnej świado
 
 ### 0.11.1 Wymagania techniczne bazowe — DO USTALENIA BEZPOŚREDNIO Z AREKIEM
 
-**WAŻNE dla dewelopera:** Poniższe punkty są świadomie NIE rozstrzygnięte w tym dokumencie. Arek zdecydował, że są to decyzje czysto inżynierskie, które powinny zostać ustalone bezpośrednio w rozmowie między deweloperem a nim, a nie jednostronnie przesądzone na etapie koncepcyjnym. Traktuj poniższe jako listę pytań do zadania Arkowi na pierwszym spotkaniu technicznym, nie jako gotowe wymagania:
+**WAŻNE dla dewelopera:** Punkty 3-5 poniżej zostały rozstrzygnięte w Rundzie #18 (patrz adnotacje przy każdym). **Punkt 1 (autentykacja) pozostaje świadomie otwarty** — Arek zdecydował, że to decyzja czysto inżynierska, która powinna zostać ustalona bezpośrednio w rozmowie między deweloperem a nim, a nie jednostronnie przesądzona na etapie koncepcyjnym:
 
 1. **Autentykacja/logowanie:** System jest z założenia **jednoosobowy** (patrz cały dokument — jeden użytkownik, Arek) — czy to oznacza brak systemu logowania w ogóle (dostęp przez sam link/URL, zabezpieczony ewentualnie na poziomie Google Workspace), czy jednak potrzebne jest minimalne zabezpieczenie dostępu (np. logowanie Google, PIN)? Do ustalenia z Arkiem, uwzględniając że dane obejmują wrażliwe informacje zdrowotne (mood tracker, GI — patrz Sekcja 0.9 o prywatności w Cerebro)
 2. **Hosting:** System opiera się o Google Sheets + Google Apps Script (patrz Sekcja 1.1) — Apps Script ma własny, wbudowany hosting (Web App deployment), więc pytanie do potwierdzenia z Arkiem to raczej: czy to wystarczające, czy Arek chce dodatkowo hostować warstwę PWA (frontend) gdzieś indziej (np. Firebase Hosting, Vercel, GitHub Pages) dla lepszej wydajności/kontroli. **Rozstrzygnięte w Rundzie #17: NIE — wyłącznie wbudowany hosting Apps Script (Web App deployment), żadnej dodatkowej platformy. System pozostaje w 100% w Google Apps Script, zarządzanie limitami opisane w nowej sekcji 1.2.**
-3. **Środowiska dev/staging/prod:** Nie ustalono, czy Arek chce rozdzielone środowisko testowe od produkcyjnego (co przy systemie z realnymi danymi zdrowotnymi i mechaniką "śmierci postaci" wpływającą na realne poczucie porażki, ma sens choćby na czas testów), czy wystarczy jedno środowisko produkcyjne od początku
-4. **Budżet/koszty bieżące:** Google Workspace, ewentualne API (Google Calendar API, przyszłe AI Coach przez Anthropic/inne API) — dokładne oszacowanie kosztów miesięcznych nie zostało zrobione, do ustalenia przy planowaniu technicznym
-5. **Wersjonowanie/backup kodu:** Nie ustalono, czy projekt będzie miał repozytorium Git (rekomendowane, biorąc pod uwagę skalę — 20 modułów, złożona logika), i gdzie (GitHub prywatne, GitLab, inne)
+3. **Środowiska dev/staging/prod — ROZSTRZYGNIĘTE (Runda #18):** JEDNO środowisko produkcyjne od początku, zgodnie z filozofią "budujemy docelowe rozwiązanie" (Runda #17, punkt P) — bez równoległej, stałej infrastruktury testowej. Google Sheets + Apps Script są tanie w duplikowaniu: jeśli kiedykolwiek zajdzie potrzeba przetestowania czegoś ryzykownego (np. nowej wartości kalibracji HP) bez wpływu na realne dane, wystarczy jednorazowa, ręczna kopia całego arkusza i skryptu (File → Make a copy) jako doraźny sandbox, nie stała, utrzymywana osobno instancja
+4. **Budżet/koszty bieżące — ROZSTRZYGNIĘTE (Runda #18):** Przy 100% Google Apps Script + Sheets na koncie osobistym (nie Workspace), koszt bieżący w Fazach 1-3 wynosi **0 zł** — Apps Script, Sheets i Google Calendar API są darmowe w tym zakresie użycia. Jedyny przyszły koszt to Moduł 14 (AI Coach, Faza 4) korzystający z Anthropic API rozliczanego za zużycie, nie w formie stałej subskrypcji — orientacyjnie pojedyncze złotówki miesięcznie przy cotygodniowej analizie, do zweryfikowania dokładnie dopiero przy aktywacji tego modułu
+5. **Wersjonowanie/backup kodu — ROZSTRZYGNIĘTE (Runda #18):** Prywatne repozytorium GitHub (`graczykarkadiuszwork/cerebro`, branch `Pip-Boy`) — ten sam, w którym powstaje i jest wersjonowana niniejsza dokumentacja. Kod Apps Script (`.gs`, `.html`) będzie trzymany w tym samym repozytorium, tak jak istniejący kod Cerebro
 
 ### 0.11.2 Fazowanie implementacji — rekomendowana kolejność budowy
 
@@ -1294,7 +1294,7 @@ Każdy dzień, przy pierwszym otwarciu aplikacji, wyświetla jeden cytat motywac
 - **Mechanizm doboru:** losowy, bez powtórzeń w obrębie jednego przejścia przez całą pulę 300 (dopiero po wyczerpaniu wszystkich 300 pula "odświeża się" i losowanie zaczyna się od nowa)
 - **Umiejscowienie:** pierwszy ekran dnia, przed lub razem z Widokiem Dnia (sekcja 6.1) — nie wymaga osobnego kliknięcia, żeby go zobaczyć
 - **Model danych:** nowa tabela `Cytaty_Motywacyjne` (sekcja 7): treść | autor (może być puste, jeśli nieznany) | źródło | data_ostatniego_wyświetlenia
-- **Do etapu implementacji:** zebranie i zweryfikowanie 300 cytatów z podanych źródeł (w tym potwierdzenie autorstwa tam, gdzie to możliwe) jest samodzielnym zadaniem redakcyjnym poprzedzającym budowę tej funkcji — nie blokuje reszty systemu
+- **Status (Runda #18):** próba zebrania cytatów bezpośrednio z czterech wskazanych stron nie powiodła się — środowisko, w którym powstaje ten dokument, ma zablokowany dostęp sieciowy do wszystkich czterech domen (polityka bezpieczeństwa środowiska, nie decyzja projektowa). Zadanie pozostaje otwarte: albo Arek dostarczy treść tych stron bezpośrednio (np. kopiując tekst), albo zbierze je deweloper na etapie implementacji, mając pełny dostęp do internetu. Nie blokuje to reszty systemu
 
 ---
 
@@ -1420,7 +1420,7 @@ Warstwa delikatnych, kontekstowych podpowiedzi behawioralnych, znacznie szersza 
 - **Zakres:** minimum 100 komunikatów, obejmujących praktycznie każdy moduł systemu (suplementy, trening, dieta, sen, sprzątanie, portfolio itd.), nie tylko obszary "wysokiego ryzyka" jak GI czy HP
 - **Mechanizm doboru:** kontekstowy — treść paska zmienia się zależnie od aktualnej sytuacji (pora dnia, status ukończenia dnia, aktywny GOD_MODE_24H/Tryb Regeneracji, zbliżający się deadline modułu itd.), nie czysto losowy
 - **Model danych:** nowa tabela `Marquee_Komunikaty` (sekcja 7): treść | kategoria/moduł_powiązany | warunek_wyświetlenia | priorytet
-- **Do etapu implementacji:** napisanie 100+ komunikatów jest samodzielnym zadaniem redakcyjnym (podobnie jak Cytaty Dnia, sekcja 5.4) — lista warunków kontekstowych do zaprojektowania razem z logiką Widoku Dnia (sekcja 6.1)
+- **Zebrane (Runda #18):** 107 komunikatów, gotowych do wgrania — plik `docs/data/marquee-komunikaty.csv` w repozytorium. Obejmują wszystkie moduły systemu (suplementy, dieta, trening, sen, mood, czytelnictwo, pielęgnację, sprzątanie, naturę, portfolio, HP/odznaki, GOD_MODE, pojazdy, zakupy, badania, rozciąganie, czas wolny, finanse i komunikaty ogólne), każdy z warunkiem kontekstowym i priorytetem (1-3) do wykorzystania przy sortowaniu, gdy kilka warunków spełnia się naraz
 
 ### 6.13 Dashboard graficzny (nowy, rozszerzony element, Runda #17)
 Zamiast wyłącznie tekstowego podsumowania tygodniowego (sekcja 6.5), pełnoprawny widok analityczny z wykresami.
