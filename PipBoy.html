@@ -1,0 +1,330 @@
+<!-- ============================================================
+     CEREBRO — PipBoy.html
+     Widok Dnia (sekcja 6.1) — Faza 1.
+     ============================================================ -->
+<div class="pipboy-shell crt-low" id="pb-shell">
+  <div class="pb-eyebrow">CEREBRO // PIP-BOY // ORGANIZACJA ŻYCIA</div>
+  <div class="pb-title">WIDOK DNIA</div>
+
+  <div class="pb-tabs">
+    <button class="pb-tab active">DZIEŃ</button>
+    <button class="pb-tab disabled">TYDZIEŃ <span class="pb-tab-note">(Faza 2)</span></button>
+    <button class="pb-tab disabled">POSTAĆ <span class="pb-tab-note">(Faza 2)</span></button>
+    <button class="pb-tab disabled">PORTFOLIO <span class="pb-tab-note">(Faza 3)</span></button>
+    <button class="pb-tab disabled">USTAWIENIA PIP-BOY <span class="pb-tab-note">↓</span></button>
+  </div>
+
+  <div class="pb-statusbar">
+    <span class="pb-hp-label" id="pb-date-label">—</span>
+    <span class="pb-hp-label">HP</span>
+    <div class="pb-hp-track"><div class="pb-hp-fill" id="pb-hp-fill" style="width:100%"></div></div>
+    <span class="pb-hp-value" id="pb-hp-value">100%</span>
+    <button class="pb-godmode-btn" id="pb-godmode-btn" onclick="pbToggleGodMode()">GOD_MODE_24H: OFF</button>
+  </div>
+
+  <div class="pb-quote" id="pb-quote" style="display:none;">
+    <div id="pb-quote-text"></div>
+    <div class="pb-quote-author" id="pb-quote-author"></div>
+  </div>
+
+  <div class="pb-marquee-wrap">
+    <div class="pb-marquee-track" id="pb-marquee-track">Ładowanie…</div>
+  </div>
+
+  <div id="pb-blocks">
+    <div style="color:var(--pb-green-dim); font-size:0.85em;">Ładowanie dnia…</div>
+  </div>
+
+  <div class="pb-settings-row">
+    <span>Efekty CRT</span>
+    <div class="pb-segmented" id="pb-crt-seg">
+      <button data-level="low" class="active" onclick="pbSetCrtLevel('low')">LOW</button>
+      <button data-level="medium" onclick="pbSetCrtLevel('medium')">MEDIUM</button>
+      <button data-level="ultra" onclick="pbSetCrtLevel('ultra')">ULTRA</button>
+    </div>
+  </div>
+  <div class="pb-settings-row">
+    <span>Rozmiar tekstu</span>
+    <div class="pb-segmented" id="pb-font-seg">
+      <button data-scale="0.9" onclick="pbSetFontScale(0.9)">A-</button>
+      <button data-scale="1" class="active" onclick="pbSetFontScale(1)">A</button>
+      <button data-scale="1.2" onclick="pbSetFontScale(1.2)">A+</button>
+      <button data-scale="1.4" onclick="pbSetFontScale(1.4)">A++</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let PB_DAY = null;
+
+function initModule() {
+  pbLoadSettings();
+  pbLoadDay();
+}
+
+function pbToday() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function pbLoadDay() {
+  const dataStr = pbToday();
+  document.getElementById('pb-date-label').textContent = dataStr;
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result.success) { showError('Pip-Boy: ' + result.error); return; }
+      PB_DAY = result.data;
+      pbRenderHP(result.data.hp);
+      pbRenderGodMode(result.data.godModeAktywny);
+      pbRenderQuote(result.data.cytatDnia);
+      pbRenderBlocks(result.data);
+      pbLoadMarquee();
+    })
+    .withFailureHandler(function(err) { showError('Błąd ładowania Pip-Boy: ' + err.message); })
+    .getPipBoyDzien(dataStr);
+}
+
+function pbRenderHP(hp) {
+  const fill = document.getElementById('pb-hp-fill');
+  fill.style.width = hp + '%';
+  fill.className = 'pb-hp-fill' + (hp <= 10 ? ' crit' : hp <= 25 ? ' warn' : '');
+  document.getElementById('pb-hp-value').textContent = hp + '%';
+}
+
+function pbRenderGodMode(aktywny) {
+  const btn = document.getElementById('pb-godmode-btn');
+  btn.textContent = 'GOD_MODE_24H: ' + (aktywny ? 'ON' : 'OFF');
+  btn.classList.toggle('on', !!aktywny);
+}
+
+function pbRenderQuote(cytat) {
+  if (!cytat) return;
+  document.getElementById('pb-quote').style.display = 'block';
+  document.getElementById('pb-quote-text').textContent = '"' + cytat.tresc + '"';
+  document.getElementById('pb-quote-author').textContent = '— ' + (cytat.autor || 'nieznany autor');
+}
+
+function pbLoadMarquee() {
+  const kontekst = { pora: pbCurrentPora(), god_mode_aktywny: PB_DAY.godModeAktywny ? 'tak' : 'nie' };
+  google.script.run
+    .withSuccessHandler(function(result) {
+      const track = document.getElementById('pb-marquee-track');
+      if (result.success && result.data.length > 0) {
+        track.textContent = result.data.map(function(m){ return m.tresc; }).join('     •     ');
+      } else {
+        track.textContent = 'Pip-Boy gotowy do pracy.';
+      }
+    })
+    .withFailureHandler(function() {})
+    .getMarqueeKomunikaty(kontekst);
+}
+
+function pbCurrentPora() {
+  const h = new Date().getHours();
+  return h < 12 ? 'rano' : (h < 18 ? 'popoludnie' : 'wieczor');
+}
+
+function pbBlockStatus(blok, dane) {
+  if (blok.modul === 'suplementy') {
+    const dzieci = blok.dzieci || [];
+    const wykonane = dzieci.filter(function(k){
+      const w = dane.suplementyLog.find(function(r){ return r.klucz === k; });
+      return w && (w.wykonano === true || w.wykonano === 'true' || w.wykonano === 'TRUE');
+    });
+    return wykonane.length === dzieci.length && dzieci.length > 0;
+  }
+  if (blok.modul === 'dieta') {
+    const w = dane.posilkiLog.find(function(r){ return Number(r.numer) === blok.numer; });
+    return !!(w && (w.wykonano === true || w.wykonano === 'true' || w.wykonano === 'TRUE'));
+  }
+  if (blok.modul === 'mood') {
+    return dane.moodLog.some(function(r){ return r.pora === blok.pora; });
+  }
+  if (blok.modul === 'rozciaganie' || blok.modul === 'sen') {
+    const w = dane.dziennyLog.find(function(r){ return r.modul === blok.modul; });
+    return !!(w && (w.wykonano === true || w.wykonano === 'true' || w.wykonano === 'TRUE'));
+  }
+  return false;
+}
+
+function pbRenderBlocks(dane) {
+  const el = document.getElementById('pb-blocks');
+  el.innerHTML = dane.bloki.map(function(blok, idx) {
+    const done = pbBlockStatus(blok, dane);
+    const obl = blok.obligatoryjne;
+    const marker = done ? '+' : (obl ? 'o' : '·');
+    const bracket = obl ? ['[',']'] : ['(',')'];
+    return (
+      '<div class="pb-block ' + (obl ? 'obligatoryjne' : 'opcjonalne') + (done ? ' done' : '') + '" id="pb-block-' + idx + '">' +
+        '<div class="pb-block-head" onclick="pbToggleExpand(' + idx + ')">' +
+          '<span class="pb-block-marker">' + bracket[0] + marker + bracket[1] + '</span>' +
+          '<span class="pb-block-name">' + blok.nazwa + '</span>' +
+          '<span class="pb-block-tag">' + (obl ? 'OBLIGATORYJNE' : 'opcjonalne') + '</span>' +
+          '<span class="pb-block-chevron">›</span>' +
+        '</div>' +
+        '<div class="pb-block-body">' + pbBlockBody(blok, dane) + '</div>' +
+      '</div>'
+    );
+  }).join('');
+}
+
+function pbBlockBody(blok, dane) {
+  if (blok.modul === 'suplementy') {
+    return (blok.dzieci || []).map(function(klucz) {
+      const w = dane.suplementyLog.find(function(r){ return r.klucz === klucz; });
+      const done = !!(w && (w.wykonano === true || w.wykonano === 'true' || w.wykonano === 'TRUE'));
+      const nazwa = pbSuplementNazwa(klucz);
+      return '<div class="pb-check-row" onclick="pbToggleSuplement(\'' + klucz + '\', ' + (!done) + ')">' +
+        '<span class="pb-check-mark">' + (done ? '[x]' : '[ ]') + '</span><span>' + nazwa + '</span></div>';
+    }).join('') || '<span style="color:var(--pb-green-dim)">Brak pozycji.</span>';
+  }
+  if (blok.modul === 'dieta') {
+    const done = pbBlockStatus(blok, dane);
+    return '<div class="pb-check-row" onclick="pbToggleMeal(' + blok.numer + ', ' + (!done) + ')">' +
+      '<span class="pb-check-mark">' + (done ? '[x]' : '[ ]') + '</span><span>Zjedzone</span></div>';
+  }
+  if (blok.modul === 'mood') {
+    return pbMoodForm(blok, dane);
+  }
+  if (blok.modul === 'rozciaganie' || blok.modul === 'sen') {
+    const done = pbBlockStatus(blok, dane);
+    const note = '<div style="color:var(--pb-green-faint); font-size:0.72em; margin-top:4px;">Bez kary HP na razie — kalibracja tego modułu czeka na Arka (luka w sekcji 4.2 dokumentu).</div>';
+    return '<div class="pb-check-row" onclick="pbToggleLogDzienny(\'' + blok.modul + '\', ' + (!done) + ')">' +
+      '<span class="pb-check-mark">' + (done ? '[x]' : '[ ]') + '</span><span>Wykonane</span></div>' + note;
+  }
+  if (blok.modul === 'trening' || blok.klucz === 'praca') {
+    return '<span style="color:var(--pb-green-dim)">Szczegółowy tracking — Faza 2 (RCP, log ćwiczeń).</span>';
+  }
+  return '<div class="pb-check-row" onclick="pbNoop()"><span style="color:var(--pb-green-dim)">Bez dodatkowego trackingu w Fazie 1.</span></div>';
+}
+
+function pbSuplementNazwa(klucz) {
+  const rdzenne = PIPBOY_SUPLEMENTY_RDZENNE_CLIENT;
+  const found = rdzenne.find(function(s){ return s.klucz === klucz; });
+  if (found) return found.nazwa;
+  if (klucz === 'melatonina') return 'Melatonina (opcjonalna, bez kary)';
+  if (klucz === 'gainer') return 'KFD X Gainer';
+  return klucz;
+}
+// Kopia nazw suplementów po stronie klienta (dane źródłowe: PipBoyData.gs)
+const PIPBOY_SUPLEMENTY_RDZENNE_CLIENT = [
+  { klucz: 'kreatyna', nazwa: 'Kreatyna' },
+  { klucz: 'vita_pak', nazwa: 'KFD Vita Pak' },
+  { klucz: 'kolagen', nazwa: 'KFD Kolagen Plus' },
+  { klucz: 'omega3', nazwa: 'KFD Ultra Omega 3 Plus' },
+];
+
+function pbMoodForm(blok, dane) {
+  const existing = dane.moodLog.find(function(r){ return r.pora === blok.pora; }) || {};
+  const pelny = blok.pora === 'wieczor';
+  const gi = existing.gi || '';
+  const followUp = gi && Number(gi) > 0 && Number(gi) <= 4;
+  let html = '<div class="pb-mood-grid">' +
+    pbMoodSlider('nastroj', 'Nastrój ogólny', existing.nastroj) +
+    pbMoodSlider('energia', 'Poziom energii', existing.energia) +
+    pbMoodSlider('sen', 'Jakość snu', existing.sen);
+  if (pelny) {
+    html += pbMoodSlider('skupienie', 'Skupienie dziś', existing.skupienie) +
+            pbMoodSlider('gi', 'Stan żołądkowo-jelitowy', existing.gi);
+  }
+  html += '</div>';
+  if (pelny) {
+    html += '<div class="pb-gi-followup" id="pb-gi-followup-' + blok.pora + '" style="display:' + (followUp ? 'block' : 'none') + '">' +
+      '<label style="color:var(--pb-green-dim); font-size:0.82em;">GI ≤4/10 — co jadłeś w ciągu ostatnich 48h?</label>' +
+      '<textarea class="pb-textarea" id="pb-gi-text-' + blok.pora + '" rows="3">' + (existing.notatka_gi_followup || '') + '</textarea>' +
+    '</div>';
+  }
+  html += '<button class="pb-btn" onclick="pbSaveMood(\'' + blok.pora + '\')">Zapisz</button>';
+  return html;
+}
+
+function pbMoodSlider(klucz, etykieta, wartosc) {
+  wartosc = wartosc || 5;
+  return '<label for="pb-mood-' + klucz + '">' + etykieta + '</label>' +
+    '<span><input type="range" min="1" max="10" value="' + wartosc + '" id="pb-mood-' + klucz + '" ' +
+    (klucz === 'gi' ? 'oninput="pbCheckGI(this.value)"' : '') + '> <span id="pb-mood-' + klucz + '-val">' + wartosc + '</span></span>';
+}
+
+function pbCheckGI(v) {
+  const el = document.getElementById('pb-mood-gi-val');
+  if (el) el.textContent = v;
+  const box = document.getElementById('pb-gi-followup-wieczor');
+  if (box) box.style.display = (Number(v) > 0 && Number(v) <= 4) ? 'block' : 'none';
+}
+
+function pbToggleExpand(idx) {
+  document.getElementById('pb-block-' + idx).classList.toggle('expanded');
+}
+
+function pbToggleSuplement(klucz, wartosc) {
+  google.script.run.withSuccessHandler(function(){ pbLoadDay(); }).toggleSuplement(pbToday(), klucz, wartosc);
+}
+
+function pbToggleMeal(numer, wartosc) {
+  google.script.run.withSuccessHandler(function(){ pbLoadDay(); }).toggleMeal(pbToday(), numer, wartosc);
+}
+
+function pbToggleLogDzienny(modul, wartosc) {
+  google.script.run.withSuccessHandler(function(){ pbLoadDay(); }).toggleLogDzienny(pbToday(), modul, wartosc);
+}
+
+function pbSaveMood(pora) {
+  const wartosci = {
+    nastroj: pbVal('pb-mood-nastroj'), energia: pbVal('pb-mood-energia'), sen: pbVal('pb-mood-sen'),
+    skupienie: pbVal('pb-mood-skupienie'), gi: pbVal('pb-mood-gi'),
+    notatka_gi_followup: (document.getElementById('pb-gi-text-' + pora) || {}).value || ''
+  };
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) { showSuccess('Mood check zapisany.'); pbLoadDay(); }
+      else showError('Błąd: ' + result.error);
+    })
+    .saveMood(pbToday(), pora, wartosci);
+}
+
+function pbVal(id) { const el = document.getElementById(id); return el ? el.value : ''; }
+
+function pbToggleGodMode() {
+  if (PB_DAY && PB_DAY.godModeAktywny) {
+    showInfo('GOD_MODE_24H jest już aktywny — dezaktywacja ręczna poza zakresem Fazy 1.');
+    return;
+  }
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) { showSuccess('GOD_MODE_24H aktywny. Pozostało w tym miesiącu: ' + result.pozostaleWMiesiacu); pbLoadDay(); }
+      else showError(result.error);
+    })
+    .activateGodMode(pbToday());
+}
+
+function pbNoop() {}
+
+// ---- Ustawienia wizualne (sekcja 6.9 / Runda #17) ----
+function pbLoadSettings() {
+  google.script.run.withSuccessHandler(function(result) {
+    const data = (result && result.data) || {};
+    pbApplyCrtLevel(data.pipboyCrtLevel || 'low');
+    pbApplyFontScale(data.pipboyFontScale || '1');
+  }).getSettings();
+}
+
+function pbSetCrtLevel(level) {
+  pbApplyCrtLevel(level);
+  google.script.run.saveSettings({ pipboyCrtLevel: level });
+}
+function pbApplyCrtLevel(level) {
+  const shell = document.getElementById('pb-shell');
+  shell.classList.remove('crt-low', 'crt-medium', 'crt-ultra');
+  shell.classList.add('crt-' + level);
+  document.querySelectorAll('#pb-crt-seg button').forEach(function(b){ b.classList.toggle('active', b.dataset.level === level); });
+}
+
+function pbSetFontScale(scale) {
+  pbApplyFontScale(scale);
+  google.script.run.saveSettings({ pipboyFontScale: String(scale) });
+}
+function pbApplyFontScale(scale) {
+  document.getElementById('pb-shell').style.setProperty('--pb-font-scale', scale);
+  document.querySelectorAll('#pb-font-seg button').forEach(function(b){ b.classList.toggle('active', b.dataset.scale === String(scale)); });
+}
+</script>

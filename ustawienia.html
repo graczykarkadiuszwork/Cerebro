@@ -37,6 +37,14 @@
       </div>
     </div>
     <div class="ios-card mb-4">
+      <div class="section-title">Pip-Boy</div>
+      <div class="p-4 space-y-3">
+        <p class="text-[15px] text-[#8e8e93] leading-relaxed">System organizacji życia — osobny arkusz i osobny, restrykcyjny folder Drive (dane zdrowotne, sekcja 0.9 dokumentu koncepcyjnego), niezależny od reszty Cerebro.</p>
+        <button onclick="setupPipBoyClick()" class="btn-primary"><i data-lucide="terminal" class="inline-block w-5 h-5 mr-2"></i>Skonfiguruj Pip-Boy</button>
+        <div id="pipboy-status" class="text-[13px] text-[#8e8e93]"></div>
+      </div>
+    </div>
+    <div class="ios-card mb-4">
       <div class="section-title">Eksport danych</div>
       <div class="p-4 space-y-3">
         <p class="text-[15px] text-[#8e8e93] leading-relaxed">Pobierz kopię wszystkich danych w formacie JSON:</p>
@@ -69,5 +77,6 @@ function loadSettings() { google.script.run.withSuccessHandler(function(result) 
 function saveSettings() { const settings = { organizationName: document.getElementById('organizationName').value, contactEmail: document.getElementById('contactEmail').value }; google.script.run.withSuccessHandler(function(result) { if (result.success) { showSuccess('Ustawienia zapisane'); document.getElementById('sidebar-org').textContent = settings.organizationName || 'Moja Organizacja'; } else { showError('Błąd: ' + result.error); } }).saveSettings(settings); }
 function setupDrive() { google.script.run.withSuccessHandler(function(result) { if (result.success) { showSuccess('Folder struktury Drive utworzony. Synchronizacja uruchomiona.'); } else { showError('Błąd: ' + result.error); } }).setupDriveFolders(); }
 function manualSync() { google.script.run.withSuccessHandler(function(result) { if (result.success) { showSuccess('Zaimportowano ' + result.imported + ' plików'); } else { showError('Błąd: ' + result.error); } }).manualSyncDrive(); }
+function setupPipBoyClick() { document.getElementById('pipboy-status').textContent = 'Konfigurowanie…'; google.script.run.withSuccessHandler(function(result) { if (result.success) { showSuccess('Pip-Boy skonfigurowany.'); document.getElementById('pipboy-status').innerHTML = result.message + '<br><a href="' + result.spreadsheetUrl + '" target="_top" class="underline">Otwórz arkusz Pip-Boy</a>'; } else { showError('Błąd: ' + result.error); document.getElementById('pipboy-status').textContent = ''; } }).setupPipBoy(); }
 function exportJSON() { google.script.run.withSuccessHandler(function(result) { if (result.success) { const blob = new Blob([result.data], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'cerebro-export-' + new Date().getTime() + '.json'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); showSuccess('Eksport został pobrany'); } else { showError('Błąd: ' + result.error); } }).exportAllData(); }
 </script>
