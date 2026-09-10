@@ -10,6 +10,7 @@
     <button class="pb-tab active" id="pb-tab-dzien" onclick="pbSwitchTab('dzien')">DZIEŃ</button>
     <button class="pb-tab" id="pb-tab-trening" onclick="pbSwitchTab('trening')">TRENING</button>
     <button class="pb-tab" id="pb-tab-postac" onclick="pbSwitchTab('postac')">POSTAĆ</button>
+    <button class="pb-tab" id="pb-tab-dashboard" onclick="pbSwitchTab('dashboard')">DASHBOARD</button>
     <button class="pb-tab disabled">TYDZIEŃ <span class="pb-tab-note">(Faza 2)</span></button>
     <button class="pb-tab disabled">PORTFOLIO <span class="pb-tab-note">(Faza 3)</span></button>
   </div>
@@ -84,6 +85,19 @@
     <div id="pb-postac-body"><div style="color:var(--pb-green-dim);">Ładowanie karty postaci…</div></div>
   </div>
 
+  <!-- ===== WIDOK: DASHBOARD (sekcja 6.13) ===== -->
+  <div id="pb-view-dashboard" style="display:none;">
+    <div class="pb-tabs" style="margin-bottom:12px;">
+      <button class="pb-tab active" id="pb-dash-sub-ogolny" onclick="pbDashSwitchSub('ogolny')">OGÓLNY</button>
+      <button class="pb-tab" id="pb-dash-sub-trening" onclick="pbDashSwitchSub('trening')">TRENING</button>
+      <button class="pb-tab" id="pb-dash-sub-dieta" onclick="pbDashSwitchSub('dieta')">DIETA / UMYSŁ</button>
+      <button class="pb-tab" id="pb-dash-sub-sen" onclick="pbDashSwitchSub('sen')">SEN / NASTRÓJ</button>
+      <button class="pb-tab" id="pb-dash-sub-dom" onclick="pbDashSwitchSub('dom')">DOM</button>
+      <button class="pb-tab disabled">PORTFOLIO <span class="pb-tab-note">(Faza 3)</span></button>
+    </div>
+    <div id="pb-dashboard-body"><div style="color:var(--pb-green-dim);">Ładowanie dashboardu…</div></div>
+  </div>
+
   <div class="pb-settings-row">
     <span>Efekty CRT</span>
     <div class="pb-segmented" id="pb-crt-seg">
@@ -119,14 +133,15 @@ function pbToday() {
 
 // ---- Przełączanie wewnętrznych widoków Pip-Boy (sekcja 6.2) ----
 function pbSwitchTab(tab) {
-  ['dzien', 'trening', 'postac'].forEach(function(t) {
+  ['dzien', 'trening', 'postac', 'dashboard'].forEach(function(t) {
     document.getElementById('pb-view-' + t).style.display = (t === tab) ? 'block' : 'none';
     document.getElementById('pb-tab-' + t).classList.toggle('active', t === tab);
   });
-  const titles = { dzien: 'WIDOK DNIA', trening: 'TRENING', postac: 'KARTA POSTACI' };
+  const titles = { dzien: 'WIDOK DNIA', trening: 'TRENING', postac: 'KARTA POSTACI', dashboard: 'DASHBOARD' };
   document.getElementById('pb-view-title').textContent = titles[tab];
   if (tab === 'trening' && !PB_PLAN) pbLoadTrainingPlan();
   if (tab === 'postac') pbLoadKartaPostaci();
+  if (tab === 'dashboard') pbLoadDashboard();
 }
 
 function pbLoadDay() {
@@ -539,6 +554,10 @@ function pbOnStatusChange() {
 function pbLogSet() {
   const status = pbVal('pb-log-status');
   const cwiczenie = pbVal('pb-log-cwiczenie');
+  // treningTyp (A/B) wyznaczany z planu na podstawie wybranego ćwiczenia —
+  // puste dla ćwiczeń ad-hoc spoza planu startowego.
+  const planRow = (PB_PLAN || []).find(function(p) { return p.cwiczenie === cwiczenie; });
+  const treningTyp = planRow ? planRow.trening_typ : '';
   google.script.run
     .withSuccessHandler(function(result) {
       if (!result.success) { showError(result.error); return; }
@@ -549,7 +568,11 @@ function pbLogSet() {
           ? '<div class="pb-quote" style="border-color: var(--pb-amber); color: var(--pb-amber);">' + r.plateau.sugestia + '</div>' : '';
       }).getTrainingHistory(cwiczenie);
     })
-    .logTrainingSet(pbToday(), status, pbVal('pb-log-powod'), cwiczenie,
+    // UWAGA (poprawka w tej turze): to wywołanie pomijało parametr treningTyp,
+    // przez co wszystkie kolejne argumenty przesuwały się o jedno miejsce
+    // względem sygnatury backendu (logTrainingSet w PipBoy.gs) — ciężar
+    // trafiał do pola oceny sesji, ocena do notatki itd. Naprawione.
+    .logTrainingSet(pbToday(), treningTyp, status, pbVal('pb-log-powod'), cwiczenie,
       pbVal('pb-log-seria'), pbVal('pb-log-powt'), pbVal('pb-log-ciezar'), pbVal('pb-log-ocena'), pbVal('pb-log-notatka'));
 }
 
@@ -592,7 +615,7 @@ function pbRenderKartaPostaci(dane) {
       return '<div class="pb-check-row" style="cursor:default;"><span class="pb-check-mark">[' + o.typ + ']</span><span>' + o.nazwa + '</span></div>';
     }).join('');
   }
-  html += '<div style="color:var(--pb-green-faint); font-size:0.72em; margin-top:10px;">Ewaluacja obejmuje na razie 3 przykładowe odznaki startowe — pełne pokrycie 208 warunków (sekcja 4.3) to osobne zadanie Fazy 2+.</div>';
+  html += '<div style="color:var(--pb-green-faint); font-size:0.72em; margin-top:10px;">Ewaluacja obejmuje ~39 z 208 odznak — te, których warunek jest jednoznacznie obliczalny z zebranych już danych (streaki, progi łączne, liczniki). Odznaki sekretne, subiektywne i zależne od jeszcze niezbudowanych modułów (Portfolio, BJJ) czekają na Fazę 2+.</div>';
 
   el.innerHTML = html;
 }
@@ -624,5 +647,176 @@ function pbSetFontScale(scale) {
 function pbApplyFontScale(scale) {
   document.getElementById('pb-shell').style.setProperty('--pb-font-scale', scale);
   document.querySelectorAll('#pb-font-seg button').forEach(function(b){ b.classList.toggle('active', b.dataset.scale === String(scale)); });
+}
+
+// ---- DASHBOARD (sekcja 6.13) ----
+const PB_GREEN = '#3dff3d', PB_GREEN_DIM = '#1f8a1f', PB_AMBER = '#ffb000', PB_RED = '#ff4d3d';
+let PB_DASH_DATA = null;
+let PB_DASH_SUB = 'ogolny';
+const PB_CHART_INSTANCES = {}; // canvasId -> Chart, żeby niszczyć przed ponownym rysowaniem
+
+function pbLoadDashboard() {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result.success) { showError('Dashboard: ' + result.error); return; }
+      PB_DASH_DATA = result.data;
+      pbRenderDashboardPanel(PB_DASH_SUB);
+    })
+    .withFailureHandler(function(err) { showError('Błąd ładowania dashboardu: ' + err.message); })
+    .getDashboardData();
+}
+
+function pbDashSwitchSub(sub) {
+  PB_DASH_SUB = sub;
+  ['ogolny', 'trening', 'dieta', 'sen', 'dom'].forEach(function(s) {
+    document.getElementById('pb-dash-sub-' + s).classList.toggle('active', s === sub);
+  });
+  if (PB_DASH_DATA) pbRenderDashboardPanel(sub);
+}
+
+function pbChartCanvas(id, height) {
+  return '<canvas id="' + id + '" height="' + (height || 160) + '"></canvas>';
+}
+
+function pbMakeChart(canvasId, config) {
+  const el = document.getElementById(canvasId);
+  if (!el) return;
+  if (PB_CHART_INSTANCES[canvasId]) { PB_CHART_INSTANCES[canvasId].destroy(); }
+  PB_CHART_INSTANCES[canvasId] = new Chart(el.getContext('2d'), config);
+}
+
+function pbChartDefaults() {
+  return {
+    scales: {
+      x: { ticks: { color: PB_GREEN_DIM, font: { size: 10 } }, grid: { color: 'rgba(61,255,61,0.08)' } },
+      y: { ticks: { color: PB_GREEN_DIM, font: { size: 10 } }, grid: { color: 'rgba(61,255,61,0.08)' } }
+    },
+    plugins: { legend: { labels: { color: PB_GREEN_DIM, font: { size: 10 } } } }
+  };
+}
+
+function pbRenderDashboardPanel(sub) {
+  const el = document.getElementById('pb-dashboard-body');
+  const d = PB_DASH_DATA;
+  if (!d) { el.innerHTML = '<div style="color:var(--pb-green-dim);">Brak danych.</div>'; return; }
+
+  if (sub === 'ogolny') {
+    el.innerHTML =
+      '<div class="pb-mood-grid" style="grid-template-columns: 1fr 1fr 1fr; margin-bottom:14px;">' +
+        '<div><div class="pb-eyebrow">STREAK</div><div class="pb-title" style="font-size:1.6em;">' + d.streak + ' dni</div></div>' +
+        '<div><div class="pb-eyebrow">POZIOM OGÓLNY</div><div class="pb-title" style="font-size:1.6em;">' + d.poziomOgolny.poziom + '</div></div>' +
+        '<div><div class="pb-eyebrow">ODZNAKI</div><div class="pb-title" style="font-size:1.6em;">' + d.odznakiZdobyteLiczba + ' / ' + d.odznakiLacznie + '</div></div>' +
+      '</div>' +
+      '<div class="pb-eyebrow">TREND HP (ostatnie ' + d.trendHp.length + ' zapisanych dni)</div>' +
+      pbChartCanvas('pb-chart-hp') +
+      '<div class="pb-eyebrow" style="margin-top:18px;">ROZKŁAD XP WG ATRYBUTU (łącznie ' + d.sumaXP + ' XP)</div>' +
+      pbChartCanvas('pb-chart-atrybuty');
+
+    pbMakeChart('pb-chart-hp', {
+      type: 'line',
+      data: {
+        labels: d.trendHp.map(function(r) { return r.data.slice(5); }),
+        datasets: [{ label: 'HP %', data: d.trendHp.map(function(r) { return Number(r.hp_procent); }),
+          borderColor: PB_GREEN, backgroundColor: 'rgba(61,255,61,0.12)', fill: true, tension: 0.2, pointRadius: 2 }]
+      },
+      options: Object.assign(pbChartDefaults(), { scales: Object.assign(pbChartDefaults().scales, { y: Object.assign(pbChartDefaults().scales.y, { min: 0, max: 100 }) } ) })
+    });
+
+    const atrybutyLabels = Object.keys(d.atrybuty);
+    pbMakeChart('pb-chart-atrybuty', {
+      type: 'bar',
+      data: {
+        labels: atrybutyLabels.map(function(a) { return PB_ATRYBUT_LABEL[a] || a; }),
+        datasets: [{ label: 'XP', data: atrybutyLabels.map(function(a) { return d.atrybuty[a]; }),
+          backgroundColor: PB_GREEN_DIM, borderColor: PB_GREEN, borderWidth: 1 }]
+      },
+      options: Object.assign(pbChartDefaults(), { plugins: { legend: { display: false } } })
+    });
+    return;
+  }
+
+  if (sub === 'trening') {
+    const cwiczenia = Object.keys(d.cwiczenia || {});
+    if (cwiczenia.length === 0) {
+      el.innerHTML = '<div style="color:var(--pb-green-dim); font-size:0.85em;">Brak jeszcze zalogowanych pełnych sesji ("pelna") — wykresy progresji ciężaru pojawią się po pierwszych wpisach w zakładce TRENING.</div>';
+      return;
+    }
+    el.innerHTML = '<div class="pb-eyebrow">PROGRESJA CIĘŻARU — wybierz ćwiczenie</div>' +
+      '<select class="pb-input" id="pb-dash-cwiczenie" onchange="pbRenderTreningChart()">' +
+        cwiczenia.map(function(c) { return '<option value="' + c + '">' + c + '</option>'; }).join('') +
+      '</select>' + pbChartCanvas('pb-chart-trening');
+    pbRenderTreningChart();
+    return;
+  }
+
+  if (sub === 'dieta') {
+    el.innerHTML = '<div class="pb-eyebrow">ŚREDNIA 7-DNIOWA CZYTELNICTWA (Moduł 20, cel: ≥55 min)</div>' +
+      pbChartCanvas('pb-chart-czyt') +
+      '<div style="color:var(--pb-green-faint); font-size:0.72em; margin-top:10px;">Wykres suplementów/diety per-dzień — do Fazy 2+; tu widoczny na razie sam wskaźnik czytelnictwa jako proxy „umysł" (Moduł 20 już zbiera te dane).</div>';
+    if (!d.rollingCzyt || d.rollingCzyt.length === 0) {
+      document.getElementById('pb-chart-czyt').outerHTML = '<div style="color:var(--pb-green-dim); font-size:0.85em;">Brak jeszcze danych czytelnictwa.</div>';
+      return;
+    }
+    pbMakeChart('pb-chart-czyt', {
+      type: 'line',
+      data: {
+        labels: d.rollingCzyt.map(function(r) { return r.data.slice(5); }),
+        datasets: [{ label: 'śr. 7-dniowa (min)', data: d.rollingCzyt.map(function(r) { return Number(r.srednia_7dni); }),
+          borderColor: PB_AMBER, backgroundColor: 'rgba(255,176,0,0.1)', fill: true, tension: 0.2, pointRadius: 2 }]
+      },
+      options: pbChartDefaults()
+    });
+    return;
+  }
+
+  if (sub === 'sen') {
+    if (!d.moodRows || d.moodRows.length === 0) {
+      el.innerHTML = '<div style="color:var(--pb-green-dim); font-size:0.85em;">Brak jeszcze wpisów mood checku.</div>';
+      return;
+    }
+    el.innerHTML = '<div class="pb-eyebrow">TREND NASTRÓJ / ENERGIA / SEN (ostatnie wpisy)</div>' + pbChartCanvas('pb-chart-mood');
+    const wieczorne = d.moodRows.filter(function(r) { return r.pora === 'wieczor'; });
+    pbMakeChart('pb-chart-mood', {
+      type: 'line',
+      data: {
+        labels: wieczorne.map(function(r) { return r.data.slice(5); }),
+        datasets: [
+          { label: 'Nastrój', data: wieczorne.map(function(r) { return Number(r.nastroj) || null; }), borderColor: PB_GREEN, tension: 0.2, pointRadius: 2 },
+          { label: 'Energia', data: wieczorne.map(function(r) { return Number(r.energia) || null; }), borderColor: PB_AMBER, tension: 0.2, pointRadius: 2 },
+          { label: 'Sen', data: wieczorne.map(function(r) { return Number(r.sen) || null; }), borderColor: PB_RED, tension: 0.2, pointRadius: 2 }
+        ]
+      },
+      options: Object.assign(pbChartDefaults(), { scales: Object.assign(pbChartDefaults().scales, { y: Object.assign(pbChartDefaults().scales.y, { min: 0, max: 10 }) }) })
+    });
+    return;
+  }
+
+  if (sub === 'dom') {
+    el.innerHTML = '<div class="pb-eyebrow">SPRZĄTANIE — MINUTY / DZIEŃ (ostatnie 30 dni, floor 15 / sufit 60)</div>' + pbChartCanvas('pb-chart-sprzatanie');
+    pbMakeChart('pb-chart-sprzatanie', {
+      type: 'bar',
+      data: {
+        labels: d.sprzatanieTrend.map(function(r) { return r.data.slice(5); }),
+        datasets: [{ label: 'minuty', data: d.sprzatanieTrend.map(function(r) { return r.minuty; }),
+          backgroundColor: d.sprzatanieTrend.map(function(r) { return r.minuty >= 15 ? PB_GREEN_DIM : PB_RED; }) }]
+      },
+      options: Object.assign(pbChartDefaults(), { plugins: { legend: { display: false } } })
+    });
+    return;
+  }
+}
+
+function pbRenderTreningChart() {
+  const cwiczenie = pbVal('pb-dash-cwiczenie');
+  const seria = (PB_DASH_DATA.cwiczenia[cwiczenie] || []).slice().sort(function(a, b) { return a.data < b.data ? -1 : 1; });
+  pbMakeChart('pb-chart-trening', {
+    type: 'line',
+    data: {
+      labels: seria.map(function(r) { return r.data.slice(5); }),
+      datasets: [{ label: cwiczenie + ' (kg)', data: seria.map(function(r) { return r.ciezarKg; }),
+        borderColor: PB_GREEN, backgroundColor: 'rgba(61,255,61,0.12)', fill: true, tension: 0.15, pointRadius: 3 }]
+    },
+    options: pbChartDefaults()
+  });
 }
 </script>

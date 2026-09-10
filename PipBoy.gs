@@ -37,9 +37,15 @@ function setupPipBoy() {
       { name: 'suplementy_log', headers: ['data', 'klucz', 'wykonano', 'godzina', 'notatka'] },
       { name: 'posilki_log', headers: ['data', 'numer', 'wykonano', 'godzina'] },
       { name: 'mood_log', headers: ['data', 'pora', 'nastroj', 'energia', 'sen', 'skupienie', 'gi', 'notatka_gi_followup'] },
-      { name: 'punkty_historia', headers: ['data', 'hp_procent', 'xp_dzienny', 'streak_aktualny', 'poziom_postaci', 'smierc_postaci_bool'] },
+      // UWAGA (poprawka w tej turze): 'punkty_historia' było zdefiniowane tu
+      // DWA razy z różnymi nagłówkami — druga definicja (data/atrybut/punkty,
+      // zgodna z pipboyAwardPoints/getAtrybutySumy) nadpisywała pierwszą przy
+      // zakładaniu arkusza, więc pierwsza (hp_procent/xp_dzienny/streak/...)
+      // była martwym kodem. Usunięta. Historia HP w czasie ma teraz własny,
+      // faktycznie zapisywany arkusz: hp_historia (patrz niżej + upsertHpHistoria).
       { name: 'tokeny_god_mode', headers: ['data_aktywacji', 'typ', 'aktywny', 'notatka'] },
       { name: 'punkty_historia', headers: ['data', 'atrybut', 'punkty'] },
+      { name: 'hp_historia', headers: ['data', 'hp_procent'] },
       { name: 'plan_treningowy', headers: ['trening_typ', 'kolejnosc', 'cwiczenie', 'serie_docelowe', 'powtorzenia_zakres', 'przerwa_sek'] },
       { name: 'log_treningowy', headers: ['data', 'trening_typ', 'zrodlo_sesji', 'powod_modyfikacji', 'cwiczenie', 'seria_nr', 'powtorzenia', 'ciezar_kg', 'ocena_sesji_1_10', 'notatka', 'nowy_rekord'] },
       { name: 'odznaki_log', headers: ['id_odznaki', 'data_zdobycia'] },
@@ -282,6 +288,7 @@ function getPipBoyDzien(dataStr) {
     const hp = computePipBoyHP(dataStr, struktura, {
       suplementyLog, posilkiLog, moodLog, sprzatanieLog, czytelnictwoLog, treningLog
     }, godModeAktywny);
+    upsertHpHistoria(dataStr, hp.procent);
 
     return {
       success: true,
@@ -742,6 +749,25 @@ function computePipBoyHP(dataStr, struktura, logi, godModeAktywny) {
   return { procent: hp, brakujace };
 }
 
+// Zapisuje/aktualizuje dzienny wynik HP w arkuszu historii (do wykresu
+// trendu na Dashboardzie, sekcja 6.13). Upsert po dacie — bezpieczne przy
+// wielokrotnym przeliczaniu tego samego dnia.
+function upsertHpHistoria(dataStr, hpProcent) {
+  try {
+    const sheet = pipboySheet('hp_historia');
+    const dane = sheet.getDataRange().getValues();
+    for (let i = 1; i < dane.length; i++) {
+      if (dane[i][0] === dataStr) {
+        sheet.getRange(i + 1, 2).setValue(hpProcent);
+        return;
+      }
+    }
+    sheet.appendRow([dataStr, hpProcent]);
+  } catch (e) {
+    // nieblokujące — brak historii nie może wywalić Widoku Dnia
+  }
+}
+
 // ============================================================
 // SEKCJA 4.1 — PUNKTY (XP) I ATRYBUTY
 // ============================================================
@@ -807,10 +833,41 @@ function getKartaPostaci() {
   }
 }
 
-// Ewaluator startowy — sprawdza tylko garść najprostszych, jednorazowych
-// odznak "pierwszy raz" jako fundament. Ocena WSZYSTKICH 208 warunków
-// (streaki, progi łączne, sekretne) to osobne, większe zadanie (Faza 2+),
-// świadomie nieskracane tutaj zgadywaniem logiki.
+// ============================================================
+// EWALUATOR ODZNAK — obejmuje wszystkie odznaki, dla których warunek jest
+// jednoznaczny i obliczalny wyłącznie z danych już logowanych (streaki
+// dzienne, progi łączne, liczniki serii/sesji/godzin). NIE obejmuje
+// (świadomie, bez zgadywania logiki): odznak sekretnych, odznak zależnych
+// od subiektywnej oceny Arka (np. "bez nadużycia", "pełny zakres ruchu"),
+// odznak wymagających danych z modułów jeszcze niezbudowanych (Portfolio
+// Figurek, BJJ, Moduł 15/16 sezonowość) i odznak per-ćwiczenie, gdzie
+// dopasowanie nazwy ćwiczenia do planu byłoby kruche zgadywaniem. Pełne
+// pokrycie 208/208 to zadanie wieloetapowe — patrz docs/Pip-Boy-Wdrozenie.md.
+// ============================================================
+
+// Licznik dni z rzędu (wstecz od dataStr), dopóki dzienOkFn(data) zwraca true.
+function pipboyStreak(dzienOkFn, dataStr) {
+  let streak = 0;
+  let d = dataStr;
+  let iteracje = 0;
+  while (dzienOkFn(d) && iteracje < 2000) {
+    streak++;
+    d = dataMinus(d, 1);
+    iteracje++;
+  }
+  return streak;
+}
+
+function pipboyGrupujPoDacie(rows) {
+  const map = {};
+  rows.forEach(r => { (map[r.data] = map[r.data] || []).push(r); });
+  return map;
+}
+
+function pipboyPrawda(v) {
+  return v === true || v === 'true' || v === 'TRUE';
+}
+
 function evaluateStarterBadges(dataStr) {
   try {
     const juzZdobyte = sheetToObjects(pipboySheet('odznaki_log')).map(r => Number(r.id_odznaki));
@@ -818,26 +875,185 @@ function evaluateStarterBadges(dataStr) {
     const przyznaj = (id) => {
       if (juzZdobyte.indexOf(id) === -1) {
         pipboySheet('odznaki_log').appendRow([id, dataStr]);
+        juzZdobyte.push(id);
         nowoZdobyte.push(PIPBOY_ODZNAKI.find(o => o.id === id));
       }
     };
 
-    const suplementyLog = sheetToObjects(pipboySheet('suplementy_log')).filter(r => r.data === dataStr);
-    const rdzenneOk = PIPBOY_SUPLEMENTY_RDZENNE.every(s => {
-      const w = suplementyLog.find(r => r.klucz === s.klucz);
-      return w && (w.wykonano === true || w.wykonano === 'true' || w.wykonano === 'TRUE');
-    });
-    if (rdzenneOk) przyznaj(1); // [S] Pierwszy krok — suplementacja
+    // --- A. SUPLEMENTACJA / DYSCYPLINA (1,2,3,4,5,6,7,8) ---
+    const suplByDate = pipboyGrupujPoDacie(sheetToObjects(pipboySheet('suplementy_log')));
+    const rdzenneKlucze = PIPBOY_SUPLEMENTY_RDZENNE.map(s => s.klucz);
+    const dzienRdzenneOk = (d) => {
+      const wpisy = suplByDate[d];
+      if (!wpisy) return false;
+      return rdzenneKlucze.every(k => {
+        const w = wpisy.find(r => r.klucz === k);
+        return w && pipboyPrawda(w.wykonano);
+      });
+    };
+    if (dzienRdzenneOk(dataStr)) przyznaj(1); // [S] Pierwszy krok
+    const streakSuplementy = pipboyStreak(dzienRdzenneOk, dataStr);
+    if (streakSuplementy >= 7) przyznaj(2);    // [Z] Tydzień rutyny
+    if (streakSuplementy >= 30) przyznaj(3);   // [S] Miesiąc dyscypliny
+    if (streakSuplementy >= 90) przyznaj(4);   // [S] Kwartał żelaznej woli
+    if (streakSuplementy >= 180) przyznaj(5);  // [S] Pół roku nawyku
+    if (streakSuplementy >= 365) przyznaj(6);  // [S] Rok konsekwencji
+    const dniLacznieSuplementy = Object.keys(suplByDate).filter(dzienRdzenneOk).length;
+    if (dniLacznieSuplementy >= 100) przyznaj(7); // [S] Setka
+    if (dniLacznieSuplementy >= 500) przyznaj(8); // [S] Pięćsetka
 
-    const moodLog = sheetToObjects(pipboySheet('mood_log')).filter(r => r.data === dataStr);
-    if (moodLog.length > 0) przyznaj(131); // [S] Pierwszy wpis — mood
+    // --- B. TRENING / CIAŁO (16,21,22,23,24,25,44,45) ---
+    const treningRows = sheetToObjects(pipboySheet('log_treningowy'));
+    const sesjePelneByDate = {};
+    treningRows.filter(r => r.zrodlo_sesji === 'pelna').forEach(r => { sesjePelneByDate[r.data] = true; });
+    const liczbaSesjiPelnych = Object.keys(sesjePelneByDate).length;
+    if (liczbaSesjiPelnych >= 1) przyznaj(16);   // [S] Powrót na matę
+    if (liczbaSesjiPelnych >= 100) przyznaj(21); // [S] Setka treningów
+    if (liczbaSesjiPelnych >= 200) przyznaj(22); // [S] Dwieście treningów
+    const liczbaRekordow = treningRows.filter(r => pipboyPrawda(r.nowy_rekord)).length;
+    if (liczbaRekordow >= 1) przyznaj(23);  // [S] Pierwszy rekord
+    if (liczbaRekordow >= 10) przyznaj(24); // [S] Dziesięć rekordów
+    if (liczbaRekordow >= 50) przyznaj(25); // [S] Pięćdziesiąt rekordów
+    if (treningRows.length >= 100) przyznaj(44);  // [S] Sto serii
+    if (treningRows.length >= 1000) przyznaj(45); // [S] Tysiąc serii
 
-    const posilkiLog = sheetToObjects(pipboySheet('posilki_log')).filter(r => r.data === dataStr);
-    if ([1,2,3,4,5].every(n => posilkiLog.some(r => Number(r.numer) === n && (r.wykonano === true || r.wykonano === 'true' || r.wykonano === 'TRUE')))) {
-      przyznaj(58); // [S] Pierwszy pełny dzień — 5/5 posiłków
+    // --- D. DIETA (58,59,60) ---
+    const posilkiByDate = pipboyGrupujPoDacie(sheetToObjects(pipboySheet('posilki_log')));
+    const dzienPelnyPosilki = (d) => {
+      const wpisy = posilkiByDate[d];
+      if (!wpisy) return false;
+      return [1, 2, 3, 4, 5].every(n => wpisy.some(r => Number(r.numer) === n && pipboyPrawda(r.wykonano)));
+    };
+    if (dzienPelnyPosilki(dataStr)) przyznaj(58); // [S] Pierwszy pełny dzień
+    const streakPosilki = pipboyStreak(dzienPelnyPosilki, dataStr);
+    if (streakPosilki >= 7) przyznaj(59); // [Z] Tydzień pełnych posiłków
+    let dniPelnychW30 = 0;
+    { let d = dataStr; for (let i = 0; i < 30; i++) { if (dzienPelnyPosilki(d)) dniPelnychW30++; d = dataMinus(d, 1); } }
+    if (dniPelnychW30 >= 25) przyznaj(60); // [S] Miesiąc regularności żywieniowej
+
+    // --- E. CZYTELNICTWO / UMYSŁ (73,74,75,76,77,78,79,80,81,82,83,85) ---
+    const czytRows = sheetToObjects(pipboySheet('czytelnictwo_log'));
+    const czytByDate = pipboyGrupujPoDacie(czytRows);
+    const minutyCzytDnia = (d) => (czytByDate[d] || []).reduce((s, r) => s + (Number(r.minuty) || 0), 0);
+    if (minutyCzytDnia(dataStr) >= 60) przyznaj(73);  // [S] Pierwsza godzina
+    if (minutyCzytDnia(dataStr) >= 180) przyznaj(85); // [Z] Maraton wiedzy
+    const rollingDzis = sheetToObjects(pipboySheet('rolling_average_cele'))
+      .filter(r => r.modul === 'czytelnictwo' && r.data === dataStr);
+    if (rollingDzis.length && Number(rollingDzis[0].srednia_7dni) >= 55) przyznaj(74); // [Z] Tydzień czytelnika (śr. 7-dniowa modułu 20)
+    let suma30Czyt = 0;
+    { let d = dataStr; for (let i = 0; i < 30; i++) { suma30Czyt += minutyCzytDnia(d); d = dataMinus(d, 1); } }
+    if (suma30Czyt / 30 >= 55) przyznaj(75); // [S] Miesiąc w książkach (śr. 30-dniowa liczona bezpośrednio)
+    const ukonczonePozycje = czytRows.filter(r => pipboyPrawda(r.ukonczono));
+    if (ukonczonePozycje.length >= 1) przyznaj(76);  // [S] Pierwsza ukończona pozycja
+    if (ukonczonePozycje.length >= 5) przyznaj(77);  // [S] Piątka
+    if (ukonczonePozycje.length >= 10) przyznaj(78); // [S] Dziesiątka
+    if (ukonczonePozycje.length >= 25) przyznaj(79); // [S] Dwudziestka pięć
+    if (ukonczonePozycje.length >= 50) przyznaj(80); // [S] Pięćdziesiątka
+    const godzinyCzytaniaLacznie = czytRows.reduce((s, r) => s + (Number(r.minuty) || 0), 0) / 60;
+    if (godzinyCzytaniaLacznie >= 100) przyznaj(81);  // [S] Setka godzin
+    if (godzinyCzytaniaLacznie >= 500) przyznaj(82);  // [S] Pięćset godzin
+    if (godzinyCzytaniaLacznie >= 1000) przyznaj(83); // [S] Tysiąc godzin
+
+    // --- G. SPACER Z PSEM (101,103,104,105) ---
+    const spacerLiczba = sheetToObjects(pipboySheet('spacer_log')).length;
+    if (spacerLiczba >= 1) przyznaj(101);    // [S] Pierwszy spacer w systemie
+    if (spacerLiczba >= 100) przyznaj(103);  // [S] Setka spacerów
+    if (spacerLiczba >= 500) przyznaj(104);  // [S] Pięćset spacerów
+    if (spacerLiczba >= 1000) przyznaj(105); // [S] Tysiąc spacerów
+
+    // --- H. SPRZĄTANIE / OTOCZENIE (109,113,117) ---
+    const sprzRows = sheetToObjects(pipboySheet('sprzatanie_log'));
+    if (sprzRows.length >= 1) przyznaj(109);   // [S] Pierwsza strefa
+    if (sprzRows.length >= 100) przyznaj(113); // [S] Setka zadań
+    const sprzByDate = pipboyGrupujPoDacie(sprzRows);
+    const dzienFloorOk = (d) => {
+      // Niedziela zwolniona z floora sprzątania (sekcja 2.0) — nie przerywa streaku
+      if (new Date(d + 'T00:00:00').getDay() === 0) return true;
+      const minuty = (sprzByDate[d] || []).reduce((s, r) => s + (Number(r.minuty) || 0), 0);
+      return minuty >= PIPBOY_SPRZATANIE_FLOOR_MIN;
+    };
+    if (pipboyStreak(dzienFloorOk, dataStr) >= 60) przyznaj(117); // [S] Floor zawsze spełniony
+
+    // --- Mood (131) ---
+    if ((pipboyGrupujPoDacie(sheetToObjects(pipboySheet('mood_log')))[dataStr] || []).length > 0) {
+      przyznaj(131); // [S] Pierwszy wpis — mood
     }
 
     return { success: true, nowoZdobyte };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+// ============================================================
+// SEKCJA 6.13 — DASHBOARD GRAFICZNY
+// Agreguje dane już logowane w innych modułach do wykresów. Wybór biblioteki
+// (Chart.js, ładowany z CDN w index.html) to decyzja projektowa UI, zgodnie
+// z sekcją 6.13 dokumentu ("zadanie projektowe, nie decyzyjne").
+// ============================================================
+
+function getDashboardData() {
+  try {
+    const dzis = todayIso();
+
+    // Trend HP w czasie (widok ogólny) — z hp_historia, zapisywane przy
+    // każdym przeliczeniu Widoku Dnia (patrz upsertHpHistoria).
+    const hpRows = sheetToObjects(pipboySheet('hp_historia'))
+      .sort((a, b) => a.data < b.data ? -1 : a.data > b.data ? 1 : 0);
+    const trendHp = hpRows.slice(-60);
+
+    // Streak = kolejne dni wstecz od dziś z HP > 0% ("postać żyje"). Pełna
+    // logika Game Over/reset streaku przy śmierci to Faza 2+ (sekcja 4.1,
+    // punkt I) — tu liczymy tylko sam streak z danych, które już mamy.
+    const hpMap = {};
+    hpRows.forEach(r => { hpMap[r.data] = Number(r.hp_procent); });
+    let streak = 0, d = dzis, iteracje = 0;
+    while (hpMap.hasOwnProperty(d) && hpMap[d] > 0 && iteracje < 2000) {
+      streak++; d = dataMinus(d, 1); iteracje++;
+    }
+
+    const sumy = getAtrybutySumy();
+    const sumaCalkowita = PIPBOY_ATRYBUTY.reduce((s, a) => s + sumy[a], 0);
+
+    // Podzakładka Trening — historia ciężaru per ćwiczenie (progresja, sekcja 6.3)
+    const treningRows = sheetToObjects(pipboySheet('log_treningowy')).filter(r => r.zrodlo_sesji === 'pelna');
+    const cwiczenia = {};
+    treningRows.forEach(r => {
+      (cwiczenia[r.cwiczenie] = cwiczenia[r.cwiczenie] || []).push({ data: r.data, ciezarKg: Number(r.ciezar_kg) || 0 });
+    });
+
+    // Podzakładka Sen/Nastrój — trend Modułu 11
+    const moodRows = sheetToObjects(pipboySheet('mood_log'))
+      .sort((a, b) => a.data < b.data ? -1 : a.data > b.data ? 1 : 0).slice(-60);
+
+    // Podzakładka Dieta/Suplementy — rolling average czytelnictwa jako proxy
+    // "umysł" (Moduł 20) + osobno pełne dni suplementacji z ostatnich 30 dni
+    const rollingCzyt = sheetToObjects(pipboySheet('rolling_average_cele'))
+      .filter(r => r.modul === 'czytelnictwo')
+      .sort((a, b) => a.data < b.data ? -1 : a.data > b.data ? 1 : 0).slice(-60);
+
+    // Podzakładka Dom/Pojazdy — minuty sprzątania/dzień, ostatnie 30 dni
+    // (floor/ceiling z sekcji 2.0, żeby zobaczyć dyscyplinę w czasie)
+    const sprzRows = sheetToObjects(pipboySheet('sprzatanie_log'));
+    const sprzByDate = {};
+    sprzRows.forEach(r => { sprzByDate[r.data] = (sprzByDate[r.data] || 0) + (Number(r.minuty) || 0); });
+    const sprzatanieTrend = [];
+    { let dd = dzis; for (let i = 0; i < 30; i++) { sprzatanieTrend.unshift({ data: dd, minuty: sprzByDate[dd] || 0 }); dd = dataMinus(dd, 1); } }
+
+    // Portfolio Figurek (Moduł 18) — moduł jeszcze niezbudowany (patrz
+    // docs/Pip-Boy-Wdrozenie.md); podzakładka Dashboardu dla niego świadomie
+    // pominięta tutaj, nie ukryta bez wyjaśnienia — front pokaże placeholder.
+
+    return {
+      success: true,
+      data: {
+        trendHp, streak,
+        atrybuty: sumy, sumaXP: sumaCalkowita, poziomOgolny: pipboyPoziomZXP(sumaCalkowita),
+        cwiczenia, moodRows, rollingCzyt, sprzatanieTrend,
+        odznakiZdobyteLiczba: sheetToObjects(pipboySheet('odznaki_log')).length,
+        odznakiLacznie: PIPBOY_ODZNAKI.length
+      }
+    };
   } catch (e) {
     return { success: false, error: e.toString() };
   }
@@ -897,7 +1113,11 @@ function logTrainingSet(dataStr, treningTyp, status, powodModyfikacji, cwiczenie
 }
 
 function sprawdzCzyRekord(cwiczenie, ciezarKg) {
-  const rows = sheetToObjects(pipboySheet('log_treningowy')).filter(r => r.cwiczenie === cwiczenie && r.trening_typ === 'pelna');
+  // UWAGA (poprawka w tej turze): kolumna 'trening_typ' przechowuje plan A/B,
+  // status sesji ('pelna'/'zmodyfikowana'/'ad-hoc') jest w 'zrodlo_sesji'.
+  // Filtrowanie po trening_typ==='pelna' nigdy nie było prawdziwe — rekordy
+  // nigdy się nie zapisywały. Poprawione na zrodlo_sesji.
+  const rows = sheetToObjects(pipboySheet('log_treningowy')).filter(r => r.cwiczenie === cwiczenie && r.zrodlo_sesji === 'pelna');
   const maxDotychczas = rows.reduce((m, r) => Math.max(m, Number(r.ciezar_kg) || 0), 0);
   return ciezarKg > maxDotychczas;
 }
@@ -916,7 +1136,7 @@ function zakonczTrening(dataStr, treningTyp, ocenaCalosci) {
 function sprawdzPlateau(cwiczenie) {
   try {
     const rows = sheetToObjects(pipboySheet('log_treningowy'))
-      .filter(r => r.cwiczenie === cwiczenie && r.trening_typ === 'pelna');
+      .filter(r => r.cwiczenie === cwiczenie && r.zrodlo_sesji === 'pelna');
     // Grupuj po dacie sesji (jedno wystąpienie = jedna data), bierz max ciężar tego dnia
     const poDacie = {};
     rows.forEach(r => {

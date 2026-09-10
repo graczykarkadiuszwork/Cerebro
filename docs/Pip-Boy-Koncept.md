@@ -3,8 +3,8 @@
 
 **Nazwa projektu:** Pip-Boy (w oryginalnym angielskim brzmieniu, bez polskiej transkrypcji)
 **Data utworzenia:** 2026-09-02
-**Ostatnia aktualizacja:** 2026-09-08 (wersja 17 — Runda #19: baza 263 cytatów motywacyjnych zebrana z dwóch z czterech źródeł (sekcja 5.4), Putty & Paint potwierdzone jako kanał wspierający (Moduł 18))
-**Status:** Faza konceptu — przed implementacją. Otwarte: autentykacja (0.11.1, pkt 1), uzupełnienie bazy cytatów do 300 z pozostałych dwóch źródeł — lubimyczytac.pl i vogue.pl (sekcja 5.4)
+**Ostatnia aktualizacja:** 2026-09-10 (wersja 17 — Runda #20: Dashboard graficzny (sekcja 6.13) — wersja podstawowa wdrożona z wykresami Chart.js; ewaluator odznak rozszerzony z 3 do ~39/208 warunków obliczalnych z danych już logowanych; naprawiony błąd w kodzie uniemożliwiający zapis rekordów treningowych)
+**Status:** W trakcie implementacji (branch `Pip-Boy`, patrz `docs/Pip-Boy-Wdrozenie.md` po aktualny zakres). Otwarte: autentykacja (0.11.1, pkt 1), uzupełnienie bazy cytatów do 300 z pozostałych dwóch źródeł — lubimyczytac.pl i vogue.pl (sekcja 5.4), realne wdrożenie (`clasp push`/`deploy`) — wymaga konta Google Arka
 **Właściciel:** Arek
 **Cel dokumentu:** Kompletna specyfikacja funkcjonalna i techniczna umożliwiająca budowę systemu bez dalszych pytań doprecyzowujących — napisana z założeniem, że czyta ją deweloper bez wcześniejszego kontaktu z Arkiem i bez znajomości historii powstania tego dokumentu.
 
