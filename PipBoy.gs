@@ -88,6 +88,12 @@ function setupPipBoy() {
     DriveApp.getRootFolder().removeFile(file);
     PropertiesService.getScriptProperties().setProperty('PIPBOY_FOLDER_ID', folder.getId());
 
+    // Backup/eksport automatyczny, cotygodniowy (sekcja 0.9) — trigger
+    // instalowany od razu przy konfiguracji, niezależnie od tego, czy Arek
+    // wskazał już osobny folder backupu (patrz pipboySetBackupFolder) — do
+    // czasu wskazania eksport ląduje w tym samym folderze Pip-Boy.
+    pipboyInstalujTriggerBackupu();
+
     return {
       success: true,
       spreadsheetUrl: ss.getUrl(),
@@ -139,6 +145,74 @@ function pipboySheet(name) {
 
 function todayIso() {
   return Utilities.formatDate(new Date(), Session.getScriptTimeZone() || 'Europe/Warsaw', 'yyyy-MM-dd');
+}
+
+// ============================================================
+// SEKCJA 0.9 — BACKUP/EKSPORT AUTOMATYCZNY (cotygodniowy, Faza 3)
+// Wymóg dosłowny z dokumentu: eksport "wyzwalany przy okazji niedzielnego
+// review" (sekcja 6.5), do OSOBNEGO folderu Drive wskazanego przez Arka
+// (nie hardkodowanego w tym repozytorium — link nie jest publikowany w
+// dokumentacji, zgodnie z Rundą #17). Dopóki Arek nie wskaże folderu przez
+// pipboySetBackupFolder(), eksport ląduje w głównym folderze Pip-Boy jako
+// jawnie oznaczony fallback (patrz uzytoFallbacku w wyniku).
+// ============================================================
+
+function pipboySetBackupFolder(link) {
+  try {
+    const m = String(link || '').match(/[-\w]{25,}/); // wyciąga ID z typowego URL folderu Drive
+    if (!m) return { success: false, error: 'Nie rozpoznano ID folderu w podanym linku.' };
+    const folderId = m[0];
+    DriveApp.getFolderById(folderId).getName(); // rzuci wyjątkiem, jeśli nieprawidłowy/niedostępny
+    PropertiesService.getScriptProperties().setProperty('PIPBOY_BACKUP_FOLDER_ID', folderId);
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: 'Nieprawidłowy lub niedostępny folder: ' + e.toString() };
+  }
+}
+
+function pipboyGetBackupFolderStatus() {
+  try {
+    const id = PropertiesService.getScriptProperties().getProperty('PIPBOY_BACKUP_FOLDER_ID');
+    return { success: true, data: { skonfigurowany: !!id } };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+// Zapisuje pełny zrzut wszystkich arkuszy Pip-Boy jako plik JSON. Wołane
+// automatycznie przez trigger czasowy (niedziela wieczorem) i ręcznie z
+// Ustawień ("Eksportuj teraz" — patrz ustawienia.html).
+function pipboyEksportTygodniowy() {
+  try {
+    const ss = getPipBoySpreadsheet();
+    const dane = {};
+    ss.getSheets().forEach(function(sheet) { dane[sheet.getName()] = sheetToObjects(sheet); });
+    const json = JSON.stringify(dane, null, 2);
+    const nazwaPliku = 'Pip-Boy-Backup-' + todayIso() + '.json';
+
+    let folderId = PropertiesService.getScriptProperties().getProperty('PIPBOY_BACKUP_FOLDER_ID');
+    let uzytoFallbacku = false;
+    if (!folderId) {
+      folderId = PropertiesService.getScriptProperties().getProperty('PIPBOY_FOLDER_ID');
+      uzytoFallbacku = true;
+    }
+    const folder = DriveApp.getFolderById(folderId);
+    folder.createFile(nazwaPliku, json, 'application/json');
+    return { success: true, uzytoFallbacku: uzytoFallbacku, nazwaPliku: nazwaPliku };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+// Instaluje/odnawia cotygodniowy trigger czasowy — idempotentne (usuwa
+// poprzedni trigger tej samej funkcji przed dodaniem nowego), więc bezpieczne
+// do wywołania wielokrotnie (np. przy ponownym uruchomieniu setupPipBoy()).
+function pipboyInstalujTriggerBackupu() {
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'pipboyEksportTygodniowy') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('pipboyEksportTygodniowy')
+    .timeBased().onWeekDay(ScriptApp.WeekDay.SUNDAY).atHour(20).create();
 }
 
 // ============================================================
