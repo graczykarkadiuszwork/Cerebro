@@ -43,6 +43,15 @@ function setupPipBoy() {
       { name: 'plan_treningowy', headers: ['trening_typ', 'kolejnosc', 'cwiczenie', 'serie_docelowe', 'powtorzenia_zakres', 'przerwa_sek'] },
       { name: 'log_treningowy', headers: ['data', 'trening_typ', 'zrodlo_sesji', 'powod_modyfikacji', 'cwiczenie', 'seria_nr', 'powtorzenia', 'ciezar_kg', 'ocena_sesji_1_10', 'notatka', 'nowy_rekord'] },
       { name: 'odznaki_log', headers: ['id_odznaki', 'data_zdobycia'] },
+      { name: 'pielegnacja_log', headers: ['data', 'produkt', 'wykonano'] },
+      { name: 'sprzatanie_log', headers: ['data', 'strefa', 'minuty'] },
+      { name: 'czytelnictwo_log', headers: ['data', 'minuty', 'tytul', 'ukonczono'] },
+      { name: 'spacer_log', headers: ['data', 'numer'] },
+      { name: 'natura_log', headers: ['data', 'zrodlo'] },
+      { name: 'zakupy_log', headers: ['data', 'kategoria', 'produkt', 'kupione'] },
+      { name: 'czas_wolny_log', headers: ['data', 'dlugosc_min', 'forma'] },
+      { name: 'przypomnienia_cykliczne', headers: ['klucz', 'nazwa', 'data_ostatniego_wykonania', 'cykl_dni'] },
+      { name: 'rolling_average_cele', headers: ['modul', 'data', 'wartosc_dnia', 'srednia_7dni'] },
       { name: 'cytaty_motywacyjne', headers: ['tresc', 'autor', 'zrodlo', 'data_ostatniego_wyswietlenia'] },
       { name: 'marquee_komunikaty', headers: ['tresc', 'kategoria', 'warunek', 'priorytet'] },
     ];
@@ -103,6 +112,13 @@ function seedPipBoyContentTables(ss) {
     });
   });
   planSheet.getRange(2, 1, planRows.length, 6).setValues(planRows);
+
+  const przypSheet = ss.getSheetByName('przypomnienia_cykliczne');
+  const przypRows = Object.keys(PIPBOY_PRZYPOMNIENIA_DEFINICJE).map(klucz => {
+    const def = PIPBOY_PRZYPOMNIENIA_DEFINICJE[klucz];
+    return [klucz, def.nazwa, '', def.cykl_dni];
+  });
+  przypSheet.getRange(2, 1, przypRows.length, 4).setValues(przypRows);
 }
 
 function getPipBoySpreadsheet() {
@@ -192,9 +208,16 @@ function generateDayBlocks(dataStr) {
   const niedziela = bazowyTyp === 'D';
   const posilkiGodz = PIPBOY_POSILKI_SZABLONY[bazowyTyp] || PIPBOY_POSILKI_SZABLONY.C;
 
+  const dow = new Date(dataStr).getDay();
+  const jestSrodaLubNiedziela = dow === 0 || dow === 3;
+  const strefaSprzatania = PIPBOY_SPRZATANIE_ROTACJA.find(s => s.dow === dow);
+
   const blocks = [];
   blocks.push({ klucz: 'pobudka', nazwa: 'Pobudka', obligatoryjne: false, modul: 'ogolne' });
-  blocks.push({ klucz: 'pielegnacja_poranna', nazwa: 'Pielęgnacja poranna (max 15 min)', obligatoryjne: false, modul: 'pielegnacja' });
+  blocks.push({
+    klucz: 'pielegnacja_poranna', nazwa: 'Pielęgnacja poranna (max 15 min)', obligatoryjne: false, modul: 'pielegnacja',
+    dzieci: PIPBOY_PIELEGNACJA_PRODUKTY.poranny.concat(jestSrodaLubNiedziela ? PIPBOY_PIELEGNACJA_PRODUKTY.poranny_sr_nd : []).map(p => p.klucz)
+  });
   blocks.push({ klucz: 'rozciaganie', nazwa: 'Rozciąganie/joga (10-15 min)', obligatoryjne: true, modul: 'rozciaganie' });
   blocks.push({ klucz: 'suplementy_rdzenne', nazwa: 'Suplementy poranne', obligatoryjne: true, modul: 'suplementy', dzieci: PIPBOY_SUPLEMENTY_RDZENNE.map(s => s.klucz) });
   blocks.push({ klucz: 'posilek_1', nazwa: 'Posiłek 1 (białko na starcie) — ok. ' + posilkiGodz[0], obligatoryjne: true, modul: 'dieta', numer: 1 });
@@ -213,18 +236,25 @@ function generateDayBlocks(dataStr) {
 
   blocks.push({ klucz: 'posilek_3', nazwa: 'Posiłek 3 — ok. ' + posilkiGodz[2], obligatoryjne: true, modul: 'dieta', numer: 3 });
 
-  if (!niedziela) {
-    blocks.push({
-      klucz: 'sprzatanie', nazwa: 'Sprzątanie (min. 15 min floor, #sprzątanie)',
-      obligatoryjne: bazowyTyp === 'C', modul: 'sprzatanie'
-    });
-  }
+  // Sprzątanie: floor 15 min OBLIGATORYJNY każdego dnia OPRÓCZ niedzieli
+  // (sekcja 2.0 — poprawione: wcześniej ograniczone błędnie tylko do Szablonu C)
+  blocks.push({
+    klucz: 'sprzatanie', nazwa: 'Sprzątanie — strefa: ' + (strefaSprzatania ? strefaSprzatania.strefa : '—') + ' (floor 15 min, #sprzątanie)',
+    obligatoryjne: !niedziela, modul: 'sprzatanie', strefa: strefaSprzatania ? strefaSprzatania.strefa : ''
+  });
 
   blocks.push({ klucz: 'posilek_4', nazwa: 'Posiłek 4 — ok. ' + posilkiGodz[3], obligatoryjne: true, modul: 'dieta', numer: 4 });
+  blocks.push({ klucz: 'czytelnictwo', nazwa: 'Czytelnictwo (cel 60 min)', obligatoryjne: true, modul: 'czytelnictwo' });
+  blocks.push({ klucz: 'spacer', nazwa: 'Spacer z psem (2-3x, bez przypomnienia)', obligatoryjne: false, modul: 'spacer' });
+  blocks.push({ klucz: 'natura', nazwa: 'Kontakt z naturą / wyciszenie', obligatoryjne: false, modul: 'natura' });
+  blocks.push({ klucz: 'zakupy', nazwa: 'Zakupy 70/30 (elastyczny slot tygodniowy)', obligatoryjne: false, modul: 'zakupy' });
   blocks.push({ klucz: 'czas_wolny_1', nazwa: 'Czas wolny (Portfolio / czytanie / spacer)', obligatoryjne: false, modul: 'czas_wolny' });
   blocks.push({ klucz: 'posilek_5', nazwa: 'Posiłek 5 — ok. ' + posilkiGodz[4], obligatoryjne: true, modul: 'dieta', numer: 5 });
   blocks.push({ klucz: 'melatonina', nazwa: 'Melatonina (w razie potrzeby, max 5)', obligatoryjne: false, modul: 'suplementy', dzieci: ['melatonina'] });
-  blocks.push({ klucz: 'pielegnacja_wieczorna', nazwa: 'Pielęgnacja wieczorna (max 15 min)', obligatoryjne: false, modul: 'pielegnacja' });
+  blocks.push({
+    klucz: 'pielegnacja_wieczorna', nazwa: 'Pielęgnacja wieczorna (max 15 min)', obligatoryjne: false, modul: 'pielegnacja',
+    dzieci: PIPBOY_PIELEGNACJA_PRODUKTY.wieczorny.map(p => p.klucz)
+  });
   blocks.push({ klucz: 'higiena_swiatla', nazwa: 'Higiena światła wieczorem', obligatoryjne: true, modul: 'sen' });
   blocks.push({ klucz: 'mood_wieczor', nazwa: 'Mood check wieczorny (w tym GI)', obligatoryjne: true, modul: 'mood', pora: 'wieczor' });
   blocks.push({ klucz: 'czas_wolny_2', nazwa: 'Czas wolny / Nicnierobienie — do snu, bez limitu', obligatoryjne: false, modul: 'czas_wolny' });
@@ -240,8 +270,18 @@ function getPipBoyDzien(dataStr) {
     const posilkiLog = sheetToObjects(pipboySheet('posilki_log')).filter(r => r.data === dataStr);
     const moodLog = sheetToObjects(pipboySheet('mood_log')).filter(r => r.data === dataStr);
     const dziennyLog = sheetToObjects(pipboySheet('log_dzienny')).filter(r => r.data === dataStr);
+    const pielegnacjaLog = sheetToObjects(pipboySheet('pielegnacja_log')).filter(r => r.data === dataStr);
+    const sprzatanieLog = sheetToObjects(pipboySheet('sprzatanie_log')).filter(r => r.data === dataStr);
+    const czytelnictwoLog = sheetToObjects(pipboySheet('czytelnictwo_log')).filter(r => r.data === dataStr);
+    const spacerLog = sheetToObjects(pipboySheet('spacer_log')).filter(r => r.data === dataStr);
+    const naturaLog = sheetToObjects(pipboySheet('natura_log')).filter(r => r.data === dataStr);
+    const zakupyLog = sheetToObjects(pipboySheet('zakupy_log')).filter(r => r.data === dataStr);
+    const czasWolnyLog = sheetToObjects(pipboySheet('czas_wolny_log')).filter(r => r.data === dataStr);
+    const treningLog = sheetToObjects(pipboySheet('log_treningowy')).filter(r => r.data === dataStr);
     const godModeAktywny = isGodModeActive(dataStr);
-    const hp = computePipBoyHP(dataStr, struktura, suplementyLog, posilkiLog, moodLog, godModeAktywny);
+    const hp = computePipBoyHP(dataStr, struktura, {
+      suplementyLog, posilkiLog, moodLog, sprzatanieLog, czytelnictwoLog, treningLog
+    }, godModeAktywny);
 
     return {
       success: true,
@@ -249,11 +289,14 @@ function getPipBoyDzien(dataStr) {
         data: dataStr,
         typSzablonu: struktura.typSzablonu,
         bloki: struktura.blocks,
-        suplementyLog, posilkiLog, moodLog, dziennyLog,
+        suplementyLog, posilkiLog, moodLog, dziennyLog, pielegnacjaLog, sprzatanieLog,
+        czytelnictwoLog, spacerLog, naturaLog, zakupyLog, czasWolnyLog, treningLog,
         godModeAktywny,
         hp: hp.procent,
         hpBrakujace: hp.brakujace,
         cytatDnia: getCytatDnia(),
+        zakupyRekomendacje: getZakupyRekomendacje(dataStr),
+        przypomnieniaAktywne: getAktywnePrzypomnienia(),
       }
     };
   } catch (e) {
@@ -285,6 +328,182 @@ function toggleLogDzienny(dataStr, modul, wykonano) {
     sheet.appendRow([dataStr, modul, wykonano]);
     if (wykonano) pipboyAwardPoints(dataStr, punktyWpis.atrybut, punktyWpis.punkty);
     return { success: true };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+// ============================================================
+// MODUŁ 7 — PIELĘGNACJA (rozbita per-produkt, dwa stałe sloty, bez kary HP)
+// ============================================================
+
+function togglePielegnacja(dataStr, produkt, wykonano) {
+  try {
+    const sheet = pipboySheet('pielegnacja_log');
+    const rows = sheet.getDataRange().getValues();
+    for (let i = 1; i < rows.length; i++) {
+      if (rows[i][0] === dataStr && rows[i][1] === produkt) {
+        sheet.getRange(i + 1, 3).setValue(wykonano);
+        if (wykonano) pipboyAwardPoints(dataStr, 'dyscyplina', PIPBOY_PUNKTY_ZDOBYTE.pielegnacja_pozycja.punkty);
+        return { success: true };
+      }
+    }
+    sheet.appendRow([dataStr, produkt, wykonano]);
+    if (wykonano) pipboyAwardPoints(dataStr, 'dyscyplina', PIPBOY_PUNKTY_ZDOBYTE.pielegnacja_pozycja.punkty);
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+// ============================================================
+// MODUŁ 8 — SPRZĄTANIE (rotacja 7-strefowa, floor/ceiling #sprzątanie)
+// ============================================================
+
+function saveSprzatanie(dataStr, strefa, minuty) {
+  try {
+    const sheet = pipboySheet('sprzatanie_log');
+    sheet.appendRow([dataStr, strefa, minuty]);
+    pipboyAwardPoints(dataStr, 'otoczenie', 8); // sekcja 4.2: +8 pkt za zadanie sprzątania
+    evaluateStarterBadges(dataStr);
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+// ============================================================
+// MODUŁ 5 — CZYTELNICTWO (minuty + tytuł, rolling average, obligatoryjne)
+// ============================================================
+
+function saveCzytelnictwo(dataStr, minuty, tytul, ukonczono) {
+  try {
+    pipboySheet('czytelnictwo_log').appendRow([dataStr, minuty, tytul || '', !!ukonczono]);
+    const pktBazowe = Math.min(12, Math.floor(Number(minuty) / 10) * 2); // +2/10min, max 12/dzień (sekcja 4.2)
+    if (pktBazowe > 0) pipboyAwardPoints(dataStr, 'umysl', pktBazowe);
+    if (ukonczono) pipboyAwardPoints(dataStr, 'umysl', 25); // bonus ukończonej pozycji
+    updateRollingAverage('czytelnictwo', dataStr, Number(minuty));
+    evaluateStarterBadges(dataStr);
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+// ============================================================
+// MODUŁ 6/9 — SPACER Z PSEM / KONTAKT Z NATURĄ (oba OPCJONALNE, bez kary)
+// ============================================================
+
+function toggleSpacer(dataStr, numer) {
+  try {
+    pipboySheet('spacer_log').appendRow([dataStr, numer]);
+    pipboyAwardPoints(dataStr, 'cialo', 3);
+    // Spacer automatycznie zalicza kontakt z naturą tego dnia (sekcja Moduł 9)
+    const naturaJuz = sheetToObjects(pipboySheet('natura_log')).some(r => r.data === dataStr);
+    if (!naturaJuz) pipboySheet('natura_log').appendRow([dataStr, 'spacer_auto']);
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+function toggleNatura(dataStr) {
+  try {
+    const juz = sheetToObjects(pipboySheet('natura_log')).some(r => r.data === dataStr);
+    if (juz) return { success: true };
+    pipboySheet('natura_log').appendRow([dataStr, 'reczny']);
+    pipboyAwardPoints(dataStr, 'otoczenie', 5);
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+// ============================================================
+// MODUŁ 17 — ZAKUPY 70/30 (rekomendacje, bez sztywnej listy)
+// ============================================================
+
+function getZakupyRekomendacje(dataStr) {
+  const wynik = {};
+  Object.keys(PIPBOY_ZAKUPY_KATEGORIE).forEach(kat => {
+    const def = PIPBOY_ZAKUPY_KATEGORIE[kat];
+    // 70/30: wszystkie pozycje core + jedna rotacyjna, wybierana wg dnia miesiąca (deterministyczne, bez losowości między odświeżeniami)
+    const dzienMiesiaca = new Date(dataStr).getDate();
+    const rotacyjna = def.rotacyjne[dzienMiesiaca % def.rotacyjne.length];
+    wynik[kat] = { core: def.core, rotacyjna };
+  });
+  return wynik;
+}
+
+function saveZakupy(dataStr, pozycje) { // pozycje: [{kategoria, produkt, kupione}]
+  try {
+    const sheet = pipboySheet('zakupy_log');
+    pozycje.forEach(p => sheet.appendRow([dataStr, p.kategoria, p.produkt, p.kupione]));
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+// ============================================================
+// MODUŁ 19 — CZAS WOLNY / NICNIEROBIENIE (log minimalistyczny, bez presji)
+// ============================================================
+
+function saveCzasWolny(dataStr, dlugoscMin, forma) {
+  try {
+    pipboySheet('czas_wolny_log').appendRow([dataStr, dlugoscMin, forma || '']);
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+// ============================================================
+// MODUŁ 20 — ROLLING AVERAGE (średnia krocząca 7-dniowa dla celów miękkich)
+// ============================================================
+
+function updateRollingAverage(modul, dataStr, wartoscDnia) {
+  try {
+    const sheet = pipboySheet('rolling_average_cele');
+    const rows = sheetToObjects(sheet).filter(r => r.modul === modul);
+    const posortowane = rows.filter(r => r.data < dataStr).sort((a, b) => a.data < b.data ? 1 : -1).slice(0, 6);
+    const wszystkie = posortowane.map(r => Number(r.wartosc_dnia)).concat([wartoscDnia]);
+    const srednia = wszystkie.reduce((a, b) => a + b, 0) / wszystkie.length;
+    sheet.appendRow([modul, dataStr, wartoscDnia, Math.round(srednia * 10) / 10]);
+    return srednia;
+  } catch (e) {
+    return null;
+  }
+}
+
+// ============================================================
+// PRZYPOMNIENIA CYKLICZNE (fryzjer, badania, auto, motocykl, robot)
+// ============================================================
+
+function getAktywnePrzypomnienia() {
+  try {
+    const rows = sheetToObjects(pipboySheet('przypomnienia_cykliczne'));
+    const dzis = todayIso();
+    return rows.filter(r => {
+      if (!r.data_ostatniego_wykonania) return true; // nigdy niewykonane — pokaż
+      return dataMinus(dzis, Number(r.cykl_dni)) >= r.data_ostatniego_wykonania;
+    }).map(r => ({ klucz: r.klucz, nazwa: r.nazwa, cyklDni: r.cykl_dni }));
+  } catch (e) {
+    return [];
+  }
+}
+
+function oznaczPrzypomnienieWykonane(klucz, dataStr) {
+  try {
+    const sheet = pipboySheet('przypomnienia_cykliczne');
+    const rows = sheet.getDataRange().getValues();
+    for (let i = 1; i < rows.length; i++) {
+      if (rows[i][0] === klucz) {
+        sheet.getRange(i + 1, 3).setValue(dataStr);
+        return { success: true };
+      }
+    }
+    return { success: false, error: 'Nieznany klucz przypomnienia.' };
   } catch (e) {
     return { success: false, error: e.toString() };
   }
@@ -463,10 +682,8 @@ function deactivateTrybRegeneracji() {
 // SEKCJA 4.2 — MECHANIKA HP (podstawowa, bez pełnej listy odznak)
 // ============================================================
 
-function computePipBoyHP(dataStr, struktura, suplementyLog, posilkiLog, moodLog, godModeAktywny) {
-  if (godModeAktywny) {
-    // GOD_MODE_24H: HP nie spada za pominięcia poza suplementami rdzennymi (4.1a)
-  }
+function computePipBoyHP(dataStr, struktura, logi, godModeAktywny) {
+  const { suplementyLog, posilkiLog, moodLog, sprzatanieLog, czytelnictwoLog, treningLog } = logi;
   let hp = 100;
   const brakujace = [];
 
@@ -493,11 +710,23 @@ function computePipBoyHP(dataStr, struktura, suplementyLog, posilkiLog, moodLog,
       }
     });
 
-    if (struktura.treningowy) {
-      // Faza 1: brak jeszcze osobnego logu treningowego (Moduł 2 = Faza 2) —
-      // trening liczony jako wykonany wyłącznie ręcznym potwierdzeniem w
-      // Punkty_Historia; tu placeholder nie nalicza kary automatycznie,
-      // żeby nie karać za funkcję, która jeszcze nie istnieje w UI.
+    if (struktura.treningowy && treningLog.length === 0) {
+      hp -= PIPBOY_HP_KARY.trening_w_dniu_treningowym;
+      brakujace.push('Trening (żaden status niezalogowany)');
+    }
+
+    if (!struktura.niedziela) {
+      const minutySprzatania = sprzatanieLog.reduce((s, r) => s + (Number(r.minuty) || 0), 0);
+      if (minutySprzatania < PIPBOY_SPRZATANIE_FLOOR_MIN) {
+        hp -= PIPBOY_HP_KARY.sprzatanie_ponizej_floora;
+        brakujace.push('Sprzątanie (poniżej ' + PIPBOY_SPRZATANIE_FLOOR_MIN + ' min floora)');
+      }
+    }
+
+    const minutyCzytania = czytelnictwoLog.reduce((s, r) => s + (Number(r.minuty) || 0), 0);
+    if (minutyCzytania === 0) {
+      hp -= PIPBOY_HP_KARY.czytelnictwo_zero_dnia;
+      brakujace.push('Czytelnictwo (zero minut dziś)');
     }
 
     ['rano', 'wieczor'].forEach(pora => {

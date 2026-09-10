@@ -1,17 +1,19 @@
 # Pip-Boy — status budowy i wdrożenie
 
-## Co istnieje teraz (Faza 1 — rdzeń, zgodnie z sekcją 0.11.2 koncepcji)
+## Co istnieje teraz (Faza 1 + część Fazy 2, zgodnie z sekcją 0.11.2 koncepcji)
 
 Kod w tym repozytorium (branch `Pip-Boy`), zintegrowany z Cerebro jako nowy moduł:
 
-- `PipBoy.gs` — logika: rytuał miesięczny grafiku (wejście manualne, zgodnie z sekcją 0.4 MVP), Szablony Dnia A/B/C/D, Moduł 1 (Suplementacja — Melatonina warunkowa), Moduł 4 (Dieta/posiłki), Moduł 11 (Mood tracker + follow-up GI), podstawowa mechanika HP (sekcja 4.2), GOD_MODE_24H (sekcja 4.1a), Cytat Dnia (5.4), Marquee (6.12).
-- `PipBoyData.gs` — dane statyczne: definicje suplementów, szablony posiłków, tabela kalibracji HP, **263 realne cytaty** i **107 realnych komunikatów Marquee** (z `docs/data/`).
-- `PipBoy.html` + `PipBoyStyles.html` — Widok Dnia w motywie Pip-Boy (sekcja 6.9): zielony monospace, zwijane bloki, pasek HP, przełączniki CRT (Low/Medium/Ultra) i rozmiaru czcionki — oba w pełni ręczne, zgodnie z Rundą #17.
+- `PipBoy.gs` (51 funkcji) — rytuał miesięczny grafiku (wejście manualne, sekcja 0.4 MVP), Szablony Dnia A/B/C/D, Moduł 1 (Suplementacja — Melatonina warunkowa), Moduł 2 (Trening: plan edytowalny, log serii, RPE, status „zmodyfikowana — zdrowie”, reguła plateau), Moduł 4 (Dieta), Moduł 5 (Czytelnictwo + rolling average), Moduł 6 (Spacer z psem), Moduł 7 (Pielęgnacja per-produkt), Moduł 8 (Sprzątanie — rotacja 7-strefowa, floor/ceiling), Moduł 9 (Kontakt z naturą, auto-link ze spacerem), Moduł 11 (Mood tracker + follow-up GI), Moduł 17 (Zakupy 70/30), Moduł 19 (Czas wolny — log minimalistyczny), Moduł 20 (Rolling average), przypomnienia cykliczne (fryzjer/badania/auto/robot filtr), mechanika HP (sekcja 4.2) — **teraz obejmująca też sprzątanie i czytelnictwo, nie tylko suplementy/posiłki/mood**, XP/Atrybuty (4.1), GOD_MODE_24H (4.1a), Tryb Regeneracji (4.1b), Karta Postaci (6.6), katalog 208 odznak (4.3, wczytany programowo z dokumentu) + ewaluator startowy (3 przykładowe odznaki), Cytat Dnia (5.4), Marquee (6.12).
+- `PipBoyData.gs` — dane statyczne: suplementy, szablony posiłków, plan treningowy A/B, kategorie zakupowe 70/30, produkty pielęgnacyjne, rotacja sprzątania, tabela kalibracji HP i punktów, **263 realne cytaty**, **107 komunikatów Marquee**, **208 odznak**.
+- `PipBoy.html` + `PipBoyStyles.html` — trzy wewnętrzne zakładki (DZIEŃ / TRENING / POSTAĆ, przełączane bez przeładowania modułu Cerebro), motyw Pip-Boy (6.9): zielony monospace, CRT Low/Medium/Ultra i rozmiar czcionki w pełni ręczne (Runda #17).
 - Wpięte do istniejącej nawigacji Cerebro (`sidebar.html`, `scripts.html`) i do Ustawień (przycisk „Skonfiguruj Pip-Boy”, `ustawienia.html`).
 
-**Świadomie POZA tą fazą** (Faza 2+, patrz sekcja 0.11.2): szczegółowy Moduł 2 (Trening) z edytowalnym planem i oceną 1-10, status „zmodyfikowany — zdrowie”, pełna lista 208 odznak, Tryb Regeneracji (4.1b), dwustronna synchronizacja Google Calendar, odczyt RCP, offline-first (Service Worker + IndexedDB), Dashboard graficzny (6.13), Portfolio Figurek, Moduł 21 (Finanse osobiste).
+**Świadomie POZA tym pakietem** (dalsza część Fazy 2 + Faza 3/4, patrz sekcja 0.11.2): dwustronna synchronizacja Google Calendar, odczyt RCP, offline-first (Service Worker + IndexedDB), Dashboard graficzny z wykresami (6.13), Widok tygodniowy (6.5), Onboarding formularz (6.11), Portfolio Figurek (Moduł 18), Moduł 21 (Finanse osobiste), Moduł 12 (Badania — obecnie tylko jako przypomnienie cykliczne, bez pełnego ekranu), Moduł 15/16 (Auto/Motocykl — obecnie tylko jako przypomnienie cykliczne, bez sezonowej logiki motocykla), pełna ewaluacja wszystkich 208 warunków odznak (na razie 3 przykładowe), narzędzie wymiany treningu (podmiana na bibliotekę CrossFit / plan alternatywny — obecnie tylko status ad-hoc bez wyboru źródła).
 
 **Znana luka odziedziczona ze specyfikacji, nie z tej implementacji:** sekcja 4.2 dokumentu koncepcyjnego nie definiuje kary HP dla Rozciągania/Jogi ani Higieny światła, mimo że sekcja 2.0 oznacza oba jako OBLIGATORYJNE. Oba są w pełni trackowalne (checkbox w Widoku Dnia), ale świadomie nie naliczają jeszcze kary HP — czeka na kalibrację od Arka, tak samo jak reszta tabeli 4.2.
+
+**Poprawiona w tej turze usterka Fazy 1:** floor sprzątania (15 min) był błędnie ograniczony tylko do Szablonu C (dzień wolny) zamiast obowiązywać każdego dnia oprócz niedzieli, zgodnie z sekcją 2.0. Poprawione — patrz `generateDayBlocks` w `PipBoy.gs`.
 
 ## Czego nie mogłem zrobić z tej sesji
 

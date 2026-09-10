@@ -671,3 +671,53 @@ const PIPBOY_ODZNAKI = [
   { id: 207, typ: 'S', kategoria: 'O', kategoriaNazwa: 'MILESTONE\'Y DŁUGOTERMINOWE / SEKRETNE', nazwa: 'Pięć Mistrzostw', opis: 'wszystkie 5 Atrybutów na poziomie 20 (odznaka finałowa, najwyższe osiągnięcie w systemie)' },
   { id: 208, typ: 'S', kategoria: 'O', kategoriaNazwa: 'MILESTONE\'Y DŁUGOTERMINOWE / SEKRETNE', nazwa: 'Sekretna: Rocznica', opis: 'odblokowana dokładnie rok od daty pierwszego uruchomienia systemu, z osobistym podsumowaniem roku (dane z całego roku zebrane w jeden widok)' },
 ];
+
+// ---- Moduł 7: Pielęgnacja — dwa stałe sloty, produkty per slot (Runda #14) ----
+const PIPBOY_PIELEGNACJA_PRODUKTY = {
+  poranny: [
+    { klucz: 'krem_twarzy_rano', nazwa: 'Krem do twarzy' },
+    { klucz: 'guma_wlosy', nazwa: 'Guma do włosów' },
+    { klucz: 'krem_rak_1', nazwa: 'Krem do rąk (1/2)' },
+  ],
+  wieczorny: [
+    { klucz: 'krem_twarzy_wieczor', nazwa: 'Krem do twarzy' },
+    { klucz: 'krem_rak_2', nazwa: 'Krem do rąk (2/2)' },
+  ],
+  // Tylko niedziela + środa (sekcja Moduł 7)
+  poranny_sr_nd: [
+    { klucz: 'ziaja', nazwa: 'Preparat Ziaja (pocenie)' },
+    { klucz: 'nizoral', nazwa: 'Szampon Nizoral' },
+  ],
+};
+
+// ---- Moduł 8: Sprzątanie — rotacja 7-strefowa (sekcja Moduł 8) ----
+// Index 0 = niedziela (JS Date.getDay()), zgodnie z resztą kodu.
+const PIPBOY_SPRZATANIE_ROTACJA = [
+  { dow: 0, strefa: 'Sprzątanie globalne (niedziela — zwolnione z floora)' },
+  { dow: 1, strefa: 'Łazienka' },
+  { dow: 2, strefa: 'Kuchnia' },
+  { dow: 3, strefa: 'Duży pokój' },
+  { dow: 4, strefa: 'Sypialnia' },
+  { dow: 5, strefa: 'Pokój komputerowy' },
+  { dow: 6, strefa: 'Pomieszczenie gospodarcze + przedsionek/klatka' },
+];
+const PIPBOY_SPRZATANIE_FLOOR_MIN = 15;
+const PIPBOY_SPRZATANIE_CEILING_MIN = 60;
+
+// ---- Moduł 17: Zakupy 70/30 — kategorie core (sekcja Moduł 17) ----
+const PIPBOY_ZAKUPY_KATEGORIE = {
+  'Białko': { core: ['Kurczak', 'Indyk', 'Jaja'], rotacyjne: ['Tofu', 'Ryba', 'Soczewica'] },
+  'Węglowodany złożone': { core: ['Ryż', 'Kasze', 'Pełnoziarniste pieczywo'], rotacyjne: ['Komosa ryżowa', 'Bataty', 'Pełnoziarnisty makaron'] },
+  'Warzywa i owoce': { core: ['Sezonowe warzywa', 'Sezonowe owoce'], rotacyjne: ['Nowość tygodnia'] },
+  'Nabiał/zamienniki': { core: ['Jogurt naturalny', 'Twaróg', 'Kefir'], rotacyjne: ['Napój roślinny', 'Ser alternatywny'] },
+};
+
+// ---- Przypomnienia cykliczne (fryzjer, badania, auto, motocykl, robot) ----
+// Wspólny wzorzec: data_ostatniego_wykonania + cykl_dni → trigger przypomnienia.
+const PIPBOY_PRZYPOMNIENIA_DEFINICJE = {
+  fryzjer: { nazwa: 'Fryzjer', cykl_dni: 21 },
+  badania: { nazwa: 'Badania i kontrola medyczna', cykl_dni: 90 },
+  auto_przeglad: { nazwa: 'Auto — przegląd miesięczny', cykl_dni: 30 },
+  motocykl_kontrola: { nazwa: 'Motocykl — kontrola bieżąca (w sezonie)', cykl_dni: 30 },
+  robot_filtr: { nazwa: 'Robot sprzątający — czyszczenie filtra', cykl_dni: 30 },
+};

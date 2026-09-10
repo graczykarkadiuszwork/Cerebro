@@ -33,6 +33,8 @@
       <div class="pb-marquee-track" id="pb-marquee-track">Ładowanie…</div>
     </div>
 
+    <div id="pb-przypomnienia" style="margin-bottom:10px;"></div>
+
     <div id="pb-blocks">
       <div style="color:var(--pb-green-dim); font-size:0.85em;">Ładowanie dnia…</div>
     </div>
@@ -138,6 +140,7 @@ function pbLoadDay() {
       pbRenderGodMode(result.data.godModeAktywny);
       pbRenderQuote(result.data.cytatDnia);
       pbRenderBlocks(result.data);
+      pbRenderPrzypomnienia(result.data.przypomnieniaAktywne);
       pbLoadMarquee();
     })
     .withFailureHandler(function(err) { showError('Błąd ładowania Pip-Boy: ' + err.message); })
@@ -179,6 +182,20 @@ function pbLoadMarquee() {
     .getMarqueeKomunikaty(kontekst);
 }
 
+function pbRenderPrzypomnienia(lista) {
+  const el = document.getElementById('pb-przypomnienia');
+  if (!lista || lista.length === 0) { el.innerHTML = ''; return; }
+  el.innerHTML = lista.map(function(p) {
+    return '<div class="pb-check-row" style="border:1px solid var(--pb-green-faint); border-radius:6px; padding:6px 10px;" onclick="pbOznaczPrzypomnienie(\'' + p.klucz + '\')">' +
+      '<span class="pb-check-mark">[!]</span><span>' + p.nazwa + ' — kliknij, gdy zrobione (cykl ' + p.cyklDni + ' dni)</span></div>';
+  }).join('');
+}
+function pbOznaczPrzypomnienie(klucz) {
+  google.script.run.withSuccessHandler(function(result) {
+    if (result.success) { showSuccess('Odnotowano.'); pbLoadDay(); } else showError(result.error);
+  }).oznaczPrzypomnienieWykonane(klucz, pbToday());
+}
+
 function pbCurrentPora() {
   const h = new Date().getHours();
   return h < 12 ? 'rano' : (h < 18 ? 'popoludnie' : 'wieczor');
@@ -204,6 +221,26 @@ function pbBlockStatus(blok, dane) {
     const w = dane.dziennyLog.find(function(r){ return r.modul === blok.modul; });
     return !!(w && (w.wykonano === true || w.wykonano === 'true' || w.wykonano === 'TRUE'));
   }
+  if (blok.modul === 'pielegnacja') {
+    const dzieci = blok.dzieci || [];
+    if (dzieci.length === 0) return false;
+    return dzieci.every(function(k){
+      const w = dane.pielegnacjaLog.find(function(r){ return r.produkt === k; });
+      return w && (w.wykonano === true || w.wykonano === 'true' || w.wykonano === 'TRUE');
+    });
+  }
+  if (blok.modul === 'sprzatanie') {
+    const min = (dane.sprzatanieLog || []).reduce(function(s, r){ return s + (Number(r.minuty) || 0); }, 0);
+    return min >= 15;
+  }
+  if (blok.modul === 'czytelnictwo') {
+    const min = (dane.czytelnictwoLog || []).reduce(function(s, r){ return s + (Number(r.minuty) || 0); }, 0);
+    return min > 0;
+  }
+  if (blok.modul === 'spacer') { return (dane.spacerLog || []).length > 0; }
+  if (blok.modul === 'natura') { return (dane.naturaLog || []).length > 0; }
+  if (blok.modul === 'zakupy') { return (dane.zakupyLog || []).length > 0; }
+  if (blok.modul === 'czas_wolny') { return (dane.czasWolnyLog || []).length > 0; }
   return false;
 }
 
@@ -258,6 +295,52 @@ function pbBlockBody(blok, dane) {
   if (blok.modul === 'trening' || blok.klucz === 'praca') {
     return '<span style="color:var(--pb-green-dim)">' + (blok.modul === 'trening' ? 'Otwórz zakładkę TRENING, żeby zalogować sesję.' : 'Szczegółowy tracking (RCP) — Faza 2.') + '</span>';
   }
+  if (blok.modul === 'pielegnacja') {
+    return (blok.dzieci || []).map(function(klucz) {
+      const w = dane.pielegnacjaLog.find(function(r){ return r.produkt === klucz; });
+      const done = !!(w && (w.wykonano === true || w.wykonano === 'true' || w.wykonano === 'TRUE'));
+      return '<div class="pb-check-row" onclick="pbTogglePielegnacja(\'' + klucz + '\', ' + (!done) + ')">' +
+        '<span class="pb-check-mark">' + (done ? '[x]' : '[ ]') + '</span><span>' + pbPielegnacjaNazwa(klucz) + '</span></div>';
+    }).join('') + '<div style="color:var(--pb-green-faint); font-size:0.72em; margin-top:4px;">Bez kary HP — stały slot w harmonogramie, ale bez presji (sekcja Moduł 7).</div>';
+  }
+  if (blok.modul === 'sprzatanie') {
+    const min = (dane.sprzatanieLog || []).reduce(function(s, r){ return s + (Number(r.minuty) || 0); }, 0);
+    return '<div style="font-size:0.85em; margin-bottom:6px;">Dziś: ' + min + ' / 15 min floor (sufit 60 min, #sprzątanie)</div>' +
+      '<button class="pb-btn" onclick="pbAddSprzatanie(15)">+15 min</button> ' +
+      '<button class="pb-btn" onclick="pbAddSprzatanie(30)">+30 min</button>';
+  }
+  if (blok.modul === 'czytelnictwo') {
+    const min = (dane.czytelnictwoLog || []).reduce(function(s, r){ return s + (Number(r.minuty) || 0); }, 0);
+    return '<div style="font-size:0.85em; margin-bottom:6px;">Dziś: ' + min + ' / 60 min</div>' +
+      '<input class="pb-input" id="pb-czyt-minuty" type="number" placeholder="minuty" style="width:100px; display:inline-block;">' +
+      '<input class="pb-input" id="pb-czyt-tytul" type="text" placeholder="tytuł (opcjonalnie)" style="width:auto; display:inline-block;">' +
+      '<label style="font-size:0.82em; margin-left:6px;"><input type="checkbox" id="pb-czyt-ukonczono"> ukończona pozycja</label>' +
+      '<button class="pb-btn" onclick="pbSaveCzytelnictwo()">Zapisz</button>';
+  }
+  if (blok.modul === 'spacer') {
+    const zrobione = (dane.spacerLog || []).length;
+    return '<div style="font-size:0.85em; margin-bottom:6px;">Dziś: ' + zrobione + ' spacer(y)</div>' +
+      '<button class="pb-btn" onclick="pbToggleSpacer()">+1 spacer</button>' +
+      '<div style="color:var(--pb-green-faint); font-size:0.72em; margin-top:4px;">Bez przypomnienia — świadoma decyzja (Moduł 6). Zalicza też kontakt z naturą.</div>';
+  }
+  if (blok.modul === 'natura') {
+    const done = pbBlockStatus(blok, dane);
+    return '<div class="pb-check-row" onclick="' + (done ? 'pbNoop()' : 'pbToggleNatura()') + '">' +
+      '<span class="pb-check-mark">' + (done ? '[x]' : '[ ]') + '</span><span>' + (done ? 'Zaliczone dziś' : 'Zaznacz') + '</span></div>';
+  }
+  if (blok.modul === 'zakupy') {
+    const rek = dane.zakupyRekomendacje || {};
+    return Object.keys(rek).map(function(kat) {
+      const pozycje = rek[kat].core.concat([rek[kat].rotacyjna]);
+      return '<div style="margin-bottom:6px;"><b style="font-size:0.85em;">' + kat + '</b><br>' +
+        pozycje.map(function(p){ return '<span class="pb-block-tag" style="margin:2px;">' + p + '</span>'; }).join('') + '</div>';
+    }).join('') + '<div style="color:var(--pb-green-faint); font-size:0.72em;">Sprawdź gazetkę Aldi przed wyjściem (brak API — ręczne przypomnienie).</div>';
+  }
+  if (blok.modul === 'czas_wolny') {
+    return '<input class="pb-input" id="pb-cw-minuty-' + blok.klucz + '" type="number" placeholder="minuty" style="width:100px; display:inline-block;">' +
+      '<input class="pb-input" id="pb-cw-forma-' + blok.klucz + '" type="text" placeholder="forma (opcjonalnie)" style="width:auto; display:inline-block;">' +
+      '<button class="pb-btn" onclick="pbSaveCzasWolny(\'' + blok.klucz + '\')">Zapisz</button>';
+  }
   return '<div class="pb-check-row" onclick="pbNoop()"><span style="color:var(--pb-green-dim)">Bez dodatkowego trackingu w Fazie 1.</span></div>';
 }
 
@@ -276,6 +359,40 @@ const PIPBOY_SUPLEMENTY_RDZENNE_CLIENT = [
   { klucz: 'kolagen', nazwa: 'KFD Kolagen Plus' },
   { klucz: 'omega3', nazwa: 'KFD Ultra Omega 3 Plus' },
 ];
+
+const PIPBOY_PIELEGNACJA_NAZWY_CLIENT = {
+  krem_twarzy_rano: 'Krem do twarzy', guma_wlosy: 'Guma do włosów', krem_rak_1: 'Krem do rąk (1/2)',
+  krem_twarzy_wieczor: 'Krem do twarzy', krem_rak_2: 'Krem do rąk (2/2)',
+  ziaja: 'Preparat Ziaja (pocenie)', nizoral: 'Szampon Nizoral',
+};
+function pbPielegnacjaNazwa(klucz) { return PIPBOY_PIELEGNACJA_NAZWY_CLIENT[klucz] || klucz; }
+
+function pbTogglePielegnacja(produkt, wartosc) {
+  google.script.run.withSuccessHandler(function(){ pbLoadDay(); }).togglePielegnacja(pbToday(), produkt, wartosc);
+}
+function pbAddSprzatanie(minuty) {
+  const strefa = (PB_DAY.bloki.find(function(b){ return b.modul === 'sprzatanie'; }) || {}).strefa || '';
+  google.script.run.withSuccessHandler(function(){ showSuccess('+' + minuty + ' min sprzątania.'); pbLoadDay(); }).saveSprzatanie(pbToday(), strefa, minuty);
+}
+function pbSaveCzytelnictwo() {
+  const minuty = pbVal('pb-czyt-minuty');
+  const tytul = pbVal('pb-czyt-tytul');
+  const ukonczono = document.getElementById('pb-czyt-ukonczono').checked;
+  if (!minuty) { showError('Podaj liczbę minut.'); return; }
+  google.script.run.withSuccessHandler(function(){ showSuccess('Czytelnictwo zapisane.'); pbLoadDay(); }).saveCzytelnictwo(pbToday(), minuty, tytul, ukonczono);
+}
+function pbToggleSpacer() {
+  const numer = ((PB_DAY.spacerLog || []).length) + 1;
+  google.script.run.withSuccessHandler(function(){ pbLoadDay(); }).toggleSpacer(pbToday(), numer);
+}
+function pbToggleNatura() {
+  google.script.run.withSuccessHandler(function(){ pbLoadDay(); }).toggleNatura(pbToday());
+}
+function pbSaveCzasWolny(blokKlucz) {
+  const minuty = pbVal('pb-cw-minuty-' + blokKlucz);
+  const forma = pbVal('pb-cw-forma-' + blokKlucz);
+  google.script.run.withSuccessHandler(function(){ showSuccess('Zapisano.'); pbLoadDay(); }).saveCzasWolny(pbToday(), minuty, forma);
+}
 
 function pbMoodForm(blok, dane) {
   const existing = dane.moodLog.find(function(r){ return r.pora === blok.pora; }) || {};
