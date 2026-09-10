@@ -175,8 +175,92 @@ function setGrafikDzien(data, start, koniec, typDnia) {
 }
 
 // Stałe dni treningowe (Wt/Czw/Sob), niezależnie od typu zmiany — sekcja 0.5.B
+// ============================================================
+// SEKCJA 6.11 — ONBOARDING (pierwsze uruchomienie)
+// Kroki 1-2 i 9 w pełni funkcjonalne (grafik miesięczny, dni treningowe,
+// podsumowanie startowe). Kroki 3-6 (suplementy/pielęgnacja/sprzątanie/
+// pojazdy) są na razie WYŁĄCZNIE prezentacją domyślnych wartości z
+// PipBoyData.gs, bez edycji per-pozycja — pełna edytowalność katalogów
+// to osobne zadanie (wymagałoby przeniesienia tych stałych do arkusza).
+// Kroki 7-8 (RCP, Kalendarz) wymagają danych dostępowych Arka do Google —
+// onboarding pokazuje je jako informacyjne, z opcją "skonfiguruj później".
+// ============================================================
+
+function getOnboardingStatus() {
+  try {
+    const done = PropertiesService.getUserProperties().getProperty('pipboyOnboardingDone') === 'true';
+    return { success: true, data: { done: done } };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+function getOnboardingDefaults() {
+  try {
+    return {
+      success: true,
+      data: {
+        suplementyRdzenne: PIPBOY_SUPLEMENTY_RDZENNE,
+        melatonina: PIPBOY_MELATONINA,
+        gainer: PIPBOY_GAINER,
+        pielegnacjaProdukty: PIPBOY_PIELEGNACJA_PRODUKTY,
+        sprzatanieRotacja: PIPBOY_SPRZATANIE_ROTACJA,
+        floorMin: PIPBOY_SPRZATANIE_FLOOR_MIN,
+        ceilingMin: PIPBOY_SPRZATANIE_CEILING_MIN
+      }
+    };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+// Zbiorczy zapis grafiku miesięcznego — jedno wywołanie zamiast N zapisów
+// dzień-po-dniu (setGrafikDzien zostaje, używane też poza onboardingiem).
+function setGrafikMiesiac(dni) {
+  try {
+    const sheet = pipboySheet('grafik_pracy');
+    const dane = sheet.getDataRange().getValues();
+    const indexMap = {};
+    for (let i = 1; i < dane.length; i++) indexMap[dane[i][0]] = i;
+
+    const doDopisania = [];
+    (dni || []).forEach(function(wpis) {
+      const dzienTygodnia = new Date(wpis.data).getDay();
+      const wiersz = [wpis.data, dzienTygodnia, wpis.start || '', wpis.koniec || '', wpis.typDnia];
+      if (indexMap.hasOwnProperty(wpis.data)) {
+        sheet.getRange(indexMap[wpis.data] + 1, 1, 1, 5).setValues([wiersz]);
+      } else {
+        doDopisania.push(wiersz);
+      }
+    });
+    if (doDopisania.length > 0) {
+      sheet.getRange(sheet.getLastRow() + 1, 1, doDopisania.length, 5).setValues(doDopisania);
+    }
+    return { success: true, zapisano: (dni || []).length };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+function completeOnboarding(treningoweDni) {
+  try {
+    PropertiesService.getUserProperties().setProperties({
+      pipboyOnboardingDone: 'true',
+      pipboyTreningoweDni: (treningoweDni && treningoweDni.length ? treningoweDni : [2, 4, 6]).join(',')
+    });
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
 function jestDniemTreningowym(dataStr) {
-  const dow = new Date(dataStr).getDay(); // 2=wtorek, 4=czwartek, 6=sobota
+  const dow = new Date(dataStr).getDay(); // domyślnie: 2=wtorek, 4=czwartek, 6=sobota
+  const wlasne = PropertiesService.getUserProperties().getProperty('pipboyTreningoweDni');
+  if (wlasne) {
+    const dni = wlasne.split(',').map(Number);
+    return dni.indexOf(dow) !== -1;
+  }
   return dow === 2 || dow === 4 || dow === 6;
 }
 
@@ -1053,6 +1137,91 @@ function getDashboardData() {
         odznakiZdobyteLiczba: sheetToObjects(pipboySheet('odznaki_log')).length,
         odznakiLacznie: PIPBOY_ODZNAKI.length
       }
+    };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+// ============================================================
+// SEKCJA 6.5 — WIDOK TYGODNIOWY (Review, niedziela)
+// Per Rundzie #17: treść zostaje jak w 6.5, prezentacja wchodzi jako
+// podzakładka Dashboardu (6.13) zamiast osobnego, czysto tekstowego widoku.
+// ============================================================
+
+function getTydzienData(dataStr) {
+  try {
+    const dzis = dataStr || todayIso();
+    const dni7 = [];
+    { let d = dzis; for (let i = 0; i < 7; i++) { dni7.unshift(d); d = dataMinus(d, 1); } }
+
+    const suplByDate = pipboyGrupujPoDacie(sheetToObjects(pipboySheet('suplementy_log')));
+    const rdzenneKlucze = PIPBOY_SUPLEMENTY_RDZENNE.map(s => s.klucz);
+    const suplOk = (d) => {
+      const w = suplByDate[d];
+      if (!w) return false;
+      return rdzenneKlucze.every(k => { const x = w.find(r => r.klucz === k); return x && pipboyPrawda(x.wykonano); });
+    };
+
+    const posilkiByDate = pipboyGrupujPoDacie(sheetToObjects(pipboySheet('posilki_log')));
+    const posilkiOk = (d) => {
+      const w = posilkiByDate[d];
+      if (!w) return false;
+      return [1, 2, 3, 4, 5].every(n => w.some(r => Number(r.numer) === n && pipboyPrawda(r.wykonano)));
+    };
+
+    const moodByDate = pipboyGrupujPoDacie(sheetToObjects(pipboySheet('mood_log')));
+    const moodOk = (d) => {
+      const w = moodByDate[d] || [];
+      return w.some(r => r.pora === 'rano') && w.some(r => r.pora === 'wieczor');
+    };
+
+    const sprzByDate = pipboyGrupujPoDacie(sheetToObjects(pipboySheet('sprzatanie_log')));
+    const sprzOk = (d) => {
+      if (jestNiedziela(d)) return true; // floor nie obowiązuje w niedzielę (sekcja 2.0)
+      const min = (sprzByDate[d] || []).reduce((s, r) => s + (Number(r.minuty) || 0), 0);
+      return min >= PIPBOY_SPRZATANIE_FLOOR_MIN;
+    };
+
+    const czytByDate = pipboyGrupujPoDacie(sheetToObjects(pipboySheet('czytelnictwo_log')));
+    const czytOk = (d) => (czytByDate[d] || []).reduce((s, r) => s + (Number(r.minuty) || 0), 0) > 0;
+
+    const treningByDate = {};
+    sheetToObjects(pipboySheet('log_treningowy')).forEach(r => { treningByDate[r.data] = true; });
+
+    const modulOkFns = { suplementy: suplOk, posilki: posilkiOk, mood: moodOk, sprzatanie: sprzOk, czytelnictwo: czytOk };
+    const procentTygodniowy = {};
+    Object.keys(modulOkFns).forEach(m => {
+      const ok = dni7.filter(modulOkFns[m]).length;
+      procentTygodniowy[m] = Math.round(100 * ok / dni7.length);
+    });
+    // Trening liczony tylko względem dni, w które faktycznie powinien się odbyć (Wt/Czw/Sob)
+    const dniTreningowe = dni7.filter(jestDniemTreningowym);
+    procentTygodniowy.trening = dniTreningowe.length > 0
+      ? Math.round(100 * dniTreningowe.filter(d => treningByDate[d]).length / dniTreningowe.length)
+      : null;
+
+    // Punkty w tym tygodniu vs poprzednim (motywacyjne porównanie, nie karzące — Runda #2/6.5)
+    const punktyRows = sheetToObjects(pipboySheet('punkty_historia'));
+    const sumaPunktowOd = (odData, doData) => punktyRows
+      .filter(r => r.data >= odData && r.data <= doData)
+      .reduce((s, r) => s + (Number(r.punkty) || 0), 0);
+    const punktyTenTydzien = sumaPunktowOd(dni7[0], dni7[6]);
+    const poprzedniTydzienStart = dataMinus(dni7[0], 7);
+    const poprzedniTydzienKoniec = dataMinus(dni7[0], 1);
+    const punktyPoprzedniTydzien = sumaPunktowOd(poprzedniTydzienStart, poprzedniTydzienKoniec);
+
+    // Historia ostatnich 4 tygodni (trend długoterminowy, motywacyjny nie karzący)
+    const trend4Tyg = [];
+    for (let i = 3; i >= 0; i--) {
+      const koniec = dataMinus(dzis, i * 7);
+      const start = dataMinus(koniec, 6);
+      trend4Tyg.push({ start: start, koniec: koniec, punkty: sumaPunktowOd(start, koniec) });
+    }
+
+    return {
+      success: true,
+      data: { dni7: dni7, procentTygodniowy: procentTygodniowy, punktyTenTydzien: punktyTenTydzien, punktyPoprzedniTydzien: punktyPoprzedniTydzien, trend4Tyg: trend4Tyg }
     };
   } catch (e) {
     return { success: false, error: e.toString() };

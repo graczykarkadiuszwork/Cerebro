@@ -6,12 +6,22 @@
   <div class="pb-eyebrow">CEREBRO // PIP-BOY // ORGANIZACJA ŻYCIA</div>
   <div class="pb-title" id="pb-view-title">WIDOK DNIA</div>
 
+  <!-- ===== ONBOARDING (sekcja 6.11, jednorazowy) ===== -->
+  <div id="pb-onboarding" style="display:none;">
+    <div class="pb-eyebrow" id="pb-ob-step-label">KROK 1 / 9</div>
+    <div id="pb-ob-body"></div>
+    <div style="margin-top:14px;">
+      <button class="pb-btn" id="pb-ob-back" onclick="pbObBack()" style="display:none;">‹ Wstecz</button>
+      <button class="pb-btn" id="pb-ob-next" onclick="pbObNext()">Dalej ›</button>
+    </div>
+  </div>
+
+  <div id="pb-main-ui" style="display:none;">
   <div class="pb-tabs">
     <button class="pb-tab active" id="pb-tab-dzien" onclick="pbSwitchTab('dzien')">DZIEŃ</button>
     <button class="pb-tab" id="pb-tab-trening" onclick="pbSwitchTab('trening')">TRENING</button>
     <button class="pb-tab" id="pb-tab-postac" onclick="pbSwitchTab('postac')">POSTAĆ</button>
     <button class="pb-tab" id="pb-tab-dashboard" onclick="pbSwitchTab('dashboard')">DASHBOARD</button>
-    <button class="pb-tab disabled">TYDZIEŃ <span class="pb-tab-note">(Faza 2)</span></button>
     <button class="pb-tab disabled">PORTFOLIO <span class="pb-tab-note">(Faza 3)</span></button>
   </div>
 
@@ -89,6 +99,7 @@
   <div id="pb-view-dashboard" style="display:none;">
     <div class="pb-tabs" style="margin-bottom:12px;">
       <button class="pb-tab active" id="pb-dash-sub-ogolny" onclick="pbDashSwitchSub('ogolny')">OGÓLNY</button>
+      <button class="pb-tab" id="pb-dash-sub-tydzien" onclick="pbDashSwitchSub('tydzien')">TYDZIEŃ</button>
       <button class="pb-tab" id="pb-dash-sub-trening" onclick="pbDashSwitchSub('trening')">TRENING</button>
       <button class="pb-tab" id="pb-dash-sub-dieta" onclick="pbDashSwitchSub('dieta')">DIETA / UMYSŁ</button>
       <button class="pb-tab" id="pb-dash-sub-sen" onclick="pbDashSwitchSub('sen')">SEN / NASTRÓJ</button>
@@ -115,6 +126,7 @@
       <button data-scale="1.4" onclick="pbSetFontScale(1.4)">A++</button>
     </div>
   </div>
+  </div> <!-- /pb-main-ui -->
 </div>
 
 <script>
@@ -123,6 +135,21 @@ let PB_PLAN = null;
 
 function initModule() {
   pbLoadSettings();
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success && !result.data.done) {
+        pbStartOnboarding();
+      } else {
+        pbShowMainUi();
+      }
+    })
+    .withFailureHandler(function() { pbShowMainUi(); })
+    .getOnboardingStatus();
+}
+
+function pbShowMainUi() {
+  document.getElementById('pb-onboarding').style.display = 'none';
+  document.getElementById('pb-main-ui').style.display = 'block';
   pbLoadDay();
 }
 
@@ -501,6 +528,176 @@ function pbToggleGodMode() {
 
 function pbNoop() {}
 
+// ---- ONBOARDING (sekcja 6.11) ----
+let PB_OB_STEP = 1;
+const PB_OB_STEP_MAX = 9;
+let PB_OB_GRAFIK = []; // [{data, start, koniec, typDnia}]
+let PB_OB_TRENINGOWE = [2, 4, 6]; // domyślnie Wt/Czw/Sob (getDay(): 0=Nd..6=Sob)
+let PB_OB_DEFAULTS = null;
+const PB_OB_DNI_TYGODNIA = [
+  { dow: 1, etykieta: 'Poniedziałek' }, { dow: 2, etykieta: 'Wtorek' }, { dow: 3, etykieta: 'Środa' },
+  { dow: 4, etykieta: 'Czwartek' }, { dow: 5, etykieta: 'Piątek' }, { dow: 6, etykieta: 'Sobota' }
+]; // niedziela pominięta — zawsze Szablon D, nie dotyczy grafiku pracy (sekcja 3)
+
+function pbStartOnboarding() {
+  document.getElementById('pb-main-ui').style.display = 'none';
+  document.getElementById('pb-onboarding').style.display = 'block';
+  PB_OB_STEP = 1;
+  pbObRenderStep();
+}
+
+function pbObNext() {
+  if (PB_OB_STEP === 1 && !pbObCollectGrafik()) return; // walidacja/kolekcja przed przejściem dalej
+  if (PB_OB_STEP === 2) pbObCollectTreningoweDni();
+  if (PB_OB_STEP === 1) {
+    google.script.run.withSuccessHandler(function() { pbObAdvance(); }).setGrafikMiesiac(PB_OB_GRAFIK);
+    return;
+  }
+  if (PB_OB_STEP === PB_OB_STEP_MAX) { pbObFinish(); return; }
+  pbObAdvance();
+}
+function pbObAdvance() { PB_OB_STEP++; pbObRenderStep(); }
+function pbObBack() { if (PB_OB_STEP > 1) { PB_OB_STEP--; pbObRenderStep(); } }
+
+function pbObRenderStep() {
+  document.getElementById('pb-ob-step-label').textContent = 'KROK ' + PB_OB_STEP + ' / ' + PB_OB_STEP_MAX;
+  document.getElementById('pb-ob-back').style.display = PB_OB_STEP > 1 ? 'inline-block' : 'none';
+  document.getElementById('pb-ob-next').textContent = PB_OB_STEP === PB_OB_STEP_MAX ? 'Rozpocznij ›' : 'Dalej ›';
+  const body = document.getElementById('pb-ob-body');
+
+  if (PB_OB_STEP === 1) { pbObRenderStep1(body); return; }
+  if (PB_OB_STEP === 2) { pbObRenderStep2(body); return; }
+  if (PB_OB_STEP >= 3 && PB_OB_STEP <= 6) {
+    if (!PB_OB_DEFAULTS) {
+      body.innerHTML = '<div style="color:var(--pb-green-dim);">Ładowanie…</div>';
+      google.script.run.withSuccessHandler(function(result) {
+        PB_OB_DEFAULTS = result.success ? result.data : {};
+        pbObRenderStep();
+      }).getOnboardingDefaults();
+      return;
+    }
+    if (PB_OB_STEP === 3) { pbObRenderStep3(body); return; }
+    if (PB_OB_STEP === 4) { pbObRenderStep4(body); return; }
+    if (PB_OB_STEP === 5) { pbObRenderStep5(body); return; }
+    if (PB_OB_STEP === 6) { pbObRenderStep6(body); return; }
+  }
+  if (PB_OB_STEP === 7) { pbObRenderStep78(body, 'RCP', 'odczyt godzin pracy z arkusza ewidencji czasu pracy (sekcja 0.8)'); return; }
+  if (PB_OB_STEP === 8) { pbObRenderStep78(body, 'Kalendarz Google', 'dwustronna synchronizacja wydarzeń (sekcja 1.1)'); return; }
+  if (PB_OB_STEP === 9) { pbObRenderStep9(body); return; }
+}
+
+function pbObRenderStep1(body) {
+  const dzis = new Date();
+  const domyslnyMiesiac = dzis.getFullYear() + '-' + String(dzis.getMonth() + 1).padStart(2, '0');
+  body.innerHTML =
+    '<p style="color:var(--pb-green-dim); font-size:0.85em; margin-bottom:10px;">Wgraj pierwszy miesięczny grafik pracy (sekcja 0.7) — ręcznie, dopóki odczyt RCP (Faza 2) nie zastąpi tego automatyzacją. Niedziele pominięte — zawsze Szablon D.</p>' +
+    '<label style="font-size:0.85em;">Miesiąc</label> <input class="pb-input" type="month" id="pb-ob-miesiac" value="' + domyslnyMiesiac + '" style="width:auto; display:inline-block;">' +
+    ' <button class="pb-btn" onclick="pbObGenerujSiatke()">Generuj siatkę dni</button>' +
+    '<div id="pb-ob-grid" style="margin-top:10px; max-height:340px; overflow:auto;"></div>';
+}
+
+function pbObGenerujSiatke() {
+  const miesiac = document.getElementById('pb-ob-miesiac').value; // 'YYYY-MM'
+  if (!miesiac) { showError('Wybierz miesiąc.'); return; }
+  const [rok, mies] = miesiac.split('-').map(Number);
+  const liczbaDni = new Date(rok, mies, 0).getDate();
+  let html = '<div class="pb-mood-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr;">' +
+    '<b>Data</b><b>Start</b><b>Koniec</b><b>Typ</b>';
+  for (let dzien = 1; dzien <= liczbaDni; dzien++) {
+    const data = miesiac + '-' + String(dzien).padStart(2, '0');
+    const dow = new Date(rok, mies - 1, dzien).getDay();
+    if (dow === 0) continue; // niedziela — pomijamy, zawsze Szablon D
+    html += '<span style="font-size:0.85em;">' + data + '</span>' +
+      '<input class="pb-input" type="time" id="pb-ob-start-' + data + '">' +
+      '<input class="pb-input" type="time" id="pb-ob-koniec-' + data + '">' +
+      '<select class="pb-input" id="pb-ob-typ-' + data + '"><option value="Wolny">Wolny</option><option value="A">A</option><option value="B">B</option></select>';
+  }
+  html += '</div>';
+  document.getElementById('pb-ob-grid').innerHTML = html;
+}
+
+function pbObCollectGrafik() {
+  const grid = document.getElementById('pb-ob-grid');
+  if (!grid || !grid.innerHTML) { showError('Wygeneruj i wypełnij siatkę dni przed przejściem dalej.'); return false; }
+  const selects = grid.querySelectorAll('select[id^="pb-ob-typ-"]');
+  PB_OB_GRAFIK = [];
+  selects.forEach(function(sel) {
+    const data = sel.id.replace('pb-ob-typ-', '');
+    PB_OB_GRAFIK.push({
+      data: data,
+      start: pbVal('pb-ob-start-' + data),
+      koniec: pbVal('pb-ob-koniec-' + data),
+      typDnia: sel.value
+    });
+  });
+  return true;
+}
+
+function pbObRenderStep2(body) {
+  body.innerHTML =
+    '<p style="color:var(--pb-green-dim); font-size:0.85em; margin-bottom:10px;">Potwierdź stałe dni treningowe w tygodniu (domyślnie Wt/Czw/Sob, edytowalne).</p>' +
+    PB_OB_DNI_TYGODNIA.map(function(d) {
+      const checked = PB_OB_TRENINGOWE.indexOf(d.dow) !== -1 ? 'checked' : '';
+      return '<label style="display:block; margin-bottom:6px;"><input type="checkbox" class="pb-ob-trening-dzien" value="' + d.dow + '" ' + checked + '> ' + d.etykieta + '</label>';
+    }).join('');
+}
+function pbObCollectTreningoweDni() {
+  PB_OB_TRENINGOWE = Array.prototype.slice.call(document.querySelectorAll('.pb-ob-trening-dzien:checked')).map(function(el) { return Number(el.value); });
+}
+
+function pbObRenderStep3(body) {
+  const d = PB_OB_DEFAULTS;
+  body.innerHTML =
+    '<p style="color:var(--pb-green-dim); font-size:0.85em; margin-bottom:10px;">Domyślne suplementy (edycja per-pozycja: przyszła funkcja, na razie potwierdzenie zestawu startowego).</p>' +
+    '<b style="font-size:0.85em;">Rdzenne (codziennie):</b>' +
+    (d.suplementyRdzenne || []).map(function(s) { return '<div class="pb-check-row" style="cursor:default;"><span class="pb-check-mark">[x]</span><span>' + s.nazwa + '</span></div>'; }).join('') +
+    '<b style="font-size:0.85em; display:block; margin-top:8px;">Warunkowe:</b>' +
+    '<div class="pb-check-row" style="cursor:default;"><span class="pb-check-mark">[·]</span><span>' + d.melatonina.nazwa + ' — w razie potrzeby, limit ' + d.melatonina.limit_max + '/miesiąc</span></div>' +
+    '<div class="pb-check-row" style="cursor:default;"><span class="pb-check-mark">[·]</span><span>' + d.gainer.nazwa + ' — w dni treningowe</span></div>';
+}
+
+function pbObRenderStep4(body) {
+  const produkty = PB_OB_DEFAULTS.pielegnacjaProdukty || {};
+  body.innerHTML = '<p style="color:var(--pb-green-dim); font-size:0.85em; margin-bottom:10px;">Harmonogram pielęgnacji per-produkt (Moduł 7) — potwierdzenie zestawu startowego.</p>' +
+    Object.keys(produkty).map(function(pora) {
+      return '<b style="font-size:0.85em; display:block; margin-top:6px;">' + pora + ':</b>' +
+        produkty[pora].map(function(p) { return '<div class="pb-check-row" style="cursor:default;"><span class="pb-check-mark">[x]</span><span>' + (p.nazwa || p.klucz) + '</span></div>'; }).join('');
+    }).join('');
+}
+
+function pbObRenderStep5(body) {
+  const d = PB_OB_DEFAULTS;
+  body.innerHTML = '<p style="color:var(--pb-green-dim); font-size:0.85em; margin-bottom:10px;">Rotacja sprzątania 7-strefowa (Moduł 8) — floor ' + d.floorMin + ' min / sufit ' + d.ceilingMin + ' min dziennie (oprócz niedzieli).</p>' +
+    (d.sprzatanieRotacja || []).map(function(s, i) { return '<div class="pb-check-row" style="cursor:default;"><span class="pb-check-mark">[' + (i + 1) + ']</span><span>' + s + '</span></div>'; }).join('');
+}
+
+function pbObRenderStep6(body) {
+  body.innerHTML = '<p style="color:var(--pb-green-dim); font-size:0.85em; margin-bottom:10px;">Pojazdy (Moduł 15/16) — na razie obsługiwane jako ogólne przypomnienia cykliczne (bez dedykowanego ekranu i sezonowej logiki motocykla, patrz docs/Pip-Boy-Wdrozenie.md).</p>' +
+    '<div class="pb-check-row" style="cursor:default;"><span class="pb-check-mark">[x]</span><span>Auto — przegląd/serwis cykliczny</span></div>' +
+    '<div class="pb-check-row" style="cursor:default;"><span class="pb-check-mark">[?]</span><span>Motocykl — sezonowość do potwierdzenia później w Ustawieniach</span></div>';
+}
+
+function pbObRenderStep78(body, nazwa, opis) {
+  body.innerHTML = '<p style="color:var(--pb-green-dim); font-size:0.85em; margin-bottom:10px;">Integracja: <b>' + nazwa + '</b> — ' + opis + '.</p>' +
+    '<div class="pb-quote" style="border-color: var(--pb-amber); color: var(--pb-amber);">Ta integracja wymaga Twoich danych dostępowych do konta Google i realnego wdrożenia (clasp deploy) — nie jest dostępna z tej sesji budowy. Skonfigurujesz ją po wdrożeniu, w Ustawieniach.</div>';
+}
+
+function pbObRenderStep9(body) {
+  body.innerHTML = '<p style="color:var(--pb-green-dim); font-size:0.85em; margin-bottom:10px;">Podsumowanie: zapisano ' + PB_OB_GRAFIK.length + ' dni grafiku, dni treningowe: ' +
+    PB_OB_TRENINGOWE.map(function(dow) { const d = PB_OB_DNI_TYGODNIA.find(function(x) { return x.dow === dow; }); return d ? d.etykieta : dow; }).join(', ') +
+    '. Kliknij "Rozpocznij", żeby zobaczyć swój pierwszy Widok Dnia.</p>';
+}
+
+function pbObFinish() {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result.success) { showError(result.error); return; }
+      showSuccess('Onboarding ukończony. Witaj w Pip-Boy.');
+      pbShowMainUi();
+    })
+    .completeOnboarding(PB_OB_TRENINGOWE);
+}
+
 // ---- TRENING (Moduł 2) ----
 function pbLoadTrainingPlan() {
   google.script.run.withSuccessHandler(function(result) {
@@ -660,7 +857,13 @@ function pbLoadDashboard() {
     .withSuccessHandler(function(result) {
       if (!result.success) { showError('Dashboard: ' + result.error); return; }
       PB_DASH_DATA = result.data;
-      pbRenderDashboardPanel(PB_DASH_SUB);
+      google.script.run
+        .withSuccessHandler(function(r2) {
+          PB_DASH_DATA.tydzien = r2.success ? r2.data : null;
+          pbRenderDashboardPanel(PB_DASH_SUB);
+        })
+        .withFailureHandler(function() { pbRenderDashboardPanel(PB_DASH_SUB); })
+        .getTydzienData(pbToday());
     })
     .withFailureHandler(function(err) { showError('Błąd ładowania dashboardu: ' + err.message); })
     .getDashboardData();
@@ -668,7 +871,7 @@ function pbLoadDashboard() {
 
 function pbDashSwitchSub(sub) {
   PB_DASH_SUB = sub;
-  ['ogolny', 'trening', 'dieta', 'sen', 'dom'].forEach(function(s) {
+  ['ogolny', 'tydzien', 'trening', 'dieta', 'sen', 'dom'].forEach(function(s) {
     document.getElementById('pb-dash-sub-' + s).classList.toggle('active', s === sub);
   });
   if (PB_DASH_DATA) pbRenderDashboardPanel(sub);
@@ -729,6 +932,39 @@ function pbRenderDashboardPanel(sub) {
         labels: atrybutyLabels.map(function(a) { return PB_ATRYBUT_LABEL[a] || a; }),
         datasets: [{ label: 'XP', data: atrybutyLabels.map(function(a) { return d.atrybuty[a]; }),
           backgroundColor: PB_GREEN_DIM, borderColor: PB_GREEN, borderWidth: 1 }]
+      },
+      options: Object.assign(pbChartDefaults(), { plugins: { legend: { display: false } } })
+    });
+    return;
+  }
+
+  if (sub === 'tydzien') {
+    const t = d.tydzien;
+    if (!t) { el.innerHTML = '<div style="color:var(--pb-green-dim); font-size:0.85em;">Brak danych tygodniowych.</div>'; return; }
+    const modulLabel = { suplementy: 'Suplementacja', posilki: 'Posiłki (5/5)', mood: 'Mood check (rano+wieczór)', sprzatanie: 'Sprzątanie (floor)', czytelnictwo: 'Czytelnictwo', trening: 'Trening (Wt/Czw/Sob)' };
+    const roznica = t.punktyTenTydzien - t.punktyPoprzedniTydzien;
+    const znak = roznica > 0 ? '+' : '';
+    el.innerHTML =
+      '<div class="pb-mood-grid" style="grid-template-columns: 1fr 1fr; margin-bottom:14px;">' +
+        '<div><div class="pb-eyebrow">PUNKTY TEN TYDZIEŃ</div><div class="pb-title" style="font-size:1.6em;">' + t.punktyTenTydzien + '</div></div>' +
+        '<div><div class="pb-eyebrow">VS POPRZEDNI TYDZIEŃ</div><div class="pb-title" style="font-size:1.6em; color:' + (roznica >= 0 ? 'var(--pb-green)' : 'var(--pb-red)') + ';">' + znak + roznica + '</div></div>' +
+      '</div>' +
+      '<div class="pb-eyebrow">% UKOŃCZENIA WG MODUŁU (ostatnie 7 dni, ' + t.dni7[0] + ' — ' + t.dni7[6] + ')</div>' +
+      Object.keys(t.procentTygodniowy).map(function(m) {
+        const pct = t.procentTygodniowy[m];
+        if (pct === null) return '';
+        return '<div style="margin-bottom:8px;">' +
+          '<div style="display:flex; justify-content:space-between; font-size:0.85em;"><span>' + (modulLabel[m] || m) + '</span><span>' + pct + '%</span></div>' +
+          '<div class="pb-hp-track" style="height:10px;"><div class="pb-hp-fill' + (pct < 50 ? ' crit' : pct < 80 ? ' warn' : '') + '" style="width:' + pct + '%"></div></div>' +
+        '</div>';
+      }).join('') +
+      '<div class="pb-eyebrow" style="margin-top:18px;">TREND PUNKTÓW — OSTATNIE 4 TYGODNIE</div>' +
+      pbChartCanvas('pb-chart-tydzien');
+    pbMakeChart('pb-chart-tydzien', {
+      type: 'bar',
+      data: {
+        labels: t.trend4Tyg.map(function(w) { return w.start.slice(5) + ' — ' + w.koniec.slice(5); }),
+        datasets: [{ label: 'Punkty / tydzień', data: t.trend4Tyg.map(function(w) { return w.punkty; }), backgroundColor: PB_GREEN_DIM, borderColor: PB_GREEN, borderWidth: 1 }]
       },
       options: Object.assign(pbChartDefaults(), { plugins: { legend: { display: false } } })
     });
