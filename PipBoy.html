@@ -54,9 +54,11 @@
   <!-- ===== WIDOK: TRENING (Moduł 2) ===== -->
   <div id="pb-view-trening" style="display:none;">
     <div style="color:var(--pb-green-dim); font-size:0.85em; margin-bottom:10px;">
-      Plan startowy A/B — w pełni edytowalny. Reguła plateau: 3+ kolejne wystąpienia ćwiczenia bez progresji.
+      Plan startowy A/B — w pełni edytowalny, plus dowolne dodatkowe warianty (narzędzie wymiany treningu). Reguła plateau: 3+ kolejne wystąpienia ćwiczenia bez progresji.
     </div>
     <div id="pb-trening-plany"><div style="color:var(--pb-green-dim);">Ładowanie planu…</div></div>
+    <button class="pb-btn" onclick="pbDodajWariantTreningowy()">+ Nowy wariant treningowy</button>
+    <div style="color:var(--pb-green-faint); font-size:0.72em; margin-top:6px;">Biblioteka mobilności CrossFit (od head coacha) — jeszcze niedostarczona przez Arka, świadomie odroczona (sekcja 8). Dodawaj warianty ręcznie do czasu jej dołączenia.</div>
 
     <div class="pb-eyebrow" style="margin-top:18px;">ZAPISZ SERIĘ</div>
     <div class="pb-mood-grid" style="grid-template-columns: 1fr 1fr;">
@@ -66,7 +68,7 @@
       <select class="pb-input" id="pb-log-status" onchange="pbOnStatusChange()">
         <option value="pelna">Pełna sesja</option>
         <option value="zmodyfikowana">Zmodyfikowana — ograniczenie zdrowotne</option>
-        <option value="ad-hoc">Ad-hoc / inny trening</option>
+        <option value="ad-hoc">Ad-hoc / inny trening (spoza planu)</option>
       </select>
       <label id="pb-log-powod-label" style="display:none;">Powód</label>
       <select class="pb-input" id="pb-log-powod" style="display:none;">
@@ -75,6 +77,8 @@
         <option value="zle-samopoczucie">Złe samopoczucie</option>
         <option value="inne">Inne</option>
       </select>
+      <label id="pb-log-cwiczenie-adhoc-label" style="display:none;">Nazwa (ad-hoc)</label>
+      <input class="pb-input" id="pb-log-cwiczenie-adhoc" type="text" placeholder="wpisz nazwę ćwiczenia spoza planu" style="display:none;">
       <label>Seria nr</label>
       <input class="pb-input" id="pb-log-seria" type="number" min="1" value="1">
       <label>Powtórzenia</label>
@@ -709,7 +713,13 @@ function pbLoadTrainingPlan() {
 
 function pbRenderTrainingPlan() {
   const el = document.getElementById('pb-trening-plany');
-  const typy = ['A', 'B'];
+  // Warianty wyznaczane dynamicznie z planu (nie tylko sztywne A/B) — narzędzie
+  // wymiany treningu: Arek może dodać dowolną liczbę dodatkowych wariantów
+  // (Runda #14/#17, sekcja 0.6.H, "biblioteka dodatkowych planów poza A/B").
+  const typySet = {};
+  PB_PLAN.forEach(function(p) { typySet[p.trening_typ] = true; });
+  const typy = Object.keys(typySet).sort(function(a, b) { return (a === 'A' || a === 'B') ? -1 : a.localeCompare(b); });
+
   el.innerHTML = typy.map(function(typ) {
     const cwiczenia = PB_PLAN.filter(function(p){ return p.trening_typ === typ; });
     return '<div class="pb-block obligatoryjne expanded"><div class="pb-block-head"><span class="pb-block-name">TRENING ' + typ + '</span></div><div class="pb-block-body">' +
@@ -718,12 +728,49 @@ function pbRenderTrainingPlan() {
           '<span style="color:var(--pb-green-dim); font-size:0.85em;">' + c.serie_docelowe + '×' + c.powtorzenia_zakres + ', przerwa ' + c.przerwa_sek + 's</span>' +
           '<button class="pb-btn" style="margin:0 0 0 8px; padding:3px 8px;" onclick="pbEditExercise(\'' + typ + '\', ' + c.kolejnosc + ')">edytuj</button></div>';
       }).join('') +
+      '<button class="pb-btn" style="margin-top:6px; padding:3px 8px;" onclick="pbDodajCwiczenieDoWariantu(\'' + typ + '\')">+ ćwiczenie do wariantu ' + typ + '</button>' +
       '</div></div>';
   }).join('');
 
   const select = document.getElementById('pb-log-cwiczenie');
   const wszystkie = PB_PLAN.map(function(p){ return p.cwiczenie; });
   select.innerHTML = wszystkie.map(function(c){ return '<option value="' + c + '">' + c + '</option>'; }).join('');
+}
+
+// Narzędzie wymiany treningu (sekcja 0.6.H / Moduł 2): dodanie zupełnie
+// nowego, nazwanego wariantu treningowego poza sztywnym A/B — np. sesja
+// zastępcza, plan od innego trenera, przyszła biblioteka CrossFit wpisana
+// ręcznie do czasu dostarczenia bazy przez Arka.
+function pbDodajWariantTreningowy() {
+  const nazwa = prompt('Nazwa nowego wariantu treningowego (np. "C", "Ad-hoc siłownia", "Mobilność CrossFit"):');
+  if (!nazwa) return;
+  const cwiczenie = prompt('Pierwsze ćwiczenie w tym wariancie:');
+  if (!cwiczenie) return;
+  const serie = prompt('Liczba serii:', '3');
+  if (serie === null) return;
+  const powt = prompt('Zakres powtórzeń:', '8-12');
+  if (powt === null) return;
+  const przerwa = prompt('Przerwa (sek):', '90');
+  if (przerwa === null) return;
+  google.script.run.withSuccessHandler(function(result) {
+    if (result.success) { showSuccess('Wariant "' + nazwa + '" dodany.'); pbLoadTrainingPlan(); } else showError(result.error);
+  }).updateTrainingExercise(nazwa, 1, { cwiczenie: cwiczenie, serie_docelowe: serie, powtorzenia_zakres: powt, przerwa_sek: przerwa });
+}
+
+function pbDodajCwiczenieDoWariantu(typ) {
+  const istniejace = PB_PLAN.filter(function(p) { return p.trening_typ === typ; });
+  const kolejnosc = istniejace.length + 1;
+  const cwiczenie = prompt('Nazwa nowego ćwiczenia w wariancie ' + typ + ':');
+  if (!cwiczenie) return;
+  const serie = prompt('Liczba serii:', '3');
+  if (serie === null) return;
+  const powt = prompt('Zakres powtórzeń:', '8-12');
+  if (powt === null) return;
+  const przerwa = prompt('Przerwa (sek):', '90');
+  if (przerwa === null) return;
+  google.script.run.withSuccessHandler(function(result) {
+    if (result.success) { showSuccess('Ćwiczenie dodane.'); pbLoadTrainingPlan(); } else showError(result.error);
+  }).updateTrainingExercise(typ, kolejnosc, { cwiczenie: cwiczenie, serie_docelowe: serie, powtorzenia_zakres: powt, przerwa_sek: przerwa });
 }
 
 function pbEditExercise(typ, kolejnosc) {
@@ -743,16 +790,24 @@ function pbEditExercise(typ, kolejnosc) {
 
 function pbOnStatusChange() {
   const status = pbVal('pb-log-status');
-  const show = status === 'zmodyfikowana';
-  document.getElementById('pb-log-powod-label').style.display = show ? 'block' : 'none';
-  document.getElementById('pb-log-powod').style.display = show ? 'block' : 'none';
+  const showPowod = status === 'zmodyfikowana';
+  document.getElementById('pb-log-powod-label').style.display = showPowod ? 'block' : 'none';
+  document.getElementById('pb-log-powod').style.display = showPowod ? 'block' : 'none';
+
+  // Ad-hoc / inny trening (narzędzie wymiany treningu) — pozwala wpisać
+  // nazwę ćwiczenia spoza zapisanego planu, zamiast wymuszać wybór z listy.
+  const showAdhoc = status === 'ad-hoc';
+  document.getElementById('pb-log-cwiczenie-adhoc-label').style.display = showAdhoc ? 'block' : 'none';
+  document.getElementById('pb-log-cwiczenie-adhoc').style.display = showAdhoc ? 'block' : 'none';
+  document.getElementById('pb-log-cwiczenie').disabled = showAdhoc;
 }
 
 function pbLogSet() {
   const status = pbVal('pb-log-status');
-  const cwiczenie = pbVal('pb-log-cwiczenie');
-  // treningTyp (A/B) wyznaczany z planu na podstawie wybranego ćwiczenia —
-  // puste dla ćwiczeń ad-hoc spoza planu startowego.
+  const cwiczenieAdhoc = pbVal('pb-log-cwiczenie-adhoc').trim();
+  const cwiczenie = (status === 'ad-hoc' && cwiczenieAdhoc) ? cwiczenieAdhoc : pbVal('pb-log-cwiczenie');
+  // treningTyp (A/B/wariant) wyznaczany z planu na podstawie wybranego
+  // ćwiczenia — puste dla ćwiczeń ad-hoc spoza każdego zapisanego wariantu.
   const planRow = (PB_PLAN || []).find(function(p) { return p.cwiczenie === cwiczenie; });
   const treningTyp = planRow ? planRow.trening_typ : '';
   google.script.run
