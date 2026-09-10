@@ -718,6 +718,11 @@ const PIPBOY_PRZYPOMNIENIA_DEFINICJE = {
   fryzjer: { nazwa: 'Fryzjer', cykl_dni: 21 },
   badania: { nazwa: 'Badania i kontrola medyczna', cykl_dni: 90 },
   auto_przeglad: { nazwa: 'Auto — przegląd miesięczny', cykl_dni: 30 },
-  motocykl_kontrola: { nazwa: 'Motocykl — kontrola bieżąca (w sezonie)', cykl_dni: 30 },
+  motocykl_kontrola: { nazwa: 'Motocykl — kontrola bieżąca (w sezonie, kwiecień-październik)', cykl_dni: 30 },
+  // Sezonowe 2x/rok (Moduł 16) — cykl_dni bez znaczenia funkcjonalnego (logika
+  // okna kalendarzowego jest w getAktywnePrzypomnienia), zostawione jako
+  // orientacyjna wartość wyświetlana w UI.
+  motocykl_wiosna: { nazwa: 'Motocykl — wiosenne przygotowanie po zimowym przestoju', cykl_dni: 365 },
+  motocykl_jesien: { nazwa: 'Motocykl — odłożenie na zimę', cykl_dni: 365 },
   robot_filtr: { nazwa: 'Robot sprzątający — czyszczenie filtra', cykl_dni: 30 },
 };

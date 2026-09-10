@@ -645,11 +645,32 @@ function updateRollingAverage(modul, dataStr, wartoscDnia) {
 // PRZYPOMNIENIA CYKLICZNE (fryzjer, badania, auto, motocykl, robot)
 // ============================================================
 
+// Sezon motocyklowy potwierdzony w dokumencie: kwiecień-październik (Moduł 16).
+function pipboyWSezonieMotocyklowym(miesiac) { return miesiac >= 4 && miesiac <= 10; }
+
 function getAktywnePrzypomnienia() {
   try {
     const rows = sheetToObjects(pipboySheet('przypomnienia_cykliczne'));
     const dzis = todayIso();
+    const dzisDate = new Date(dzis + 'T00:00:00');
+    const miesiac = dzisDate.getMonth() + 1; // 1-12
+
     return rows.filter(r => {
+      // Kontrola bieżąca motocykla — aktywna WYŁĄCZNIE w sezonie, nie tylko
+      // "jeszcze nie czas wg cyklu" — poza sezonem w ogóle niewidoczna
+      // (Moduł 16, wcześniej brakująca logika sezonowości).
+      if (r.klucz === 'motocykl_kontrola' && !pipboyWSezonieMotocyklowym(miesiac)) return false;
+
+      // Przypomnienia sezonowe 2x/rok (Moduł 16) — aktywne tylko w konkretnym
+      // oknie kalendarzowym, raz na dany rok (nie co N dni jak reszta).
+      if (r.klucz === 'motocykl_wiosna' || r.klucz === 'motocykl_jesien') {
+        const wOknie = r.klucz === 'motocykl_wiosna' ? (miesiac === 3 || miesiac === 4) : (miesiac === 10 || miesiac === 11);
+        if (!wOknie) return false;
+        if (!r.data_ostatniego_wykonania) return true;
+        const rokWykonania = Number(String(r.data_ostatniego_wykonania).slice(0, 4));
+        return rokWykonania < dzisDate.getFullYear();
+      }
+
       if (!r.data_ostatniego_wykonania) return true; // nigdy niewykonane — pokaż
       return dataMinus(dzis, Number(r.cykl_dni)) >= r.data_ostatniego_wykonania;
     }).map(r => ({ klucz: r.klucz, nazwa: r.nazwa, cyklDni: r.cykl_dni }));
