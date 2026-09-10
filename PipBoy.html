@@ -1,17 +1,17 @@
 <!-- ============================================================
      CEREBRO — PipBoy.html
-     Widok Dnia (sekcja 6.1) — Faza 1.
+     Widok Dnia (6.1), Trening (6.3) i Karta Postaci (6.6) — Faza 1-2.
      ============================================================ -->
 <div class="pipboy-shell crt-low" id="pb-shell">
   <div class="pb-eyebrow">CEREBRO // PIP-BOY // ORGANIZACJA ŻYCIA</div>
-  <div class="pb-title">WIDOK DNIA</div>
+  <div class="pb-title" id="pb-view-title">WIDOK DNIA</div>
 
   <div class="pb-tabs">
-    <button class="pb-tab active">DZIEŃ</button>
+    <button class="pb-tab active" id="pb-tab-dzien" onclick="pbSwitchTab('dzien')">DZIEŃ</button>
+    <button class="pb-tab" id="pb-tab-trening" onclick="pbSwitchTab('trening')">TRENING</button>
+    <button class="pb-tab" id="pb-tab-postac" onclick="pbSwitchTab('postac')">POSTAĆ</button>
     <button class="pb-tab disabled">TYDZIEŃ <span class="pb-tab-note">(Faza 2)</span></button>
-    <button class="pb-tab disabled">POSTAĆ <span class="pb-tab-note">(Faza 2)</span></button>
     <button class="pb-tab disabled">PORTFOLIO <span class="pb-tab-note">(Faza 3)</span></button>
-    <button class="pb-tab disabled">USTAWIENIA PIP-BOY <span class="pb-tab-note">↓</span></button>
   </div>
 
   <div class="pb-statusbar">
@@ -22,17 +22,64 @@
     <button class="pb-godmode-btn" id="pb-godmode-btn" onclick="pbToggleGodMode()">GOD_MODE_24H: OFF</button>
   </div>
 
-  <div class="pb-quote" id="pb-quote" style="display:none;">
-    <div id="pb-quote-text"></div>
-    <div class="pb-quote-author" id="pb-quote-author"></div>
+  <!-- ===== WIDOK: DZIEŃ ===== -->
+  <div id="pb-view-dzien">
+    <div class="pb-quote" id="pb-quote" style="display:none;">
+      <div id="pb-quote-text"></div>
+      <div class="pb-quote-author" id="pb-quote-author"></div>
+    </div>
+
+    <div class="pb-marquee-wrap">
+      <div class="pb-marquee-track" id="pb-marquee-track">Ładowanie…</div>
+    </div>
+
+    <div id="pb-blocks">
+      <div style="color:var(--pb-green-dim); font-size:0.85em;">Ładowanie dnia…</div>
+    </div>
   </div>
 
-  <div class="pb-marquee-wrap">
-    <div class="pb-marquee-track" id="pb-marquee-track">Ładowanie…</div>
+  <!-- ===== WIDOK: TRENING (Moduł 2) ===== -->
+  <div id="pb-view-trening" style="display:none;">
+    <div style="color:var(--pb-green-dim); font-size:0.85em; margin-bottom:10px;">
+      Plan startowy A/B — w pełni edytowalny. Reguła plateau: 3+ kolejne wystąpienia ćwiczenia bez progresji.
+    </div>
+    <div id="pb-trening-plany"><div style="color:var(--pb-green-dim);">Ładowanie planu…</div></div>
+
+    <div class="pb-eyebrow" style="margin-top:18px;">ZAPISZ SERIĘ</div>
+    <div class="pb-mood-grid" style="grid-template-columns: 1fr 1fr;">
+      <label>Ćwiczenie</label>
+      <select class="pb-input" id="pb-log-cwiczenie"></select>
+      <label>Status</label>
+      <select class="pb-input" id="pb-log-status" onchange="pbOnStatusChange()">
+        <option value="pelna">Pełna sesja</option>
+        <option value="zmodyfikowana">Zmodyfikowana — ograniczenie zdrowotne</option>
+        <option value="ad-hoc">Ad-hoc / inny trening</option>
+      </select>
+      <label id="pb-log-powod-label" style="display:none;">Powód</label>
+      <select class="pb-input" id="pb-log-powod" style="display:none;">
+        <option value="zdrowie">Zdrowie / kontuzja</option>
+        <option value="zmeczenie">Zmęczenie</option>
+        <option value="zle-samopoczucie">Złe samopoczucie</option>
+        <option value="inne">Inne</option>
+      </select>
+      <label>Seria nr</label>
+      <input class="pb-input" id="pb-log-seria" type="number" min="1" value="1">
+      <label>Powtórzenia</label>
+      <input class="pb-input" id="pb-log-powt" type="text" placeholder="np. 8-10">
+      <label>Ciężar (kg)</label>
+      <input class="pb-input" id="pb-log-ciezar" type="number" step="0.5">
+      <label>Ocena sesji (1-10)</label>
+      <input class="pb-input" id="pb-log-ocena" type="number" min="1" max="10">
+    </div>
+    <textarea class="pb-textarea" id="pb-log-notatka" rows="2" placeholder="Notatka (opcjonalnie)" style="margin-top:8px;"></textarea>
+    <button class="pb-btn" onclick="pbLogSet()">Zapisz serię</button>
+    <button class="pb-btn" onclick="pbZakonczTrening()">Zakończ trening (+20 XP Ciało)</button>
+    <div id="pb-plateau-warning"></div>
   </div>
 
-  <div id="pb-blocks">
-    <div style="color:var(--pb-green-dim); font-size:0.85em;">Ładowanie dnia…</div>
+  <!-- ===== WIDOK: POSTAĆ (Karta Postaci, sekcja 6.6) ===== -->
+  <div id="pb-view-postac" style="display:none;">
+    <div id="pb-postac-body"><div style="color:var(--pb-green-dim);">Ładowanie karty postaci…</div></div>
   </div>
 
   <div class="pb-settings-row">
@@ -56,6 +103,7 @@
 
 <script>
 let PB_DAY = null;
+let PB_PLAN = null;
 
 function initModule() {
   pbLoadSettings();
@@ -65,6 +113,18 @@ function initModule() {
 function pbToday() {
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+// ---- Przełączanie wewnętrznych widoków Pip-Boy (sekcja 6.2) ----
+function pbSwitchTab(tab) {
+  ['dzien', 'trening', 'postac'].forEach(function(t) {
+    document.getElementById('pb-view-' + t).style.display = (t === tab) ? 'block' : 'none';
+    document.getElementById('pb-tab-' + t).classList.toggle('active', t === tab);
+  });
+  const titles = { dzien: 'WIDOK DNIA', trening: 'TRENING', postac: 'KARTA POSTACI' };
+  document.getElementById('pb-view-title').textContent = titles[tab];
+  if (tab === 'trening' && !PB_PLAN) pbLoadTrainingPlan();
+  if (tab === 'postac') pbLoadKartaPostaci();
 }
 
 function pbLoadDay() {
@@ -154,11 +214,14 @@ function pbRenderBlocks(dane) {
     const obl = blok.obligatoryjne;
     const marker = done ? '+' : (obl ? 'o' : '·');
     const bracket = obl ? ['[',']'] : ['(',')'];
+    const trescBlokowa = (blok.modul === 'trening')
+      ? '<span style="color:var(--pb-green-dim); text-decoration:underline; cursor:pointer;" onclick="event.stopPropagation(); pbSwitchTab(\'trening\')">' + blok.nazwa + ' → zakładka TRENING</span>'
+      : blok.nazwa;
     return (
       '<div class="pb-block ' + (obl ? 'obligatoryjne' : 'opcjonalne') + (done ? ' done' : '') + '" id="pb-block-' + idx + '">' +
         '<div class="pb-block-head" onclick="pbToggleExpand(' + idx + ')">' +
           '<span class="pb-block-marker">' + bracket[0] + marker + bracket[1] + '</span>' +
-          '<span class="pb-block-name">' + blok.nazwa + '</span>' +
+          '<span class="pb-block-name">' + trescBlokowa + '</span>' +
           '<span class="pb-block-tag">' + (obl ? 'OBLIGATORYJNE' : 'opcjonalne') + '</span>' +
           '<span class="pb-block-chevron">›</span>' +
         '</div>' +
@@ -193,7 +256,7 @@ function pbBlockBody(blok, dane) {
       '<span class="pb-check-mark">' + (done ? '[x]' : '[ ]') + '</span><span>Wykonane</span></div>' + note;
   }
   if (blok.modul === 'trening' || blok.klucz === 'praca') {
-    return '<span style="color:var(--pb-green-dim)">Szczegółowy tracking — Faza 2 (RCP, log ćwiczeń).</span>';
+    return '<span style="color:var(--pb-green-dim)">' + (blok.modul === 'trening' ? 'Otwórz zakładkę TRENING, żeby zalogować sesję.' : 'Szczegółowy tracking (RCP) — Faza 2.') + '</span>';
   }
   return '<div class="pb-check-row" onclick="pbNoop()"><span style="color:var(--pb-green-dim)">Bez dodatkowego trackingu w Fazie 1.</span></div>';
 }
@@ -286,18 +349,136 @@ function pbVal(id) { const el = document.getElementById(id); return el ? el.valu
 
 function pbToggleGodMode() {
   if (PB_DAY && PB_DAY.godModeAktywny) {
-    showInfo('GOD_MODE_24H jest już aktywny — dezaktywacja ręczna poza zakresem Fazy 1.');
+    showInfo('Ochrona jest już aktywna. Dezaktywacja Trybu Regeneracji: karta POSTAĆ (wkrótce) lub arkusz.');
     return;
   }
   google.script.run
     .withSuccessHandler(function(result) {
-      if (result.success) { showSuccess('GOD_MODE_24H aktywny. Pozostało w tym miesiącu: ' + result.pozostaleWMiesiacu); pbLoadDay(); }
-      else showError(result.error);
+      if (!result.success) { showError(result.error); return; }
+      showSuccess('GOD_MODE_24H aktywny. Pozostało w tym miesiącu: ' + result.pozostaleWMiesiacu);
+      if (result.sugestiaTrybu) {
+        if (confirm('Dwa dni ochronne z rzędu — aktywować dłuższy Tryb Regeneracji? (HP zawieszone do ręcznego wyłączenia, przypomnienia zostają)')) {
+          google.script.run.withSuccessHandler(function(){ showSuccess('Tryb Regeneracji aktywny.'); pbLoadDay(); }).activateTrybRegeneracji(pbToday());
+          return;
+        }
+      }
+      pbLoadDay();
     })
     .activateGodMode(pbToday());
 }
 
 function pbNoop() {}
+
+// ---- TRENING (Moduł 2) ----
+function pbLoadTrainingPlan() {
+  google.script.run.withSuccessHandler(function(result) {
+    if (!result.success) { showError(result.error); return; }
+    PB_PLAN = result.data;
+    pbRenderTrainingPlan();
+  }).getTrainingPlan();
+}
+
+function pbRenderTrainingPlan() {
+  const el = document.getElementById('pb-trening-plany');
+  const typy = ['A', 'B'];
+  el.innerHTML = typy.map(function(typ) {
+    const cwiczenia = PB_PLAN.filter(function(p){ return p.trening_typ === typ; });
+    return '<div class="pb-block obligatoryjne expanded"><div class="pb-block-head"><span class="pb-block-name">TRENING ' + typ + '</span></div><div class="pb-block-body">' +
+      cwiczenia.map(function(c) {
+        return '<div class="pb-check-row" style="cursor:default;"><span style="flex:1;">' + c.cwiczenie + '</span>' +
+          '<span style="color:var(--pb-green-dim); font-size:0.85em;">' + c.serie_docelowe + '×' + c.powtorzenia_zakres + ', przerwa ' + c.przerwa_sek + 's</span>' +
+          '<button class="pb-btn" style="margin:0 0 0 8px; padding:3px 8px;" onclick="pbEditExercise(\'' + typ + '\', ' + c.kolejnosc + ')">edytuj</button></div>';
+      }).join('') +
+      '</div></div>';
+  }).join('');
+
+  const select = document.getElementById('pb-log-cwiczenie');
+  const wszystkie = PB_PLAN.map(function(p){ return p.cwiczenie; });
+  select.innerHTML = wszystkie.map(function(c){ return '<option value="' + c + '">' + c + '</option>'; }).join('');
+}
+
+function pbEditExercise(typ, kolejnosc) {
+  const c = PB_PLAN.find(function(p){ return p.trening_typ === typ && Number(p.kolejnosc) === kolejnosc; });
+  const nazwa = prompt('Nazwa ćwiczenia:', c.cwiczenie);
+  if (nazwa === null) return;
+  const serie = prompt('Liczba serii:', c.serie_docelowe);
+  if (serie === null) return;
+  const powt = prompt('Zakres powtórzeń:', c.powtorzenia_zakres);
+  if (powt === null) return;
+  const przerwa = prompt('Przerwa (sek):', c.przerwa_sek);
+  if (przerwa === null) return;
+  google.script.run.withSuccessHandler(function(result) {
+    if (result.success) { showSuccess('Zapisano.'); pbLoadTrainingPlan(); } else showError(result.error);
+  }).updateTrainingExercise(typ, kolejnosc, { cwiczenie: nazwa, serie_docelowe: serie, powtorzenia_zakres: powt, przerwa_sek: przerwa });
+}
+
+function pbOnStatusChange() {
+  const status = pbVal('pb-log-status');
+  const show = status === 'zmodyfikowana';
+  document.getElementById('pb-log-powod-label').style.display = show ? 'block' : 'none';
+  document.getElementById('pb-log-powod').style.display = show ? 'block' : 'none';
+}
+
+function pbLogSet() {
+  const status = pbVal('pb-log-status');
+  const cwiczenie = pbVal('pb-log-cwiczenie');
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result.success) { showError(result.error); return; }
+      showSuccess(result.nowyRekord ? 'Zapisano — nowy rekord! (+10 XP Ciało)' : 'Seria zapisana.');
+      google.script.run.withSuccessHandler(function(r) {
+        const box = document.getElementById('pb-plateau-warning');
+        box.innerHTML = (r.success && r.plateau && r.plateau.plateau)
+          ? '<div class="pb-quote" style="border-color: var(--pb-amber); color: var(--pb-amber);">' + r.plateau.sugestia + '</div>' : '';
+      }).getTrainingHistory(cwiczenie);
+    })
+    .logTrainingSet(pbToday(), status, pbVal('pb-log-powod'), cwiczenie,
+      pbVal('pb-log-seria'), pbVal('pb-log-powt'), pbVal('pb-log-ciezar'), pbVal('pb-log-ocena'), pbVal('pb-log-notatka'));
+}
+
+function pbZakonczTrening() {
+  google.script.run.withSuccessHandler(function(result) {
+    if (result.success) { showSuccess('Trening zakończony (+20 XP Ciało).'); pbLoadDay(); } else showError(result.error);
+  }).zakonczTrening(pbToday(), '', '');
+}
+
+// ---- POSTAĆ (Karta Postaci, sekcja 6.6) ----
+function pbLoadKartaPostaci() {
+  google.script.run.withSuccessHandler(function(result) {
+    if (!result.success) { showError(result.error); return; }
+    pbRenderKartaPostaci(result.data);
+  }).getKartaPostaci();
+}
+
+const PB_ATRYBUT_LABEL = { cialo: 'CIAŁO', umysl: 'UMYSŁ', dyscyplina: 'DYSCYPLINA', otoczenie: 'OTOCZENIE', personal_brand: 'PERSONAL BRAND' };
+
+function pbRenderKartaPostaci(dane) {
+  const el = document.getElementById('pb-postac-body');
+  let html = '<div class="pb-eyebrow">POZIOM OGÓLNY</div>' +
+    '<div class="pb-title" style="font-size:1.6em;">' + dane.poziomOgolny.poziom + '</div>' +
+    '<div style="color:var(--pb-green-dim); font-size:0.85em; margin-bottom:16px;">' + dane.poziomOgolny.xpWPoziomie + ' / ' + dane.poziomOgolny.xpDoNastepnego + ' XP do poziomu ' + (dane.poziomOgolny.poziom + 1) + ' — łącznie ' + dane.sumaXP + ' XP</div>';
+
+  html += Object.keys(dane.atrybuty).map(function(a) {
+    const at = dane.atrybuty[a];
+    const pct = Math.round(100 * at.xpWPoziomie / (at.xpDoNastepnego || 1));
+    return '<div style="margin-bottom:10px;">' +
+      '<div style="display:flex; justify-content:space-between; font-size:0.85em;"><span>' + PB_ATRYBUT_LABEL[a] + '</span><span>poz. ' + at.poziom + '</span></div>' +
+      '<div class="pb-hp-track" style="height:10px;"><div class="pb-hp-fill" style="width:' + pct + '%"></div></div>' +
+    '</div>';
+  }).join('');
+
+  html += '<div class="pb-eyebrow" style="margin-top:18px;">ODZNAKI (' + dane.odznakiZdobyte.length + ' / ' + dane.odznakiLacznie + ')</div>';
+  if (dane.odznakiZdobyte.length === 0) {
+    html += '<div style="color:var(--pb-green-dim); font-size:0.85em;">Jeszcze żadnej — pierwsza pojawi się po pełnym dniu suplementacji, posiłków lub mood checku.</div>';
+  } else {
+    html += dane.odznakiZdobyte.map(function(o) {
+      return '<div class="pb-check-row" style="cursor:default;"><span class="pb-check-mark">[' + o.typ + ']</span><span>' + o.nazwa + '</span></div>';
+    }).join('');
+  }
+  html += '<div style="color:var(--pb-green-faint); font-size:0.72em; margin-top:10px;">Ewaluacja obejmuje na razie 3 przykładowe odznaki startowe — pełne pokrycie 208 warunków (sekcja 4.3) to osobne zadanie Fazy 2+.</div>';
+
+  el.innerHTML = html;
+}
 
 // ---- Ustawienia wizualne (sekcja 6.9 / Runda #17) ----
 function pbLoadSettings() {

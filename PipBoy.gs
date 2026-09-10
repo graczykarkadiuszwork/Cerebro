@@ -38,7 +38,11 @@ function setupPipBoy() {
       { name: 'posilki_log', headers: ['data', 'numer', 'wykonano', 'godzina'] },
       { name: 'mood_log', headers: ['data', 'pora', 'nastroj', 'energia', 'sen', 'skupienie', 'gi', 'notatka_gi_followup'] },
       { name: 'punkty_historia', headers: ['data', 'hp_procent', 'xp_dzienny', 'streak_aktualny', 'poziom_postaci', 'smierc_postaci_bool'] },
-      { name: 'tokeny_god_mode', headers: ['data_aktywacji', 'typ', 'notatka'] },
+      { name: 'tokeny_god_mode', headers: ['data_aktywacji', 'typ', 'aktywny', 'notatka'] },
+      { name: 'punkty_historia', headers: ['data', 'atrybut', 'punkty'] },
+      { name: 'plan_treningowy', headers: ['trening_typ', 'kolejnosc', 'cwiczenie', 'serie_docelowe', 'powtorzenia_zakres', 'przerwa_sek'] },
+      { name: 'log_treningowy', headers: ['data', 'trening_typ', 'zrodlo_sesji', 'powod_modyfikacji', 'cwiczenie', 'seria_nr', 'powtorzenia', 'ciezar_kg', 'ocena_sesji_1_10', 'notatka', 'nowy_rekord'] },
+      { name: 'odznaki_log', headers: ['id_odznaki', 'data_zdobycia'] },
       { name: 'cytaty_motywacyjne', headers: ['tresc', 'autor', 'zrodlo', 'data_ostatniego_wyswietlenia'] },
       { name: 'marquee_komunikaty', headers: ['tresc', 'kategoria', 'warunek', 'priorytet'] },
     ];
@@ -90,6 +94,15 @@ function seedPipBoyContentTables(ss) {
   if (marqueeRows.length > 0) {
     marqueeSheet.getRange(2, 1, marqueeRows.length, 4).setValues(marqueeRows);
   }
+
+  const planSheet = ss.getSheetByName('plan_treningowy');
+  const planRows = [];
+  ['A', 'B'].forEach(typ => {
+    PIPBOY_TRENING_PLAN_STARTOWY[typ].forEach((cw, idx) => {
+      planRows.push([typ, idx + 1, cw.cwiczenie, cw.serie, cw.powtorzenia, cw.przerwa_sek]);
+    });
+  });
+  planSheet.getRange(2, 1, planRows.length, 6).setValues(planRows);
 }
 
 function getPipBoySpreadsheet() {
@@ -258,13 +271,19 @@ function toggleLogDzienny(dataStr, modul, wykonano) {
   try {
     const sheet = pipboySheet('log_dzienny');
     const rows = sheet.getDataRange().getValues();
+    const punktyWpis = modul === 'rozciaganie'
+      ? { atrybut: 'cialo', punkty: PIPBOY_PUNKTY_ZDOBYTE.rozciaganie.punkty }
+      : { atrybut: 'umysl', punkty: PIPBOY_PUNKTY_ZDOBYTE.higiena_swiatla.punkty };
     for (let i = 1; i < rows.length; i++) {
       if (rows[i][0] === dataStr && rows[i][1] === modul) {
+        const bylWykonany = rows[i][2] === true || rows[i][2] === 'true' || rows[i][2] === 'TRUE';
         sheet.getRange(i + 1, 3).setValue(wykonano);
+        if (wykonano && !bylWykonany) pipboyAwardPoints(dataStr, punktyWpis.atrybut, punktyWpis.punkty);
         return { success: true };
       }
     }
     sheet.appendRow([dataStr, modul, wykonano]);
+    if (wykonano) pipboyAwardPoints(dataStr, punktyWpis.atrybut, punktyWpis.punkty);
     return { success: true };
   } catch (e) {
     return { success: false, error: e.toString() };
@@ -283,10 +302,14 @@ function toggleSuplement(dataStr, klucz, wykonano) {
     for (let i = 1; i < rows.length; i++) {
       if (rows[i][0] === dataStr && rows[i][1] === klucz) {
         sheet.getRange(i + 1, 3, 1, 2).setValues([[wykonano, godzina]]);
+        if (wykonano && klucz !== 'melatonina') pipboyAwardPoints(dataStr, 'dyscyplina', PIPBOY_PUNKTY_ZDOBYTE.suplement_rdzenny.punkty);
+        evaluateStarterBadges(dataStr);
         return { success: true };
       }
     }
     sheet.appendRow([dataStr, klucz, wykonano, godzina, '']);
+    if (wykonano && klucz !== 'melatonina') pipboyAwardPoints(dataStr, 'dyscyplina', PIPBOY_PUNKTY_ZDOBYTE.suplement_rdzenny.punkty);
+    evaluateStarterBadges(dataStr);
     return { success: true };
   } catch (e) {
     return { success: false, error: e.toString() };
@@ -305,10 +328,14 @@ function toggleMeal(dataStr, numer, wykonano) {
     for (let i = 1; i < rows.length; i++) {
       if (rows[i][0] === dataStr && Number(rows[i][1]) === Number(numer)) {
         sheet.getRange(i + 1, 3, 1, 2).setValues([[wykonano, godzina]]);
+        if (wykonano) pipboyAwardPoints(dataStr, 'dyscyplina', PIPBOY_PUNKTY_ZDOBYTE.posilek.punkty);
+        evaluateStarterBadges(dataStr);
         return { success: true };
       }
     }
     sheet.appendRow([dataStr, numer, wykonano, godzina]);
+    if (wykonano) pipboyAwardPoints(dataStr, 'dyscyplina', PIPBOY_PUNKTY_ZDOBYTE.posilek.punkty);
+    evaluateStarterBadges(dataStr);
     return { success: true };
   } catch (e) {
     return { success: false, error: e.toString() };
@@ -329,13 +356,17 @@ function saveMood(dataStr, pora, wartosci) {
       wartosci.nastroj || '', wartosci.energia || '', wartosci.sen || '',
       wartosci.skupienie || '', wartosci.gi || '', wartosci.notatka_gi_followup || ''
     ];
+    let bylWpisJuz = false;
     for (let i = 1; i < rows.length; i++) {
       if (rows[i][0] === dataStr && rows[i][1] === pora) {
         sheet.getRange(i + 1, 1, 1, 8).setValues([row]);
-        return { success: true, followUpGI: Number(wartosci.gi) > 0 && Number(wartosci.gi) <= 4 };
+        bylWpisJuz = true;
+        break;
       }
     }
-    sheet.appendRow(row);
+    if (!bylWpisJuz) sheet.appendRow(row);
+    if (!bylWpisJuz) pipboyAwardPoints(dataStr, 'umysl', PIPBOY_PUNKTY_ZDOBYTE.mood_wpis.punkty);
+    evaluateStarterBadges(dataStr);
     return { success: true, followUpGI: Number(wartosci.gi) > 0 && Number(wartosci.gi) <= 4 };
   } catch (e) {
     return { success: false, error: e.toString() };
@@ -347,14 +378,18 @@ function saveMood(dataStr, pora, wartosci) {
 // Ręczna aktywacja, w tym tego samego dnia (Runda #17), limit 4/miesiąc.
 // ============================================================
 
+// Aktywny GOD_MODE_24H na dany dzień (typ='dzien', dopasowanie po dacie) LUB
+// Tryb Regeneracji obejmujący ten dzień (typ='tryb-regeneracji', aktywny=true,
+// data_aktywacji <= dataStr — trwa aż do ręcznej dezaktywacji, sekcja 4.1b).
 function isGodModeActive(dataStr) {
   const rows = sheetToObjects(pipboySheet('tokeny_god_mode'));
-  return rows.some(r => r.data_aktywacji === dataStr);
+  return rows.some(r => r.data_aktywacji === dataStr && r.typ === 'dzien')
+      || isTrybRegeneracjiActive(dataStr);
 }
 
 function countGodModeWMiesiacu(rokMiesiac) {
   const rows = sheetToObjects(pipboySheet('tokeny_god_mode'));
-  return rows.filter(r => String(r.data_aktywacji).startsWith(rokMiesiac) && r.typ !== 'tryb-regeneracji').length;
+  return rows.filter(r => String(r.data_aktywacji).startsWith(rokMiesiac) && r.typ === 'dzien').length;
 }
 
 function activateGodMode(dataStr) {
@@ -365,10 +400,60 @@ function activateGodMode(dataStr) {
       return { success: false, error: 'Limit ' + PIPBOY_GOD_MODE_LIMIT_MIESIECZNY + ' aktywacji w tym miesiącu wykorzystany.' };
     }
     if (isGodModeActive(dataStr)) {
-      return { success: false, error: 'GOD_MODE_24H jest już aktywny na ten dzień.' };
+      return { success: false, error: 'Ochrona jest już aktywna na ten dzień.' };
     }
-    pipboySheet('tokeny_god_mode').appendRow([dataStr, 'dzien', '']);
-    return { success: true, pozostaleWMiesiacu: PIPBOY_GOD_MODE_LIMIT_MIESIECZNY - uzyte - 1 };
+    pipboySheet('tokeny_god_mode').appendRow([dataStr, 'dzien', true, '']);
+    const sugestiaTrybu = sprawdzSugestieTrybuRegeneracji(dataStr);
+    return { success: true, pozostaleWMiesiacu: PIPBOY_GOD_MODE_LIMIT_MIESIECZNY - uzyte - 1, sugestiaTrybu };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+// ============================================================
+// SEKCJA 4.1b — TRYB REGENERACJI (Runda #17)
+// Wyzwalacz: 2 dni z rzędu z aktywnym GOD_MODE_24H → propozycja (nie wymus).
+// ============================================================
+
+function dataMinus(dataStr, dni) {
+  const d = new Date(dataStr + 'T00:00:00');
+  d.setDate(d.getDate() - dni);
+  return Utilities.formatDate(d, Session.getScriptTimeZone() || 'Europe/Warsaw', 'yyyy-MM-dd');
+}
+
+function sprawdzSugestieTrybuRegeneracji(dataStr) {
+  const rows = sheetToObjects(pipboySheet('tokeny_god_mode'));
+  const wczoraj = dataMinus(dataStr, 1);
+  const dzisAktywny = rows.some(r => r.data_aktywacji === dataStr && r.typ === 'dzien');
+  const wczorajAktywny = rows.some(r => r.data_aktywacji === wczoraj && r.typ === 'dzien');
+  return dzisAktywny && wczorajAktywny;
+}
+
+function isTrybRegeneracjiActive(dataStr) {
+  const rows = sheetToObjects(pipboySheet('tokeny_god_mode'));
+  return rows.some(r => r.typ === 'tryb-regeneracji' && (r.aktywny === true || r.aktywny === 'true' || r.aktywny === 'TRUE') && r.data_aktywacji <= dataStr);
+}
+
+function activateTrybRegeneracji(dataStr) {
+  try {
+    if (isTrybRegeneracjiActive(dataStr)) return { success: false, error: 'Tryb Regeneracji jest już aktywny.' };
+    pipboySheet('tokeny_god_mode').appendRow([dataStr, 'tryb-regeneracji', true, '']);
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+function deactivateTrybRegeneracji() {
+  try {
+    const sheet = pipboySheet('tokeny_god_mode');
+    const rows = sheet.getDataRange().getValues();
+    for (let i = 1; i < rows.length; i++) {
+      if (rows[i][1] === 'tryb-regeneracji' && (rows[i][2] === true || rows[i][2] === 'true' || rows[i][2] === 'TRUE')) {
+        sheet.getRange(i + 1, 3).setValue(false);
+      }
+    }
+    return { success: true };
   } catch (e) {
     return { success: false, error: e.toString() };
   }
@@ -426,6 +511,209 @@ function computePipBoyHP(dataStr, struktura, suplementyLog, posilkiLog, moodLog,
 
   hp = Math.max(0, hp);
   return { procent: hp, brakujace };
+}
+
+// ============================================================
+// SEKCJA 4.1 — PUNKTY (XP) I ATRYBUTY
+// ============================================================
+
+function pipboyAwardPoints(dataStr, atrybutKey, punkty) {
+  try {
+    pipboySheet('punkty_historia').appendRow([dataStr, atrybutKey, punkty]);
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+// XP(poziom) = 3*poziom^2 + 47*poziom (sekcja 4.1) — odwrócenie: poziom z sumy XP
+function pipboyPoziomZXP(sumaXP) {
+  let poziom = 1;
+  let suma = 0;
+  while (poziom < 20) {
+    const potrzebne = pipboyXpDoNastepnegoPoziomu(poziom);
+    if (suma + potrzebne > sumaXP) break;
+    suma += potrzebne;
+    poziom++;
+  }
+  return { poziom, xpWPoziomie: sumaXP - suma, xpDoNastepnego: pipboyXpDoNastepnegoPoziomu(poziom) };
+}
+
+function getAtrybutySumy() {
+  const rows = sheetToObjects(pipboySheet('punkty_historia'));
+  const sumy = {};
+  PIPBOY_ATRYBUTY.forEach(a => sumy[a] = 0);
+  rows.forEach(r => {
+    if (sumy.hasOwnProperty(r.atrybut)) sumy[r.atrybut] += Number(r.punkty) || 0;
+  });
+  return sumy;
+}
+
+// ============================================================
+// KARTA POSTACI (sekcja 6.6) — agregat do Fazy 1: atrybuty, poziom ogólny,
+// HP dzisiejsze, zdobyte odznaki. Pełen streak/historia śmierci — Faza 2+.
+// ============================================================
+
+function getKartaPostaci() {
+  try {
+    const sumy = getAtrybutySumy();
+    const sumaCalkowita = PIPBOY_ATRYBUTY.reduce((s, a) => s + sumy[a], 0);
+    const poziomOgolny = pipboyPoziomZXP(sumaCalkowita);
+    const atrybutyZPoziomem = {};
+    PIPBOY_ATRYBUTY.forEach(a => { atrybutyZPoziomem[a] = Object.assign({ xpCalkowite: sumy[a] }, pipboyPoziomZXP(sumy[a])); });
+
+    const odznakiLog = sheetToObjects(pipboySheet('odznaki_log'));
+    const zdobyteIds = odznakiLog.map(r => Number(r.id_odznaki));
+    const zdobyte = PIPBOY_ODZNAKI.filter(o => zdobyteIds.indexOf(o.id) !== -1);
+
+    return {
+      success: true,
+      data: {
+        poziomOgolny, sumaXP: sumaCalkowita, atrybuty: atrybutyZPoziomem,
+        odznakiZdobyte: zdobyte, odznakiLacznie: PIPBOY_ODZNAKI.length,
+      }
+    };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+// Ewaluator startowy — sprawdza tylko garść najprostszych, jednorazowych
+// odznak "pierwszy raz" jako fundament. Ocena WSZYSTKICH 208 warunków
+// (streaki, progi łączne, sekretne) to osobne, większe zadanie (Faza 2+),
+// świadomie nieskracane tutaj zgadywaniem logiki.
+function evaluateStarterBadges(dataStr) {
+  try {
+    const juzZdobyte = sheetToObjects(pipboySheet('odznaki_log')).map(r => Number(r.id_odznaki));
+    const nowoZdobyte = [];
+    const przyznaj = (id) => {
+      if (juzZdobyte.indexOf(id) === -1) {
+        pipboySheet('odznaki_log').appendRow([id, dataStr]);
+        nowoZdobyte.push(PIPBOY_ODZNAKI.find(o => o.id === id));
+      }
+    };
+
+    const suplementyLog = sheetToObjects(pipboySheet('suplementy_log')).filter(r => r.data === dataStr);
+    const rdzenneOk = PIPBOY_SUPLEMENTY_RDZENNE.every(s => {
+      const w = suplementyLog.find(r => r.klucz === s.klucz);
+      return w && (w.wykonano === true || w.wykonano === 'true' || w.wykonano === 'TRUE');
+    });
+    if (rdzenneOk) przyznaj(1); // [S] Pierwszy krok — suplementacja
+
+    const moodLog = sheetToObjects(pipboySheet('mood_log')).filter(r => r.data === dataStr);
+    if (moodLog.length > 0) przyznaj(131); // [S] Pierwszy wpis — mood
+
+    const posilkiLog = sheetToObjects(pipboySheet('posilki_log')).filter(r => r.data === dataStr);
+    if ([1,2,3,4,5].every(n => posilkiLog.some(r => Number(r.numer) === n && (r.wykonano === true || r.wykonano === 'true' || r.wykonano === 'TRUE')))) {
+      przyznaj(58); // [S] Pierwszy pełny dzień — 5/5 posiłków
+    }
+
+    return { success: true, nowoZdobyte };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+// ============================================================
+// MODUŁ 2 — TRENING (Faza 2, wdrożone: plan edytowalny, log sesji,
+// status "zmodyfikowany — zdrowie" z powodem, reguła plateau)
+// ============================================================
+
+const PIPBOY_POWODY_MODYFIKACJI = ['zdrowie', 'zmeczenie', 'zle-samopoczucie', 'inne'];
+
+function getTrainingPlan() {
+  try {
+    const rows = sheetToObjects(pipboySheet('plan_treningowy'));
+    rows.sort((a, b) => a.trening_typ === b.trening_typ ? Number(a.kolejnosc) - Number(b.kolejnosc) : String(a.trening_typ).localeCompare(String(b.trening_typ)));
+    return { success: true, data: rows };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+// Edycja pojedynczego ćwiczenia w planie (Runda #17 — plan w pełni edytowalny)
+function updateTrainingExercise(treningTyp, kolejnosc, dane) {
+  try {
+    const sheet = pipboySheet('plan_treningowy');
+    const rows = sheet.getDataRange().getValues();
+    for (let i = 1; i < rows.length; i++) {
+      if (rows[i][0] === treningTyp && Number(rows[i][1]) === Number(kolejnosc)) {
+        sheet.getRange(i + 1, 3, 1, 4).setValues([[dane.cwiczenie, dane.serie_docelowe, dane.powtorzenia_zakres, dane.przerwa_sek]]);
+        return { success: true };
+      }
+    }
+    sheet.appendRow([treningTyp, kolejnosc, dane.cwiczenie, dane.serie_docelowe, dane.powtorzenia_zakres, dane.przerwa_sek]);
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+// Zapis jednej serii sesji treningowej. status: 'pelna' | 'zmodyfikowana' | 'ad-hoc'
+function logTrainingSet(dataStr, treningTyp, status, powodModyfikacji, cwiczenie, seriaNr, powtorzenia, ciezarKg, ocena, notatka) {
+  try {
+    if (status === 'zmodyfikowana' && PIPBOY_POWODY_MODYFIKACJI.indexOf(powodModyfikacji) === -1) {
+      return { success: false, error: 'Nieznany powód modyfikacji.' };
+    }
+    const nowyRekord = status === 'pelna' ? sprawdzCzyRekord(cwiczenie, Number(ciezarKg)) : false;
+    pipboySheet('log_treningowy').appendRow([
+      dataStr, treningTyp, status, status === 'zmodyfikowana' ? powodModyfikacji : '',
+      cwiczenie, seriaNr, powtorzenia, ciezarKg, ocena || '', notatka || '', nowyRekord
+    ]);
+    if (nowyRekord) pipboyAwardPoints(dataStr, 'cialo', PIPBOY_PUNKTY_ZDOBYTE.progresja_ciezaru.punkty);
+    return { success: true, nowyRekord };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+function sprawdzCzyRekord(cwiczenie, ciezarKg) {
+  const rows = sheetToObjects(pipboySheet('log_treningowy')).filter(r => r.cwiczenie === cwiczenie && r.trening_typ === 'pelna');
+  const maxDotychczas = rows.reduce((m, r) => Math.max(m, Number(r.ciezar_kg) || 0), 0);
+  return ciezarKg > maxDotychczas;
+}
+
+function zakonczTrening(dataStr, treningTyp, ocenaCalosci) {
+  try {
+    pipboyAwardPoints(dataStr, 'cialo', PIPBOY_PUNKTY_ZDOBYTE.trening_ukonczony.punkty);
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+// Reguła plateau (sekcja 0.6.A / Moduł 2): 3+ KOLEJNE WYSTĄPIENIA danego
+// ćwiczenia (nie dni kalendarzowe) bez progresji ciężaru/objętości.
+function sprawdzPlateau(cwiczenie) {
+  try {
+    const rows = sheetToObjects(pipboySheet('log_treningowy'))
+      .filter(r => r.cwiczenie === cwiczenie && r.trening_typ === 'pelna');
+    // Grupuj po dacie sesji (jedno wystąpienie = jedna data), bierz max ciężar tego dnia
+    const poDacie = {};
+    rows.forEach(r => {
+      const c = Number(r.ciezar_kg) || 0;
+      if (!poDacie[r.data] || c > poDacie[r.data]) poDacie[r.data] = c;
+    });
+    const daty = Object.keys(poDacie).sort();
+    if (daty.length < 4) return { plateau: false };
+    const ostatnie4 = daty.slice(-4).map(d => poDacie[d]);
+    const bezProgresu = ostatnie4[1] <= ostatnie4[0] && ostatnie4[2] <= ostatnie4[1] && ostatnie4[3] <= ostatnie4[2];
+    return {
+      plateau: bezProgresu,
+      sugestia: bezProgresu ? 'Brak progresu na ' + cwiczenie + ' od 3 wystąpień — rozważ: (a) zamianę na ćwiczenie zbliżone na 4-6 tygodni, (b) tydzień redukcji obciążenia (deload), (c) kontynuację bez zmian.' : ''
+    };
+  } catch (e) {
+    return { plateau: false, error: e.toString() };
+  }
+}
+
+function getTrainingHistory(cwiczenie) {
+  try {
+    const rows = sheetToObjects(pipboySheet('log_treningowy')).filter(r => r.cwiczenie === cwiczenie);
+    return { success: true, data: rows, plateau: sprawdzPlateau(cwiczenie) };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
 }
 
 // ============================================================
