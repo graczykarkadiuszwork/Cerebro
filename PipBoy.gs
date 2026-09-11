@@ -1440,18 +1440,84 @@ function evaluateStarterBadges(dataStr) {
     // lub trackingu promocji Aldi, których obecny model danych zakupy_log
     // (log dzień/kategoria/produkt/kupione) nie wyraża wprost.
 
-    // --- Mood (131) ---
-    if ((pipboyGrupujPoDacie(sheetToObjects(pipboySheet('mood_log')))[dataStr] || []).length > 0) {
-      przyznaj(131); // [S] Pierwszy wpis — mood
+    // --- J. MOOD TRACKER / SAMOPOCZUCIE (131,132,133,134,135,136,137,138,139) ---
+    // UWAGA (poprawka w tej turze): 131 wcześniej przyznawana za JAKIKOLWIEK
+    // wpis mood — dokument wymaga wprost "w PEŁNI wypełniony (rano+wieczór)".
+    const moodRowsB = sheetToObjects(pipboySheet('mood_log'));
+    const moodByDateB = pipboyGrupujPoDacie(moodRowsB);
+    const dzienPelnyMood = (d) => {
+      const w = moodByDateB[d] || [];
+      return w.some(r => r.pora === 'rano') && w.some(r => r.pora === 'wieczor');
+    };
+    if (dzienPelnyMood(dataStr)) przyznaj(131); // [S] Pierwszy wpis (w pełni wypełniony)
+    if (pipboyStreak(dzienPelnyMood, dataStr) >= 7) przyznaj(132); // [Z] Tydzień świadomości (14/14 wpisów)
+    let wpisyOstatnie30 = 0;
+    { let d = dataStr; for (let i = 0; i < 30; i++) { wpisyOstatnie30 += (moodByDateB[d] || []).length; d = dataMinus(d, 1); } }
+    if (wpisyOstatnie30 >= 50) przyznaj(133); // [S] Miesiąc obserwacji (50+/60 wpisów)
+    if (moodRowsB.length >= 100) przyznaj(134);  // [S] Setka wpisów
+    if (moodRowsB.length >= 500) przyznaj(135);  // [S] Pięćset wpisów
+    if (moodRowsB.length >= 1000) przyznaj(136); // [S] Tysiąc wpisów
+    const dataMoodRows = moodRowsB.map(r => r.data).sort();
+    if (dataMoodRows.length > 0) {
+      const dniMood = Math.floor((new Date(dataStr + 'T00:00:00') - new Date(dataMoodRows[0] + 'T00:00:00')) / 86400000);
+      if (dniMood >= 365) przyznaj(137); // [S] Rok samoobserwacji
+    }
+    const liczbaGiFollowup = moodRowsB.filter(r => r.notatka_gi_followup && String(r.notatka_gi_followup).trim() !== '').length;
+    if (liczbaGiFollowup >= 10) przyznaj(138); // [S] Detektyw GI
+    const dzienBezNiskiegoWyniku = (d) => {
+      const w = moodByDateB[d];
+      if (!w || w.length === 0) return false;
+      const pola = ['nastroj', 'energia', 'sen', 'skupienie', 'gi'];
+      return w.every(r => pola.every(p => !r[p] || Number(r[p]) >= 4));
+    };
+    if (pipboyStreak(dzienBezNiskiegoWyniku, dataStr) >= 30) przyznaj(139); // [S] Stabilny trend
+    // 140 [S] Sekretna: Gotowość na AI Coacha — świadomie pominięta: "wystarczające
+    // dane do aktywacji Modułu 14" to próg subiektywny/nieokreślony liczbowo w
+    // dokumencie, a Moduł 14 sam w sobie jest poza obecnym zakresem budowy.
+
+    // --- O. MILESTONE'Y DŁUGOTERMINOWE / SEKRETNE (194,197,200-208) ---
+    // 195/196/198/199/140 świadomie pominięte: wymagają logiki "śmierci
+    // postaci" (Game Over, Faza 2+, jeszcze niezaimplementowana — patrz
+    // sekcja 4.1 punkt I) albo ręcznej aktywacji Modułu 13 (BJJ/Boks),
+    // którego w ogóle nie ma w obecnym zakresie budowy.
+    // hp_historia odczytana tu wcześniej (przed kategorią N) — obie kategorie
+    // (O i N) potrzebują tego samego mapowania data->HP.
+    const hpRowsB = sheetToObjects(pipboySheet('hp_historia'));
+    const hpByDateB = {};
+    hpRowsB.forEach(r => { hpByDateB[r.data] = Number(r.hp_procent); });
+    const wszystkieDatyHpO = Object.keys(hpByDateB).sort();
+    if (wszystkieDatyHpO.length > 0) {
+      const dniOdStartuO = Math.floor((new Date(dataStr + 'T00:00:00') - new Date(wszystkieDatyHpO[0] + 'T00:00:00')) / 86400000);
+      if (dniOdStartuO >= 30) przyznaj(194); // [S] Sekretna: Pierwszy miesiąc
+    }
+    { // 197 [S] Sekretna: Wiosna wojownika — pierwszy tydzień kwietnia
+      const dz = new Date(dataStr + 'T00:00:00');
+      if (dz.getMonth() + 1 === 4 && dz.getDate() <= 7) przyznaj(197);
+    }
+    const sumyO = getAtrybutySumy();
+    const poziomOgolnyO = pipboyPoziomZXP(PIPBOY_ATRYBUTY.reduce((s, a) => s + sumyO[a], 0)).poziom;
+    if (poziomOgolnyO >= 10) przyznaj(200); // [S] Poziom 10 postaci
+    if (poziomOgolnyO >= 20) przyznaj(201); // [S] Poziom 20 postaci (maksymalny)
+    const poziomyAtrybutowO = {};
+    PIPBOY_ATRYBUTY.forEach(a => { poziomyAtrybutowO[a] = pipboyPoziomZXP(sumyO[a]).poziom; });
+    if (poziomyAtrybutowO.cialo >= 20) przyznaj(202);          // [S] Mistrz Ciała
+    if (poziomyAtrybutowO.umysl >= 20) przyznaj(203);          // [S] Mistrz Umysłu
+    if (poziomyAtrybutowO.dyscyplina >= 20) przyznaj(204);     // [S] Mistrz Dyscypliny
+    if (poziomyAtrybutowO.otoczenie >= 20) przyznaj(205);      // [S] Mistrz Otoczenia
+    if (poziomyAtrybutowO.personal_brand >= 20) przyznaj(206); // [S] Mistrz Marki Osobistej
+    if (PIPBOY_ATRYBUTY.every(a => poziomyAtrybutowO[a] >= 20)) przyznaj(207); // [S] Pięć Mistrzostw
+    if (wszystkieDatyHpO.length > 0) {
+      const dniOdStartuRok = Math.floor((new Date(dataStr + 'T00:00:00') - new Date(wszystkieDatyHpO[0] + 'T00:00:00')) / 86400000);
+      // 208 przyznaje samą odznakę; "osobiste podsumowanie roku" jako specjalny
+      // widok UI (dosłowny wymóg opisu 208) NIE jest zbudowane w tej turze.
+      if (dniOdStartuRok >= 365) przyznaj(208); // [S] Sekretna: Rocznica
     }
 
     // --- N. STREAKI OGÓLNE / PERFECT DAY (179-190,192,193) ---
     // "Perfect Day" = dzień z HP 100% (HP już JEST % ukończenia wg sekcji 4.2,
     // więc nie liczymy tego osobno); "≥80% ukończenia" = HP >= 80. Wykorzystuje
-    // hp_historia (upsertHpHistoria), już zbieraną dla Dashboardu (6.13).
-    const hpRowsB = sheetToObjects(pipboySheet('hp_historia'));
-    const hpByDateB = {};
-    hpRowsB.forEach(r => { hpByDateB[r.data] = Number(r.hp_procent); });
+    // hp_historia (upsertHpHistoria, odczytana wyżej w kategorii O), już
+    // zbieraną dla Dashboardu (6.13).
     const dzienPerfect = (d) => hpByDateB.hasOwnProperty(d) && hpByDateB[d] === 100;
     const dzien80 = (d) => hpByDateB.hasOwnProperty(d) && hpByDateB[d] >= 80;
 
