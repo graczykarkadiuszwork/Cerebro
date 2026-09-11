@@ -209,7 +209,7 @@ function pipboyGetBackupFolderStatus() {
 
 // Zapisuje pełny zrzut wszystkich arkuszy Pip-Boy jako plik JSON. Wołane
 // automatycznie przez trigger czasowy (niedziela wieczorem) i ręcznie z
-// Ustawień ("Eksportuj teraz" — patrz ustawienia.html).
+// Ustawień ("Eksportuj teraz" — patrz Ustawienia.html).
 function pipboyEksportTygodniowy() {
   try {
     const ss = getPipBoySpreadsheet();
@@ -1859,7 +1859,7 @@ function evaluateStarterBadges(dataStr) {
 // ============================================================
 // SEKCJA 6.13 — DASHBOARD GRAFICZNY
 // Agreguje dane już logowane w innych modułach do wykresów. Wybór biblioteki
-// (Chart.js, ładowany z CDN w index.html) to decyzja projektowa UI, zgodnie
+// (Chart.js, ładowany z CDN w Index.html) to decyzja projektowa UI, zgodnie
 // z sekcją 6.13 dokumentu ("zadanie projektowe, nie decyzyjne").
 // ============================================================
 

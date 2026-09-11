@@ -7,7 +7,7 @@ Kod w tym repozytorium (branch `Pip-Boy`), zintegrowany z Cerebro jako nowy modu
 - `PipBoy.gs` — rytuał miesięczny grafiku (wejście manualne, sekcja 0.4 MVP), Szablony Dnia A/B/C/D, Moduł 1 (Suplementacja — Melatonina warunkowa), Moduł 2 (Trening: plan edytowalny, log serii, RPE, status „zmodyfikowana — zdrowie”, reguła plateau, kardio z kettlami na mobilność), Moduł 4 (Dieta), Moduł 5 (Czytelnictwo + rolling average), Moduł 6 (Spacer z psem), Moduł 7 (Pielęgnacja per-produkt), Moduł 8 (Sprzątanie — rotacja 7-strefowa, floor/ceiling), Moduł 9 (Kontakt z naturą, auto-link ze spacerem), Moduł 11 (Mood tracker + follow-up GI), Moduł 17 (Zakupy 70/30), Moduł 18 (Portfolio Figurek — hybryda rigid/elastyczny), Moduł 19 (Czas wolny — log minimalistyczny), Moduł 20 (Rolling average), przypomnienia cykliczne (fryzjer/badania/auto/robot filtr), mechanika HP (sekcja 4.2) — obejmująca sprzątanie, czytelnictwo i trening, nie tylko suplementy/posiłki/mood — XP/Atrybuty (4.1), **logika "śmierci postaci" (4.1, punkt I — popup GAME OVER, utrata odznak sezonowych, reset streaków, -1 poziom)**, GOD_MODE_24H (4.1a), Tryb Regeneracji (4.1b), Karta Postaci (6.6), katalog 208 odznak (4.3, wczytany programowo z dokumentu) + **ewaluator obejmujący ~152/208 odznak (73%)** (14 z 15 kategorii dotknięte — patrz niżej), Cytat Dnia (5.4), Marquee (6.12), **Dashboard graficzny (6.13, wersja podstawowa)** — wykresy Chart.js: trend HP, rozkład XP wg Atrybutu, progresja ciężaru per ćwiczenie, średnia czytelnictwa, trend mood, minuty sprzątania/dzień.
 - `PipBoyData.gs` — dane statyczne: suplementy, szablony posiłków, plan treningowy A/B, kategorie zakupowe 70/30, produkty pielęgnacyjne, rotacja sprzątania, tabela kalibracji HP i punktów, **263 realne cytaty**, **107 komunikatów Marquee**, **208 odznak**.
 - `PipBoy.html` + `PipBoyStyles.html` — cztery wewnętrzne zakładki (DZIEŃ / TRENING / POSTAĆ / DASHBOARD, przełączane bez przeładowania modułu Cerebro; DASHBOARD ma własne podzakładki OGÓLNY/TYDZIEŃ/TRENING/DIETA-UMYSŁ/SEN-NASTRÓJ/DOM), motyw Pip-Boy (6.9): zielony monospace, CRT Low/Medium/Ultra i rozmiar czcionki w pełni ręczne (Runda #17). Podzakładka TYDZIEŃ realizuje sekcję 6.5 (Widok tygodniowy) w formie graficznej, zgodnie z decyzją Rundy #17, że 6.5 wchodzi do Dashboardu zamiast być osobnym ekranem: % ukończenia per moduł z ostatnich 7 dni, punkty tydzień-do-tygodnia, wykres trendu z ostatnich 4 tygodni (`getTydzienData()` w `PipBoy.gs`).
-- Wpięte do istniejącej nawigacji Cerebro (`sidebar.html`, `scripts.html`) i do Ustawień (przycisk „Skonfiguruj Pip-Boy”, `ustawienia.html`). Chart.js (CDN) doładowany globalnie w `index.html`, obok już używanych Tailwind/Lucide/Marked.
+- Wpięte do istniejącej nawigacji Cerebro (`Sidebar.html`, `Scripts.html`) i do Ustawień (przycisk „Skonfiguruj Pip-Boy”, `Ustawienia.html`). Chart.js (CDN) doładowany globalnie w `Index.html`, obok już używanych Tailwind/Lucide/Marked.
 
 - **Onboarding (sekcja 6.11)** — kreator pierwszego uruchomienia (`pb-onboarding` w `PipBoy.html`, 9 kroków wg specyfikacji), pokazywany automatycznie zamiast Widoku Dnia, dopóki `completeOnboarding()` nie zostanie wywołane (flaga `pipboyOnboardingDone` w ustawieniach użytkownika). Kroki 1 (grafik miesięczny — siatka dni, zapis zbiorczy `setGrafikMiesiac`), 2 (dni treningowe — edytowalne, zapisywane jako ustawienie i odczytywane przez `jestDniemTreningowym`) i 9 (podsumowanie i start) są w pełni funkcjonalne. Krok 7-8 (RCP, Kalendarz) pokazują wprost, że integracja wymaga danych dostępowych Arka i realnego wdrożenia — nie udają połączenia, które nie istnieje. To jedyne dwa kroki onboardingu, które pozostają czysto informacyjne (z dobrego powodu — reszta, kroki 1-6, ma teraz realną funkcję, nie tylko podgląd).
 
@@ -69,20 +69,34 @@ Kategoria odznak K/Portfolio Figurek (141-150,156-160, 15 z 22) obliczalna wpros
 ## Czego nie mogłem zrobić z tej sesji
 
 Nie mam dostępu do Twojego konta Google — nie mogę więc:
-- wypchnąć tego kodu na żywy projekt Google Apps Script (`clasp push` wymaga Twojego OAuth),
+- wypchnąć tego kodu na żywy projekt Google Apps Script (wymaga Twojego OAuth),
 - utworzyć arkusza i folderu Pip-Boy na Twoim Dysku (to robi funkcja `setupPipBoy()`, ale dopiero po wdrożeniu),
 - podłączyć RCP ani Kalendarza (Faza 2, wymaga Twoich danych dostępowych).
 
-## Jak wdrożyć (kroki dla Ciebie lub dewelopera)
+## Naprawiony w tej turze błąd, który blokowałby wdrożenie
 
-1. Zainstaluj `clasp` (`npm install -g @google/clasp`), zaloguj się (`clasp login`) na to samo konto co `graczyk.arkadiusz.work@gmail.com` (Runda #17, pkt L).
-2. W katalogu repo: `clasp create --type webapp --title "Cerebro"` (jeśli projekt Apps Script jeszcze nie istnieje) albo `clasp clone <scriptId>` (jeśli już istnieje z wcześniejszej pracy nad Cerebro) — potwierdź z deweloperem, czy taki projekt już jest.
-3. `clasp push` — wgrywa wszystkie pliki `.gs`/`.html` z repo.
-4. `clasp deploy` jako Web App (dostęp: tylko Ty — zgodnie z sekcją 0.11.1, pkt 1, wciąż otwartym pytaniem o autentykację).
-5. Otwórz wdrożony Web App → Ustawienia → **Skonfiguruj Pip-Boy** — tworzy osobny arkusz i osobny, restrykcyjny folder na Twoim Dysku (sekcja 0.9), zasiewa 263 cytaty i 107 komunikatów Marquee.
-6. W nowym arkuszu Pip-Boy, w zakładce `grafik_pracy`, wpisz ręcznie dni bieżącego miesiąca (data, godziny, typ A/B/Wolny) — to tymczasowy, manualny odpowiednik rytuału z sekcji 0.7, dopóki odczyt RCP (Faza 2) nie zastąpi go automatyzacją.
-7. Otwórz zakładkę Pip-Boy w Cerebro — powinieneś zobaczyć dzisiejszy Widok Dnia.
+Podczas przygotowywania tej instrukcji znalazłem i naprawiłem dwa realne problemy, które sprawiłyby, że wdrożenie od razu by nie zadziałało (pusta strona / błędy przy każdym kliknięciu):
+
+1. **Wielkość liter w nazwach plików się nie zgadzała.** Kod odwołuje się do plików po nazwie (np. `include('Sidebar')`, `getModuleHtml('Pulpit')`), a Google Apps Script rozróżnia wielkość liter w nazwach plików. W repozytorium pliki nazywały się małą literą (`sidebar.html`, `pulpit.html`, `index.html`, `chat.html`, `personel.html`, `terminarz.html`, `ustawienia.html`, `wiedza.html`, `scripts.html`, `styles.html`) — każde wywołanie modułu by się wywaliło. Wszystkie przemianowane na wielką literę, zgodną z tym, czego kod faktycznie szuka.
+2. **`DriveSync.script` miał złe rozszerzenie.** Google Apps Script rozpoznaje tylko pliki `.gs`/`.html`/`.json` — plik z rozszerzeniem `.script` zostałby po prostu pominięty przy wgrywaniu, a funkcje „Skonfiguruj Drive” i „Synchronizuj ręcznie” w Ustawieniach przestałyby działać (odwołują się do funkcji zdefiniowanych właśnie w tym pliku). Przemianowany na `DriveSync.gs`.
+3. Dodany brakujący plik `appsscript.json` (wymagany przez Apps Script) — ustawia strefę czasową na Warszawę i dostęp do Web Appa wyłącznie dla Ciebie (`access: MYSELF`), zgodnie z sekcją 0.11.1.
+
+## Jak wdrożyć — najprostsza ścieżka (przez przeglądarkę, bez instalowania czegokolwiek)
+
+1. Wejdź na **script.google.com** i zaloguj się na `graczyk.arkadiusz.work@gmail.com`.
+2. Kliknij **Nowy projekt**. Nazwij go „Cerebro” (menu w lewym górnym rogu, obok logo).
+3. W panelu po lewej usuń domyślny plik `Code.gs`, a potem po kolei dodaj **wszystkie 17 plików z tego repozytorium** (branch `Pip-Boy`) — dla każdego pliku `.gs` użyj przycisku „+” → „Skrypt”, dla każdego `.html` — „+” → „HTML”, wpisując dokładnie tę samą nazwę co w repozytorium (bez rozszerzenia), i wklej całą zawartość:
+   `code.gs`, `PipBoy.gs`, `PipBoyData.gs`, `DriveSync.gs`,
+   `Index.html`, `Sidebar.html`, `Scripts.html`, `Styles.html`, `PipBoy.html`, `PipBoyStyles.html`, `Pulpit.html`, `Zadania.html`, `Wiedza.html`, `Chat.html`, `Terminarz.html`, `Personel.html`, `Ustawienia.html`.
+4. Otwórz plik `appsscript.json` (ikona koła zębatego „Ustawienia projektu” → zaznacz „Pokaż plik manifestu appsscript.json” w panelu bocznym) i zastąp jego zawartość tą z repozytorium.
+5. Kliknij **Wdróż → Nowe wdrożenie**. Typ: **Aplikacja internetowa**. „Wykonaj jako”: Ja. „Kto ma dostęp”: Tylko ja. Kliknij Wdróż i zezwól na uprawnienia, o które poprosi Google.
+6. Otwórz link, który dostaniesz po wdrożeniu — to jest Twoje Cerebro.
+7. W aplikacji: **Ustawienia → Skonfiguruj Pip-Boy** — utworzy osobny arkusz i osobny folder na Twoim Dysku, zasieje 263 cytaty i 107 komunikatów.
+8. W nowo utworzonym arkuszu Pip-Boy, w zakładce `grafik_pracy`, wpisz ręcznie dni bieżącego miesiąca (data, godziny, typ A/B/Wolny) — tymczasowy, ręczny odpowiednik rytuału z sekcji 0.7, dopóki odczyt RCP go nie zastąpi.
+9. Wróć do zakładki Pip-Boy w Cerebro — zobaczysz kreator pierwszego uruchomienia (Onboarding), a po nim dzisiejszy Widok Dnia.
+
+**Alternatywa dla kogoś, kto woli terminal:** ten sam efekt daje `clasp` (`npm install -g @google/clasp`, `clasp login`, `clasp create --type webapp --title "Cerebro"` w katalogu repo, `clasp push`, `clasp deploy`) — ale przy 17 plikach kopiowanie ręczne przez przeglądarkę (kroki 1-6 wyżej) jest równie szybkie i nie wymaga niczego instalować.
 
 ## Sugerowany następny krok
 
-Priorytet #2 z wcześniejszego przeglądu wciąż aktualny: **przeliczyć kalibrację HP na papierze** zanim zacznie się codzienne używanie — teraz można to zrobić na żywych, choć jeszcze niepodłączonych, wartościach z `PipBoyData.gs` (`PIPBOY_HP_KARY`).
+Priorytet wciąż aktualny: **przeliczyć kalibrację HP na papierze** zanim zacznie się codzienne używanie — teraz można to zrobić na żywych, choć jeszcze niepodłączonych, wartościach z `PipBoyData.gs` (`PIPBOY_HP_KARY`).
