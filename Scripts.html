@@ -1,7 +1,28 @@
 <script>
 let currentModule = null;
 const MODULES = { pulpit: { title: 'Pulpit', icon: 'layout-dashboard', file: 'Pulpit' }, zadania: { title: 'Zadania', icon: 'check-square', file: 'Zadania' }, wiedza: { title: 'Baza Wiedzy', icon: 'book-open', file: 'Wiedza' }, chat: { title: 'Chat Saver', icon: 'message-square-plus', file: 'Chat' }, terminarz: { title: 'Terminarz', icon: 'calendar', file: 'Terminarz' }, personel: { title: 'Personel', icon: 'users', file: 'Personel' }, pipboy: { title: 'Pip-Boy', icon: 'terminal', file: 'PipBoy' }, ustawienia: { title: 'Ustawienia', icon: 'settings', file: 'Ustawienia' } };
-function navigateTo(module) { currentModule = module; const config = MODULES[module]; if (!config) return; document.querySelectorAll('.nav-item').forEach(el => { el.classList.remove('bg-[rgba(0,122,255,0.1)]', 'text-[#007aff]'); el.classList.add('text-[#000]'); }); const activeNav = document.getElementById(`nav-${module}`); if (activeNav) { activeNav.classList.add('bg-[rgba(0,122,255,0.1)]', 'text-[#007aff]'); activeNav.classList.remove('text-[#000]'); } const mobileTitle = document.getElementById('mobile-title'); if (mobileTitle) mobileTitle.textContent = config.title; document.getElementById('content').innerHTML = `<div class="flex items-center justify-center h-full"><div class="text-center"><div class="animate-pulse text-5xl mb-4">🧠</div><div class="text-[15px] text-[#8e8e93]">Ładowanie ${config.title}...</div></div></div>`; google.script.run.withSuccessHandler(function(html) { document.getElementById('content').innerHTML = html; lucide.createIcons(); initTooltips(); if (typeof initModule === 'function') initModule(); }).withFailureHandler(function(err) { showError('Błąd ładowania modułu: ' + err.message); }).getModuleHtml(config.file); if (window.innerWidth < 768) toggleMobileSidebar(); }
+// KLUCZOWE: <script> wstawiony przez innerHTML = html NIGDY się nie wykonuje
+// (standard przeglądarek — element ma ustawioną flagę "already started" przy
+// parsowaniu fragmentu). Bez tej funkcji initModule() (i każda inna funkcja
+// zdefiniowana wewnątrz modułu — Pulpit/Zadania/Wiedza/Chat/PipBoy/Ustawienia
+// itd.) nigdy by nie istniała, więc `typeof initModule === 'function'` niżej
+// zawsze byłoby fałszem po cichu — to jest prawdziwa przyczyna pustych
+// ekranów/nieznikających placeholderów zgłaszanych dziś przez Arka. Trik:
+// podmień każdy wstawiony <script> (pomijając np. type="text/template") na
+// świeżo utworzony element script — TAKI, dodany przez createElement +
+// appendChild, przeglądarka już wykonuje normalnie.
+function executeInsertedScripts(container) {
+  container.querySelectorAll('script').forEach(function(oldScript) {
+    if (oldScript.type && oldScript.type !== 'text/javascript') return; // np. text/template (modale) zostają nietknięte
+    const newScript = document.createElement('script');
+    for (let i = 0; i < oldScript.attributes.length; i++) {
+      newScript.setAttribute(oldScript.attributes[i].name, oldScript.attributes[i].value);
+    }
+    newScript.textContent = oldScript.textContent;
+    oldScript.parentNode.replaceChild(newScript, oldScript);
+  });
+}
+function navigateTo(module) { currentModule = module; const config = MODULES[module]; if (!config) return; document.querySelectorAll('.nav-item').forEach(el => { el.classList.remove('bg-[rgba(0,122,255,0.1)]', 'text-[#007aff]'); el.classList.add('text-[#000]'); }); const activeNav = document.getElementById(`nav-${module}`); if (activeNav) { activeNav.classList.add('bg-[rgba(0,122,255,0.1)]', 'text-[#007aff]'); activeNav.classList.remove('text-[#000]'); } const mobileTitle = document.getElementById('mobile-title'); if (mobileTitle) mobileTitle.textContent = config.title; document.getElementById('content').innerHTML = `<div class="flex items-center justify-center h-full"><div class="text-center"><div class="animate-pulse text-5xl mb-4">🧠</div><div class="text-[15px] text-[#8e8e93]">Ładowanie ${config.title}...</div></div></div>`; google.script.run.withSuccessHandler(function(html) { const contentEl = document.getElementById('content'); contentEl.innerHTML = html; lucide.createIcons(); initTooltips(); executeInsertedScripts(contentEl); if (typeof initModule === 'function') initModule(); }).withFailureHandler(function(err) { showError('Błąd ładowania modułu: ' + err.message); }).getModuleHtml(config.file); if (window.innerWidth < 768) toggleMobileSidebar(); }
 const TRANSLATIONS = { 'Pulpit': 'Dashboard', 'Zadania': 'Tasks', 'Baza Wiedzy': 'Knowledge Base', 'Chat Saver': 'Save AI Chat', 'Terminarz': 'Calendar', 'Personel': 'Staff View', 'Ustawienia': 'Settings', 'Zapisz': 'Save', 'Anuluj': 'Cancel', 'Usuń': 'Delete', 'Edytuj': 'Edit', 'Dodaj': 'Add', 'Szukaj': 'Search', 'Importuj z Drive': 'Import from Drive', 'Eksportuj': 'Export', 'Połączenie': 'Connection', 'Wdrożenie': 'Deployment' };
 let tooltipTimer = null;
 const tooltip = document.getElementById ? document.getElementById('tooltip') : null;
