@@ -36,6 +36,11 @@
 
   <!-- ===== WIDOK: DZIEŃ ===== -->
   <div id="pb-view-dzien">
+    <div id="pb-hp-ostrzezenie" style="display:none; border:2px solid var(--pb-red); border-radius:8px; padding:10px 14px; margin-bottom:10px; color:var(--pb-red); background:rgba(255,77,61,0.08);">
+      <b>⚠ Twoja postać jest bliska upadku.</b>
+      <div id="pb-hp-ostrzezenie-lista" style="font-size:0.85em; margin-top:6px; color:var(--pb-green);"></div>
+    </div>
+
     <div class="pb-quote" id="pb-quote" style="display:none;">
       <div id="pb-quote-text"></div>
       <div class="pb-quote-author" id="pb-quote-author"></div>
@@ -245,6 +250,7 @@ function pbLoadDay() {
       if (!result.success) { showError('Pip-Boy: ' + result.error); return; }
       PB_DAY = result.data;
       pbRenderHP(result.data.hp);
+      pbRenderOstrzezenieHP(result.data.hp, result.data.hpBrakujace);
       pbRenderGodMode(result.data.godModeAktywny);
       pbRenderQuote(result.data.cytatDnia);
       pbRenderBlocks(result.data);
@@ -265,6 +271,17 @@ function pbRenderHP(hp) {
 
 function pbPokazGameOver() {
   document.getElementById('pb-gameover-overlay').style.display = 'flex';
+}
+
+// Ostrzeżenie wyprzedzające (sekcja 4.1): "przy HP ≤20% system pokazuje
+// wyraźny wizualny alert z listą konkretnych brakujących zadań, żeby
+// śmierć postaci nigdy nie była zaskoczeniem".
+function pbRenderOstrzezenieHP(hp, brakujace) {
+  const box = document.getElementById('pb-hp-ostrzezenie');
+  if (hp > 20 || !brakujace || brakujace.length === 0) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  document.getElementById('pb-hp-ostrzezenie-lista').innerHTML =
+    'Wykonaj jeszcze dziś, żeby odzyskać HP: ' + brakujace.join(', ') + '.';
 }
 
 function pbRenderGodMode(aktywny) {

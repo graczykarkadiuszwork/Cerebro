@@ -15,6 +15,8 @@ Kod w tym repozytorium (branch `Pip-Boy`), zintegrowany z Cerebro jako nowy modu
 
 **Świadomie POZA tym pakietem** (dalsza część Fazy 2 + Faza 3/4, patrz sekcja 0.11.2): dwustronna synchronizacja Google Calendar, odczyt RCP, offline-first (Service Worker + IndexedDB), Moduł 21 (Finanse osobiste), pozostałe ~98/208 warunków odznak (sekretne, subiektywne, zależne od modułów jeszcze niezbudowanych, od danych historycznych sprzed systemu, lub od dopasowania nazw ćwiczeń — patrz komentarz nad `evaluateStarterBadges` w `PipBoy.gs`).
 
+**Ostrzeżenie wyprzedzające przy niskim HP (sekcja 4.1) — wdrożone w tej turze:** dokument wymaga wprost: "przy HP ≤20% system pokazuje pełnoekranowy alert z listą konkretnych brakujących zadań... żeby śmierć postaci nigdy nie była zaskoczeniem". Wcześniej pasek HP tylko zmieniał kolor (`crit`/`warn`), bez żadnej listy zadań. Nowy widoczny alert (`pb-hp-ostrzezenie`) w Widoku Dnia, pokazywany automatycznie gdy HP≤20%, z listą `hpBrakujace` (dane już zwracane przez `computePipBoyHP`, wcześniej niewykorzystane w UI poza logiką kolorów paska).
+
 **Logika "śmierci postaci" (sekcja 4.1, punkt I) — wdrożona w tej turze:** wcześniej HP spadało do 0%, ale nic się dalej nie działo — kompletnie brakująca część rdzenia mechaniki, mimo że dokument opisuje ją bardzo precyzyjnie (5 kroków). `pipboySprawdzSmierc()`, wołana z `getPipBoyDzien()` WYŁĄCZNIE dla dzisiejszej daty (przeglądanie dawnych dni z HP=0 nie zabija retroaktywnie — "śmierć" dotyczy dnia bieżącego "w trakcie"), realizuje wszystkie 5 kroków z dokumentu:
 1. Popup pełnoekranowy "GAME OVER" — nowy overlay w `PipBoy.html`, pokazywany raz (flaga `nowaSmiercPostaci`, idempotentność przez nowy arkusz `smierci_log`).
 2. Odznaki [S] Stałe — nietknięte (nic ich nie usuwa).
