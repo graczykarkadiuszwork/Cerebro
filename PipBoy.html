@@ -853,9 +853,30 @@ function pbObZapiszStrefe(dow) {
 }
 
 function pbObRenderStep6(body) {
-  body.innerHTML = '<p style="color:var(--pb-green-dim); font-size:0.85em; margin-bottom:10px;">Pojazdy (Moduł 15/16) — na razie obsługiwane jako ogólne przypomnienia cykliczne (bez dedykowanego ekranu i sezonowej logiki motocykla, patrz docs/Pip-Boy-Wdrozenie.md).</p>' +
-    '<div class="pb-check-row" style="cursor:default;"><span class="pb-check-mark">[x]</span><span>Auto — przegląd/serwis cykliczny</span></div>' +
-    '<div class="pb-check-row" style="cursor:default;"><span class="pb-check-mark">[?]</span><span>Motocykl — sezonowość do potwierdzenia później w Ustawieniach</span></div>';
+  body.innerHTML = '<p style="color:var(--pb-green-dim); font-size:0.85em; margin-bottom:10px;">Pojazdy (Moduł 15/16) — obsługiwane jako przypomnienia cykliczne, ze szczegółami w osobnej zakładce SERWIS. Auto: przegląd co 30 dni. Motocykl: kontrola bieżąca w sezonie (kwiecień-październik) + wiosenne/jesienne przygotowanie 2x/rok. Dodaj tu kolejny pojazd, jeśli potrzebujesz.</p>' +
+    '<div id="pb-ob-pojazdy-lista">Ładowanie…</div>' +
+    '<div style="margin-top:8px;">' +
+      '<input class="pb-input" id="pb-ob-pojazd-nazwa" type="text" placeholder="nazwa (np. Skuter — przegląd)" style="width:auto; display:inline-block;">' +
+      '<input class="pb-input" id="pb-ob-pojazd-cykl" type="number" placeholder="cykl w dniach" value="30" style="width:100px; display:inline-block;">' +
+      '<button class="pb-btn" onclick="pbObDodajPojazd()">+ Dodaj przypomnienie</button>' +
+    '</div>';
+  google.script.run.withSuccessHandler(function(result) {
+    if (!result.success) return;
+    document.getElementById('pb-ob-pojazdy-lista').innerHTML = result.data
+      .filter(function(p) { return p.klucz.indexOf('auto') !== -1 || p.klucz.indexOf('motocykl') !== -1 || p.klucz.indexOf('pojazd_') === 0; })
+      .map(function(p) { return '<div class="pb-check-row" style="cursor:default;"><span class="pb-check-mark">[' + (p.dataOstatniegoWykonania ? 'x' : '·') + ']</span><span>' + p.nazwa + '</span></div>'; })
+      .join('');
+  }).getWszystkiePrzypomnienia();
+}
+
+function pbObDodajPojazd() {
+  const nazwa = pbVal('pb-ob-pojazd-nazwa').trim();
+  const cykl = pbVal('pb-ob-pojazd-cykl');
+  if (!nazwa || !cykl) { showError('Podaj nazwę i cykl w dniach.'); return; }
+  const klucz = 'pojazd_' + nazwa.toLowerCase().replace(/[^a-z0-9ąćęłńóśźż]+/gi, '_').replace(/^_+|_+$/g, '');
+  google.script.run.withSuccessHandler(function(result) {
+    if (result.success) { showSuccess('Dodano.'); pbObRenderStep6(document.getElementById('pb-ob-body')); } else showError(result.error);
+  }).dodajPrzypomnienieCykliczne(klucz, nazwa, cykl);
 }
 
 function pbObRenderStep78(body, nazwa, opis) {

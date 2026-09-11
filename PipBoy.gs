@@ -719,6 +719,37 @@ function oznaczPrzypomnienieWykonane(klucz, dataStr) {
   }
 }
 
+// Dodanie nowego przypomnienia cyklicznego spoza startowego katalogu
+// (Onboarding krok 6 / Ustawienia) — np. drugi pojazd, coś specyficznego
+// dla Arka. Sezonowe klucze motocykl_wiosna/motocykl_jesien są zarezerwowane
+// (mają dedykowaną logikę okna kalendarzowego w getAktywnePrzypomnienia) —
+// nowy klucz zawsze podlega zwykłej logice "co N dni".
+function dodajPrzypomnienieCykliczne(klucz, nazwa, cyklDni) {
+  try {
+    if (!klucz || !nazwa || !cyklDni) return { success: false, error: 'Podaj klucz, nazwę i cykl w dniach.' };
+    const sheet = pipboySheet('przypomnienia_cykliczne');
+    const rows = sheetToObjects(sheet);
+    if (rows.some(r => r.klucz === klucz)) return { success: false, error: 'Taki klucz już istnieje.' };
+    sheet.appendRow([klucz, nazwa, '', cyklDni, '']);
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+function usunPrzypomnienieCykliczne(klucz) {
+  try {
+    const sheet = pipboySheet('przypomnienia_cykliczne');
+    const dane = sheet.getDataRange().getValues();
+    for (let i = 1; i < dane.length; i++) {
+      if (dane[i][0] === klucz) { sheet.deleteRow(i + 1); return { success: true }; }
+    }
+    return { success: false, error: 'Nie znaleziono.' };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
 function pipboyUstawNotatkaPrzypomnienia(klucz, notatka) {
   try {
     const sheet = pipboySheet('przypomnienia_cykliczne');
