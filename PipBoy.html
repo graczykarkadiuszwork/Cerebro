@@ -164,6 +164,7 @@ function pbShowMainUi() {
   document.getElementById('pb-onboarding').style.display = 'none';
   document.getElementById('pb-main-ui').style.display = 'block';
   pbLoadSuplementyRdzenneDynamic();
+  pbLoadPielegnacjaDynamic();
   pbLoadDay();
 }
 
@@ -479,7 +480,21 @@ const PIPBOY_PIELEGNACJA_NAZWY_CLIENT = {
   krem_twarzy_wieczor: 'Krem do twarzy', krem_rak_2: 'Krem do rąk (2/2)',
   ziaja: 'Preparat Ziaja (pocenie)', nizoral: 'Szampon Nizoral',
 };
-function pbPielegnacjaNazwa(klucz) { return PIPBOY_PIELEGNACJA_NAZWY_CLIENT[klucz] || klucz; }
+let PB_PIELEGNACJA_DYNAMIC = null; // { poranny: [...], wieczorny: [...], poranny_sr_nd: [...] }
+function pbLoadPielegnacjaDynamic() {
+  google.script.run
+    .withSuccessHandler(function(result) { PB_PIELEGNACJA_DYNAMIC = result; if (PB_DAY) pbRenderBlocks(PB_DAY); })
+    .withFailureHandler(function() {})
+    .getPielegnacjaDefinicje();
+}
+function pbPielegnacjaNazwa(klucz) {
+  if (PB_PIELEGNACJA_DYNAMIC) {
+    const wszystkie = [].concat(PB_PIELEGNACJA_DYNAMIC.poranny || [], PB_PIELEGNACJA_DYNAMIC.wieczorny || [], PB_PIELEGNACJA_DYNAMIC.poranny_sr_nd || []);
+    const found = wszystkie.find(function(p) { return p.klucz === klucz; });
+    if (found) return found.nazwa;
+  }
+  return PIPBOY_PIELEGNACJA_NAZWY_CLIENT[klucz] || klucz;
+}
 
 function pbTogglePielegnacja(produkt, wartosc) {
   google.script.run.withSuccessHandler(function(){ pbLoadDay(); }).togglePielegnacja(pbToday(), produkt, wartosc);
@@ -763,13 +778,50 @@ function pbObUsunSuplement(klucz) {
     .usunSuplementRdzenny(klucz);
 }
 
+const PB_OB_PORA_LABEL = { poranny: 'Poranna (codziennie)', wieczorny: 'Wieczorna (codziennie)', poranny_sr_nd: 'Dodatkowo w środy i niedziele' };
+
 function pbObRenderStep4(body) {
   const produkty = PB_OB_DEFAULTS.pielegnacjaProdukty || {};
-  body.innerHTML = '<p style="color:var(--pb-green-dim); font-size:0.85em; margin-bottom:10px;">Harmonogram pielęgnacji per-produkt (Moduł 7) — potwierdzenie zestawu startowego.</p>' +
-    Object.keys(produkty).map(function(pora) {
-      return '<b style="font-size:0.85em; display:block; margin-top:6px;">' + pora + ':</b>' +
-        produkty[pora].map(function(p) { return '<div class="pb-check-row" style="cursor:default;"><span class="pb-check-mark">[x]</span><span>' + (p.nazwa || p.klucz) + '</span></div>'; }).join('');
-    }).join('');
+  body.innerHTML = '<p style="color:var(--pb-green-dim); font-size:0.85em; margin-bottom:10px;">Harmonogram pielęgnacji per-produkt (Moduł 7) — edytowalny: dodaj lub usuń pozycję w każdej porze.</p>' +
+    '<div id="pb-ob-pielegnacja-lista">' + pbObRenderujPielegnacje(produkty) + '</div>';
+}
+
+function pbObRenderujPielegnacje(produkty) {
+  return Object.keys(PB_OB_PORA_LABEL).map(function(pora) {
+    return '<b style="font-size:0.85em; display:block; margin-top:10px;">' + PB_OB_PORA_LABEL[pora] + ':</b>' +
+      (produkty[pora] || []).map(function(p) {
+        return '<div class="pb-check-row" style="cursor:default;"><span class="pb-check-mark">[x]</span><span style="flex:1;">' + p.nazwa + '</span>' +
+          '<button class="pb-btn" style="margin:0; padding:3px 8px;" onclick="pbObUsunPielegnacje(\'' + p.klucz + '\')">usuń</button></div>';
+      }).join('') +
+      '<input class="pb-input" id="pb-ob-piel-nazwa-' + pora + '" type="text" placeholder="nowy produkt" style="width:auto; display:inline-block;">' +
+      '<button class="pb-btn" onclick="pbObDodajPielegnacje(\'' + pora + '\')">+ Dodaj</button>';
+  }).join('');
+}
+
+function pbObDodajPielegnacje(pora) {
+  const nazwa = pbVal('pb-ob-piel-nazwa-' + pora).trim();
+  if (!nazwa) { showError('Podaj nazwę produktu.'); return; }
+  const klucz = nazwa.toLowerCase().replace(/[^a-z0-9ąćęłńóśźż]+/gi, '_').replace(/^_+|_+$/g, '');
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result.success) { showError(result.error); return; }
+      if (!PB_OB_DEFAULTS.pielegnacjaProdukty[pora]) PB_OB_DEFAULTS.pielegnacjaProdukty[pora] = [];
+      PB_OB_DEFAULTS.pielegnacjaProdukty[pora].push({ klucz: klucz, nazwa: nazwa });
+      document.getElementById('pb-ob-pielegnacja-lista').innerHTML = pbObRenderujPielegnacje(PB_OB_DEFAULTS.pielegnacjaProdukty);
+    })
+    .dodajProduktPielegnacyjny(pora, klucz, nazwa);
+}
+
+function pbObUsunPielegnacje(klucz) {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result.success) { showError(result.error); return; }
+      Object.keys(PB_OB_DEFAULTS.pielegnacjaProdukty).forEach(function(pora) {
+        PB_OB_DEFAULTS.pielegnacjaProdukty[pora] = PB_OB_DEFAULTS.pielegnacjaProdukty[pora].filter(function(p) { return p.klucz !== klucz; });
+      });
+      document.getElementById('pb-ob-pielegnacja-lista').innerHTML = pbObRenderujPielegnacje(PB_OB_DEFAULTS.pielegnacjaProdukty);
+    })
+    .usunProduktPielegnacyjny(klucz);
 }
 
 function pbObRenderStep5(body) {

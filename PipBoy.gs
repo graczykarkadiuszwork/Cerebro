@@ -58,6 +58,7 @@ function setupPipBoy() {
       { name: 'czas_wolny_log', headers: ['data', 'dlugosc_min', 'forma'] },
       { name: 'przypomnienia_cykliczne', headers: ['klucz', 'nazwa', 'data_ostatniego_wykonania', 'cykl_dni', 'notatka'] },
       { name: 'suplementy_definicje', headers: ['klucz', 'nazwa', 'typ'] },
+      { name: 'pielegnacja_definicje', headers: ['klucz', 'nazwa', 'pora'] },
       { name: 'rolling_average_cele', headers: ['modul', 'data', 'wartosc_dnia', 'srednia_7dni'] },
       { name: 'cytaty_motywacyjne', headers: ['tresc', 'autor', 'zrodlo', 'data_ostatniego_wyswietlenia'] },
       { name: 'marquee_komunikaty', headers: ['tresc', 'kategoria', 'warunek', 'priorytet'] },
@@ -139,6 +140,14 @@ function seedPipBoyContentTables(ss) {
   const suplSheet = ss.getSheetByName('suplementy_definicje');
   const suplRows = PIPBOY_SUPLEMENTY_RDZENNE.map(s => [s.klucz, s.nazwa, 'rdzenny']);
   suplSheet.getRange(2, 1, suplRows.length, 3).setValues(suplRows);
+
+  // Pielęgnacja (Moduł 7) — zasiew startowy z PipBoyData.gs, odtąd edytowalny.
+  const pielSheet = ss.getSheetByName('pielegnacja_definicje');
+  const pielRows = [];
+  Object.keys(PIPBOY_PIELEGNACJA_PRODUKTY).forEach(pora => {
+    PIPBOY_PIELEGNACJA_PRODUKTY[pora].forEach(p => pielRows.push([p.klucz, p.nazwa, pora]));
+  });
+  pielSheet.getRange(2, 1, pielRows.length, 3).setValues(pielRows);
 }
 
 function getPipBoySpreadsheet() {
@@ -285,7 +294,7 @@ function getOnboardingDefaults() {
         suplementyRdzenne: getSuplementyRdzenneDefinicje(),
         melatonina: PIPBOY_MELATONINA,
         gainer: PIPBOY_GAINER,
-        pielegnacjaProdukty: PIPBOY_PIELEGNACJA_PRODUKTY,
+        pielegnacjaProdukty: getPielegnacjaDefinicje(),
         sprzatanieRotacja: PIPBOY_SPRZATANIE_ROTACJA,
         floorMin: PIPBOY_SPRZATANIE_FLOOR_MIN,
         ceilingMin: PIPBOY_SPRZATANIE_CEILING_MIN
@@ -383,12 +392,13 @@ function generateDayBlocks(dataStr) {
   const dow = new Date(dataStr).getDay();
   const jestSrodaLubNiedziela = dow === 0 || dow === 3;
   const strefaSprzatania = PIPBOY_SPRZATANIE_ROTACJA.find(s => s.dow === dow);
+  const pielegnacjaDef = getPielegnacjaDefinicje();
 
   const blocks = [];
   blocks.push({ klucz: 'pobudka', nazwa: 'Pobudka', obligatoryjne: false, modul: 'ogolne' });
   blocks.push({
     klucz: 'pielegnacja_poranna', nazwa: 'Pielęgnacja poranna (max 15 min)', obligatoryjne: false, modul: 'pielegnacja',
-    dzieci: PIPBOY_PIELEGNACJA_PRODUKTY.poranny.concat(jestSrodaLubNiedziela ? PIPBOY_PIELEGNACJA_PRODUKTY.poranny_sr_nd : []).map(p => p.klucz)
+    dzieci: pielegnacjaDef.poranny.concat(jestSrodaLubNiedziela ? pielegnacjaDef.poranny_sr_nd : []).map(p => p.klucz)
   });
   blocks.push({ klucz: 'rozciaganie', nazwa: 'Rozciąganie/joga (10-15 min)', obligatoryjne: true, modul: 'rozciaganie' });
   blocks.push({ klucz: 'suplementy_rdzenne', nazwa: 'Suplementy poranne', obligatoryjne: true, modul: 'suplementy', dzieci: getSuplementyRdzenneDefinicje().map(s => s.klucz) });
@@ -425,7 +435,7 @@ function generateDayBlocks(dataStr) {
   blocks.push({ klucz: 'melatonina', nazwa: 'Melatonina (w razie potrzeby, max 5)', obligatoryjne: false, modul: 'suplementy', dzieci: ['melatonina'] });
   blocks.push({
     klucz: 'pielegnacja_wieczorna', nazwa: 'Pielęgnacja wieczorna (max 15 min)', obligatoryjne: false, modul: 'pielegnacja',
-    dzieci: PIPBOY_PIELEGNACJA_PRODUKTY.wieczorny.map(p => p.klucz)
+    dzieci: pielegnacjaDef.wieczorny.map(p => p.klucz)
   });
   blocks.push({ klucz: 'higiena_swiatla', nazwa: 'Higiena światła wieczorem', obligatoryjne: true, modul: 'sen' });
   blocks.push({ klucz: 'mood_wieczor', nazwa: 'Mood check wieczorny (w tym GI)', obligatoryjne: true, modul: 'mood', pora: 'wieczor' });
@@ -782,6 +792,54 @@ function dodajSuplementRdzenny(klucz, nazwa) {
 function usunSuplementRdzenny(klucz) {
   try {
     const sheet = pipboySheet('suplementy_definicje');
+    const dane = sheet.getDataRange().getValues();
+    for (let i = 1; i < dane.length; i++) {
+      if (dane[i][0] === klucz) { sheet.deleteRow(i + 1); return { success: true }; }
+    }
+    return { success: false, error: 'Nie znaleziono.' };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+// ============================================================
+// PIELĘGNACJA — definicja edytowalna (Moduł 7 / Onboarding krok 4), zamiast
+// sztywnej listy w kodzie. Fallback do PIPBOY_PIELEGNACJA_PRODUKTY, tak samo
+// jak przy suplementach rdzennych.
+// ============================================================
+
+function getPielegnacjaDefinicje() {
+  try {
+    const rows = sheetToObjects(pipboySheet('pielegnacja_definicje'));
+    if (rows.length === 0) return PIPBOY_PIELEGNACJA_PRODUKTY;
+    const wynik = { poranny: [], wieczorny: [], poranny_sr_nd: [] };
+    rows.forEach(r => {
+      if (!wynik[r.pora]) wynik[r.pora] = [];
+      wynik[r.pora].push({ klucz: r.klucz, nazwa: r.nazwa });
+    });
+    return wynik;
+  } catch (e) {
+    return PIPBOY_PIELEGNACJA_PRODUKTY;
+  }
+}
+
+function dodajProduktPielegnacyjny(pora, klucz, nazwa) {
+  try {
+    if (!klucz || !nazwa) return { success: false, error: 'Podaj klucz i nazwę.' };
+    if (['poranny', 'wieczorny', 'poranny_sr_nd'].indexOf(pora) === -1) return { success: false, error: 'Nieznana pora.' };
+    const sheet = pipboySheet('pielegnacja_definicje');
+    const rows = sheetToObjects(sheet);
+    if (rows.some(r => r.klucz === klucz)) return { success: false, error: 'Taki klucz już istnieje.' };
+    sheet.appendRow([klucz, nazwa, pora]);
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+function usunProduktPielegnacyjny(klucz) {
+  try {
+    const sheet = pipboySheet('pielegnacja_definicje');
     const dane = sheet.getDataRange().getValues();
     for (let i = 1; i < dane.length; i++) {
       if (dane[i][0] === klucz) { sheet.deleteRow(i + 1); return { success: true }; }

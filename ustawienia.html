@@ -62,6 +62,11 @@
             <button onclick="pipboyDodajSuplement()" class="btn-secondary whitespace-nowrap">+ Dodaj</button>
           </div>
         </div>
+
+        <div class="pt-3 mt-3 border-t border-[#e5e5ea]">
+          <label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Pielęgnacja (Moduł 7) — edytowalna lista per pora</label>
+          <div id="pipboy-pielegnacja-lista" class="text-[15px]"></div>
+        </div>
       </div>
     </div>
     <div class="ios-card mb-4">
@@ -92,7 +97,7 @@
   </div>
 </div>
 <script>
-function initModule() { loadSettings(); pipboyLoadBackupStatus(); pipboyLoadSuplementy(); }
+function initModule() { loadSettings(); pipboyLoadBackupStatus(); pipboyLoadSuplementy(); pipboyLoadPielegnacja(); }
 function loadSettings() { google.script.run.withSuccessHandler(function(result) { if (result.success && result.data) { document.getElementById('organizationName').value = result.data.organizationName || ''; document.getElementById('contactEmail').value = result.data.contactEmail || ''; } }).getSettings(); }
 function saveSettings() { const settings = { organizationName: document.getElementById('organizationName').value, contactEmail: document.getElementById('contactEmail').value }; google.script.run.withSuccessHandler(function(result) { if (result.success) { showSuccess('Ustawienia zapisane'); document.getElementById('sidebar-org').textContent = settings.organizationName || 'Moja Organizacja'; } else { showError('Błąd: ' + result.error); } }).saveSettings(settings); }
 function setupDrive() { google.script.run.withSuccessHandler(function(result) { if (result.success) { showSuccess('Folder struktury Drive utworzony. Synchronizacja uruchomiona.'); } else { showError('Błąd: ' + result.error); } }).setupDriveFolders(); }
@@ -136,6 +141,38 @@ function pipboyUsunSuplement(klucz) {
   google.script.run.withSuccessHandler(function(result) {
     if (result.success) { showSuccess('Usunięto.'); pipboyLoadSuplementy(); } else showError('Błąd: ' + result.error);
   }).usunSuplementRdzenny(klucz);
+}
+
+const PIPBOY_PORA_LABEL = { poranny: 'Poranna (codziennie)', wieczorny: 'Wieczorna (codziennie)', poranny_sr_nd: 'Dodatkowo w środy i niedziele' };
+function pipboyLoadPielegnacja() {
+  google.script.run.withSuccessHandler(function(result) { pipboyRenderPielegnacja(result || {}); }).withFailureHandler(function() {}).getPielegnacjaDefinicje();
+}
+function pipboyRenderPielegnacja(produkty) {
+  const el = document.getElementById('pipboy-pielegnacja-lista');
+  if (!el) return;
+  el.innerHTML = Object.keys(PIPBOY_PORA_LABEL).map(function(pora) {
+    return '<div class="mt-2"><b class="text-[13px]">' + PIPBOY_PORA_LABEL[pora] + '</b>' +
+      (produkty[pora] || []).map(function(p) {
+        return '<div class="flex items-center justify-between py-1"><span>' + p.nazwa + '</span>' +
+          '<button onclick="pipboyUsunPielegnacje(\'' + p.klucz + '\')" class="text-[13px] text-[#ff3b30]">usuń</button></div>';
+      }).join('') +
+      '<div class="flex gap-2 mt-1"><input type="text" id="pipboyPielNazwa-' + pora + '" class="ios-input" placeholder="nowy produkt">' +
+      '<button onclick="pipboyDodajPielegnacje(\'' + pora + '\')" class="btn-secondary whitespace-nowrap">+ Dodaj</button></div></div>';
+  }).join('');
+}
+function pipboyDodajPielegnacje(pora) {
+  const el = document.getElementById('pipboyPielNazwa-' + pora);
+  const nazwa = el.value.trim();
+  if (!nazwa) { showError('Podaj nazwę produktu.'); return; }
+  const klucz = nazwa.toLowerCase().replace(/[^a-z0-9ąćęłńóśźż]+/gi, '_').replace(/^_+|_+$/g, '');
+  google.script.run.withSuccessHandler(function(result) {
+    if (result.success) { showSuccess('Dodano.'); pipboyLoadPielegnacja(); } else showError('Błąd: ' + result.error);
+  }).dodajProduktPielegnacyjny(pora, klucz, nazwa);
+}
+function pipboyUsunPielegnacje(klucz) {
+  google.script.run.withSuccessHandler(function(result) {
+    if (result.success) { showSuccess('Usunięto.'); pipboyLoadPielegnacja(); } else showError('Błąd: ' + result.error);
+  }).usunProduktPielegnacyjny(klucz);
 }
 function exportJSON() { google.script.run.withSuccessHandler(function(result) { if (result.success) { const blob = new Blob([result.data], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'cerebro-export-' + new Date().getTime() + '.json'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); showSuccess('Eksport został pobrany'); } else { showError('Błąd: ' + result.error); } }).exportAllData(); }
 </script>
