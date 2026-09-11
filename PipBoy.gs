@@ -64,6 +64,7 @@ function setupPipBoy() {
       { name: 'kardio_mobilnosc_log', headers: ['data', 'minuty', 'intensywnosc_1_10', 'rodzaj'] },
       { name: 'portfolio_projekty', headers: ['id', 'nazwa', 'kategoria', 'typ_pracy', 'data_rozpoczecia', 'zdjecie_zrobione', 'opis_napisany', 'opublikowane', 'kanaly', 'status'] },
       { name: 'portfolio_czas_log', headers: ['data', 'projekt_id', 'minuty'] },
+      { name: 'smierci_log', headers: ['data'] },
       { name: 'rolling_average_cele', headers: ['modul', 'data', 'wartosc_dnia', 'srednia_7dni'] },
       { name: 'cytaty_motywacyjne', headers: ['tresc', 'autor', 'zrodlo', 'data_ostatniego_wyswietlenia'] },
       { name: 'marquee_komunikaty', headers: ['tresc', 'kategoria', 'warunek', 'priorytet'] },
@@ -475,6 +476,9 @@ function getPipBoyDzien(dataStr) {
       suplementyLog, posilkiLog, moodLog, sprzatanieLog, czytelnictwoLog, treningLog
     }, godModeAktywny);
     upsertHpHistoria(dataStr, hp.procent);
+    // Śmierć postaci wyzwalana WYŁĄCZNIE dla dzisiejszego dnia ("w trakcie dnia",
+    // sekcja 4.1) — przeglądanie dawnych dni z HP=0 nie zabija retroaktywnie.
+    const smiercWynik = (dataStr === todayIso()) ? pipboySprawdzSmierc(dataStr, hp.procent) : { smierc: false, nowaSmierc: false };
 
     return {
       success: true,
@@ -487,6 +491,7 @@ function getPipBoyDzien(dataStr) {
         godModeAktywny,
         hp: hp.procent,
         hpBrakujace: hp.brakujace,
+        smiercPostaci: smiercWynik.smierc, nowaSmiercPostaci: !!smiercWynik.nowaSmierc,
         cytatDnia: getCytatDnia(),
         zakupyRekomendacje: getZakupyRekomendacje(dataStr),
         przypomnieniaAktywne: getAktywnePrzypomnienia(),
@@ -1216,6 +1221,59 @@ function getAtrybutySumy() {
 }
 
 // ============================================================
+// LOGIKA "ŚMIERCI POSTACI" — FINALNA (Runda #17, sekcja 4.1)
+// Wyzwalana WYŁĄCZNIE dla dzisiejszego dnia (patrz getPipBoyDzien), przy
+// HP=0. Kroki dosłownie z dokumentu:
+// 1. Popup "GAME OVER" — obsłużony we frontendzie (PipBoy.html), na
+//    podstawie flagi nowaSmiercPostaci zwróconej stąd.
+// 2. Odznaki JUŻ zdobyte typu [S] Stała — zostają (nic tu ich nie rusza).
+// 3. Odznaki [Z] Sezonowe — TRACONE (usuwane z odznaki_log).
+// 4. Postęp w trakcie zdobywania kolejnego progu/streaka — zeruje się
+//    SAM, bez dodatkowej akcji: streaki są liczone na żywo z hp_historia/
+//    logów (pipboyStreak), więc dzień z HP=0 naturalnie przerywa każdy
+//    licznik, który przez niego przechodzi.
+// 5. Poziom postaci traci 1 — realizowane jako ujemny wpis punktowy,
+//    rozłożony po 5 Atrybutach (bo poziom ogólny to suma wszystkich).
+// ============================================================
+
+function pipboySprawdzSmierc(dataStr, hpProcent) {
+  try {
+    if (hpProcent > 0) return { smierc: false, nowaSmierc: false };
+    const smierciRows = sheetToObjects(pipboySheet('smierci_log'));
+    if (smierciRows.some(r => r.data === dataStr)) return { smierc: true, nowaSmierc: false };
+
+    // 3. Odznaki [Z] sezonowe — tracone
+    const odznakiSheet = pipboySheet('odznaki_log');
+    const dane = odznakiSheet.getDataRange().getValues();
+    const wierszeDoUsuniecia = [];
+    for (let i = 1; i < dane.length; i++) {
+      const odznaka = PIPBOY_ODZNAKI.find(o => o.id === Number(dane[i][0]));
+      if (odznaka && odznaka.typ === 'Z') wierszeDoUsuniecia.push(i + 1);
+    }
+    wierszeDoUsuniecia.sort((a, b) => b - a).forEach(row => odznakiSheet.deleteRow(row));
+
+    // 5. Poziom postaci -1 (jeśli już powyżej 1) — XP tego poziomu odjęte
+    // równo po 5 Atrybutach, żeby suma (poziom ogólny) spadła o dokładnie 1.
+    const sumy = getAtrybutySumy();
+    const sumaCalkowita = PIPBOY_ATRYBUTY.reduce((s, a) => s + sumy[a], 0);
+    const poziomInfo = pipboyPoziomZXP(sumaCalkowita);
+    if (poziomInfo.poziom > 1) {
+      const xpPoziomu = pipboyXpDoNastepnegoPoziomu(poziomInfo.poziom - 1);
+      const naAtrybut = Math.round(xpPoziomu / PIPBOY_ATRYBUTY.length);
+      PIPBOY_ATRYBUTY.forEach(a => pipboyAwardPoints(dataStr, a, -naAtrybut));
+    }
+
+    // Zapis faktu śmierci — idempotentność powyżej + zasila odznaki 195/196
+    // ("Dolina cienia"/"Trzy doliny", kategoria O).
+    pipboySheet('smierci_log').appendRow([dataStr]);
+
+    return { smierc: true, nowaSmierc: true };
+  } catch (e) {
+    return { smierc: false, nowaSmierc: false, error: e.toString() };
+  }
+}
+
+// ============================================================
 // KARTA POSTACI (sekcja 6.6) — agregat do Fazy 1: atrybuty, poziom ogólny,
 // HP dzisiejsze, zdobyte odznaki. Pełen streak/historia śmierci — Faza 2+.
 // ============================================================
@@ -1530,11 +1588,10 @@ function evaluateStarterBadges(dataStr) {
     // dane do aktywacji Modułu 14" to próg subiektywny/nieokreślony liczbowo w
     // dokumencie, a Moduł 14 sam w sobie jest poza obecnym zakresem budowy.
 
-    // --- O. MILESTONE'Y DŁUGOTERMINOWE / SEKRETNE (194,197,200-208) ---
-    // 195/196/198/199/140 świadomie pominięte: wymagają logiki "śmierci
-    // postaci" (Game Over, Faza 2+, jeszcze niezaimplementowana — patrz
-    // sekcja 4.1 punkt I) albo ręcznej aktywacji Modułu 13 (BJJ/Boks),
-    // którego w ogóle nie ma w obecnym zakresie budowy.
+    // --- O. MILESTONE'Y DŁUGOTERMINOWE / SEKRETNE (194,195,196,197,200-208) ---
+    // 198/199/140 świadomie pominięte: wymagają ręcznej aktywacji Modułu 13
+    // (BJJ/Boks) albo progu nieokreślonego liczbowo (Moduł 14), których w
+    // ogóle nie ma w obecnym zakresie budowy.
     // hp_historia odczytana tu wcześniej (przed kategorią N) — obie kategorie
     // (O i N) potrzebują tego samego mapowania data->HP.
     const hpRowsB = sheetToObjects(pipboySheet('hp_historia'));
@@ -1544,6 +1601,12 @@ function evaluateStarterBadges(dataStr) {
     if (wszystkieDatyHpO.length > 0) {
       const dniOdStartuO = Math.floor((new Date(dataStr + 'T00:00:00') - new Date(wszystkieDatyHpO[0] + 'T00:00:00')) / 86400000);
       if (dniOdStartuO >= 30) przyznaj(194); // [S] Sekretna: Pierwszy miesiąc
+    }
+    { // 195/196 — logika "śmierci postaci" (sekcja 4.1) jest teraz zaimplementowana
+      const smierciDaty = sheetToObjects(pipboySheet('smierci_log')).map(r => r.data);
+      const kontynuowanoPoSmierci = smierciDaty.some(d => hpByDateB.hasOwnProperty(dataMinus(d, -1))); // dzień po śmierci ma wpis HP = system użyty dalej
+      if (smierciDaty.length >= 1 && kontynuowanoPoSmierci) przyznaj(195); // [S] Sekretna: Dolina cienia
+      if (smierciDaty.length >= 3) przyznaj(196); // [S] Sekretna: Trzy doliny
     }
     { // 197 [S] Sekretna: Wiosna wojownika — pierwszy tydzień kwietnia
       const dz = new Date(dataStr + 'T00:00:00');
@@ -1633,9 +1696,9 @@ function getDashboardData() {
       .sort((a, b) => a.data < b.data ? -1 : a.data > b.data ? 1 : 0);
     const trendHp = hpRows.slice(-60);
 
-    // Streak = kolejne dni wstecz od dziś z HP > 0% ("postać żyje"). Pełna
-    // logika Game Over/reset streaku przy śmierci to Faza 2+ (sekcja 4.1,
-    // punkt I) — tu liczymy tylko sam streak z danych, które już mamy.
+    // Streak = kolejne dni wstecz od dziś z HP > 0% ("postać żyje") — dzień
+    // ze śmiercią (pipboySprawdzSmierc, sekcja 4.1 punkt I) naturalnie
+    // przerywa ten streak, bo jego HP to 0.
     const hpMap = {};
     hpRows.forEach(r => { hpMap[r.data] = Number(r.hp_procent); });
     let streak = 0, d = dzis, iteracje = 0;

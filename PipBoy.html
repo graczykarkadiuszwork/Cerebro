@@ -174,6 +174,20 @@
     </div>
   </div>
   </div> <!-- /pb-main-ui -->
+
+  <!-- ===== GAME OVER (sekcja 4.1 — logika "śmierci postaci") ===== -->
+  <div id="pb-gameover-overlay" style="display:none; position:fixed; inset:0; z-index:900; background:rgba(10,15,10,0.96); color:var(--pb-red); flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px;">
+    <div class="pb-title" style="font-size:3em; color:var(--pb-red); text-shadow:0 0 12px rgba(255,77,61,0.6);">GAME OVER</div>
+    <div style="max-width:480px; margin-top:16px; font-size:0.9em; line-height:1.6; color:var(--pb-green);">
+      HP spadło do 0%. Postać "umarła" — zgodnie z ustaloną mechaniką (sekcja 4.1):<br><br>
+      <span style="color:var(--pb-green-dim);">✓ Odznaki JUŻ zdobyte (stałe) — zostają na zawsze<br>
+      ✗ Odznaki sezonowe — utracone<br>
+      ✗ Streaki w trakcie — zerwane<br>
+      ✗ Poziom postaci — spadek o 1<br>
+      ✓ Cała reszta danych i historii — bez zmian</span>
+    </div>
+    <button class="pb-btn" style="margin-top:20px;" onclick="document.getElementById('pb-gameover-overlay').style.display='none';">Rozumiem, kontynuuj</button>
+  </div>
 </div>
 
 <script>
@@ -236,6 +250,7 @@ function pbLoadDay() {
       pbRenderBlocks(result.data);
       pbRenderPrzypomnienia(result.data.przypomnieniaAktywne);
       pbLoadMarquee();
+      if (result.data.nowaSmiercPostaci) pbPokazGameOver();
     })
     .withFailureHandler(function(err) { showError('Błąd ładowania Pip-Boy: ' + err.message); })
     .getPipBoyDzien(dataStr);
@@ -246,6 +261,10 @@ function pbRenderHP(hp) {
   fill.style.width = hp + '%';
   fill.className = 'pb-hp-fill' + (hp <= 10 ? ' crit' : hp <= 25 ? ' warn' : '');
   document.getElementById('pb-hp-value').textContent = hp + '%';
+}
+
+function pbPokazGameOver() {
+  document.getElementById('pb-gameover-overlay').style.display = 'flex';
 }
 
 function pbRenderGodMode(aktywny) {
@@ -1214,7 +1233,7 @@ function pbRenderKartaPostaci(dane) {
       return '<div class="pb-check-row" style="cursor:default;"><span class="pb-check-mark">[' + o.typ + ']</span><span>' + o.nazwa + '</span></div>';
     }).join('');
   }
-  html += '<div style="color:var(--pb-green-faint); font-size:0.72em; margin-top:10px;">Ewaluacja obejmuje ~108 z 208 odznak — te, których warunek jest jednoznacznie obliczalny z zebranych już danych (streaki, progi łączne, liczniki). Odznaki sekretne, subiektywne i zależne od jeszcze niezbudowanych modułów (Portfolio, BJJ) czekają na Fazę 2+.</div>';
+  html += '<div style="color:var(--pb-green-faint); font-size:0.72em; margin-top:10px;">Ewaluacja obejmuje ~110 z 208 odznak — te, których warunek jest jednoznacznie obliczalny z zebranych już danych (streaki, progi łączne, liczniki). Odznaki sekretne, subiektywne i zależne od jeszcze niezbudowanych modułów (Portfolio, BJJ) czekają na Fazę 2+.</div>';
 
   el.innerHTML = html;
 }
