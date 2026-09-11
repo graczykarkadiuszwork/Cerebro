@@ -60,6 +60,7 @@ function setupPipBoy() {
       { name: 'suplementy_definicje', headers: ['klucz', 'nazwa', 'typ'] },
       { name: 'pielegnacja_definicje', headers: ['klucz', 'nazwa', 'pora'] },
       { name: 'sprzatanie_rotacja_definicje', headers: ['dow', 'strefa'] },
+      { name: 'przypomnienia_log', headers: ['klucz', 'data'] },
       { name: 'rolling_average_cele', headers: ['modul', 'data', 'wartosc_dnia', 'srednia_7dni'] },
       { name: 'cytaty_motywacyjne', headers: ['tresc', 'autor', 'zrodlo', 'data_ostatniego_wyswietlenia'] },
       { name: 'marquee_komunikaty', headers: ['tresc', 'kategoria', 'warunek', 'priorytet'] },
@@ -710,6 +711,10 @@ function oznaczPrzypomnienieWykonane(klucz, dataStr) {
     for (let i = 1; i < rows.length; i++) {
       if (rows[i][0] === klucz) {
         sheet.getRange(i + 1, 3).setValue(dataStr);
+        // Log historyczny KAŻDEGO wykonania (nie tylko ostatniej daty) — bez
+        // tego odznaki liczące wielokrotne wykonania (Moduł 15/16, kategoria L)
+        // byłyby nieobliczalne, bo przypomnienia_cykliczne trzyma tylko 1 datę.
+        pipboySheet('przypomnienia_log').appendRow([klucz, dataStr]);
         return { success: true };
       }
     }
@@ -1410,6 +1415,30 @@ function evaluateStarterBadges(dataStr) {
     { let d = dataStr; for (let i = 0; i < 30; i++) { if (dzienSenOk(d)) dniSenW30++; d = dataMinus(d, 1); } }
     if (dniSenW30 >= 25) przyznaj(125); // [S] Miesiąc dyscypliny świetlnej
     if (Object.keys(senByDate).filter(dzienSenOk).length >= 100) przyznaj(126); // [S] Setka ciemnych wieczorów
+
+    // --- L. AUTO + MOTOCYKL (163,165,166,169) ---
+    // Tylko liczniki liczby wykonań — 164/167/168/170/171/172 wymagają grupowania
+    // po kolejnych miesiącach/sezonach kalendarzowych (świadomie pominięte,
+    // większa złożoność niż prosty licznik/streak, żeby uniknąć zgadywania
+    // dokładnej definicji "pełnego sezonu").
+    const przypLogRows = sheetToObjects(pipboySheet('przypomnienia_log'));
+    const liczbaWpisow = (klucz) => przypLogRows.filter(r => r.klucz === klucz).length;
+    if (liczbaWpisow('auto_przeglad') >= 1) przyznaj(163); // [S] Pierwszy przegląd auta
+    if (liczbaWpisow('motocykl_wiosna') >= 1) przyznaj(165); // [S] Pierwsza wiosna
+    if (liczbaWpisow('motocykl_jesien') >= 1) przyznaj(166); // [S] Pierwsza zima
+    if (liczbaWpisow('auto_przeglad') + liczbaWpisow('motocykl_kontrola') >= 20) przyznaj(169); // [S] Mechanik-amator
+
+    // --- M. ZAKUPY (173,178) ---
+    const zakupyRows = sheetToObjects(pipboySheet('zakupy_log'));
+    if (zakupyRows.some(r => pipboyPrawda(r.kupione))) przyznaj(173); // [S] Pierwsza lista 70/30
+    const dataZakupyRows = zakupyRows.map(r => r.data).sort();
+    if (dataZakupyRows.length > 0) {
+      const dniZakupow = Math.floor((new Date(dataStr + 'T00:00:00') - new Date(dataZakupyRows[0] + 'T00:00:00')) / 86400000);
+      if (dniZakupow >= 365) przyznaj(178); // [S] Rok przy wózku
+    }
+    // 174/175/176/177 świadomie pominięte — wymagają pojęcia "tygodniowej listy"
+    // lub trackingu promocji Aldi, których obecny model danych zakupy_log
+    // (log dzień/kategoria/produkt/kupione) nie wyraża wprost.
 
     // --- Mood (131) ---
     if ((pipboyGrupujPoDacie(sheetToObjects(pipboySheet('mood_log')))[dataStr] || []).length > 0) {
