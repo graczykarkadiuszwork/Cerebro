@@ -88,6 +88,22 @@ Podczas przygotowywania tej instrukcji znalazłem i naprawiłem dwa realne probl
 2. **`DriveSync.script` miał złe rozszerzenie.** Google Apps Script rozpoznaje tylko pliki `.gs`/`.html`/`.json` — plik z rozszerzeniem `.script` zostałby po prostu pominięty przy wgrywaniu, a funkcje „Skonfiguruj Drive” i „Synchronizuj ręcznie” w Ustawieniach przestałyby działać (odwołują się do funkcji zdefiniowanych właśnie w tym pliku). Przemianowany na `DriveSync.gs`.
 3. Dodany brakujący plik `appsscript.json` (wymagany przez Apps Script) — ustawia strefę czasową na Warszawę i dostęp do Web Appa wyłącznie dla Ciebie (`access: MYSELF`), zgodnie z sekcją 0.11.1.
 
+## Diagnoza zgłoszenia „CO TO W OGÓLE MA BYĆ?!” (5 zrzutów ekranu) i naprawa
+
+Arek zgłosił wdrożenie, po którym Zadania/Baza Wiedzy/Chat Saver pokazywały dosłowny tekst `${skeleton(5)}` zamiast treści, a zakładka Pip-Boy pokazywała czerwony błąd „Nie znaleziono pliku HTML o nazwie PipBoy.”. Dwa oddzielne problemy, dwie oddzielne przyczyny:
+
+**1. Zakładka Pip-Boy — błąd „Nie znaleziono pliku HTML o nazwie PipBoy”.** Kod woła `getModuleHtml('PipBoy')`, co wymaga pliku o nazwie DOKŁADNIE `PipBoy` (bez myślnika). Wcześniejszy zrzut ekranu Arka pokazywał w jego edytorze plik `Pip-Boy.html` (Z myślnikiem — naturalne, bo tak nazywa się projekt/branch). To dwie różne nazwy dla Apps Script. **Poprawka po Twojej stronie:** w edytorze script.google.com zmień nazwę tego pliku na `PipBoy` (bez myślnika, bez spacji) — dokładnie jak w liście plików niżej.
+
+**2. `${skeleton(5)}` jako dosłowny tekst na Zadaniach/Bazie Wiedzy/Chat Saverze.** To był realny błąd w kodzie (istniejący od dawna, nie mój błąd z tej sesji — sprawdzone przez historię gita, plik `Zadania.html` pochodzi z commita sprzed jakiejkolwiek pracy nad Pip-Boyem). Przyczyna: `${skeleton(5)}` był wklejony wprost w statyczny HTML, a nie w kod JavaScript — więc nigdy się nie wykonywał, tylko wyświetlał jako zwykły tekst. Do tego doszła druga, głębsza przyczyna: **główny arkusz Cerebro (zadania/wiedza/wydarzenia) nigdy nie został zainicjowany** — funkcja `setupCerebro()` istniała w kodzie od zawsze, ale nigdzie w interfejsie nie było przycisku, który ją wywołuje (w przeciwieństwie do Pip-Boya, który ma własny przycisk „Skonfiguruj Pip-Boy”). Efekt: `getTasks()`/`getKnowledge()` po cichu zwracały błąd, a kod obsługujący wynik nie miał gałęzi na taki przypadek — więc nic się nie działo, poza tym nieszczęsnym `${skeleton(5)}`, które i tak nigdy nie znikało.
+
+Naprawione w tej turze:
+- Nowy przycisk **Ustawienia → Skonfiguruj Cerebro** (wywołuje istniejącą od dawna funkcję `setupCerebro()`) — to jest brakujący pierwszy krok, bez którego Zadania/Baza Wiedzy/Chat Saver zawsze będą puste.
+- `${skeleton(N)}` usunięty ze statycznego HTML w `Pulpit.html`, `Zadania.html`, `Wiedza.html`, `Chat.html` — szkielet ładowania jest teraz poprawnie wstawiany przez JavaScript w `initModule()`.
+- Dodana widoczna obsługa błędu (`showError(...)`) we wszystkich tych czterech modułach, zamiast cichego niepowodzenia — jeśli coś pójdzie nie tak, teraz zobaczysz dlaczego, zamiast pustego ekranu.
+- Przy okazji naprawiony pokrewny błąd w widoku Kanban Zadań: `renderKanban()` nadpisywał całą kolumnę (razem z nagłówkiem „Do wykonania”/„W trakcie”/„Ukończone”), więc nagłówki znikały po pierwszym odświeżeniu.
+
+**Kolejność po wdrożeniu (ważne):** najpierw **Ustawienia → Skonfiguruj Cerebro**, dopiero potem **Ustawienia → Skonfiguruj Pip-Boy** — to dwa niezależne arkusze (sekcja 0.9), oba wymagane, każdy inicjowany osobnym przyciskiem.
+
 ## Jak wdrożyć — najprostsza ścieżka (przez przeglądarkę, bez instalowania czegokolwiek)
 
 1. Wejdź na **script.google.com** i zaloguj się na `graczyk.arkadiusz.work@gmail.com`.
@@ -96,11 +112,11 @@ Podczas przygotowywania tej instrukcji znalazłem i naprawiłem dwa realne probl
    `code.gs`, `PipBoyLogic.gs`, `PipBoyData.gs`, `DriveSync.gs`,
    `Index.html`, `Sidebar.html`, `Scripts.html`, `Styles.html`, `PipBoy.html`, `PipBoyStyles.html`, `Pulpit.html`, `Zadania.html`, `Wiedza.html`, `Chat.html`, `Terminarz.html`, `Personel.html`, `Ustawienia.html`.
 
-   **Uwaga na nazwy:** Apps Script nie pozwala na dwa pliki o tej samej nazwie, NIEZALEŻNIE od typu (`.gs` vs `.html` się nie liczy — liczy się sama nazwa). Dlatego backend nazywa się `PipBoyLogic.gs`, nie `PipBoy.gs` — inaczej kolidowałby z `PipBoy.html`. Trzymaj się dokładnie nazw z listy wyżej.
+   **Uwaga na nazwy:** Apps Script nie pozwala na dwa pliki o tej samej nazwie, NIEZALEŻNIE od typu (`.gs` vs `.html` się nie liczy — liczy się sama nazwa). Dlatego backend nazywa się `PipBoyLogic.gs`, nie `PipBoy.gs` — inaczej kolidowałby z `PipBoy.html`. Trzymaj się dokładnie nazw z listy wyżej — w szczególności `PipBoy.html` **bez myślnika** (nie „Pip-Boy”, mimo że tak nazywa się cały projekt/branch — kod szuka pliku dokładnie o nazwie `PipBoy`).
 4. **Manifest `appsscript.json` NIE jest zwykłym nowym plikiem** — nie da się go dodać przyciskiem „+”, bo każdy projekt ma go już wbudowanego (domyślnie ukryty). Żeby go zobaczyć: ikona koła zębatego po lewej („Ustawienia projektu”) → zaznacz „Pokaż plik manifestu appsscript.json w edytorze”. Wróć do widoku plików (ikona `< >`), kliknij pojawiający się `appsscript.json` i zastąp całą jego zawartość tą z repozytorium.
 5. Kliknij **Wdróż → Nowe wdrożenie**. Typ: **Aplikacja internetowa**. „Wykonaj jako”: Ja. „Kto ma dostęp”: Tylko ja. Kliknij Wdróż i zezwól na uprawnienia, o które poprosi Google.
 6. Otwórz link, który dostaniesz po wdrożeniu — to jest Twoje Cerebro.
-7. W aplikacji: **Ustawienia → Skonfiguruj Pip-Boy** — utworzy osobny arkusz i osobny folder na Twoim Dysku, zasieje 263 cytaty i 107 komunikatów.
+7. W aplikacji: **Ustawienia → Skonfiguruj Cerebro** — to jest pierwszy, wymagany krok, bez którego Zadania/Baza Wiedzy/Chat Saver będą puste. Dopiero potem **Ustawienia → Skonfiguruj Pip-Boy** — utworzy osobny arkusz i osobny folder na Twoim Dysku, zasieje 263 cytaty i 107 komunikatów. To dwa niezależne przyciski, dwa niezależne arkusze.
 8. W nowo utworzonym arkuszu Pip-Boy, w zakładce `grafik_pracy`, wpisz ręcznie dni bieżącego miesiąca (data, godziny, typ A/B/Wolny) — tymczasowy, ręczny odpowiednik rytuału z sekcji 0.7, dopóki odczyt RCP go nie zastąpi.
 9. Wróć do zakładki Pip-Boy w Cerebro — zobaczysz kreator pierwszego uruchomienia (Onboarding), a po nim dzisiejszy Widok Dnia.
 

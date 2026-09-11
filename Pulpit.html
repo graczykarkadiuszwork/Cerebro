@@ -5,29 +5,28 @@
       <p class="text-[15px] text-[#8e8e93] mt-1">Przegląd działań</p>
     </div>
   </div>
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6" id="stats-container">
-    ${skeleton(4)}
-  </div>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6" id="stats-container"></div>
   <div class="mb-6">
     <h2 class="text-[17px] font-semibold text-[#000] mb-3">📅 Bliskie terminy</h2>
     <div id="upcoming-tasks" class="ios-card">
-      <div class="p-4">
-        ${skeleton(3)}
-      </div>
+      <div class="p-4"></div>
     </div>
   </div>
   <div class="mb-6">
     <h2 class="text-[17px] font-semibold text-[#000] mb-3">✨ Ostatnio dodane</h2>
     <div id="recent-items" class="ios-card">
-      <div class="p-4">
-        ${skeleton(3)}
-      </div>
+      <div class="p-4"></div>
     </div>
   </div>
 </div>
 <script>
-function initModule() { loadDashboard(); }
-function loadDashboard() { google.script.run.withSuccessHandler(function(result) { if (result.success) { renderDashboard(result.data); } }).getTasks(); }
+function initModule() {
+  document.getElementById('stats-container').innerHTML = skeleton(4);
+  document.getElementById('upcoming-tasks').innerHTML = '<div class="p-4">' + skeleton(3) + '</div>';
+  document.getElementById('recent-items').innerHTML = '<div class="p-4">' + skeleton(3) + '</div>';
+  loadDashboard();
+}
+function loadDashboard() { google.script.run.withSuccessHandler(function(result) { if (result.success) { renderDashboard(result.data); } else { showError('Błąd wczytywania: ' + result.error); } }).withFailureHandler(function(err) { showError('Błąd wczytywania: ' + err.message); }).getTasks(); }
 function renderDashboard(tasks) {
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const total = tasks.length;

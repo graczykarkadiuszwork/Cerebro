@@ -18,6 +18,14 @@
       </div>
     </div>
     <div class="ios-card mb-4">
+      <div class="section-title">Baza danych Cerebro</div>
+      <div class="p-4 space-y-3">
+        <p class="text-[15px] text-[#8e8e93] leading-relaxed">Wymagany pierwszy krok przed użyciem Zadań, Bazy Wiedzy i Chat Savera — tworzy główny arkusz Cerebro (zadania/wiedza/wydarzenia/ustawienia) i strukturę folderów Drive. Bez tego kroku te moduły pozostaną puste.</p>
+        <button onclick="setupCerebroClick()" class="btn-primary"><i data-lucide="database" class="inline-block w-5 h-5 mr-2"></i>Skonfiguruj Cerebro</button>
+        <div id="cerebro-status" class="text-[13px] text-[#8e8e93]"></div>
+      </div>
+    </div>
+    <div class="ios-card mb-4">
       <div class="section-title">Google Drive</div>
       <div class="p-4 space-y-3">
         <p class="text-[15px] text-[#8e8e93] leading-relaxed">Automatyczny import plików z następujących folderów Drive:</p>
@@ -105,6 +113,7 @@
 function initModule() { loadSettings(); pipboyLoadBackupStatus(); pipboyLoadSuplementy(); pipboyLoadPielegnacja(); pipboyLoadRotacja(); }
 function loadSettings() { google.script.run.withSuccessHandler(function(result) { if (result.success && result.data) { document.getElementById('organizationName').value = result.data.organizationName || ''; document.getElementById('contactEmail').value = result.data.contactEmail || ''; } }).getSettings(); }
 function saveSettings() { const settings = { organizationName: document.getElementById('organizationName').value, contactEmail: document.getElementById('contactEmail').value }; google.script.run.withSuccessHandler(function(result) { if (result.success) { showSuccess('Ustawienia zapisane'); document.getElementById('sidebar-org').textContent = settings.organizationName || 'Moja Organizacja'; } else { showError('Błąd: ' + result.error); } }).saveSettings(settings); }
+function setupCerebroClick() { document.getElementById('cerebro-status').textContent = 'Konfigurowanie…'; google.script.run.withSuccessHandler(function(result) { if (result.success) { showSuccess('Cerebro skonfigurowane.'); document.getElementById('cerebro-status').innerHTML = result.message + '<br><a href="' + result.spreadsheetUrl + '" target="_top" class="underline">Otwórz arkusz Cerebro</a>'; } else { showError('Błąd: ' + result.error); document.getElementById('cerebro-status').textContent = ''; } }).withFailureHandler(function(err) { showError('Błąd: ' + err.message); document.getElementById('cerebro-status').textContent = ''; }).setupCerebro(); }
 function setupDrive() { google.script.run.withSuccessHandler(function(result) { if (result.success) { showSuccess('Folder struktury Drive utworzony. Synchronizacja uruchomiona.'); } else { showError('Błąd: ' + result.error); } }).setupDriveFolders(); }
 function manualSync() { google.script.run.withSuccessHandler(function(result) { if (result.success) { showSuccess('Zaimportowano ' + result.imported + ' plików'); } else { showError('Błąd: ' + result.error); } }).manualSyncDrive(); }
 function setupPipBoyClick() { document.getElementById('pipboy-status').textContent = 'Konfigurowanie…'; google.script.run.withSuccessHandler(function(result) { if (result.success) { showSuccess('Pip-Boy skonfigurowany.'); document.getElementById('pipboy-status').innerHTML = result.message + '<br><a href="' + result.spreadsheetUrl + '" target="_top" class="underline">Otwórz arkusz Pip-Boy</a>'; } else { showError('Błąd: ' + result.error); document.getElementById('pipboy-status').textContent = ''; } }).setupPipBoy(); }

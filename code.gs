@@ -95,7 +95,7 @@ function setupCerebro() {
 
 function getSpreadsheet() {
   const id = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
-  if (!id) throw new Error('Cerebro nie jest zainicjowane. Kliknij "Konfiguruj Cerebro" w Ustawieniach.');
+  if (!id) throw new Error('Cerebro nie jest zainicjowane. Kliknij "Skonfiguruj Cerebro" w Ustawieniach.');
   return SpreadsheetApp.openById(id);
 }
 
