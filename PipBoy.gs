@@ -62,6 +62,8 @@ function setupPipBoy() {
       { name: 'sprzatanie_rotacja_definicje', headers: ['dow', 'strefa'] },
       { name: 'przypomnienia_log', headers: ['klucz', 'data'] },
       { name: 'kardio_mobilnosc_log', headers: ['data', 'minuty', 'intensywnosc_1_10', 'rodzaj'] },
+      { name: 'portfolio_projekty', headers: ['id', 'nazwa', 'kategoria', 'typ_pracy', 'data_rozpoczecia', 'zdjecie_zrobione', 'opis_napisany', 'opublikowane', 'kanaly', 'status'] },
+      { name: 'portfolio_czas_log', headers: ['data', 'projekt_id', 'minuty'] },
       { name: 'rolling_average_cele', headers: ['modul', 'data', 'wartosc_dnia', 'srednia_7dni'] },
       { name: 'cytaty_motywacyjne', headers: ['tresc', 'autor', 'zrodlo', 'data_ostatniego_wyswietlenia'] },
       { name: 'marquee_komunikaty', headers: ['tresc', 'kategoria', 'warunek', 'priorytet'] },
@@ -1460,6 +1462,39 @@ function evaluateStarterBadges(dataStr) {
     // lub trackingu promocji Aldi, których obecny model danych zakupy_log
     // (log dzień/kategoria/produkt/kupione) nie wyraża wprost.
 
+    // --- K. PORTFOLIO FIGUREK / PERSONAL BRAND (141-150,156-160) ---
+    // 151-154 (grupowanie tygodni/miesięcy z regułą publikacji), 155
+    // (kalibracja szacowany/rzeczywisty — wymaga pola czasu szacowanego,
+    // którego portfolio_projekty jeszcze nie zapisuje), 161 (sesje
+    // kolorowanek — brak osobnego mechanizmu logowania bez projektu) i 162
+    // (sekretna, "zlecenie niezależne" — brak takiej flagi) świadomie
+    // pominięte — wymagają rozszerzenia modelu danych, nie zgadywania.
+    const projektyK = sheetToObjects(pipboySheet('portfolio_projekty'));
+    const ukonczoneK = projektyK.filter(p => p.status === 'ukonczony');
+    if (projektyK.length >= 1) przyznaj(141); // [S] Pierwszy projekt
+    if (ukonczoneK.length >= 1) przyznaj(142);   // [S] Pierwsza ukończona figurka
+    if (ukonczoneK.length >= 5) przyznaj(143);   // [S] Piątka portfolio
+    if (ukonczoneK.length >= 10) przyznaj(144);  // [S] Dziesiątka portfolio
+    if (ukonczoneK.length >= 25) przyznaj(145);  // [S] Dwudziestka pięć
+    if (ukonczoneK.length >= 50) przyznaj(146);  // [S] Pięćdziesiątka
+    if (ukonczoneK.length >= 100) przyznaj(147); // [S] Setka
+    const publikacjeK = projektyK.filter(p => pipboyPrawda(p.zdjecie_zrobione) && pipboyPrawda(p.opis_napisany) && pipboyPrawda(p.opublikowane));
+    if (publikacjeK.length >= 1) przyznaj(148);  // [S] Pierwsza publikacja
+    if (publikacjeK.length >= 10) przyznaj(149); // [S] Dziesięć publikacji
+    if (publikacjeK.length >= 50) przyznaj(150); // [S] Pięćdziesiąt publikacji
+    if (ukonczoneK.filter(p => p.kategoria === 'Mała figurka').length >= 10) przyznaj(156);          // [S] Mała ale wytrwała
+    if (ukonczoneK.filter(p => p.kategoria === 'Średnia figurka').length >= 10) przyznaj(157);       // [S] Średniozaawansowany warsztat
+    if (ukonczoneK.filter(p => p.kategoria === 'Duża/złożona figurka').length >= 5) przyznaj(158);   // [S] Duże wyzwanie
+    if (ukonczoneK.filter(p => p.kategoria === 'Cały zestaw/oddział').length >= 1) przyznaj(159);    // [S] Cały oddział
+    { // 160 [Z] Tydzień praktyki — min. 3 sesje (dowolny projekt) w ostatnich 7 dniach
+      const dniPraktykiOstatnie7 = {};
+      sheetToObjects(pipboySheet('portfolio_czas_log')).forEach(r => {
+        const dniOd = Math.floor((new Date(dataStr + 'T00:00:00') - new Date(r.data + 'T00:00:00')) / 86400000);
+        if (dniOd >= 0 && dniOd < 7) dniPraktykiOstatnie7[r.data] = true;
+      });
+      if (Object.keys(dniPraktykiOstatnie7).length >= 3) przyznaj(160);
+    }
+
     // --- J. MOOD TRACKER / SAMOPOCZUCIE (131,132,133,134,135,136,137,138,139) ---
     // UWAGA (poprawka w tej turze): 131 wcześniej przyznawana za JAKIKOLWIEK
     // wpis mood — dokument wymaga wprost "w PEŁNI wypełniony (rano+wieczór)".
@@ -1636,16 +1671,22 @@ function getDashboardData() {
     const sprzatanieTrend = [];
     { let dd = dzis; for (let i = 0; i < 30; i++) { sprzatanieTrend.unshift({ data: dd, minuty: sprzByDate[dd] || 0 }); dd = dataMinus(dd, 1); } }
 
-    // Portfolio Figurek (Moduł 18) — moduł jeszcze niezbudowany (patrz
-    // docs/Pip-Boy-Wdrozenie.md); podzakładka Dashboardu dla niego świadomie
-    // pominięta tutaj, nie ukryta bez wyjaśnienia — front pokaże placeholder.
+    // Podzakładka Portfolio (Moduł 18) — rolling average 7-dniowa minut
+    // tworzenia (sekcja Moduł 18, "wskaźnik rolling-average marki"), bez
+    // wpływu na HP, tylko trend widoczny tutaj.
+    const rollingPortfolio = sheetToObjects(pipboySheet('rolling_average_cele'))
+      .filter(r => r.modul === 'portfolio')
+      .sort((a, b) => a.data < b.data ? -1 : a.data > b.data ? 1 : 0).slice(-60);
+    const projektyPortfolio = sheetToObjects(pipboySheet('portfolio_projekty'));
 
     return {
       success: true,
       data: {
         trendHp, streak,
         atrybuty: sumy, sumaXP: sumaCalkowita, poziomOgolny: pipboyPoziomZXP(sumaCalkowita),
-        cwiczenia, moodRows, rollingCzyt, sprzatanieTrend,
+        cwiczenia, moodRows, rollingCzyt, sprzatanieTrend, rollingPortfolio,
+        portfolioProjektowLacznie: projektyPortfolio.length,
+        portfolioUkonczonychLacznie: projektyPortfolio.filter(p => p.status === 'ukonczony').length,
         odznakiZdobyteLiczba: sheetToObjects(pipboySheet('odznaki_log')).length,
         odznakiLacznie: PIPBOY_ODZNAKI.length
       }
@@ -1942,4 +1983,125 @@ function marqueeWarunekPasuje(warunek, kontekst) {
       default: return true;
     }
   });
+}
+
+// ============================================================
+// MODUŁ 18 — PORTFOLIO FIGUREK (Personal Brand)
+// Hybryda rigid/elastyczny (sekcja Moduł 18): blok TWORZENIA (czas
+// sklejania/malowania) jest CELOWO poza mechaniką HP — presja tutaj byłaby
+// kontrproduktywna dla procesu twórczego (decyzja Arka, oparta na strategii
+// biznesowej sekcja 21.4). Checklist PUBLIKACJI (zdjęcie/opis/opublikowane)
+// dokument opisuje jako "RIGID z pełną mechaniką HP" — tracking jest w pełni
+// wdrożony, ale NIE podpięty pod computePipBoyHP: dokument nie definiuje
+// jednoznacznego triggera (ile dni po ukończeniu projektu zaczyna karać,
+// jaka wartość kary) — dopisanie tego byłoby zgadywaniem kalibracji, nie
+// odczytaniem specyfikacji, tak samo jak przy Rozciąganiu/Higienie światła
+// (patrz analogiczna, udokumentowana luka gdzie indziej w tym pliku).
+// ============================================================
+
+function getPortfolioSzacunki() {
+  return {
+    success: true,
+    data: { kategorie: PIPBOY_PORTFOLIO_KATEGORIE, typyPracy: PIPBOY_PORTFOLIO_TYPY_PRACY, szacunki: PIPBOY_PORTFOLIO_SZACUNKI }
+  };
+}
+
+function utworzProjektPortfolio(nazwa, kategoria, typPracy) {
+  try {
+    if (!nazwa) return { success: false, error: 'Podaj nazwę projektu.' };
+    const id = generateId();
+    pipboySheet('portfolio_projekty').appendRow([
+      id, nazwa, kategoria, typPracy, todayIso(), false, false, false, '', 'w_trakcie'
+    ]);
+    return { success: true, id: id };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+function getProjektyPortfolio() {
+  try {
+    const projekty = sheetToObjects(pipboySheet('portfolio_projekty'));
+    const czasRows = sheetToObjects(pipboySheet('portfolio_czas_log'));
+    const czasPoProjekcie = {};
+    czasRows.forEach(r => { czasPoProjekcie[r.projekt_id] = (czasPoProjekcie[r.projekt_id] || 0) + (Number(r.minuty) || 0); });
+    return {
+      success: true,
+      data: projekty.map(p => Object.assign({}, p, { czasRzeczywistyMin: czasPoProjekcie[p.id] || 0 }))
+    };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+// Log czasu bloku tworzenia — CELOWO bez wpływu na HP (patrz nagłówek
+// sekcji). Zasila rolling-average marki (Runda #17, wzorzec Modułu 20) i
+// atrybut Personal Brand.
+function logCzasPortfolio(projektId, dataStr, minuty) {
+  try {
+    if (!minuty) return { success: false, error: 'Podaj liczbę minut.' };
+    pipboySheet('portfolio_czas_log').appendRow([dataStr, projektId, minuty]);
+    const sumaDnia = sheetToObjects(pipboySheet('portfolio_czas_log'))
+      .filter(r => r.data === dataStr)
+      .reduce((s, r) => s + (Number(r.minuty) || 0), 0);
+    updateRollingAverage('portfolio', dataStr, sumaDnia);
+    pipboyAwardPoints(dataStr, 'personal_brand', PIPBOY_PUNKTY_ZDOBYTE.blok_portfolio.punkty);
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+// Checklist publikacji per projekt (patrz zastrzeżenie w nagłówku — trackowany,
+// świadomie NIE podpięty pod HP).
+function ustawChecklistePublikacji(projektId, pole, wartosc) {
+  try {
+    const dozwolone = ['zdjecie_zrobione', 'opis_napisany', 'opublikowane'];
+    if (dozwolone.indexOf(pole) === -1) return { success: false, error: 'Nieznane pole.' };
+    const sheet = pipboySheet('portfolio_projekty');
+    const naglowki = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    const kolIdx = naglowki.indexOf(pole) + 1;
+    const dane = sheet.getDataRange().getValues();
+    for (let i = 1; i < dane.length; i++) {
+      if (dane[i][0] === projektId) {
+        sheet.getRange(i + 1, kolIdx).setValue(wartosc);
+        return { success: true };
+      }
+    }
+    return { success: false, error: 'Nie znaleziono projektu.' };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+function ustawKanalyPortfolio(projektId, kanaly) {
+  try {
+    const sheet = pipboySheet('portfolio_projekty');
+    const dane = sheet.getDataRange().getValues();
+    for (let i = 1; i < dane.length; i++) {
+      if (dane[i][0] === projektId) {
+        sheet.getRange(i + 1, 9).setValue(kanaly || ''); // kolumna 'kanaly'
+        return { success: true };
+      }
+    }
+    return { success: false, error: 'Nie znaleziono projektu.' };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+function zakonczProjektPortfolio(projektId) {
+  try {
+    const sheet = pipboySheet('portfolio_projekty');
+    const dane = sheet.getDataRange().getValues();
+    for (let i = 1; i < dane.length; i++) {
+      if (dane[i][0] === projektId) {
+        sheet.getRange(i + 1, 10).setValue('ukonczony'); // kolumna 'status'
+        return { success: true };
+      }
+    }
+    return { success: false, error: 'Nie znaleziono projektu.' };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
 }

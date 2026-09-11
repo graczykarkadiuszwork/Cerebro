@@ -23,7 +23,7 @@
     <button class="pb-tab" id="pb-tab-postac" onclick="pbSwitchTab('postac')">POSTAĆ</button>
     <button class="pb-tab" id="pb-tab-dashboard" onclick="pbSwitchTab('dashboard')">DASHBOARD</button>
     <button class="pb-tab" id="pb-tab-serwis" onclick="pbSwitchTab('serwis')">SERWIS</button>
-    <button class="pb-tab disabled">PORTFOLIO <span class="pb-tab-note">(Faza 3)</span></button>
+    <button class="pb-tab" id="pb-tab-portfolio" onclick="pbSwitchTab('portfolio')">PORTFOLIO</button>
   </div>
 
   <div class="pb-statusbar">
@@ -105,6 +105,7 @@
       <input class="pb-input" id="pb-kardio-rodzaj" type="text" placeholder="np. mobilność bioder">
     </div>
     <button class="pb-btn" onclick="pbSaveKardio()">Zapisz kardio/mobilność</button>
+    <div style="color:var(--pb-green-faint); font-size:0.72em; margin-top:4px;">Bez osobnej kary HP na razie — formalnie część obligatoryjnego bloku treningowego (Moduł 2, punkt 3), ale sekcja 4.2 nie definiuje osobnej wartości kary; kara za brak treningu jako całości już obowiązuje.</div>
   </div>
 
   <!-- ===== WIDOK: POSTAĆ (Karta Postaci, sekcja 6.6) ===== -->
@@ -121,7 +122,7 @@
       <button class="pb-tab" id="pb-dash-sub-dieta" onclick="pbDashSwitchSub('dieta')">DIETA / UMYSŁ</button>
       <button class="pb-tab" id="pb-dash-sub-sen" onclick="pbDashSwitchSub('sen')">SEN / NASTRÓJ</button>
       <button class="pb-tab" id="pb-dash-sub-dom" onclick="pbDashSwitchSub('dom')">DOM</button>
-      <button class="pb-tab disabled">PORTFOLIO <span class="pb-tab-note">(Faza 3)</span></button>
+      <button class="pb-tab" id="pb-dash-sub-portfolio" onclick="pbDashSwitchSub('portfolio')">PORTFOLIO</button>
     </div>
     <div id="pb-dashboard-body"><div style="color:var(--pb-green-dim);">Ładowanie dashboardu…</div></div>
   </div>
@@ -132,6 +133,27 @@
       Wszystkie przypomnienia cykliczne w jednym miejscu — nie tylko te akurat przeterminowane (te widzisz też w Widoku Dnia). Motocykl: sezon kwiecień-październik.
     </div>
     <div id="pb-serwis-body"><div style="color:var(--pb-green-dim);">Ładowanie…</div></div>
+  </div>
+
+  <!-- ===== WIDOK: PORTFOLIO (Moduł 18 — Personal Brand) ===== -->
+  <div id="pb-view-portfolio" style="display:none;">
+    <div style="color:var(--pb-green-dim); font-size:0.85em; margin-bottom:10px;">
+      Blok tworzenia (sklejanie/malowanie) jest ELASTYCZNY — bez kary HP, presja tu byłaby kontrproduktywna. Checklist publikacji jest trackowany, ale świadomie NIE wpięty pod HP (dokument nie definiuje dokładnego triggera kary).
+    </div>
+    <div class="pb-eyebrow">NOWY PROJEKT</div>
+    <div class="pb-mood-grid" style="grid-template-columns: 1fr 1fr;">
+      <label>Nazwa</label>
+      <input class="pb-input" id="pb-portfolio-nazwa" type="text" placeholder="np. Primaris Intercessor">
+      <label>Kategoria</label>
+      <select class="pb-input" id="pb-portfolio-kategoria" onchange="pbPortfolioPokazSzacunek()"></select>
+      <label>Typ pracy</label>
+      <select class="pb-input" id="pb-portfolio-typ" onchange="pbPortfolioPokazSzacunek()"></select>
+    </div>
+    <div id="pb-portfolio-szacunek" style="font-size:0.85em; color:var(--pb-green-dim); margin:6px 0;"></div>
+    <button class="pb-btn" onclick="pbUtworzProjektPortfolio()">+ Utwórz projekt</button>
+
+    <div class="pb-eyebrow" style="margin-top:18px;">PROJEKTY</div>
+    <div id="pb-portfolio-lista"><div style="color:var(--pb-green-dim);">Ładowanie…</div></div>
   </div>
 
   <div class="pb-settings-row">
@@ -187,17 +209,18 @@ function pbToday() {
 
 // ---- Przełączanie wewnętrznych widoków Pip-Boy (sekcja 6.2) ----
 function pbSwitchTab(tab) {
-  ['dzien', 'trening', 'postac', 'dashboard', 'serwis'].forEach(function(t) {
+  ['dzien', 'trening', 'postac', 'dashboard', 'serwis', 'portfolio'].forEach(function(t) {
     document.getElementById('pb-view-' + t).style.display = (t === tab) ? 'block' : 'none';
     document.getElementById('pb-tab-' + t).classList.toggle('active', t === tab);
   });
-  const titles = { dzien: 'WIDOK DNIA', trening: 'TRENING', postac: 'KARTA POSTACI', dashboard: 'DASHBOARD', serwis: 'SERWIS' };
+  const titles = { dzien: 'WIDOK DNIA', trening: 'TRENING', postac: 'KARTA POSTACI', dashboard: 'DASHBOARD', serwis: 'SERWIS', portfolio: 'PORTFOLIO' };
   document.getElementById('pb-view-title').textContent = titles[tab];
   if (tab === 'trening' && !PB_PLAN) pbLoadTrainingPlan();
   if (tab === 'trening') pbLoadKardioDzien();
   if (tab === 'postac') pbLoadKartaPostaci();
   if (tab === 'dashboard') pbLoadDashboard();
   if (tab === 'serwis') pbLoadSerwis();
+  if (tab === 'portfolio') pbLoadPortfolio();
 }
 
 function pbLoadDay() {
@@ -311,6 +334,95 @@ function pbSerwisZapiszNotatke(klucz) {
   google.script.run.withSuccessHandler(function(result) {
     if (result.success) showSuccess('Notatka zapisana.'); else showError(result.error);
   }).pipboyUstawNotatkaPrzypomnienia(klucz, notatka);
+}
+
+// ---- PORTFOLIO (Moduł 18 — Personal Brand) ----
+let PB_PORTFOLIO_SZACUNKI = null;
+
+function pbLoadPortfolio() {
+  google.script.run.withSuccessHandler(function(result) {
+    if (!result.success) return;
+    PB_PORTFOLIO_SZACUNKI = result.data;
+    const katSel = document.getElementById('pb-portfolio-kategoria');
+    katSel.innerHTML = result.data.kategorie.map(function(k) { return '<option value="' + k + '">' + k + '</option>'; }).join('');
+    const typSel = document.getElementById('pb-portfolio-typ');
+    typSel.innerHTML = result.data.typyPracy.map(function(t) { return '<option value="' + t + '">' + t + '</option>'; }).join('');
+    pbPortfolioPokazSzacunek();
+  }).getPortfolioSzacunki();
+  pbRenderujProjektyPortfolio();
+}
+
+function pbPortfolioPokazSzacunek() {
+  if (!PB_PORTFOLIO_SZACUNKI) return;
+  const kat = pbVal('pb-portfolio-kategoria');
+  const typ = pbVal('pb-portfolio-typ');
+  const el = document.getElementById('pb-portfolio-szacunek');
+  const wpis = (PB_PORTFOLIO_SZACUNKI.szacunki[kat] || {})[typ];
+  el.textContent = wpis ? ('Orientacyjnie: ' + wpis[0] + '-' + wpis[1] + 'h') :
+    'Cały zestaw/oddział: suma czasów pojedynczych modeli × liczba sztuk, z rabatem za powtarzalność — brak stałej wartości.';
+}
+
+function pbUtworzProjektPortfolio() {
+  const nazwa = pbVal('pb-portfolio-nazwa').trim();
+  if (!nazwa) { showError('Podaj nazwę projektu.'); return; }
+  google.script.run.withSuccessHandler(function(result) {
+    if (result.success) { showSuccess('Projekt utworzony.'); document.getElementById('pb-portfolio-nazwa').value = ''; pbRenderujProjektyPortfolio(); }
+    else showError(result.error);
+  }).utworzProjektPortfolio(nazwa, pbVal('pb-portfolio-kategoria'), pbVal('pb-portfolio-typ'));
+}
+
+function pbRenderujProjektyPortfolio() {
+  google.script.run.withSuccessHandler(function(result) {
+    if (!result.success) return;
+    const el = document.getElementById('pb-portfolio-lista');
+    if (result.data.length === 0) { el.innerHTML = '<div style="color:var(--pb-green-dim); font-size:0.85em;">Brak jeszcze projektów.</div>'; return; }
+    el.innerHTML = result.data.slice().reverse().map(function(p) {
+      const zdj = p.zdjecie_zrobione === true || p.zdjecie_zrobione === 'true' || p.zdjecie_zrobione === 'TRUE';
+      const opis = p.opis_napisany === true || p.opis_napisany === 'true' || p.opis_napisany === 'TRUE';
+      const opub = p.opublikowane === true || p.opublikowane === 'true' || p.opublikowane === 'TRUE';
+      return '<div class="pb-block ' + (p.status === 'ukonczony' ? '' : 'obligatoryjne') + ' expanded">' +
+        '<div class="pb-block-head"><span class="pb-block-name">' + p.nazwa + '</span><span class="pb-block-tag">' + p.kategoria + ' / ' + p.typ_pracy + ' / ' + p.status + '</span></div>' +
+        '<div class="pb-block-body">' +
+          '<div style="font-size:0.85em; margin-bottom:6px;">Czas zarejestrowany: ' + p.czasRzeczywistyMin + ' min</div>' +
+          '<input class="pb-input" id="pb-portfolio-czas-' + p.id + '" type="number" placeholder="minuty" style="width:100px; display:inline-block;">' +
+          '<button class="pb-btn" onclick="pbLogCzasPortfolio(\'' + p.id + '\')">+ Zaloguj czas tworzenia</button>' +
+          (p.status !== 'ukonczony' ? ' <button class="pb-btn" onclick="pbZakonczProjektPortfolio(\'' + p.id + '\')">Zakończ projekt</button>' : '') +
+          '<div class="pb-eyebrow" style="margin-top:10px;">CHECKLIST PUBLIKACJI</div>' +
+          '<div class="pb-check-row" onclick="pbUstawCheckliste(\'' + p.id + '\', \'zdjecie_zrobione\', ' + (!zdj) + ')"><span class="pb-check-mark">' + (zdj ? '[x]' : '[ ]') + '</span><span>Zdjęcie zrobione</span></div>' +
+          '<div class="pb-check-row" onclick="pbUstawCheckliste(\'' + p.id + '\', \'opis_napisany\', ' + (!opis) + ')"><span class="pb-check-mark">' + (opis ? '[x]' : '[ ]') + '</span><span>Opis napisany</span></div>' +
+          '<div class="pb-check-row" onclick="pbUstawCheckliste(\'' + p.id + '\', \'opublikowane\', ' + (!opub) + ')"><span class="pb-check-mark">' + (opub ? '[x]' : '[ ]') + '</span><span>Opublikowane</span></div>' +
+          '<input class="pb-input" id="pb-portfolio-kanaly-' + p.id + '" type="text" value="' + (p.kanaly || '') + '" placeholder="kanały (np. Instagram, YouTube)" style="margin-top:6px;">' +
+          '<button class="pb-btn" onclick="pbUstawKanaly(\'' + p.id + '\')">Zapisz kanały</button>' +
+        '</div></div>';
+    }).join('');
+  }).getProjektyPortfolio();
+}
+
+function pbLogCzasPortfolio(projektId) {
+  const minuty = pbVal('pb-portfolio-czas-' + projektId);
+  if (!minuty) { showError('Podaj liczbę minut.'); return; }
+  google.script.run.withSuccessHandler(function(result) {
+    if (result.success) { showSuccess('Czas zapisany.'); pbRenderujProjektyPortfolio(); } else showError(result.error);
+  }).logCzasPortfolio(projektId, pbToday(), minuty);
+}
+
+function pbUstawCheckliste(projektId, pole, wartosc) {
+  google.script.run.withSuccessHandler(function(result) {
+    if (result.success) pbRenderujProjektyPortfolio(); else showError(result.error);
+  }).ustawChecklistePublikacji(projektId, pole, wartosc);
+}
+
+function pbUstawKanaly(projektId) {
+  const kanaly = pbVal('pb-portfolio-kanaly-' + projektId);
+  google.script.run.withSuccessHandler(function(result) {
+    if (result.success) showSuccess('Kanały zapisane.'); else showError(result.error);
+  }).ustawKanalyPortfolio(projektId, kanaly);
+}
+
+function pbZakonczProjektPortfolio(projektId) {
+  google.script.run.withSuccessHandler(function(result) {
+    if (result.success) { showSuccess('Projekt zakończony.'); pbRenderujProjektyPortfolio(); } else showError(result.error);
+  }).zakonczProjektPortfolio(projektId);
 }
 
 function pbCurrentPora() {
@@ -1102,7 +1214,7 @@ function pbRenderKartaPostaci(dane) {
       return '<div class="pb-check-row" style="cursor:default;"><span class="pb-check-mark">[' + o.typ + ']</span><span>' + o.nazwa + '</span></div>';
     }).join('');
   }
-  html += '<div style="color:var(--pb-green-faint); font-size:0.72em; margin-top:10px;">Ewaluacja obejmuje ~93 z 208 odznak — te, których warunek jest jednoznacznie obliczalny z zebranych już danych (streaki, progi łączne, liczniki). Odznaki sekretne, subiektywne i zależne od jeszcze niezbudowanych modułów (Portfolio, BJJ) czekają na Fazę 2+.</div>';
+  html += '<div style="color:var(--pb-green-faint); font-size:0.72em; margin-top:10px;">Ewaluacja obejmuje ~108 z 208 odznak — te, których warunek jest jednoznacznie obliczalny z zebranych już danych (streaki, progi łączne, liczniki). Odznaki sekretne, subiektywne i zależne od jeszcze niezbudowanych modułów (Portfolio, BJJ) czekają na Fazę 2+.</div>';
 
   el.innerHTML = html;
 }
@@ -1161,7 +1273,7 @@ function pbLoadDashboard() {
 
 function pbDashSwitchSub(sub) {
   PB_DASH_SUB = sub;
-  ['ogolny', 'tydzien', 'trening', 'dieta', 'sen', 'dom'].forEach(function(s) {
+  ['ogolny', 'tydzien', 'trening', 'dieta', 'sen', 'dom', 'portfolio'].forEach(function(s) {
     document.getElementById('pb-dash-sub-' + s).classList.toggle('active', s === sub);
   });
   if (PB_DASH_DATA) pbRenderDashboardPanel(sub);
@@ -1327,6 +1439,30 @@ function pbRenderDashboardPanel(sub) {
           backgroundColor: d.sprzatanieTrend.map(function(r) { return r.minuty >= 15 ? PB_GREEN_DIM : PB_RED; }) }]
       },
       options: Object.assign(pbChartDefaults(), { plugins: { legend: { display: false } } })
+    });
+    return;
+  }
+
+  if (sub === 'portfolio') {
+    el.innerHTML =
+      '<div class="pb-mood-grid" style="grid-template-columns: 1fr 1fr; margin-bottom:14px;">' +
+        '<div><div class="pb-eyebrow">PROJEKTY ŁĄCZNIE</div><div class="pb-title" style="font-size:1.6em;">' + d.portfolioProjektowLacznie + '</div></div>' +
+        '<div><div class="pb-eyebrow">UKOŃCZONE</div><div class="pb-title" style="font-size:1.6em;">' + d.portfolioUkonczonychLacznie + '</div></div>' +
+      '</div>' +
+      '<div class="pb-eyebrow">ŚREDNIA 7-DNIOWA MINUT TWORZENIA (bez wpływu na HP — sekcja Moduł 18)</div>';
+    if (!d.rollingPortfolio || d.rollingPortfolio.length === 0) {
+      el.innerHTML += '<div style="color:var(--pb-green-dim); font-size:0.85em; margin-top:6px;">Brak jeszcze zalogowanego czasu tworzenia — zakładka PORTFOLIO.</div>';
+      return;
+    }
+    el.innerHTML += pbChartCanvas('pb-chart-portfolio');
+    pbMakeChart('pb-chart-portfolio', {
+      type: 'line',
+      data: {
+        labels: d.rollingPortfolio.map(function(r) { return r.data.slice(5); }),
+        datasets: [{ label: 'śr. 7-dniowa (min)', data: d.rollingPortfolio.map(function(r) { return Number(r.srednia_7dni); }),
+          borderColor: PB_GREEN, backgroundColor: 'rgba(61,255,61,0.1)', fill: true, tension: 0.2, pointRadius: 2 }]
+      },
+      options: pbChartDefaults()
     });
     return;
   }

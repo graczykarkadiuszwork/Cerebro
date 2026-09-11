@@ -457,6 +457,7 @@ const PIPBOY_PUNKTY_ZDOBYTE = {
   mood_wpis: { punkty: 3, atrybut: 'umysl', max_dziennie: 6 },
   pielegnacja_pozycja: { punkty: 2, atrybut: 'dyscyplina' },
   higiena_swiatla: { punkty: 3, atrybut: 'umysl' },
+  blok_portfolio: { punkty: 5, atrybut: 'personal_brand' },
 };
 const PIPBOY_ATRYBUTY = ['cialo', 'umysl', 'dyscyplina', 'otoczenie', 'personal_brand'];
 
@@ -725,4 +726,19 @@ const PIPBOY_PRZYPOMNIENIA_DEFINICJE = {
   motocykl_wiosna: { nazwa: 'Motocykl — wiosenne przygotowanie po zimowym przestoju', cykl_dni: 365 },
   motocykl_jesien: { nazwa: 'Motocykl — odłożenie na zimę', cykl_dni: 365 },
   robot_filtr: { nazwa: 'Robot sprzątający — czyszczenie filtra', cykl_dni: 30 },
+};
+
+// ---- Moduł 18: Portfolio Figurek — orientacyjne widełki czasowe wg
+// kategorii rozmiaru i typu pracy (sekcja Moduł 18, "do skalibrowania
+// indywidualnie po pierwszych kilku zarejestrowanych projektach Arka") ----
+const PIPBOY_PORTFOLIO_KATEGORIE = ['Mała figurka', 'Średnia figurka', 'Duża/złożona figurka', 'Cały zestaw/oddział'];
+const PIPBOY_PORTFOLIO_TYPY_PRACY = ['sklejanie', 'malowanie', 'oba'];
+// Widełki w godzinach [min, max]; dla "Cały zestaw" brak stałej wartości —
+// dokument mówi wprost "suma czasów pojedynczych modeli × liczba sztuk, z
+// rabatem czasowym za powtarzalność" — zbyt niejednoznaczne dla sztywnej
+// tabeli, system pokazuje tylko informację, nie liczbę.
+const PIPBOY_PORTFOLIO_SZACUNKI = {
+  'Mała figurka': { sklejanie: [1, 3], malowanie: [1, 3], oba: [2, 6] },
+  'Średnia figurka': { sklejanie: [3, 6], malowanie: [3, 8], oba: [6, 14] },
+  'Duża/złożona figurka': { sklejanie: [6, 15], malowanie: [8, 20], oba: [14, 35] },
 };
