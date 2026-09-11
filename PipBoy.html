@@ -824,10 +824,32 @@ function pbObUsunPielegnacje(klucz) {
     .usunProduktPielegnacyjny(klucz);
 }
 
+const PB_OB_DOW_LABEL = { 0: 'Niedziela', 1: 'Poniedziałek', 2: 'Wtorek', 3: 'Środa', 4: 'Czwartek', 5: 'Piątek', 6: 'Sobota' };
+
 function pbObRenderStep5(body) {
   const d = PB_OB_DEFAULTS;
-  body.innerHTML = '<p style="color:var(--pb-green-dim); font-size:0.85em; margin-bottom:10px;">Rotacja sprzątania 7-strefowa (Moduł 8) — floor ' + d.floorMin + ' min / sufit ' + d.ceilingMin + ' min dziennie (oprócz niedzieli).</p>' +
-    (d.sprzatanieRotacja || []).map(function(s, i) { return '<div class="pb-check-row" style="cursor:default;"><span class="pb-check-mark">[' + (i + 1) + ']</span><span>' + s + '</span></div>'; }).join('');
+  body.innerHTML = '<p style="color:var(--pb-green-dim); font-size:0.85em; margin-bottom:10px;">Rotacja sprzątania 7-strefowa (Moduł 8) — floor ' + d.floorMin + ' min / sufit ' + d.ceilingMin + ' min dziennie (oprócz niedzieli). Nazwę strefy per dzień można edytować.</p>' +
+    '<div id="pb-ob-rotacja-lista">' + pbObRenderujRotacje(d.sprzatanieRotacja || []) + '</div>';
+}
+
+function pbObRenderujRotacje(rotacja) {
+  return rotacja.slice().sort(function(a, b) { return a.dow - b.dow; }).map(function(s) {
+    return '<div class="pb-mood-grid" style="grid-template-columns: 1fr 2fr; margin-bottom:4px;">' +
+      '<span style="font-size:0.85em;">' + (PB_OB_DOW_LABEL[s.dow] || s.dow) + '</span>' +
+      '<span><input class="pb-input" id="pb-ob-strefa-' + s.dow + '" type="text" value="' + s.strefa + '" style="width:100%;">' +
+      '<button class="pb-btn" style="margin:2px 0 0 0; padding:3px 8px;" onclick="pbObZapiszStrefe(' + s.dow + ')">zapisz</button></span></div>';
+  }).join('');
+}
+
+function pbObZapiszStrefe(dow) {
+  const strefa = pbVal('pb-ob-strefa-' + dow);
+  google.script.run.withSuccessHandler(function(result) {
+    if (result.success) {
+      showSuccess('Zapisano.');
+      const wpis = PB_OB_DEFAULTS.sprzatanieRotacja.find(function(s) { return s.dow === dow; });
+      if (wpis) wpis.strefa = strefa;
+    } else showError(result.error);
+  }).ustawStrefeSprzatania(dow, strefa);
 }
 
 function pbObRenderStep6(body) {

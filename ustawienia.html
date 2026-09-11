@@ -67,6 +67,11 @@
           <label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Pielęgnacja (Moduł 7) — edytowalna lista per pora</label>
           <div id="pipboy-pielegnacja-lista" class="text-[15px]"></div>
         </div>
+
+        <div class="pt-3 mt-3 border-t border-[#e5e5ea]">
+          <label class="block text-[13px] font-semibold text-[#8e8e93] mb-2">Rotacja sprzątania 7-strefowa (Moduł 8) — nazwa strefy per dzień</label>
+          <div id="pipboy-rotacja-lista" class="text-[15px]"></div>
+        </div>
       </div>
     </div>
     <div class="ios-card mb-4">
@@ -97,7 +102,7 @@
   </div>
 </div>
 <script>
-function initModule() { loadSettings(); pipboyLoadBackupStatus(); pipboyLoadSuplementy(); pipboyLoadPielegnacja(); }
+function initModule() { loadSettings(); pipboyLoadBackupStatus(); pipboyLoadSuplementy(); pipboyLoadPielegnacja(); pipboyLoadRotacja(); }
 function loadSettings() { google.script.run.withSuccessHandler(function(result) { if (result.success && result.data) { document.getElementById('organizationName').value = result.data.organizationName || ''; document.getElementById('contactEmail').value = result.data.contactEmail || ''; } }).getSettings(); }
 function saveSettings() { const settings = { organizationName: document.getElementById('organizationName').value, contactEmail: document.getElementById('contactEmail').value }; google.script.run.withSuccessHandler(function(result) { if (result.success) { showSuccess('Ustawienia zapisane'); document.getElementById('sidebar-org').textContent = settings.organizationName || 'Moja Organizacja'; } else { showError('Błąd: ' + result.error); } }).saveSettings(settings); }
 function setupDrive() { google.script.run.withSuccessHandler(function(result) { if (result.success) { showSuccess('Folder struktury Drive utworzony. Synchronizacja uruchomiona.'); } else { showError('Błąd: ' + result.error); } }).setupDriveFolders(); }
@@ -173,6 +178,26 @@ function pipboyUsunPielegnacje(klucz) {
   google.script.run.withSuccessHandler(function(result) {
     if (result.success) { showSuccess('Usunięto.'); pipboyLoadPielegnacja(); } else showError('Błąd: ' + result.error);
   }).usunProduktPielegnacyjny(klucz);
+}
+
+const PIPBOY_DOW_LABEL = { 0: 'Niedziela', 1: 'Poniedziałek', 2: 'Wtorek', 3: 'Środa', 4: 'Czwartek', 5: 'Piątek', 6: 'Sobota' };
+function pipboyLoadRotacja() {
+  google.script.run.withSuccessHandler(function(result) { pipboyRenderRotacja(result || []); }).withFailureHandler(function() {}).getSprzatanieRotacjaDefinicje();
+}
+function pipboyRenderRotacja(rotacja) {
+  const el = document.getElementById('pipboy-rotacja-lista');
+  if (!el) return;
+  el.innerHTML = rotacja.slice().sort(function(a, b) { return a.dow - b.dow; }).map(function(s) {
+    return '<div class="flex items-center gap-2 py-1"><span class="w-28 text-[13px] text-[#8e8e93]">' + (PIPBOY_DOW_LABEL[s.dow] || s.dow) + '</span>' +
+      '<input type="text" id="pipboyStrefa-' + s.dow + '" class="ios-input" value="' + s.strefa + '">' +
+      '<button onclick="pipboyZapiszStrefe(' + s.dow + ')" class="btn-secondary whitespace-nowrap">Zapisz</button></div>';
+  }).join('');
+}
+function pipboyZapiszStrefe(dow) {
+  const strefa = document.getElementById('pipboyStrefa-' + dow).value;
+  google.script.run.withSuccessHandler(function(result) {
+    if (result.success) showSuccess('Zapisano.'); else showError('Błąd: ' + result.error);
+  }).ustawStrefeSprzatania(dow, strefa);
 }
 function exportJSON() { google.script.run.withSuccessHandler(function(result) { if (result.success) { const blob = new Blob([result.data], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'cerebro-export-' + new Date().getTime() + '.json'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); showSuccess('Eksport został pobrany'); } else { showError('Błąd: ' + result.error); } }).exportAllData(); }
 </script>

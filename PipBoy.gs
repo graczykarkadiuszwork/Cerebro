@@ -59,6 +59,7 @@ function setupPipBoy() {
       { name: 'przypomnienia_cykliczne', headers: ['klucz', 'nazwa', 'data_ostatniego_wykonania', 'cykl_dni', 'notatka'] },
       { name: 'suplementy_definicje', headers: ['klucz', 'nazwa', 'typ'] },
       { name: 'pielegnacja_definicje', headers: ['klucz', 'nazwa', 'pora'] },
+      { name: 'sprzatanie_rotacja_definicje', headers: ['dow', 'strefa'] },
       { name: 'rolling_average_cele', headers: ['modul', 'data', 'wartosc_dnia', 'srednia_7dni'] },
       { name: 'cytaty_motywacyjne', headers: ['tresc', 'autor', 'zrodlo', 'data_ostatniego_wyswietlenia'] },
       { name: 'marquee_komunikaty', headers: ['tresc', 'kategoria', 'warunek', 'priorytet'] },
@@ -148,6 +149,11 @@ function seedPipBoyContentTables(ss) {
     PIPBOY_PIELEGNACJA_PRODUKTY[pora].forEach(p => pielRows.push([p.klucz, p.nazwa, pora]));
   });
   pielSheet.getRange(2, 1, pielRows.length, 3).setValues(pielRows);
+
+  // Rotacja sprzątania (Moduł 8) — zasiew startowy z PipBoyData.gs, odtąd edytowalny.
+  const rotSheet = ss.getSheetByName('sprzatanie_rotacja_definicje');
+  const rotRows = PIPBOY_SPRZATANIE_ROTACJA.map(r => [r.dow, r.strefa]);
+  rotSheet.getRange(2, 1, rotRows.length, 2).setValues(rotRows);
 }
 
 function getPipBoySpreadsheet() {
@@ -295,7 +301,7 @@ function getOnboardingDefaults() {
         melatonina: PIPBOY_MELATONINA,
         gainer: PIPBOY_GAINER,
         pielegnacjaProdukty: getPielegnacjaDefinicje(),
-        sprzatanieRotacja: PIPBOY_SPRZATANIE_ROTACJA,
+        sprzatanieRotacja: getSprzatanieRotacjaDefinicje(),
         floorMin: PIPBOY_SPRZATANIE_FLOOR_MIN,
         ceilingMin: PIPBOY_SPRZATANIE_CEILING_MIN
       }
@@ -391,7 +397,7 @@ function generateDayBlocks(dataStr) {
 
   const dow = new Date(dataStr).getDay();
   const jestSrodaLubNiedziela = dow === 0 || dow === 3;
-  const strefaSprzatania = PIPBOY_SPRZATANIE_ROTACJA.find(s => s.dow === dow);
+  const strefaSprzatania = getSprzatanieRotacjaDefinicje().find(s => s.dow === dow);
   const pielegnacjaDef = getPielegnacjaDefinicje();
 
   const blocks = [];
@@ -845,6 +851,38 @@ function usunProduktPielegnacyjny(klucz) {
       if (dane[i][0] === klucz) { sheet.deleteRow(i + 1); return { success: true }; }
     }
     return { success: false, error: 'Nie znaleziono.' };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+// ============================================================
+// ROTACJA SPRZĄTANIA — definicja edytowalna (Moduł 8 / Onboarding krok 5),
+// zamiast sztywnej listy w kodzie. 7 stałych dni tygodnia (dow 0-6) — edycja
+// to zmiana NAZWY strefy per dzień, nie dodawanie/usuwanie wierszy.
+// ============================================================
+
+function getSprzatanieRotacjaDefinicje() {
+  try {
+    const rows = sheetToObjects(pipboySheet('sprzatanie_rotacja_definicje'));
+    if (rows.length === 0) return PIPBOY_SPRZATANIE_ROTACJA.slice();
+    return rows.map(r => ({ dow: Number(r.dow), strefa: r.strefa }));
+  } catch (e) {
+    return PIPBOY_SPRZATANIE_ROTACJA.slice();
+  }
+}
+
+function ustawStrefeSprzatania(dow, strefa) {
+  try {
+    const sheet = pipboySheet('sprzatanie_rotacja_definicje');
+    const rows = sheet.getDataRange().getValues();
+    for (let i = 1; i < rows.length; i++) {
+      if (Number(rows[i][0]) === Number(dow)) {
+        sheet.getRange(i + 1, 2).setValue(strefa);
+        return { success: true };
+      }
+    }
+    return { success: false, error: 'Nieznany dzień tygodnia.' };
   } catch (e) {
     return { success: false, error: e.toString() };
   }
