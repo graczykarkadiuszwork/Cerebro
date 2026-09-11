@@ -1370,8 +1370,39 @@ function evaluateStarterBadges(dataStr) {
     const dniLacznieSuplementy = Object.keys(suplByDate).filter(dzienRdzenneOk).length;
     if (dniLacznieSuplementy >= 100) przyznaj(7); // [S] Setka
     if (dniLacznieSuplementy >= 500) przyznaj(8); // [S] Pięćsetka
+    if (streakSuplementy >= 7) przyznaj(13); // [S] Perfekcyjny tydzień suplementów — ten sam warunek co 2, dokument powtarza go pod dwiema nazwami
+    { // 9 [Z] Odzyskany rytm — dziś OK, 3 poprzednie dni NIE, i był wcześniej choć jeden dzień OK (to "powrót", nie pierwszy raz)
+      if (dzienRdzenneOk(dataStr)) {
+        const d1 = dataMinus(dataStr, 1), d2 = dataMinus(dataStr, 2), d3 = dataMinus(dataStr, 3);
+        const bylaPrzerwa = !dzienRdzenneOk(d1) && !dzienRdzenneOk(d2) && !dzienRdzenneOk(d3);
+        const bylKiedysOk = Object.keys(suplByDate).some(d => d < d3 && dzienRdzenneOk(d));
+        if (bylaPrzerwa && bylKiedysOk) przyznaj(9);
+      }
+    }
+    { // 10 [S] Świadomy wybór — Melatonina użyta świadomie, bez przekroczenia limitu w ostatnich 30 dniach
+      let melatoninaW30 = 0;
+      let d = dataStr;
+      for (let i = 0; i < 30; i++) { const w = (suplByDate[d] || []).find(r => r.klucz === 'melatonina'); if (w && pipboyPrawda(w.wykonano)) melatoninaW30++; d = dataMinus(d, 1); }
+      if (melatoninaW30 >= 1 && melatoninaW30 <= PIPBOY_MELATONINA.limit_max) przyznaj(10);
+    }
+    { // 14 [S] Gainer na czas — 20 dni treningowych z gainerem przyjętym tego samego dnia
+      const treningRowsA = sheetToObjects(pipboySheet('log_treningowy'));
+      const dniTreningoweZGainerem = new Set();
+      treningRowsA.filter(r => r.zrodlo_sesji === 'pelna').forEach(r => {
+        const w = (suplByDate[r.data] || []).find(x => x.klucz === 'gainer');
+        if (w && pipboyPrawda(w.wykonano)) dniTreningoweZGainerem.add(r.data);
+      });
+      if (dniTreningoweZGainerem.size >= 20) przyznaj(14);
+    }
+    { // 15 [S] Sekretna: Fundament — 6 miesięcy z systemem, niezależnie od streaków
+      const wszystkieDatyHpA = sheetToObjects(pipboySheet('hp_historia')).map(r => r.data).sort();
+      if (wszystkieDatyHpA.length > 0) {
+        const dniOdStartuA = Math.floor((new Date(dataStr + 'T00:00:00') - new Date(wszystkieDatyHpA[0] + 'T00:00:00')) / 86400000);
+        if (dniOdStartuA >= 180) przyznaj(15);
+      }
+    }
 
-    // --- B. TRENING / CIAŁO (16,21,22,23,24,25,44,45) ---
+    // --- B. TRENING / CIAŁO (16,17,18,19,20,21,22,23,24,25,27,28,29,30,32,34,35,41,44,45) ---
     const treningRows = sheetToObjects(pipboySheet('log_treningowy'));
     const sesjePelneByDate = {};
     treningRows.filter(r => r.zrodlo_sesji === 'pelna').forEach(r => { sesjePelneByDate[r.data] = true; });
@@ -1379,12 +1410,51 @@ function evaluateStarterBadges(dataStr) {
     if (liczbaSesjiPelnych >= 1) przyznaj(16);   // [S] Powrót na matę
     if (liczbaSesjiPelnych >= 100) przyznaj(21); // [S] Setka treningów
     if (liczbaSesjiPelnych >= 200) przyznaj(22); // [S] Dwieście treningów
+    { // 17 [Z] Tydzień w rytmie, 18-20 progi liczbowe w oknie dni
+      const liczSesjeWOknie = (dniOkno) => {
+        let n = 0, d = dataStr;
+        for (let i = 0; i < dniOkno; i++) { if (sesjePelneByDate[d]) n++; d = dataMinus(d, 1); }
+        return n;
+      };
+      if (liczSesjeWOknie(7) >= 3) przyznaj(17);    // [Z] Tydzień w rytmie
+      if (liczSesjeWOknie(30) >= 12) przyznaj(18);  // [S] Miesiąc w budowie
+      if (liczSesjeWOknie(90) >= 36) przyznaj(19);  // [S] Kwartał regularności
+      if (liczSesjeWOknie(180) >= 78) przyznaj(20); // [S] Pół roku w budowie
+    }
     const liczbaRekordow = treningRows.filter(r => pipboyPrawda(r.nowy_rekord)).length;
     if (liczbaRekordow >= 1) przyznaj(23);  // [S] Pierwszy rekord
     if (liczbaRekordow >= 10) przyznaj(24); // [S] Dziesięć rekordów
     if (liczbaRekordow >= 50) przyznaj(25); // [S] Pięćdziesiąt rekordów
     if (treningRows.length >= 100) przyznaj(44);  // [S] Sto serii
     if (treningRows.length >= 1000) przyznaj(45); // [S] Tysiąc serii
+    // 27-30 — dopasowanie DOKŁADNEJ nazwy ćwiczenia z planu startowego (sekcja
+    // Moduł 2); jeśli Arek zmieni nazwę w swoim planie, te 4 odznaki przestaną
+    // się liczyć (nie ukryta wada — świadomy kompromis, bo nazwy ćwiczeń są
+    // swobodnym tekstem, nie identyfikatorem).
+    const liczbaRekordowCwiczenia = (nazwy) => treningRows.filter(r => pipboyPrawda(r.nowy_rekord) && nazwy.indexOf(r.cwiczenie) !== -1).length;
+    if (liczbaRekordowCwiczenia(['Przysiad ze sztangą']) >= 10) przyznaj(27); // [S] Mistrz przysiadu
+    if (liczbaRekordowCwiczenia(['Wyciskanie sztangi na ławce płaskiej', 'Wyciskanie hantli na ławce skośnej']) >= 10) przyznaj(28); // [S] Mistrz wyciskania
+    if (liczbaRekordowCwiczenia(['Martwy ciąg rumuński']) >= 10) przyznaj(29); // [S] Mistrz martwego ciągu
+    if (liczbaRekordowCwiczenia(['Wyciskanie hantli nad głowę (stojąc)', 'Wyciskanie sztangi nad głowę (OHP)']) >= 10) przyznaj(30); // [S] Żelazne barki
+    { // 32 [Z] Perfekcyjny tydzień treningowy — dziś, jeśli dzień treningowy: sesja + kardio + rozciąganie tego dnia
+      const dziennySenRozc = sheetToObjects(pipboySheet('log_dzienny')).filter(r => r.modul === 'rozciaganie' && r.data === dataStr);
+      const mialRozciaganie = dziennySenRozc.some(r => pipboyPrawda(r.wykonano));
+      const mialKardioDzis = !!(pipboyGrupujPoDacie(sheetToObjects(pipboySheet('kardio_mobilnosc_log')))[dataStr]);
+      if (jestDniemTreningowym(dataStr) && sesjePelneByDate[dataStr] && mialKardioDzis && mialRozciaganie) przyznaj(32);
+    }
+    { // 34/35 — czas od PIERWSZEJ sesji treningowej (powrót na matę), nie od
+      // pierwszego dnia systemu w ogóle — inny punkt odniesienia niż 15/194/208.
+      const datySesjiPelnych = Object.keys(sesjePelneByDate).sort();
+      if (datySesjiPelnych.length > 0) {
+        const dniOdPierwszejSesji = Math.floor((new Date(dataStr + 'T00:00:00') - new Date(datySesjiPelnych[0] + 'T00:00:00')) / 86400000);
+        if (dniOdPierwszejSesji >= 180) przyznaj(34); // [S] Weteran FBW
+        if (dniOdPierwszejSesji >= 365) przyznaj(35); // [S] Rocznik
+      }
+    }
+    { // 41 [Z] Dzień mocy — sesja z co najmniej 2 progresjami ciężaru naraz (tego samego dnia)
+      const rekordyDzis = treningRows.filter(r => r.data === dataStr && pipboyPrawda(r.nowy_rekord)).length;
+      if (rekordyDzis >= 2) przyznaj(41);
+    }
 
     // --- C. KARDIO + MOBILNOŚĆ (46,47,48,54) ---
     // Dawny Moduł 3, scalony z Modułem 2 (Runda #14) — "kardio z kettlami,
@@ -1418,8 +1488,35 @@ function evaluateStarterBadges(dataStr) {
     let dniPelnychW30 = 0;
     { let d = dataStr; for (let i = 0; i < 30; i++) { if (dzienPelnyPosilki(d)) dniPelnychW30++; d = dataMinus(d, 1); } }
     if (dniPelnychW30 >= 25) przyznaj(60); // [S] Miesiąc regularności żywieniowej
+    // 61 — "3 miesiące konsekwentnego wzorca" interpretowane spójnie z resztą
+    // dokumentu (gdzie "Kwartał X" = streak 90 dni z rzędu, np. odznaki 4, 19).
+    if (streakPosilki >= 90) przyznaj(61); // [S] Kwartał nawyku
+    const posilkiWszystkie = sheetToObjects(pipboySheet('posilki_log')).filter(r => pipboyPrawda(r.wykonano));
+    if (posilkiWszystkie.length >= 100) przyznaj(66);  // [S] Setka posiłków
+    if (posilkiWszystkie.length >= 500) przyznaj(67);  // [S] Pięćset posiłków
+    if (posilkiWszystkie.length >= 1000) przyznaj(68); // [S] Tysiąc posiłków
+    { // 69 — ten sam wzorzec metryki co odznaka 14 (kategoria A), wyższy próg,
+      // dokument dosłownie powtarza tę metrykę pod inną nazwą w innej kategorii.
+      const treningRowsD = sheetToObjects(pipboySheet('log_treningowy'));
+      const suplByDateD = pipboyGrupujPoDacie(sheetToObjects(pipboySheet('suplementy_log')));
+      const dniTreningoweZGaineremD = new Set();
+      treningRowsD.filter(r => r.zrodlo_sesji === 'pelna').forEach(r => {
+        const w = (suplByDateD[r.data] || []).find(x => x.klucz === 'gainer');
+        if (w && pipboyPrawda(w.wykonano)) dniTreningoweZGaineremD.add(r.data);
+      });
+      if (dniTreningoweZGaineremD.size >= 50) przyznaj(69); // [S] Gainer konsekwentny
+    }
+    { // 71 [S] Sekretna — 6 miesięcy bez ani jednego dnia z ZERO posiłków (nie 5/5, tylko nie-zero)
+      const dzienNieZerowyPosilki = (d) => (posilkiByDate[d] || []).some(r => pipboyPrawda(r.wykonano));
+      if (pipboyStreak(dzienNieZerowyPosilki, dataStr) >= 180) przyznaj(71);
+    }
+    const dataPosilkiWszystkie = Object.keys(posilkiByDate).sort();
+    if (dataPosilkiWszystkie.length > 0) {
+      const dniPosilkow = Math.floor((new Date(dataStr + 'T00:00:00') - new Date(dataPosilkiWszystkie[0] + 'T00:00:00')) / 86400000);
+      if (dniPosilkow >= 365) przyznaj(72); // [S] Rok przy stole
+    }
 
-    // --- E. CZYTELNICTWO / UMYSŁ (73,74,75,76,77,78,79,80,81,82,83,85) ---
+    // --- E. CZYTELNICTWO / UMYSŁ (73,74,75,76,77,78,79,80,81,82,83,85,88,90) ---
     const czytRows = sheetToObjects(pipboySheet('czytelnictwo_log'));
     const czytByDate = pipboyGrupujPoDacie(czytRows);
     const minutyCzytDnia = (d) => (czytByDate[d] || []).reduce((s, r) => s + (Number(r.minuty) || 0), 0);
@@ -1441,15 +1538,39 @@ function evaluateStarterBadges(dataStr) {
     if (godzinyCzytaniaLacznie >= 100) przyznaj(81);  // [S] Setka godzin
     if (godzinyCzytaniaLacznie >= 500) przyznaj(82);  // [S] Pięćset godzin
     if (godzinyCzytaniaLacznie >= 1000) przyznaj(83); // [S] Tysiąc godzin
+    const dataCzytRows = czytRows.map(r => r.data).sort();
+    if (dataCzytRows.length > 0) {
+      const dniCzytania = Math.floor((new Date(dataStr + 'T00:00:00') - new Date(dataCzytRows[0] + 'T00:00:00')) / 86400000);
+      if (dniCzytania >= 365) przyznaj(88); // [S] Rok czytelnika
+    }
+    { // 90 — "rolling-average w normie" interpretowane jako śr. 7-dniowa ≥55
+      // (norma z odznaki 74), bez ani jednego dnia zerowego, przez 90 dni z rzędu.
+      const rollingCzytByDate = {};
+      sheetToObjects(pipboySheet('rolling_average_cele')).filter(r => r.modul === 'czytelnictwo').forEach(r => { rollingCzytByDate[r.data] = Number(r.srednia_7dni); });
+      const dzienZrownowazony = (d) => minutyCzytDnia(d) > 0 && rollingCzytByDate.hasOwnProperty(d) && rollingCzytByDate[d] >= 55;
+      if (pipboyStreak(dzienZrownowazony, dataStr) >= 90) przyznaj(90);
+    }
 
-    // --- G. SPACER Z PSEM (101,103,104,105) ---
-    const spacerLiczba = sheetToObjects(pipboySheet('spacer_log')).length;
+    // --- G. SPACER Z PSEM (101,102,103,104,105,106,107,108) ---
+    const spacerRowsG = sheetToObjects(pipboySheet('spacer_log'));
+    const spacerLiczba = spacerRowsG.length;
     if (spacerLiczba >= 1) przyznaj(101);    // [S] Pierwszy spacer w systemie
     if (spacerLiczba >= 100) przyznaj(103);  // [S] Setka spacerów
     if (spacerLiczba >= 500) przyznaj(104);  // [S] Pięćset spacerów
     if (spacerLiczba >= 1000) przyznaj(105); // [S] Tysiąc spacerów
+    const spacerByDate = pipboyGrupujPoDacie(spacerRowsG);
+    const dzien2SpaceryOk = (d) => (spacerByDate[d] || []).length >= 2;
+    if (pipboyStreak(dzien2SpaceryOk, dataStr) >= 7) przyznaj(102); // [Z] Tydzień ruchu z psem
+    const dzien1SpacerOk = (d) => (spacerByDate[d] || []).length >= 1;
+    if (pipboyStreak(dzien1SpacerOk, dataStr) >= 180) przyznaj(106); // [S] Bez przypomnień (6 miesięcy)
+    if (pipboyStreak(dzien1SpacerOk, dataStr) >= 365) przyznaj(108); // [S] Sekretna: Więź (rok konsekwentnych spacerów)
+    const dataSpacerRows = Object.keys(spacerByDate).sort();
+    if (dataSpacerRows.length > 0) {
+      const dniSpacerow = Math.floor((new Date(dataStr + 'T00:00:00') - new Date(dataSpacerRows[0] + 'T00:00:00')) / 86400000);
+      if (dniSpacerow >= 365) przyznaj(107); // [S] Towarzysz w każdą pogodę (12 mies. trackingu)
+    }
 
-    // --- H. SPRZĄTANIE / OTOCZENIE (109,113,117) ---
+    // --- H. SPRZĄTANIE / OTOCZENIE (109,110,113,114,115,116,117,118,119,120,122) ---
     const sprzRows = sheetToObjects(pipboySheet('sprzatanie_log'));
     if (sprzRows.length >= 1) przyznaj(109);   // [S] Pierwsza strefa
     if (sprzRows.length >= 100) przyznaj(113); // [S] Setka zadań
@@ -1461,6 +1582,44 @@ function evaluateStarterBadges(dataStr) {
       return minuty >= PIPBOY_SPRZATANIE_FLOOR_MIN;
     };
     if (pipboyStreak(dzienFloorOk, dataStr) >= 60) przyznaj(117); // [S] Floor zawsze spełniony
+    { // 118 — analogicznie, ale sufit (ceiling) zamiast floora — dyscyplina, nie tylko wykonanie
+      const dzienCeilingOk = (d) => {
+        const minuty = (sprzByDate[d] || []).reduce((s, r) => s + (Number(r.minuty) || 0), 0);
+        return minuty <= PIPBOY_SPRZATANIE_CEILING_MIN;
+      };
+      if (pipboyStreak(dzienCeilingOk, dataStr) >= 60) przyznaj(118); // [S] W granicach ceiling
+    }
+    { // 110 — wszystkie 7 stref (wg AKTUALNEJ, edytowalnej rotacji) odhaczone w oknie 7 dni
+      const strefyWymagane = getSprzatanieRotacjaDefinicje().map(r => r.strefa);
+      const strefyOstatnie7 = new Set();
+      { let d = dataStr; for (let i = 0; i < 7; i++) { (sprzByDate[d] || []).forEach(r => strefyOstatnie7.add(r.strefa)); d = dataMinus(d, 1); } }
+      if (strefyWymagane.length > 0 && strefyWymagane.every(s => strefyOstatnie7.has(s))) przyznaj(110); // [Z] Pełny tydzień rotacji
+    }
+    // 114/115/122 — dopasowanie DOKŁADNEJ nazwy strefy ze startowej rotacji
+    // (PipBoyData.gs); jeśli Arek zmieni nazwę w Ustawieniach, te 3 odznaki
+    // przestaną się liczyć — świadomy kompromis, jak przy ćwiczeniach (27-30).
+    const liczbaZadanStrefy = (nazwa) => sprzRows.filter(r => r.strefa === nazwa).length;
+    if (liczbaZadanStrefy('Łazienka') >= 20) przyznaj(114); // [S] Mistrz łazienki
+    if (liczbaZadanStrefy('Kuchnia') >= 20) przyznaj(115);  // [S] Mistrz kuchni
+    if (liczbaZadanStrefy('Pomieszczenie gospodarcze + przedsionek/klatka') >= 20) przyznaj(122); // [S] Przedsionek i klatka
+    { // 116 — niedzielne sprzątania globalne: dowolny wpis sprzątania w niedzielę
+      const niedzieleZSprzataniem = new Set(sprzRows.filter(r => new Date(r.data + 'T00:00:00').getDay() === 0).map(r => r.data));
+      if (niedzieleZSprzataniem.size >= 20) przyznaj(116); // [S] Porządek globalny
+    }
+    { // 119 [Z] Dzień generalny — dziś sprzątanie (≥floor) I auto tego samego dnia (wg przypomnienia_log)
+      const minutyDzis = (sprzByDate[dataStr] || []).reduce((s, r) => s + (Number(r.minuty) || 0), 0);
+      const autoDzis = sheetToObjects(pipboySheet('przypomnienia_log')).some(r => r.klucz === 'auto_przeglad' && r.data === dataStr);
+      if (minutyDzis >= PIPBOY_SPRZATANIE_FLOOR_MIN && autoDzis) przyznaj(119);
+    }
+    { // 120 — "Rok w porządku": dni od pierwszego wpisu sprzątania (spójne z
+      // wzorcem "Rok X" reszty kategorii — pełna, 52-tygodniowa rotacja bez
+      // przerwy byłaby zgadywaniem dokładnej definicji "konsekwentnej rotacji")
+      const dataSprzRows = Object.keys(sprzByDate).sort();
+      if (dataSprzRows.length > 0) {
+        const dniSprzatania = Math.floor((new Date(dataStr + 'T00:00:00') - new Date(dataSprzRows[0] + 'T00:00:00')) / 86400000);
+        if (dniSprzatania >= 365) przyznaj(120);
+      }
+    }
 
     // --- F. PIELĘGNACJA (91,92,93,98,99) ---
     const pielegnacjaDefB = getPielegnacjaDefinicje();
@@ -1482,6 +1641,24 @@ function evaluateStarterBadges(dataStr) {
     { let d = dataStr; for (let i = 0; i < 30; i++) { if (dzienPielegnacjaOk(d)) dniPielW30++; d = dataMinus(d, 1); } }
     if (dniPielW30 >= 25) przyznaj(93); // [S] Miesiąc dbałości
     if (Object.keys(pielByDate).filter(dzienPielegnacjaOk).length >= 100) przyznaj(99); // [S] Setka rytuałów
+    { // 96/97 — oba sloty (rano+wieczór) tego konkretnego produktu, 90 dni z rzędu
+      const dzienProduktOk = (kluczRano, kluczWieczor) => (d) => {
+        const wpisy = pielByDate[d] || [];
+        const r = wpisy.find(x => x.produkt === kluczRano);
+        const w = wpisy.find(x => x.produkt === kluczWieczor);
+        return !!(r && pipboyPrawda(r.wykonano) && w && pipboyPrawda(w.wykonano));
+      };
+      if (pipboyStreak(dzienProduktOk('krem_twarzy_rano', 'krem_twarzy_wieczor'), dataStr) >= 90) przyznaj(96); // [S] Skóra w formie
+      if (pipboyStreak(dzienProduktOk('krem_rak_1', 'krem_rak_2'), dataStr) >= 90) przyznaj(97);               // [S] Ręce jak nowe
+    }
+    { // 100 [S] Sekretna — 6 miesięcy bez ani jednego CAŁKOWICIE pominiętego dnia (≥1 wpis, nie pełny rytuał)
+      const dzienNieZerowyPiel = (d) => (pielByDate[d] || []).some(r => pipboyPrawda(r.wykonano));
+      if (pipboyStreak(dzienNieZerowyPiel, dataStr) >= 180) przyznaj(100);
+    }
+    { // 94 — liczba odnotowanych wizyt fryzjera (przypomnienia_log, dodany wcześniej)
+      const liczbaFryzjer = sheetToObjects(pipboySheet('przypomnienia_log')).filter(r => r.klucz === 'fryzjer').length;
+      if (liczbaFryzjer >= 10) przyznaj(94); // [S] Fryzjer w rytmie
+    }
 
     // --- I. SEN / HIGIENA ŚWIATŁA (123,124,125,126,128,129) ---
     const senByDate = pipboyGrupujPoDacie(sheetToObjects(pipboySheet('log_dzienny')).filter(r => r.modul === 'sen'));
