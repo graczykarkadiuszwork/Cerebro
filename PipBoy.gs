@@ -65,6 +65,8 @@ function setupPipBoy() {
       { name: 'portfolio_projekty', headers: ['id', 'nazwa', 'kategoria', 'typ_pracy', 'data_rozpoczecia', 'zdjecie_zrobione', 'opis_napisany', 'opublikowane', 'kanaly', 'status'] },
       { name: 'portfolio_czas_log', headers: ['data', 'projekt_id', 'minuty'] },
       { name: 'smierci_log', headers: ['data'] },
+      { name: 'mysli_log', headers: ['id', 'data', 'tresc', 'rozwiazane'] },
+      { name: 'priorytet_dnia', headers: ['data', 'blok_klucz'] },
       { name: 'rolling_average_cele', headers: ['modul', 'data', 'wartosc_dnia', 'srednia_7dni'] },
       { name: 'cytaty_motywacyjne', headers: ['tresc', 'autor', 'zrodlo', 'data_ostatniego_wyswietlenia'] },
       { name: 'marquee_komunikaty', headers: ['tresc', 'kategoria', 'warunek', 'priorytet'] },
@@ -492,6 +494,7 @@ function getPipBoyDzien(dataStr) {
         hp: hp.procent,
         hpBrakujace: hp.brakujace,
         smiercPostaci: smiercWynik.smierc, nowaSmiercPostaci: !!smiercWynik.nowaSmierc,
+        priorytetDnia: getPriorytetDnia(dataStr),
         cytatDnia: getCytatDnia(),
         zakupyRekomendacje: getZakupyRekomendacje(dataStr),
         przypomnieniaAktywne: getAktywnePrzypomnienia(),
@@ -2223,6 +2226,83 @@ function marqueeWarunekPasuje(warunek, kontekst) {
       default: return true;
     }
   });
+}
+
+// ============================================================
+// MYŚLI (Brain Vault) — dodatek spoza pierwotnej specyfikacji dokumentu,
+// zgłoszony przez Arka po analizie porównawczej z innymi narzędziami dla
+// ADHD (Flow/Taknoghte, Mindwtr — niezależnie zbieżne na tym samym wzorcu:
+// "capture-first"). CELOWO poza mechaniką HP i poza sztywnymi blokami dnia —
+// to zawór bezpieczeństwa na natrętną myśl, którą trzeba zapisać w 2
+// sekundy i wrócić do tego, co się robiło, nie osobny system zadań (ten
+// już istnieje w Cerebro — Zadania). Nie zmienia rigid-systemu Pip-Boya,
+// tylko go uzupełnia.
+// ============================================================
+
+function dodajMysl(tresc) {
+  try {
+    if (!tresc || !tresc.trim()) return { success: false, error: 'Pusta treść.' };
+    const id = generateId();
+    pipboySheet('mysli_log').appendRow([id, todayIso(), tresc.trim(), false]);
+    return { success: true, id: id };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+function getMysliAktywne() {
+  try {
+    const rows = sheetToObjects(pipboySheet('mysli_log')).filter(r => !pipboyPrawda(r.rozwiazane));
+    rows.sort((a, b) => a.data < b.data ? -1 : a.data > b.data ? 1 : 0);
+    return { success: true, data: rows };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+function oznaczMyslRozwiazana(id) {
+  try {
+    const sheet = pipboySheet('mysli_log');
+    const dane = sheet.getDataRange().getValues();
+    for (let i = 1; i < dane.length; i++) {
+      if (dane[i][0] === id) { sheet.getRange(i + 1, 4).setValue(true); return { success: true }; }
+    }
+    return { success: false, error: 'Nie znaleziono.' };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+// ============================================================
+// PRIORYTET DNIA ("Boulder") — dodatek spoza pierwotnej specyfikacji,
+// zgłoszony przez Arka po analizie porównawczej (Flow/Taknoghte: "jedna
+// rzecz, jeśli nic innego"). CZYSTO wizualne wyróżnienie jednego bloku
+// dnia — nie zmienia obligatoryjności ani mechaniki HP żadnego bloku,
+// tylko pomaga zobaczyć, co dziś jest najważniejsze spośród już
+// zaplanowanych rzeczy.
+// ============================================================
+
+function ustawPriorytetDnia(dataStr, blokKlucz) {
+  try {
+    const sheet = pipboySheet('priorytet_dnia');
+    const dane = sheet.getDataRange().getValues();
+    for (let i = 1; i < dane.length; i++) {
+      if (dane[i][0] === dataStr) { sheet.getRange(i + 1, 2).setValue(blokKlucz); return { success: true }; }
+    }
+    sheet.appendRow([dataStr, blokKlucz]);
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+function getPriorytetDnia(dataStr) {
+  try {
+    const wpis = sheetToObjects(pipboySheet('priorytet_dnia')).find(r => r.data === dataStr);
+    return wpis ? wpis.blok_klucz : '';
+  } catch (e) {
+    return '';
+  }
 }
 
 // ============================================================

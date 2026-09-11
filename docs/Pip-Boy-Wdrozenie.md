@@ -73,6 +73,13 @@ Nie mam dostępu do Twojego konta Google — nie mogę więc:
 - utworzyć arkusza i folderu Pip-Boy na Twoim Dysku (to robi funkcja `setupPipBoy()`, ale dopiero po wdrożeniu),
 - podłączyć RCP ani Kalendarza (Faza 2, wymaga Twoich danych dostępowych).
 
+## Myśli (Brain Vault) i Priorytet dnia (Boulder) — dwa dodatki SPOZA pierwotnej specyfikacji
+
+Wdrożone na wyraźną prośbę Arka, po analizie porównawczej z Flow/Taknoghte i Mindwtr (dwa niezależne, dobrze zaprojektowane narzędzia dla ADHD, które zbieżnie doszły do tego samego wzorca "capture-first"). Mechanika HP/GAME OVER/streaki **NIE zostały ruszone** — Arek świadomie zdecydował zostawić je bez zmian po zobaczeniu, że modyfikacja cofnęłaby już zbudowaną pracę (14 odznak kategorii N, cały system Game Over) — "zobaczymy jak sprawdza się mój projekt".
+
+- **Myśli** — pływający przycisk 🧠 widoczny z KAŻDEJ zakładki (nie tylko Widoku Dnia), pozwala zapisać natrętną myśl/pomysł w 2 sekundy i wrócić do tego, co się robiło. Nowy arkusz `mysli_log`, funkcje `dodajMysl()`/`getMysliAktywne()`/`oznaczMyslRozwiazana()`. Celowo poza mechaniką HP i poza sztywnymi blokami dnia — to zawór bezpieczeństwa, nie osobny system zadań (Zadania w Cerebro już istnieją, to nie ich zamiennik).
+- **Priorytet dnia** — kliknięcie gwiazdki przy dowolnym bloku Widoku Dnia oznacza go jako "dzisiejszy priorytet" (wyróżnienie bursztynową obwódką). Nowy arkusz `priorytet_dnia`, funkcje `ustawPriorytetDnia()`/`getPriorytetDnia()`. Czysto wizualne — nie zmienia obligatoryjności ani kary HP żadnego bloku.
+
 ## Naprawiony w tej turze błąd, który blokowałby wdrożenie
 
 Podczas przygotowywania tej instrukcji znalazłem i naprawiłem dwa realne problemy, które sprawiłyby, że wdrożenie od razu by nie zadziałało (pusta strona / błędy przy każdym kliknięciu):

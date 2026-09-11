@@ -178,6 +178,15 @@
       <button data-scale="1.4" onclick="pbSetFontScale(1.4)">A++</button>
     </div>
   </div>
+
+  <!-- ===== MYŚLI / Brain Vault — widoczne z każdej zakładki (patrz sekcja o Myślach w PipBoy.gs) ===== -->
+  <button class="pb-vault-btn" id="pb-vault-btn" onclick="pbToggleVault()" title="Myśli — szybki zrzut">🧠</button>
+  <div class="pb-vault-panel" id="pb-vault-panel" style="display:none;">
+    <div class="pb-eyebrow">MYŚLI — zapisz i wróć do tego, co robiłeś</div>
+    <textarea class="pb-textarea" id="pb-vault-input" rows="2" placeholder="natrętna myśl, pomysł, coś do zrobienia później…"></textarea>
+    <button class="pb-btn" onclick="pbDodajMysl()">Zapisz</button>
+    <div id="pb-vault-lista" style="margin-top:8px;"></div>
+  </div>
   </div> <!-- /pb-main-ui -->
 
   <!-- ===== GAME OVER (sekcja 4.1 — logika "śmierci postaci") ===== -->
@@ -219,6 +228,7 @@ function pbShowMainUi() {
   pbLoadSuplementyRdzenneDynamic();
   pbLoadPielegnacjaDynamic();
   pbLoadDay();
+  pbLoadMysli();
 }
 
 function pbToday() {
@@ -282,6 +292,47 @@ function pbRenderOstrzezenieHP(hp, brakujace) {
   box.style.display = 'block';
   document.getElementById('pb-hp-ostrzezenie-lista').innerHTML =
     'Wykonaj jeszcze dziś, żeby odzyskać HP: ' + brakujace.join(', ') + '.';
+}
+
+// ---- MYŚLI / Brain Vault (dostępne z każdej zakładki) ----
+function pbToggleVault() {
+  const panel = document.getElementById('pb-vault-panel');
+  const otwieranie = panel.style.display === 'none';
+  panel.style.display = otwieranie ? 'block' : 'none';
+  if (otwieranie) pbLoadMysli();
+}
+
+function pbLoadMysli() {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result.success) return;
+      const btn = document.getElementById('pb-vault-btn');
+      btn.classList.toggle('has-items', result.data.length > 0);
+      const el = document.getElementById('pb-vault-lista');
+      el.innerHTML = result.data.map(function(m) {
+        return '<div class="pb-vault-item"><span style="flex:1;">' + escapeHtml(m.tresc) + '</span>' +
+          '<button onclick="pbOznaczMyslRozwiazana(\'' + m.id + '\')" title="Załatwione">✓</button></div>';
+      }).join('') || '<div style="color:var(--pb-green-dim); font-size:0.82em;">Pusto.</div>';
+    })
+    .withFailureHandler(function() {})
+    .getMysliAktywne();
+}
+
+function pbDodajMysl() {
+  const el = document.getElementById('pb-vault-input');
+  const tresc = el.value.trim();
+  if (!tresc) return;
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) { el.value = ''; pbLoadMysli(); } else showError(result.error);
+    })
+    .dodajMysl(tresc);
+}
+
+function pbOznaczMyslRozwiazana(id) {
+  google.script.run.withSuccessHandler(function(result) {
+    if (result.success) pbLoadMysli(); else showError(result.error);
+  }).oznaczMyslRozwiazana(id);
 }
 
 function pbRenderGodMode(aktywny) {
@@ -514,15 +565,17 @@ function pbRenderBlocks(dane) {
   el.innerHTML = dane.bloki.map(function(blok, idx) {
     const done = pbBlockStatus(blok, dane);
     const obl = blok.obligatoryjne;
+    const jestPriorytetem = blok.klucz && blok.klucz === dane.priorytetDnia;
     const marker = done ? '+' : (obl ? 'o' : '·');
     const bracket = obl ? ['[',']'] : ['(',')'];
     const trescBlokowa = (blok.modul === 'trening')
       ? '<span style="color:var(--pb-green-dim); text-decoration:underline; cursor:pointer;" onclick="event.stopPropagation(); pbSwitchTab(\'trening\')">' + blok.nazwa + ' → zakładka TRENING</span>'
       : blok.nazwa;
     return (
-      '<div class="pb-block ' + (obl ? 'obligatoryjne' : 'opcjonalne') + (done ? ' done' : '') + '" id="pb-block-' + idx + '">' +
+      '<div class="pb-block ' + (obl ? 'obligatoryjne' : 'opcjonalne') + (done ? ' done' : '') + (jestPriorytetem ? ' priorytet' : '') + '" id="pb-block-' + idx + '">' +
         '<div class="pb-block-head" onclick="pbToggleExpand(' + idx + ')">' +
           '<span class="pb-block-marker">' + bracket[0] + marker + bracket[1] + '</span>' +
+          (blok.klucz ? '<span class="pb-block-star" title="Priorytet dnia" onclick="event.stopPropagation(); pbUstawPriorytet(\'' + blok.klucz + '\')">' + (jestPriorytetem ? '★' : '☆') + '</span>' : '') +
           '<span class="pb-block-name">' + trescBlokowa + '</span>' +
           '<span class="pb-block-tag">' + (obl ? 'OBLIGATORYJNE' : 'opcjonalne') + '</span>' +
           '<span class="pb-block-chevron">›</span>' +
@@ -531,6 +584,15 @@ function pbRenderBlocks(dane) {
       '</div>'
     );
   }).join('');
+}
+
+// "Boulder" (sekcja o Priorytecie dnia w PipBoy.gs) — czysto wizualne
+// wyróżnienie jednego bloku, nie zmienia obligatoryjności/HP.
+function pbUstawPriorytet(blokKlucz) {
+  const nowyPriorytet = (PB_DAY.priorytetDnia === blokKlucz) ? '' : blokKlucz; // powtórne kliknięcie = zdejmij
+  google.script.run.withSuccessHandler(function(result) {
+    if (result.success) { PB_DAY.priorytetDnia = nowyPriorytet; pbRenderBlocks(PB_DAY); } else showError(result.error);
+  }).ustawPriorytetDnia(pbToday(), nowyPriorytet);
 }
 
 function pbBlockBody(blok, dane) {

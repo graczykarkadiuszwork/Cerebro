@@ -90,6 +90,21 @@
   .pb-block.expanded .pb-block-chevron { transform: rotate(90deg); }
   .pb-block-body { display: none; padding: 4px 14px 14px 42px; border-top: 1px solid var(--pb-green-faint); }
   .pb-block.expanded .pb-block-body { display: block; }
+  .pb-block.priorytet { border-color: var(--pb-amber); box-shadow: 0 0 6px rgba(255,176,0,0.25); }
+  .pb-block-star { cursor: pointer; color: var(--pb-green-faint); flex-shrink: 0; }
+  .pb-block.priorytet .pb-block-star { color: var(--pb-amber); }
+
+  /* Myśli (Brain Vault) — dostępne z każdej zakładki */
+  .pb-vault-btn { position: fixed; right: 18px; bottom: 18px; z-index: 400; width: 44px; height: 44px; border-radius: 50%;
+    background: var(--pb-bg-raised); border: 1px solid var(--pb-green-dim); color: var(--pb-green); font-size: 1.3em;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .pb-vault-btn.has-items { border-color: var(--pb-amber); color: var(--pb-amber); }
+  .pb-vault-panel { position: fixed; right: 18px; bottom: 70px; z-index: 400; width: min(320px, calc(100vw - 36px));
+    max-height: 60vh; overflow: auto; background: var(--pb-bg-raised); border: 1px solid var(--pb-green-dim);
+    border-radius: 8px; padding: 12px; }
+  .pb-vault-item { display: flex; gap: 8px; align-items: flex-start; padding: 6px 0; border-bottom: 1px solid var(--pb-green-faint); font-size: 0.85em; }
+  .pb-vault-item:last-child { border-bottom: none; }
+  .pb-vault-item button { background: none; border: none; color: var(--pb-green-dim); cursor: pointer; flex-shrink: 0; }
 
   .pb-check-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 0.88em; cursor: pointer; }
   .pb-check-mark { width: 1.4em; display: inline-block; }
