@@ -6,7 +6,7 @@
       <span class="text-3xl">🧠</span>
       <div>
         <div class="text-[20px] font-bold text-[#007aff]">Cerebro</div>
-        <div id="sidebar-org" class="text-[12px] text-[#8e8e93]">Ładowanie...</div>
+        <div id="sidebar-org" class="text-[12px] text-[#8e8e93]">Pip-Boy — wdrożenie samodzielne</div>
       </div>
     </div>
   </div>
@@ -17,7 +17,15 @@
       Moduły
     </div>
 
-    <button id="nav-pulpit" onclick="navigateTo('pulpit')"
+    <!--
+      Pulpit/Zadania/Baza Wiedzy/Chat Saver/Terminarz/Personel — ukryte
+      celowo. Arek: "wdrożyć niezależnie Pip-Boya, hub łączący wszystkie
+      moduły stworzymy później". Kod tych modułów (guziki, pliki .html,
+      funkcje backendowe) NIE jest usunięty — zostaje nietknięty w
+      repozytorium do czasu budowy huba, tylko chwilowo niewidoczny w
+      nawigacji. Odsłonić: usuń "hidden" z poniższych 6 przycisków.
+    -->
+    <button id="nav-pulpit" onclick="navigateTo('pulpit')" hidden
       class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px]
       text-[15px] font-medium transition-colors text-[#000] hover:bg-[rgba(120,120,128,0.08)]"
       data-tooltip="Pulpit">
@@ -25,7 +33,7 @@
       <span>Pulpit</span>
     </button>
 
-    <button id="nav-zadania" onclick="navigateTo('zadania')"
+    <button id="nav-zadania" onclick="navigateTo('zadania')" hidden
       class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px]
       text-[15px] font-medium transition-colors text-[#000] hover:bg-[rgba(120,120,128,0.08)]"
       data-tooltip="Zadania">
@@ -33,7 +41,7 @@
       <span>Zadania</span>
     </button>
 
-    <button id="nav-wiedza" onclick="navigateTo('wiedza')"
+    <button id="nav-wiedza" onclick="navigateTo('wiedza')" hidden
       class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px]
       text-[15px] font-medium transition-colors text-[#000] hover:bg-[rgba(120,120,128,0.08)]"
       data-tooltip="Baza Wiedzy">
@@ -41,7 +49,7 @@
       <span>Baza Wiedzy</span>
     </button>
 
-    <button id="nav-chat" onclick="navigateTo('chat')"
+    <button id="nav-chat" onclick="navigateTo('chat')" hidden
       class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px]
       text-[15px] font-medium transition-colors text-[#000] hover:bg-[rgba(120,120,128,0.08)]"
       data-tooltip="Chat Saver">
@@ -49,7 +57,7 @@
       <span>Chat Saver</span>
     </button>
 
-    <button id="nav-terminarz" onclick="navigateTo('terminarz')"
+    <button id="nav-terminarz" onclick="navigateTo('terminarz')" hidden
       class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px]
       text-[15px] font-medium transition-colors text-[#000] hover:bg-[rgba(120,120,128,0.08)]"
       data-tooltip="Terminarz">
@@ -57,7 +65,7 @@
       <span>Terminarz</span>
     </button>
 
-    <button id="nav-personel" onclick="navigateTo('personel')"
+    <button id="nav-personel" onclick="navigateTo('personel')" hidden
       class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px]
       text-[15px] font-medium transition-colors text-[#000] hover:bg-[rgba(120,120,128,0.08)]"
       data-tooltip="Personel">
@@ -93,12 +101,8 @@
 </div>
 
 <script>
-  google.script.run
-    .withSuccessHandler(function(result) {
-      if (result.success && result.data) {
-        const org = result.data.organizationName || 'Moja Organizacja';
-        document.getElementById('sidebar-org').textContent = org;
-      }
-    })
-    .getSettings();
+  // Karta "Organizacja" w Ustawieniach jest teraz ukryta (samodzielne
+  // wdrożenie Pip-Boya — patrz komentarz w nawigacji wyżej), więc etykieta
+  // organizacji nie jest już pobierana ani nadpisywana tutaj; podpis
+  // "Pip-Boy — wdrożenie samodzielne" (ustawiony w HTML wyżej) zostaje na stałe.
 </script>

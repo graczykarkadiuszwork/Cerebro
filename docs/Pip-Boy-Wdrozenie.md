@@ -1,5 +1,15 @@
 # Pip-Boy — status budowy i wdrożenie
 
+## Wdrożenie samodzielne (Pip-Boy niezależnie od reszty Cerebro)
+
+Na wyraźną prośbę Arka: pozostałe moduły Cerebro (Pulpit, Zadania, Baza Wiedzy, Chat Saver, Terminarz, Personel) — w obecnym, starym wyglądzie — są nieaktualne jeszcze przed wdrożeniem. Hub łączący wszystkie moduły w jedną spójną całość zostanie zbudowany później. Do tego czasu Pip-Boy działa jako samodzielna aplikacja: **kod pozostałych modułów NIE został usunięty** (zostaje w repo nietknięty, gotowy do podłączenia pod hub), tylko wyłączony z nawigacji:
+
+- `Sidebar.html`: przyciski Pulpit/Zadania/Baza Wiedzy/Chat Saver/Terminarz/Personel mają atrybut `hidden` (widoczne zostają tylko Pip-Boy i Ustawienia).
+- `Ustawienia.html`: karty „Organizacja”/„Baza danych Cerebro”/„Google Drive” mają atrybut `hidden` (widoczna zostaje tylko karta „Pip-Boy”).
+- `Index.html`: po zalogowaniu aplikacja ląduje od razu na widoku Pip-Boy (nowa funkcja `isPipBoyConfigured()` w `PipBoyLogic.gs` sprawdza, czy `PIPBOY_SPREADSHEET_ID` już istnieje; jeśli nie — kieruje na Ustawienia z podpowiedzią kliknięcia „Skonfiguruj Pip-Boy”).
+
+**Żeby z powrotem odsłonić resztę modułów** (gdy hub będzie gotowy): usuń atrybuty `hidden` w wymienionych dwóch plikach — reszta kodu (backend, moduły, style) nie wymaga żadnych zmian, bo nigdy nie została usunięta.
+
 ## Co istnieje teraz (Faza 1 + część Fazy 2, zgodnie z sekcją 0.11.2 koncepcji)
 
 Kod w tym repozytorium (branch `Pip-Boy`), zintegrowany z Cerebro jako nowy moduł:
@@ -102,7 +112,7 @@ Naprawione w tej turze:
 - Dodana widoczna obsługa błędu (`showError(...)`) we wszystkich tych czterech modułach, zamiast cichego niepowodzenia — jeśli coś pójdzie nie tak, teraz zobaczysz dlaczego, zamiast pustego ekranu.
 - Przy okazji naprawiony pokrewny błąd w widoku Kanban Zadań: `renderKanban()` nadpisywał całą kolumnę (razem z nagłówkiem „Do wykonania”/„W trakcie”/„Ukończone”), więc nagłówki znikały po pierwszym odświeżeniu.
 
-**Kolejność po wdrożeniu (ważne):** najpierw **Ustawienia → Skonfiguruj Cerebro**, dopiero potem **Ustawienia → Skonfiguruj Pip-Boy** — to dwa niezależne arkusze (sekcja 0.9), oba wymagane, każdy inicjowany osobnym przyciskiem.
+**Aktualizacja (wdrożenie samodzielne — patrz sekcja na samej górze dokumentu):** karta „Baza danych Cerebro” i przycisk „Skonfiguruj Cerebro” zostały od tej pory ukryte razem z resztą modułów Cerebro — do czasu Pip-Boya wystarczy sam przycisk **Ustawienia → Skonfiguruj Pip-Boy**. Kod `setupCerebro()` wciąż istnieje (przyda się, gdy hub połączy moduły), po prostu nie jest teraz potrzebny.
 
 ## Jak wdrożyć — najprostsza ścieżka (przez przeglądarkę, bez instalowania czegokolwiek)
 
@@ -116,7 +126,7 @@ Naprawione w tej turze:
 4. **Manifest `appsscript.json` NIE jest zwykłym nowym plikiem** — nie da się go dodać przyciskiem „+”, bo każdy projekt ma go już wbudowanego (domyślnie ukryty). Żeby go zobaczyć: ikona koła zębatego po lewej („Ustawienia projektu”) → zaznacz „Pokaż plik manifestu appsscript.json w edytorze”. Wróć do widoku plików (ikona `< >`), kliknij pojawiający się `appsscript.json` i zastąp całą jego zawartość tą z repozytorium.
 5. Kliknij **Wdróż → Nowe wdrożenie**. Typ: **Aplikacja internetowa**. „Wykonaj jako”: Ja. „Kto ma dostęp”: Tylko ja. Kliknij Wdróż i zezwól na uprawnienia, o które poprosi Google.
 6. Otwórz link, który dostaniesz po wdrożeniu — to jest Twoje Cerebro.
-7. W aplikacji: **Ustawienia → Skonfiguruj Cerebro** — to jest pierwszy, wymagany krok, bez którego Zadania/Baza Wiedzy/Chat Saver będą puste. Dopiero potem **Ustawienia → Skonfiguruj Pip-Boy** — utworzy osobny arkusz i osobny folder na Twoim Dysku, zasieje 263 cytaty i 107 komunikatów. To dwa niezależne przyciski, dwa niezależne arkusze.
+7. W aplikacji (wyląduje automatycznie na Ustawieniach, bo Pip-Boy jeszcze nieskonfigurowany): **Ustawienia → Skonfiguruj Pip-Boy** — utworzy osobny arkusz i osobny folder na Twoim Dysku, zasieje 263 cytaty i 107 komunikatów. (Karta „Baza danych Cerebro” jest teraz ukryta razem z resztą modułów — patrz sekcja „Wdrożenie samodzielne” na górze dokumentu — nie jest już potrzebna.)
 8. W nowo utworzonym arkuszu Pip-Boy, w zakładce `grafik_pracy`, wpisz ręcznie dni bieżącego miesiąca (data, godziny, typ A/B/Wolny) — tymczasowy, ręczny odpowiednik rytuału z sekcji 0.7, dopóki odczyt RCP go nie zastąpi.
 9. Wróć do zakładki Pip-Boy w Cerebro — zobaczysz kreator pierwszego uruchomienia (Onboarding), a po nim dzisiejszy Widok Dnia.
 

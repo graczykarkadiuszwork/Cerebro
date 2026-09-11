@@ -173,6 +173,18 @@ function pipboySheet(name) {
   return getPipBoySpreadsheet().getSheetByName(name);
 }
 
+// Lekki, szybki test "czy Pip-Boy w ogóle ma arkusz" — używany przez Index.html
+// do decyzji, czy przy starcie przekierować od razu na widok Pip-Boy, czy
+// najpierw na Ustawienia (gdy ktoś jeszcze nie kliknął "Skonfiguruj Pip-Boy").
+function isPipBoyConfigured() {
+  try {
+    const id = PropertiesService.getScriptProperties().getProperty('PIPBOY_SPREADSHEET_ID');
+    return { success: true, data: { configured: !!id } };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
 function todayIso() {
   return Utilities.formatDate(new Date(), Session.getScriptTimeZone() || 'Europe/Warsaw', 'yyyy-MM-dd');
 }

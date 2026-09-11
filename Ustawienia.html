@@ -3,7 +3,14 @@
     <h1 class="text-2xl font-bold text-[#000]">Ustawienia</h1>
   </div>
   <div id="settings-container">
-    <div class="ios-card mb-4">
+    <!--
+      Organizacja / Baza danych Cerebro / Google Drive — ukryte celowo.
+      Arek: "wdrożyć niezależnie Pip-Boya, hub łączący wszystkie moduły
+      stworzymy później". Kod (przyciski, funkcje setupCerebro()/setupDrive())
+      NIE jest usunięty, tylko chwilowo niewidoczny. Odsłonić: usuń "hidden"
+      z poniższych 3 kart.
+    -->
+    <div class="ios-card mb-4" hidden>
       <div class="section-title">Organizacja</div>
       <div class="p-4 space-y-4">
         <div>
@@ -17,7 +24,7 @@
         <button onclick="saveSettings()" class="btn-primary">Zapisz zmiany</button>
       </div>
     </div>
-    <div class="ios-card mb-4">
+    <div class="ios-card mb-4" hidden>
       <div class="section-title">Baza danych Cerebro</div>
       <div class="p-4 space-y-3">
         <p class="text-[15px] text-[#8e8e93] leading-relaxed">Wymagany pierwszy krok przed użyciem Zadań, Bazy Wiedzy i Chat Savera — tworzy główny arkusz Cerebro (zadania/wiedza/wydarzenia/ustawienia) i strukturę folderów Drive. Bez tego kroku te moduły pozostaną puste.</p>
@@ -25,7 +32,7 @@
         <div id="cerebro-status" class="text-[13px] text-[#8e8e93]"></div>
       </div>
     </div>
-    <div class="ios-card mb-4">
+    <div class="ios-card mb-4" hidden>
       <div class="section-title">Google Drive</div>
       <div class="p-4 space-y-3">
         <p class="text-[15px] text-[#8e8e93] leading-relaxed">Automatyczny import plików z następujących folderów Drive:</p>

@@ -121,7 +121,6 @@
     document.addEventListener('DOMContentLoaded', function() {
       lucide.createIcons();
       checkFirstRun();
-      navigateTo('pulpit');
       showPWABanner();
     });
 
@@ -133,15 +132,23 @@
       }
     }
 
+    // Wersja tymczasowa (samodzielne wdrożenie Pip-Boya, zanim powstanie hub
+    // łączący wszystkie moduły Cerebro — patrz docs/Pip-Boy-Wdrozenie.md):
+    // domyślnym i jedynym realnie widocznym widokiem jest Pip-Boy, więc
+    // pierwsze uruchomienie sprawdza JEGO konfigurację, a nie starych pól
+    // Organizacji (ta karta w Ustawieniach jest teraz ukryta).
     function checkFirstRun() {
       google.script.run
         .withSuccessHandler(function(result) {
-          if (!result.success || !result.data.organizationName) {
+          if (result.success && result.data.configured) {
+            navigateTo('pipboy');
+          } else {
             navigateTo('ustawienia');
-            showInfo('Witaj w Cerebro! Zacznij od konfiguracji.');
+            showInfo('Witaj! Zacznij od „Skonfiguruj Pip-Boy" w Ustawieniach.');
           }
         })
-        .getSettings();
+        .withFailureHandler(function() { navigateTo('pipboy'); })
+        .isPipBoyConfigured();
     }
 
     function toggleMobileSidebar() {
