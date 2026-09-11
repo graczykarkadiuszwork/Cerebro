@@ -56,7 +56,7 @@ function setupPipBoy() {
       { name: 'natura_log', headers: ['data', 'zrodlo'] },
       { name: 'zakupy_log', headers: ['data', 'kategoria', 'produkt', 'kupione'] },
       { name: 'czas_wolny_log', headers: ['data', 'dlugosc_min', 'forma'] },
-      { name: 'przypomnienia_cykliczne', headers: ['klucz', 'nazwa', 'data_ostatniego_wykonania', 'cykl_dni'] },
+      { name: 'przypomnienia_cykliczne', headers: ['klucz', 'nazwa', 'data_ostatniego_wykonania', 'cykl_dni', 'notatka'] },
       { name: 'rolling_average_cele', headers: ['modul', 'data', 'wartosc_dnia', 'srednia_7dni'] },
       { name: 'cytaty_motywacyjne', headers: ['tresc', 'autor', 'zrodlo', 'data_ostatniego_wyswietlenia'] },
       { name: 'marquee_komunikaty', headers: ['tresc', 'kategoria', 'warunek', 'priorytet'] },
@@ -128,9 +128,9 @@ function seedPipBoyContentTables(ss) {
   const przypSheet = ss.getSheetByName('przypomnienia_cykliczne');
   const przypRows = Object.keys(PIPBOY_PRZYPOMNIENIA_DEFINICJE).map(klucz => {
     const def = PIPBOY_PRZYPOMNIENIA_DEFINICJE[klucz];
-    return [klucz, def.nazwa, '', def.cykl_dni];
+    return [klucz, def.nazwa, '', def.cykl_dni, ''];
   });
-  przypSheet.getRange(2, 1, przypRows.length, 4).setValues(przypRows);
+  przypSheet.getRange(2, 1, przypRows.length, 5).setValues(przypRows);
 }
 
 function getPipBoySpreadsheet() {
@@ -690,6 +690,52 @@ function oznaczPrzypomnienieWykonane(klucz, dataStr) {
       }
     }
     return { success: false, error: 'Nieznany klucz przypomnienia.' };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+function pipboyUstawNotatkaPrzypomnienia(klucz, notatka) {
+  try {
+    const sheet = pipboySheet('przypomnienia_cykliczne');
+    const rows = sheet.getDataRange().getValues();
+    for (let i = 1; i < rows.length; i++) {
+      if (rows[i][0] === klucz) {
+        sheet.getRange(i + 1, 5).setValue(notatka || '');
+        return { success: true };
+      }
+    }
+    return { success: false, error: 'Nieznany klucz przypomnienia.' };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+// Pełna lista WSZYSTKICH przypomnień cyklicznych (nie tylko aktualnie
+// "aktywnych") — do dedykowanego ekranu SERWIS (Moduł 12/15/16), żeby Arek
+// widział status każdego z nich, nie tylko te akurat przeterminowane.
+function getWszystkiePrzypomnienia() {
+  try {
+    const rows = sheetToObjects(pipboySheet('przypomnienia_cykliczne'));
+    const dzis = todayIso();
+    const dzisDate = new Date(dzis + 'T00:00:00');
+    const miesiac = dzisDate.getMonth() + 1;
+    return {
+      success: true,
+      data: rows.map(function(r) {
+        let sezonowyStatus = null;
+        if (r.klucz === 'motocykl_kontrola') {
+          sezonowyStatus = pipboyWSezonieMotocyklowym(miesiac) ? 'w sezonie (kwiecień-październik)' : 'POZA SEZONEM — ukryte z Widoku Dnia';
+        } else if (r.klucz === 'motocykl_wiosna' || r.klucz === 'motocykl_jesien') {
+          sezonowyStatus = r.klucz === 'motocykl_wiosna' ? 'okno: marzec-kwiecień' : 'okno: październik-listopad';
+        }
+        return {
+          klucz: r.klucz, nazwa: r.nazwa, cyklDni: r.cykl_dni,
+          dataOstatniegoWykonania: r.data_ostatniego_wykonania || '', notatka: r.notatka || '',
+          sezonowyStatus: sezonowyStatus
+        };
+      })
+    };
   } catch (e) {
     return { success: false, error: e.toString() };
   }

@@ -22,6 +22,7 @@
     <button class="pb-tab" id="pb-tab-trening" onclick="pbSwitchTab('trening')">TRENING</button>
     <button class="pb-tab" id="pb-tab-postac" onclick="pbSwitchTab('postac')">POSTAĆ</button>
     <button class="pb-tab" id="pb-tab-dashboard" onclick="pbSwitchTab('dashboard')">DASHBOARD</button>
+    <button class="pb-tab" id="pb-tab-serwis" onclick="pbSwitchTab('serwis')">SERWIS</button>
     <button class="pb-tab disabled">PORTFOLIO <span class="pb-tab-note">(Faza 3)</span></button>
   </div>
 
@@ -113,6 +114,14 @@
     <div id="pb-dashboard-body"><div style="color:var(--pb-green-dim);">Ładowanie dashboardu…</div></div>
   </div>
 
+  <!-- ===== WIDOK: SERWIS (Moduł 12 Badania, Moduł 15/16 Auto/Motocykl, Moduł 7 fryzjer, robot sprzątający) ===== -->
+  <div id="pb-view-serwis" style="display:none;">
+    <div style="color:var(--pb-green-dim); font-size:0.85em; margin-bottom:10px;">
+      Wszystkie przypomnienia cykliczne w jednym miejscu — nie tylko te akurat przeterminowane (te widzisz też w Widoku Dnia). Motocykl: sezon kwiecień-październik.
+    </div>
+    <div id="pb-serwis-body"><div style="color:var(--pb-green-dim);">Ładowanie…</div></div>
+  </div>
+
   <div class="pb-settings-row">
     <span>Efekty CRT</span>
     <div class="pb-segmented" id="pb-crt-seg">
@@ -164,15 +173,16 @@ function pbToday() {
 
 // ---- Przełączanie wewnętrznych widoków Pip-Boy (sekcja 6.2) ----
 function pbSwitchTab(tab) {
-  ['dzien', 'trening', 'postac', 'dashboard'].forEach(function(t) {
+  ['dzien', 'trening', 'postac', 'dashboard', 'serwis'].forEach(function(t) {
     document.getElementById('pb-view-' + t).style.display = (t === tab) ? 'block' : 'none';
     document.getElementById('pb-tab-' + t).classList.toggle('active', t === tab);
   });
-  const titles = { dzien: 'WIDOK DNIA', trening: 'TRENING', postac: 'KARTA POSTACI', dashboard: 'DASHBOARD' };
+  const titles = { dzien: 'WIDOK DNIA', trening: 'TRENING', postac: 'KARTA POSTACI', dashboard: 'DASHBOARD', serwis: 'SERWIS' };
   document.getElementById('pb-view-title').textContent = titles[tab];
   if (tab === 'trening' && !PB_PLAN) pbLoadTrainingPlan();
   if (tab === 'postac') pbLoadKartaPostaci();
   if (tab === 'dashboard') pbLoadDashboard();
+  if (tab === 'serwis') pbLoadSerwis();
 }
 
 function pbLoadDay() {
@@ -240,6 +250,52 @@ function pbOznaczPrzypomnienie(klucz) {
   google.script.run.withSuccessHandler(function(result) {
     if (result.success) { showSuccess('Odnotowano.'); pbLoadDay(); } else showError(result.error);
   }).oznaczPrzypomnienieWykonane(klucz, pbToday());
+}
+
+// ---- SERWIS (Moduł 12 Badania, Moduł 15/16 Auto/Motocykl, Moduł 7 fryzjer, robot) ----
+function pbLoadSerwis() {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result.success) { showError('Serwis: ' + result.error); return; }
+      pbRenderSerwis(result.data);
+    })
+    .withFailureHandler(function(err) { showError('Błąd ładowania Serwisu: ' + err.message); })
+    .getWszystkiePrzypomnienia();
+}
+
+function pbRenderSerwis(lista) {
+  const el = document.getElementById('pb-serwis-body');
+  el.innerHTML = lista.map(function(p) {
+    const dniOd = p.dataOstatniegoWykonania
+      ? Math.floor((new Date(pbToday()) - new Date(p.dataOstatniegoWykonania)) / 86400000) + ' dni temu'
+      : 'nigdy';
+    return '<div class="pb-block obligatoryjne expanded" style="margin-bottom:10px;">' +
+      '<div class="pb-block-head"><span class="pb-block-name">' + p.nazwa + '</span>' +
+      '<span class="pb-block-tag">cykl ' + p.cyklDni + ' dni</span></div>' +
+      '<div class="pb-block-body">' +
+        '<div style="font-size:0.85em; margin-bottom:6px;">Ostatnio wykonane: <b>' + (p.dataOstatniegoWykonania || '—') + '</b> (' + dniOd + ')' +
+          (p.sezonowyStatus ? '<br><span style="color:var(--pb-amber);">' + p.sezonowyStatus + '</span>' : '') + '</div>' +
+        '<label style="font-size:0.82em;">Data wykonania</label> ' +
+        '<input class="pb-input" type="date" id="pb-serwis-data-' + p.klucz + '" value="' + pbToday() + '" style="width:auto; display:inline-block;"> ' +
+        '<button class="pb-btn" onclick="pbSerwisOznaczWykonane(\'' + p.klucz + '\')">Oznacz wykonane</button>' +
+        '<div style="margin-top:6px;"><textarea class="pb-textarea" id="pb-serwis-notatka-' + p.klucz + '" rows="2" placeholder="Notatka (np. wymiana oleju za 2 miesiące)">' + (p.notatka || '') + '</textarea>' +
+        '<button class="pb-btn" onclick="pbSerwisZapiszNotatke(\'' + p.klucz + '\')">Zapisz notatkę</button></div>' +
+      '</div></div>';
+  }).join('');
+}
+
+function pbSerwisOznaczWykonane(klucz) {
+  const data = pbVal('pb-serwis-data-' + klucz) || pbToday();
+  google.script.run.withSuccessHandler(function(result) {
+    if (result.success) { showSuccess('Odnotowano.'); pbLoadSerwis(); } else showError(result.error);
+  }).oznaczPrzypomnienieWykonane(klucz, data);
+}
+
+function pbSerwisZapiszNotatke(klucz) {
+  const notatka = pbVal('pb-serwis-notatka-' + klucz);
+  google.script.run.withSuccessHandler(function(result) {
+    if (result.success) showSuccess('Notatka zapisana.'); else showError(result.error);
+  }).pipboyUstawNotatkaPrzypomnienia(klucz, notatka);
 }
 
 function pbCurrentPora() {
