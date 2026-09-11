@@ -23,9 +23,13 @@
       moduły stworzymy później". Kod tych modułów (guziki, pliki .html,
       funkcje backendowe) NIE jest usunięty — zostaje nietknięty w
       repozytorium do czasu budowy huba, tylko chwilowo niewidoczny w
-      nawigacji. Odsłonić: usuń "hidden" z poniższych 6 przycisków.
+      nawigacji. Odsłonić: usuń atrybuty `hidden` I `style="display:none;"`
+      z poniższych 6 przycisków (oba naraz — sam atrybut `hidden` nie
+      wystarczy, bo klasa Tailwind `flex` na tym samym przycisku ma taką
+      samą specyficzność CSS i wygrywa z domyślną regułą przeglądarki
+      `[hidden]{display:none}`; stąd inline `style` jako rozstrzygnięcie).
     -->
-    <button id="nav-pulpit" onclick="navigateTo('pulpit')" hidden
+    <button id="nav-pulpit" onclick="navigateTo('pulpit')" hidden style="display:none;"
       class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px]
       text-[15px] font-medium transition-colors text-[#000] hover:bg-[rgba(120,120,128,0.08)]"
       data-tooltip="Pulpit">
@@ -33,7 +37,7 @@
       <span>Pulpit</span>
     </button>
 
-    <button id="nav-zadania" onclick="navigateTo('zadania')" hidden
+    <button id="nav-zadania" onclick="navigateTo('zadania')" hidden style="display:none;"
       class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px]
       text-[15px] font-medium transition-colors text-[#000] hover:bg-[rgba(120,120,128,0.08)]"
       data-tooltip="Zadania">
@@ -41,7 +45,7 @@
       <span>Zadania</span>
     </button>
 
-    <button id="nav-wiedza" onclick="navigateTo('wiedza')" hidden
+    <button id="nav-wiedza" onclick="navigateTo('wiedza')" hidden style="display:none;"
       class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px]
       text-[15px] font-medium transition-colors text-[#000] hover:bg-[rgba(120,120,128,0.08)]"
       data-tooltip="Baza Wiedzy">
@@ -49,7 +53,7 @@
       <span>Baza Wiedzy</span>
     </button>
 
-    <button id="nav-chat" onclick="navigateTo('chat')" hidden
+    <button id="nav-chat" onclick="navigateTo('chat')" hidden style="display:none;"
       class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px]
       text-[15px] font-medium transition-colors text-[#000] hover:bg-[rgba(120,120,128,0.08)]"
       data-tooltip="Chat Saver">
@@ -57,7 +61,7 @@
       <span>Chat Saver</span>
     </button>
 
-    <button id="nav-terminarz" onclick="navigateTo('terminarz')" hidden
+    <button id="nav-terminarz" onclick="navigateTo('terminarz')" hidden style="display:none;"
       class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px]
       text-[15px] font-medium transition-colors text-[#000] hover:bg-[rgba(120,120,128,0.08)]"
       data-tooltip="Terminarz">
@@ -65,7 +69,7 @@
       <span>Terminarz</span>
     </button>
 
-    <button id="nav-personel" onclick="navigateTo('personel')" hidden
+    <button id="nav-personel" onclick="navigateTo('personel')" hidden style="display:none;"
       class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px]
       text-[15px] font-medium transition-colors text-[#000] hover:bg-[rgba(120,120,128,0.08)]"
       data-tooltip="Personel">
