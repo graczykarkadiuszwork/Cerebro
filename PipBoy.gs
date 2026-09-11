@@ -57,6 +57,7 @@ function setupPipBoy() {
       { name: 'zakupy_log', headers: ['data', 'kategoria', 'produkt', 'kupione'] },
       { name: 'czas_wolny_log', headers: ['data', 'dlugosc_min', 'forma'] },
       { name: 'przypomnienia_cykliczne', headers: ['klucz', 'nazwa', 'data_ostatniego_wykonania', 'cykl_dni', 'notatka'] },
+      { name: 'suplementy_definicje', headers: ['klucz', 'nazwa', 'typ'] },
       { name: 'rolling_average_cele', headers: ['modul', 'data', 'wartosc_dnia', 'srednia_7dni'] },
       { name: 'cytaty_motywacyjne', headers: ['tresc', 'autor', 'zrodlo', 'data_ostatniego_wyswietlenia'] },
       { name: 'marquee_komunikaty', headers: ['tresc', 'kategoria', 'warunek', 'priorytet'] },
@@ -131,6 +132,13 @@ function seedPipBoyContentTables(ss) {
     return [klucz, def.nazwa, '', def.cykl_dni, ''];
   });
   przypSheet.getRange(2, 1, przypRows.length, 5).setValues(przypRows);
+
+  // Suplementy rdzenne — zasiew startowy z PipBoyData.gs, ale odtąd
+  // edytowalny w arkuszu (Onboarding krok 3 / Ustawienia), nie na sztywno
+  // w kodzie. Patrz getSuplementyRdzenneDefinicje().
+  const suplSheet = ss.getSheetByName('suplementy_definicje');
+  const suplRows = PIPBOY_SUPLEMENTY_RDZENNE.map(s => [s.klucz, s.nazwa, 'rdzenny']);
+  suplSheet.getRange(2, 1, suplRows.length, 3).setValues(suplRows);
 }
 
 function getPipBoySpreadsheet() {
@@ -274,7 +282,7 @@ function getOnboardingDefaults() {
     return {
       success: true,
       data: {
-        suplementyRdzenne: PIPBOY_SUPLEMENTY_RDZENNE,
+        suplementyRdzenne: getSuplementyRdzenneDefinicje(),
         melatonina: PIPBOY_MELATONINA,
         gainer: PIPBOY_GAINER,
         pielegnacjaProdukty: PIPBOY_PIELEGNACJA_PRODUKTY,
@@ -383,7 +391,7 @@ function generateDayBlocks(dataStr) {
     dzieci: PIPBOY_PIELEGNACJA_PRODUKTY.poranny.concat(jestSrodaLubNiedziela ? PIPBOY_PIELEGNACJA_PRODUKTY.poranny_sr_nd : []).map(p => p.klucz)
   });
   blocks.push({ klucz: 'rozciaganie', nazwa: 'Rozciąganie/joga (10-15 min)', obligatoryjne: true, modul: 'rozciaganie' });
-  blocks.push({ klucz: 'suplementy_rdzenne', nazwa: 'Suplementy poranne', obligatoryjne: true, modul: 'suplementy', dzieci: PIPBOY_SUPLEMENTY_RDZENNE.map(s => s.klucz) });
+  blocks.push({ klucz: 'suplementy_rdzenne', nazwa: 'Suplementy poranne', obligatoryjne: true, modul: 'suplementy', dzieci: getSuplementyRdzenneDefinicje().map(s => s.klucz) });
   blocks.push({ klucz: 'posilek_1', nazwa: 'Posiłek 1 (białko na starcie) — ok. ' + posilkiGodz[0], obligatoryjne: true, modul: 'dieta', numer: 1 });
   blocks.push({ klucz: 'mood_rano', nazwa: 'Mood check poranny', obligatoryjne: true, modul: 'mood', pora: 'rano' });
 
@@ -742,6 +750,49 @@ function getWszystkiePrzypomnienia() {
 }
 
 // ============================================================
+// SUPLEMENTY RDZENNE — definicja edytowalna (Moduł 1 / Onboarding krok 3),
+// zamiast sztywnej listy w kodzie. Fallback do stałej PIPBOY_SUPLEMENTY_RDZENNE
+// (PipBoyData.gs) dopóki arkusz jest pusty — np. tuż po setupPipBoy(), zanim
+// zasiew zdąży się wykonać, albo w bardzo starych, ręcznie tworzonych arkuszach.
+// ============================================================
+
+function getSuplementyRdzenneDefinicje() {
+  try {
+    const rows = sheetToObjects(pipboySheet('suplementy_definicje')).filter(r => r.typ === 'rdzenny');
+    if (rows.length === 0) return PIPBOY_SUPLEMENTY_RDZENNE.slice();
+    return rows.map(r => ({ klucz: r.klucz, nazwa: r.nazwa }));
+  } catch (e) {
+    return PIPBOY_SUPLEMENTY_RDZENNE.slice();
+  }
+}
+
+function dodajSuplementRdzenny(klucz, nazwa) {
+  try {
+    if (!klucz || !nazwa) return { success: false, error: 'Podaj klucz i nazwę.' };
+    const sheet = pipboySheet('suplementy_definicje');
+    const rows = sheetToObjects(sheet);
+    if (rows.some(r => r.klucz === klucz)) return { success: false, error: 'Taki klucz już istnieje.' };
+    sheet.appendRow([klucz, nazwa, 'rdzenny']);
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+function usunSuplementRdzenny(klucz) {
+  try {
+    const sheet = pipboySheet('suplementy_definicje');
+    const dane = sheet.getDataRange().getValues();
+    for (let i = 1; i < dane.length; i++) {
+      if (dane[i][0] === klucz) { sheet.deleteRow(i + 1); return { success: true }; }
+    }
+    return { success: false, error: 'Nie znaleziono.' };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+// ============================================================
 // MODUŁ 1 — SUPLEMENTACJA
 // ============================================================
 
@@ -919,7 +970,7 @@ function computePipBoyHP(dataStr, struktura, logi, godModeAktywny) {
   let hp = 100;
   const brakujace = [];
 
-  const rdzenneKlucze = PIPBOY_SUPLEMENTY_RDZENNE.map(s => s.klucz);
+  const rdzenneKlucze = getSuplementyRdzenneDefinicje().map(s => s.klucz);
   if (struktura.treningowy) rdzenneKlucze.push('gainer');
   rdzenneKlucze.forEach(klucz => {
     const wpis = suplementyLog.find(r => r.klucz === klucz);
@@ -1107,7 +1158,7 @@ function evaluateStarterBadges(dataStr) {
 
     // --- A. SUPLEMENTACJA / DYSCYPLINA (1,2,3,4,5,6,7,8) ---
     const suplByDate = pipboyGrupujPoDacie(sheetToObjects(pipboySheet('suplementy_log')));
-    const rdzenneKlucze = PIPBOY_SUPLEMENTY_RDZENNE.map(s => s.klucz);
+    const rdzenneKlucze = getSuplementyRdzenneDefinicje().map(s => s.klucz);
     const dzienRdzenneOk = (d) => {
       const wpisy = suplByDate[d];
       if (!wpisy) return false;
@@ -1297,7 +1348,7 @@ function getTydzienData(dataStr) {
     { let d = dzis; for (let i = 0; i < 7; i++) { dni7.unshift(d); d = dataMinus(d, 1); } }
 
     const suplByDate = pipboyGrupujPoDacie(sheetToObjects(pipboySheet('suplementy_log')));
-    const rdzenneKlucze = PIPBOY_SUPLEMENTY_RDZENNE.map(s => s.klucz);
+    const rdzenneKlucze = getSuplementyRdzenneDefinicje().map(s => s.klucz);
     const suplOk = (d) => {
       const w = suplByDate[d];
       if (!w) return false;

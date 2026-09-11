@@ -163,6 +163,7 @@ function initModule() {
 function pbShowMainUi() {
   document.getElementById('pb-onboarding').style.display = 'none';
   document.getElementById('pb-main-ui').style.display = 'block';
+  pbLoadSuplementyRdzenneDynamic();
   pbLoadDay();
 }
 
@@ -447,14 +448,25 @@ function pbBlockBody(blok, dane) {
 }
 
 function pbSuplementNazwa(klucz) {
-  const rdzenne = PIPBOY_SUPLEMENTY_RDZENNE_CLIENT;
+  // Preferuj listę pobraną z arkusza (edytowalną — Onboarding krok 3 /
+  // Ustawienia); statyczna kopia niżej to tylko fallback na czas przed
+  // pierwszym pobraniem lub gdy zapytanie się nie powiedzie.
+  const rdzenne = PB_SUPLEMENTY_RDZENNE_DYNAMIC || PIPBOY_SUPLEMENTY_RDZENNE_CLIENT;
   const found = rdzenne.find(function(s){ return s.klucz === klucz; });
   if (found) return found.nazwa;
   if (klucz === 'melatonina') return 'Melatonina (opcjonalna, bez kary)';
   if (klucz === 'gainer') return 'KFD X Gainer';
   return klucz;
 }
-// Kopia nazw suplementów po stronie klienta (dane źródłowe: PipBoyData.gs)
+let PB_SUPLEMENTY_RDZENNE_DYNAMIC = null;
+function pbLoadSuplementyRdzenneDynamic() {
+  google.script.run
+    .withSuccessHandler(function(result) { PB_SUPLEMENTY_RDZENNE_DYNAMIC = result; if (PB_DAY) pbRenderBlocks(PB_DAY); })
+    .withFailureHandler(function() {})
+    .getSuplementyRdzenneDefinicje();
+}
+// Kopia nazw suplementów po stronie klienta — fallback startowy, dane źródłowe
+// właściwe to arkusz suplementy_definicje (PipBoy.gs: getSuplementyRdzenneDefinicje).
 const PIPBOY_SUPLEMENTY_RDZENNE_CLIENT = [
   { klucz: 'kreatyna', nazwa: 'Kreatyna' },
   { klucz: 'vita_pak', nazwa: 'KFD Vita Pak' },
@@ -708,12 +720,47 @@ function pbObCollectTreningoweDni() {
 function pbObRenderStep3(body) {
   const d = PB_OB_DEFAULTS;
   body.innerHTML =
-    '<p style="color:var(--pb-green-dim); font-size:0.85em; margin-bottom:10px;">Domyślne suplementy (edycja per-pozycja: przyszła funkcja, na razie potwierdzenie zestawu startowego).</p>' +
+    '<p style="color:var(--pb-green-dim); font-size:0.85em; margin-bottom:10px;">Suplementy rdzenne (codziennie) — edytowalne: dodaj lub usuń pozycję. Warunkowe (Melatonina, Gainer) mają osobną, specjalną logikę i na razie nie są edytowalne z tego ekranu.</p>' +
     '<b style="font-size:0.85em;">Rdzenne (codziennie):</b>' +
-    (d.suplementyRdzenne || []).map(function(s) { return '<div class="pb-check-row" style="cursor:default;"><span class="pb-check-mark">[x]</span><span>' + s.nazwa + '</span></div>'; }).join('') +
-    '<b style="font-size:0.85em; display:block; margin-top:8px;">Warunkowe:</b>' +
+    '<div id="pb-ob-suplementy-rdzenne-lista">' + pbObRenderujListeSuplementow(d.suplementyRdzenne || []) + '</div>' +
+    '<div style="margin-top:6px;">' +
+      '<input class="pb-input" id="pb-ob-suplement-nazwa" type="text" placeholder="nazwa nowego suplementu" style="width:auto; display:inline-block;">' +
+      '<button class="pb-btn" onclick="pbObDodajSuplement()">+ Dodaj</button>' +
+    '</div>' +
+    '<b style="font-size:0.85em; display:block; margin-top:12px;">Warunkowe:</b>' +
     '<div class="pb-check-row" style="cursor:default;"><span class="pb-check-mark">[·]</span><span>' + d.melatonina.nazwa + ' — w razie potrzeby, limit ' + d.melatonina.limit_max + '/miesiąc</span></div>' +
     '<div class="pb-check-row" style="cursor:default;"><span class="pb-check-mark">[·]</span><span>' + d.gainer.nazwa + ' — w dni treningowe</span></div>';
+}
+
+function pbObRenderujListeSuplementow(lista) {
+  return lista.map(function(s) {
+    return '<div class="pb-check-row" style="cursor:default;"><span class="pb-check-mark">[x]</span><span style="flex:1;">' + s.nazwa + '</span>' +
+      '<button class="pb-btn" style="margin:0; padding:3px 8px;" onclick="pbObUsunSuplement(\'' + s.klucz + '\')">usuń</button></div>';
+  }).join('') || '<div style="color:var(--pb-green-dim); font-size:0.82em;">Brak pozycji.</div>';
+}
+
+function pbObDodajSuplement() {
+  const nazwa = pbVal('pb-ob-suplement-nazwa').trim();
+  if (!nazwa) { showError('Podaj nazwę suplementu.'); return; }
+  const klucz = nazwa.toLowerCase().replace(/[^a-z0-9ąćęłńóśźż]+/gi, '_').replace(/^_+|_+$/g, '');
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result.success) { showError(result.error); return; }
+      PB_OB_DEFAULTS.suplementyRdzenne.push({ klucz: klucz, nazwa: nazwa });
+      document.getElementById('pb-ob-suplementy-rdzenne-lista').innerHTML = pbObRenderujListeSuplementow(PB_OB_DEFAULTS.suplementyRdzenne);
+      document.getElementById('pb-ob-suplement-nazwa').value = '';
+    })
+    .dodajSuplementRdzenny(klucz, nazwa);
+}
+
+function pbObUsunSuplement(klucz) {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result.success) { showError(result.error); return; }
+      PB_OB_DEFAULTS.suplementyRdzenne = PB_OB_DEFAULTS.suplementyRdzenne.filter(function(s) { return s.klucz !== klucz; });
+      document.getElementById('pb-ob-suplementy-rdzenne-lista').innerHTML = pbObRenderujListeSuplementow(PB_OB_DEFAULTS.suplementyRdzenne);
+    })
+    .usunSuplementRdzenny(klucz);
 }
 
 function pbObRenderStep4(body) {
