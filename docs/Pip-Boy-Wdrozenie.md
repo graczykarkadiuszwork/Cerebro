@@ -98,6 +98,16 @@ Podczas przygotowywania tej instrukcji znalazłem i naprawiłem dwa realne probl
 2. **`DriveSync.script` miał złe rozszerzenie.** Google Apps Script rozpoznaje tylko pliki `.gs`/`.html`/`.json` — plik z rozszerzeniem `.script` zostałby po prostu pominięty przy wgrywaniu, a funkcje „Skonfiguruj Drive” i „Synchronizuj ręcznie” w Ustawieniach przestałyby działać (odwołują się do funkcji zdefiniowanych właśnie w tym pliku). Przemianowany na `DriveSync.gs`.
 3. Dodany brakujący plik `appsscript.json` (wymagany przez Apps Script) — ustawia strefę czasową na Warszawę i dostęp do Web Appa wyłącznie dla Ciebie (`access: MYSELF`), zgodnie z sekcją 0.11.1.
 
+## KRYTYCZNE: prawdziwa, wspólna przyczyna pustych ekranów we wszystkich modułach
+
+Znalezione po tym, jak Pip-Boy — nawet po naprawieniu nazwy pliku — pokazywał całkowicie pusty ekran (sam nagłówek „WIDOK DNIA”, ani kreator onboardingu, ani główny UI, żadnego błędu). To był objaw jednej, wspólnej, znacznie głębszej przyczyny stojącej też za wcześniejszym `${skeleton(5)}`.
+
+`navigateTo()` w `Scripts.html` ładował HTML każdego modułu przez `document.getElementById('content').innerHTML = html`. To **standardowe zachowanie przeglądarek** (nie błąd Apps Script): element `<script>` wstawiony w ten sposób nigdy się nie wykonuje — przeglądarka ustawia mu flagę „already started” przy parsowaniu fragmentu HTML. Efekt: `function initModule() {...}` zdefiniowana wewnątrz `Pulpit.html`/`Zadania.html`/`Wiedza.html`/`Chat.html`/`PipBoy.html`/`Ustawienia.html`/`Terminarz.html`/`Personel.html` **nigdy faktycznie nie istniała** w globalnym zasięgu przeglądarki. `typeof initModule === 'function'` był po cichu zawsze fałszywy. Statyczny markup (nagłówki, puste kontenery) renderował się normalnie — to zwykłe wstawianie HTML, zawsze działa — ale własny skrypt modułu nigdy nie ruszał. Stąd brak jakiegokolwiek błędu: z punktu widzenia przeglądarki nic się nie „wysypało”, po prostu nic nigdy się nie uruchomiło.
+
+**Naprawione w jednym miejscu** (`Scripts.html`, funkcja `navigateTo`): nowa funkcja `executeInsertedScripts(container)` — po wstawieniu HTML modułu, dla każdego `<script>` (pomijając `script[type="text/template"]`, czyli kontenery na markup modali — te mają zostać nietknięte) tworzy nowy element `<script>` przez `createElement` + kopiuje atrybuty i treść + podmienia stary przez `replaceChild`. Taki, świeżo utworzony i dołączony element, przeglądarka wykonuje normalnie i synchronicznie.
+
+Dotyczy KAŻDEGO modułu ładowanego dynamicznie — nie tylko Pip-Boya. Po tej poprawce wszystkie powinny faktycznie wykonywać swój JS po raz pierwszy.
+
 ## Diagnoza zgłoszenia „CO TO W OGÓLE MA BYĆ?!” (5 zrzutów ekranu) i naprawa
 
 Arek zgłosił wdrożenie, po którym Zadania/Baza Wiedzy/Chat Saver pokazywały dosłowny tekst `${skeleton(5)}` zamiast treści, a zakładka Pip-Boy pokazywała czerwony błąd „Nie znaleziono pliku HTML o nazwie PipBoy.”. Dwa oddzielne problemy, dwie oddzielne przyczyny:
