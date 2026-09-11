@@ -179,7 +179,7 @@
     </div>
   </div>
 
-  <!-- ===== MYŚLI / Brain Vault — widoczne z każdej zakładki (patrz sekcja o Myślach w PipBoy.gs) ===== -->
+  <!-- ===== MYŚLI / Brain Vault — widoczne z każdej zakładki (patrz sekcja o Myślach w PipBoyLogic.gs) ===== -->
   <button class="pb-vault-btn" id="pb-vault-btn" onclick="pbToggleVault()" title="Myśli — szybki zrzut">🧠</button>
   <div class="pb-vault-panel" id="pb-vault-panel" style="display:none;">
     <div class="pb-eyebrow">MYŚLI — zapisz i wróć do tego, co robiłeś</div>
@@ -586,7 +586,7 @@ function pbRenderBlocks(dane) {
   }).join('');
 }
 
-// "Boulder" (sekcja o Priorytecie dnia w PipBoy.gs) — czysto wizualne
+// "Boulder" (sekcja o Priorytecie dnia w PipBoyLogic.gs) — czysto wizualne
 // wyróżnienie jednego bloku, nie zmienia obligatoryjności/HP.
 function pbUstawPriorytet(blokKlucz) {
   const nowyPriorytet = (PB_DAY.priorytetDnia === blokKlucz) ? '' : blokKlucz; // powtórne kliknięcie = zdejmij
@@ -690,7 +690,7 @@ function pbLoadSuplementyRdzenneDynamic() {
     .getSuplementyRdzenneDefinicje();
 }
 // Kopia nazw suplementów po stronie klienta — fallback startowy, dane źródłowe
-// właściwe to arkusz suplementy_definicje (PipBoy.gs: getSuplementyRdzenneDefinicje).
+// właściwe to arkusz suplementy_definicje (PipBoyLogic.gs: getSuplementyRdzenneDefinicje).
 const PIPBOY_SUPLEMENTY_RDZENNE_CLIENT = [
   { klucz: 'kreatyna', nazwa: 'Kreatyna' },
   { klucz: 'vita_pak', nazwa: 'KFD Vita Pak' },
@@ -1243,7 +1243,7 @@ function pbLogSet() {
     })
     // UWAGA (poprawka w tej turze): to wywołanie pomijało parametr treningTyp,
     // przez co wszystkie kolejne argumenty przesuwały się o jedno miejsce
-    // względem sygnatury backendu (logTrainingSet w PipBoy.gs) — ciężar
+    // względem sygnatury backendu (logTrainingSet w PipBoyLogic.gs) — ciężar
     // trafiał do pola oceny sesji, ocena do notatki itd. Naprawione.
     .logTrainingSet(pbToday(), treningTyp, status, pbVal('pb-log-powod'), cwiczenie,
       pbVal('pb-log-seria'), pbVal('pb-log-powt'), pbVal('pb-log-ciezar'), pbVal('pb-log-ocena'), pbVal('pb-log-notatka'));

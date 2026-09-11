@@ -1,5 +1,5 @@
 // ============================================================
-// CEREBRO — PipBoy.gs
+// CEREBRO — PipBoyLogic.gs
 // Pip-Boy: system organizacji życia — logika backendowa (Faza 1 — rdzeń)
 // Specyfikacja pełna: docs/Pip-Boy-Koncept.md
 //
