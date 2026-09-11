@@ -1377,9 +1377,87 @@ function evaluateStarterBadges(dataStr) {
     };
     if (pipboyStreak(dzienFloorOk, dataStr) >= 60) przyznaj(117); // [S] Floor zawsze spełniony
 
+    // --- F. PIELĘGNACJA (91,92,93,98,99) ---
+    const pielegnacjaDefB = getPielegnacjaDefinicje();
+    const pielByDate = pipboyGrupujPoDacie(sheetToObjects(pipboySheet('pielegnacja_log')));
+    const dzienPielegnacjaOk = (d) => {
+      const dow = new Date(d + 'T00:00:00').getDay();
+      const jestSrodaLubNiedziela = dow === 0 || dow === 3;
+      const wymagane = pielegnacjaDefB.poranny.concat(pielegnacjaDefB.wieczorny)
+        .concat(jestSrodaLubNiedziela ? pielegnacjaDefB.poranny_sr_nd : []).map(p => p.klucz);
+      if (wymagane.length === 0) return false;
+      const wpisy = pielByDate[d] || [];
+      return wymagane.every(k => { const w = wpisy.find(r => r.produkt === k); return w && pipboyPrawda(w.wykonano); });
+    };
+    if (dzienPielegnacjaOk(dataStr)) przyznaj(91); // [S] Pierwszy rytuał
+    const streakPielegnacja = pipboyStreak(dzienPielegnacjaOk, dataStr);
+    if (streakPielegnacja >= 7) przyznaj(92);   // [Z] Tydzień w formie
+    if (streakPielegnacja >= 365) przyznaj(98); // [S] Rok pielęgnacji
+    let dniPielW30 = 0;
+    { let d = dataStr; for (let i = 0; i < 30; i++) { if (dzienPielegnacjaOk(d)) dniPielW30++; d = dataMinus(d, 1); } }
+    if (dniPielW30 >= 25) przyznaj(93); // [S] Miesiąc dbałości
+    if (Object.keys(pielByDate).filter(dzienPielegnacjaOk).length >= 100) przyznaj(99); // [S] Setka rytuałów
+
+    // --- I. SEN / HIGIENA ŚWIATŁA (123,124,125,126,128,129) ---
+    const senByDate = pipboyGrupujPoDacie(sheetToObjects(pipboySheet('log_dzienny')).filter(r => r.modul === 'sen'));
+    const dzienSenOk = (d) => { const w = (senByDate[d] || [])[0]; return !!(w && pipboyPrawda(w.wykonano)); };
+    if (dzienSenOk(dataStr)) przyznaj(123); // [S] Pierwsza ciemna noc
+    const streakSen = pipboyStreak(dzienSenOk, dataStr);
+    if (streakSen >= 7) przyznaj(124);   // [Z] Tydzień higieny snu
+    if (streakSen >= 60) przyznaj(128);  // [S] Bez ekranu przed snem
+    if (streakSen >= 365) przyznaj(129); // [S] Rok higieny snu
+    let dniSenW30 = 0;
+    { let d = dataStr; for (let i = 0; i < 30; i++) { if (dzienSenOk(d)) dniSenW30++; d = dataMinus(d, 1); } }
+    if (dniSenW30 >= 25) przyznaj(125); // [S] Miesiąc dyscypliny świetlnej
+    if (Object.keys(senByDate).filter(dzienSenOk).length >= 100) przyznaj(126); // [S] Setka ciemnych wieczorów
+
     // --- Mood (131) ---
     if ((pipboyGrupujPoDacie(sheetToObjects(pipboySheet('mood_log')))[dataStr] || []).length > 0) {
       przyznaj(131); // [S] Pierwszy wpis — mood
+    }
+
+    // --- N. STREAKI OGÓLNE / PERFECT DAY (179-190,192,193) ---
+    // "Perfect Day" = dzień z HP 100% (HP już JEST % ukończenia wg sekcji 4.2,
+    // więc nie liczymy tego osobno); "≥80% ukończenia" = HP >= 80. Wykorzystuje
+    // hp_historia (upsertHpHistoria), już zbieraną dla Dashboardu (6.13).
+    const hpRowsB = sheetToObjects(pipboySheet('hp_historia'));
+    const hpByDateB = {};
+    hpRowsB.forEach(r => { hpByDateB[r.data] = Number(r.hp_procent); });
+    const dzienPerfect = (d) => hpByDateB.hasOwnProperty(d) && hpByDateB[d] === 100;
+    const dzien80 = (d) => hpByDateB.hasOwnProperty(d) && hpByDateB[d] >= 80;
+
+    if (dzienPerfect(dataStr)) przyznaj(179); // [Z] Pierwszy Perfect Day
+    const streakPerfect = pipboyStreak(dzienPerfect, dataStr);
+    if (streakPerfect >= 7) przyznaj(180); // [Z] Tydzień doskonałości (7 Perfect Days z rzędu)
+    const liczbaPerfectLacznie = Object.keys(hpByDateB).filter(dzienPerfect).length;
+    if (liczbaPerfectLacznie >= 10) przyznaj(181);
+    if (liczbaPerfectLacznie >= 50) przyznaj(182);
+    if (liczbaPerfectLacznie >= 100) przyznaj(183);
+
+    const streak80 = pipboyStreak(dzien80, dataStr);
+    if (streak80 >= 7) przyznaj(184);
+    if (streak80 >= 14) przyznaj(185);
+    if (streak80 >= 30) przyznaj(186);
+    if (streak80 >= 60) przyznaj(187);
+    if (streak80 >= 90) przyznaj(188);
+    if (streak80 >= 180) przyznaj(189);
+    if (streak80 >= 365) przyznaj(190);
+    // 191 [S] Feniks (pierwszy powrót po zerwaniu streaka) świadomie pominięta —
+    // wymaga śledzenia historii zerwań (dodatkowy stan), nie samego streaka.
+
+    // 192 — interpretacja robocza (dokument nie precyzuje progu "100% w atrybucie"
+    // per dzień): uznaj za spełnione, gdy danego dnia zdobyto choć 1 punkt w
+    // KAŻDYM z 5 Atrybutów naraz — jednoznacznie obliczalne, nie zgadywanie progu.
+    const punktyDzisiaj = sheetToObjects(pipboySheet('punkty_historia')).filter(r => r.data === dataStr);
+    if (PIPBOY_ATRYBUTY.every(a => punktyDzisiaj.some(r => r.atrybut === a))) przyznaj(192);
+
+    // 193 [S] Sekretna — "365 dni od pierwszego uruchomienia systemu": proxy =
+    // najwcześniejsza data w hp_historia (pierwszy dzień, w którym Widok Dnia
+    // w ogóle policzył HP), nie dokładna data setupPipBoy() (nie logowana osobno).
+    const wszystkieDatyHp = Object.keys(hpByDateB).sort();
+    if (wszystkieDatyHp.length > 0) {
+      const dniOdStartu = Math.floor((new Date(dataStr + 'T00:00:00') - new Date(wszystkieDatyHp[0] + 'T00:00:00')) / 86400000);
+      if (dniOdStartu >= 365) przyznaj(193);
     }
 
     return { success: true, nowoZdobyte };
