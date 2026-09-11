@@ -61,6 +61,7 @@ function setupPipBoy() {
       { name: 'pielegnacja_definicje', headers: ['klucz', 'nazwa', 'pora'] },
       { name: 'sprzatanie_rotacja_definicje', headers: ['dow', 'strefa'] },
       { name: 'przypomnienia_log', headers: ['klucz', 'data'] },
+      { name: 'kardio_mobilnosc_log', headers: ['data', 'minuty', 'intensywnosc_1_10', 'rodzaj'] },
       { name: 'rolling_average_cele', headers: ['modul', 'data', 'wartosc_dnia', 'srednia_7dni'] },
       { name: 'cytaty_motywacyjne', headers: ['tresc', 'autor', 'zrodlo', 'data_ostatniego_wyswietlenia'] },
       { name: 'marquee_komunikaty', headers: ['tresc', 'kategoria', 'warunek', 'priorytet'] },
@@ -1325,6 +1326,25 @@ function evaluateStarterBadges(dataStr) {
     if (treningRows.length >= 100) przyznaj(44);  // [S] Sto serii
     if (treningRows.length >= 1000) przyznaj(45); // [S] Tysiąc serii
 
+    // --- C. KARDIO + MOBILNOŚĆ (46,47,48,54) ---
+    // Dawny Moduł 3, scalony z Modułem 2 (Runda #14) — "kardio z kettlami,
+    // zawsze na koniec treningu". Pozostałe odznaki tej kategorii (49-57)
+    // wymagają subiektywnych notatek tekstowych lub biblioteki CrossFit —
+    // świadomie pominięte, nie zgadywane.
+    const kardioRows = sheetToObjects(pipboySheet('kardio_mobilnosc_log'));
+    if (kardioRows.length >= 1) przyznaj(46);   // [S] Pierwszy krok mobilności
+    if (kardioRows.length >= 100) przyznaj(54); // [S] Sto sesji kardio
+    const kardioByDate = pipboyGrupujPoDacie(kardioRows);
+    let dniKardioW30 = 0;
+    { let d = dataStr; for (let i = 0; i < 30; i++) { if (kardioByDate[d]) dniKardioW30++; d = dataMinus(d, 1); } }
+    if (dniKardioW30 >= 12) przyznaj(48); // [S] Miesiąc mobilności (12 sesji w 30 dni)
+    { // 47 [Z] Tydzień mobilności — kardio po KAŻDYM z 3 treningów w tygodniu
+      const dniTreningoweOstatnie7 = [];
+      let d = dataStr;
+      for (let i = 0; i < 7; i++) { if (jestDniemTreningowym(d)) dniTreningoweOstatnie7.push(d); d = dataMinus(d, 1); }
+      if (dniTreningoweOstatnie7.length > 0 && dniTreningoweOstatnie7.every(dd => kardioByDate[dd])) przyznaj(47);
+    }
+
     // --- D. DIETA (58,59,60) ---
     const posilkiByDate = pipboyGrupujPoDacie(sheetToObjects(pipboySheet('posilki_log')));
     const dzienPelnyPosilki = (d) => {
@@ -1787,6 +1807,29 @@ function zakonczTrening(dataStr, treningTyp, ocenaCalosci) {
   try {
     pipboyAwardPoints(dataStr, 'cialo', PIPBOY_PUNKTY_ZDOBYTE.trening_ukonczony.punkty);
     return { success: true };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+// Kardio z kettlami na mobilność — punkt 3 struktury sesji treningowej
+// (sekcja Moduł 2): "zawsze na koniec właściwego treningu, w ramach tej
+// samej godziny... czas trwania, subiektywna intensywność (1-10), rodzaj
+// ćwiczeń". Do czasu dostarczenia biblioteki CrossFit (sekcja 8) "rodzaj"
+// to wolny tekst, nie wybór z katalogu.
+function saveKardioMobilnosc(dataStr, minuty, intensywnosc, rodzaj) {
+  try {
+    if (!minuty) return { success: false, error: 'Podaj czas trwania (min).' };
+    pipboySheet('kardio_mobilnosc_log').appendRow([dataStr, minuty, intensywnosc || '', rodzaj || '']);
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+function getKardioMobilnoscDzien(dataStr) {
+  try {
+    return { success: true, data: sheetToObjects(pipboySheet('kardio_mobilnosc_log')).filter(r => r.data === dataStr) };
   } catch (e) {
     return { success: false, error: e.toString() };
   }

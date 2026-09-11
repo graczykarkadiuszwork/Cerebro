@@ -93,6 +93,18 @@
     <button class="pb-btn" onclick="pbLogSet()">Zapisz serię</button>
     <button class="pb-btn" onclick="pbZakonczTrening()">Zakończ trening (+20 XP Ciało)</button>
     <div id="pb-plateau-warning"></div>
+
+    <div class="pb-eyebrow" style="margin-top:18px;">KARDIO Z KETTLAMI NA MOBILNOŚĆ (zawsze na koniec treningu)</div>
+    <div id="pb-kardio-dzien" style="font-size:0.85em; color:var(--pb-green-dim); margin-bottom:6px;"></div>
+    <div class="pb-mood-grid" style="grid-template-columns: 1fr 1fr;">
+      <label>Czas trwania (min)</label>
+      <input class="pb-input" id="pb-kardio-minuty" type="number" min="1">
+      <label>Intensywność (1-10)</label>
+      <input class="pb-input" id="pb-kardio-intensywnosc" type="number" min="1" max="10">
+      <label>Rodzaj (biodra/barki/inne)</label>
+      <input class="pb-input" id="pb-kardio-rodzaj" type="text" placeholder="np. mobilność bioder">
+    </div>
+    <button class="pb-btn" onclick="pbSaveKardio()">Zapisz kardio/mobilność</button>
   </div>
 
   <!-- ===== WIDOK: POSTAĆ (Karta Postaci, sekcja 6.6) ===== -->
@@ -182,6 +194,7 @@ function pbSwitchTab(tab) {
   const titles = { dzien: 'WIDOK DNIA', trening: 'TRENING', postac: 'KARTA POSTACI', dashboard: 'DASHBOARD', serwis: 'SERWIS' };
   document.getElementById('pb-view-title').textContent = titles[tab];
   if (tab === 'trening' && !PB_PLAN) pbLoadTrainingPlan();
+  if (tab === 'trening') pbLoadKardioDzien();
   if (tab === 'postac') pbLoadKartaPostaci();
   if (tab === 'dashboard') pbLoadDashboard();
   if (tab === 'serwis') pbLoadSerwis();
@@ -1032,6 +1045,30 @@ function pbZakonczTrening() {
   }).zakonczTrening(pbToday(), '', '');
 }
 
+function pbLoadKardioDzien() {
+  google.script.run.withSuccessHandler(function(result) {
+    const el = document.getElementById('pb-kardio-dzien');
+    if (!el || !result.success) return;
+    el.textContent = result.data.length > 0
+      ? 'Dziś zapisano: ' + result.data.map(function(r) { return r.minuty + ' min' + (r.rodzaj ? ' (' + r.rodzaj + ')' : ''); }).join(', ')
+      : 'Jeszcze nie zapisano dziś.';
+  }).getKardioMobilnoscDzien(pbToday());
+}
+
+function pbSaveKardio() {
+  const minuty = pbVal('pb-kardio-minuty');
+  if (!minuty) { showError('Podaj czas trwania.'); return; }
+  google.script.run.withSuccessHandler(function(result) {
+    if (result.success) {
+      showSuccess('Kardio/mobilność zapisane.');
+      document.getElementById('pb-kardio-minuty').value = '';
+      document.getElementById('pb-kardio-intensywnosc').value = '';
+      document.getElementById('pb-kardio-rodzaj').value = '';
+      pbLoadKardioDzien();
+    } else showError(result.error);
+  }).saveKardioMobilnosc(pbToday(), minuty, pbVal('pb-kardio-intensywnosc'), pbVal('pb-kardio-rodzaj'));
+}
+
 // ---- POSTAĆ (Karta Postaci, sekcja 6.6) ----
 function pbLoadKartaPostaci() {
   google.script.run.withSuccessHandler(function(result) {
@@ -1065,7 +1102,7 @@ function pbRenderKartaPostaci(dane) {
       return '<div class="pb-check-row" style="cursor:default;"><span class="pb-check-mark">[' + o.typ + ']</span><span>' + o.nazwa + '</span></div>';
     }).join('');
   }
-  html += '<div style="color:var(--pb-green-faint); font-size:0.72em; margin-top:10px;">Ewaluacja obejmuje ~89 z 208 odznak — te, których warunek jest jednoznacznie obliczalny z zebranych już danych (streaki, progi łączne, liczniki). Odznaki sekretne, subiektywne i zależne od jeszcze niezbudowanych modułów (Portfolio, BJJ) czekają na Fazę 2+.</div>';
+  html += '<div style="color:var(--pb-green-faint); font-size:0.72em; margin-top:10px;">Ewaluacja obejmuje ~93 z 208 odznak — te, których warunek jest jednoznacznie obliczalny z zebranych już danych (streaki, progi łączne, liczniki). Odznaki sekretne, subiektywne i zależne od jeszcze niezbudowanych modułów (Portfolio, BJJ) czekają na Fazę 2+.</div>';
 
   el.innerHTML = html;
 }
