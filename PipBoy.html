@@ -904,11 +904,35 @@ function pbObRenderStep1(body) {
     '<label style="font-size:0.85em;">Miesiąc</label> <input class="pb-input" type="month" id="pb-ob-miesiac" value="' + domyslnyMiesiac + '" style="width:auto; display:inline-block;">' +
     ' <button class="pb-btn" onclick="pbObGenerujSiatke()">Generuj siatkę dni</button>' +
     '<div id="pb-ob-grid" style="margin-top:10px; max-height:340px; overflow:auto;"></div>';
+  pbObGenerujSiatke(); // od razu dla bieżącego miesiąca — bez dodatkowego kliku
 }
 
+// Zanim wygenerujemy pustą siatkę, sprawdzamy arkusz grafik_pracy — jeśli
+// Arek już coś tam wpisał ręcznie (bezpośrednio w arkuszu Pip-Boy) albo
+// wraca do wcześniej rozpoczętego onboardingu dla tego miesiąca, siatka
+// ma się wypełnić TYM, a nie zaczynać pusta za każdym razem.
 function pbObGenerujSiatke() {
   const miesiac = document.getElementById('pb-ob-miesiac').value; // 'YYYY-MM'
   if (!miesiac) { showError('Wybierz miesiąc.'); return; }
+  document.getElementById('pb-ob-grid').innerHTML = '<div style="color:var(--pb-green-dim);">Wczytywanie…</div>';
+  google.script.run
+    .withSuccessHandler(function(result) {
+      const istniejace = {};
+      if (result && result.success && result.data) {
+        result.data.forEach(function(r) { istniejace[r.data] = r; });
+      }
+      pbObRenderujSiatkeGrid(miesiac, istniejace);
+    })
+    .withFailureHandler(function() { pbObRenderujSiatkeGrid(miesiac, {}); })
+    .getGrafikMiesiaca(miesiac);
+}
+
+function pbTimeStr(val) {
+  const m = String(val || '').match(/(\d{2}):(\d{2})/);
+  return m ? (m[1] + ':' + m[2]) : '';
+}
+
+function pbObRenderujSiatkeGrid(miesiac, istniejace) {
   const [rok, mies] = miesiac.split('-').map(Number);
   const liczbaDni = new Date(rok, mies, 0).getDate();
   let html = '<div class="pb-mood-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr;">' +
@@ -917,13 +941,24 @@ function pbObGenerujSiatke() {
     const data = miesiac + '-' + String(dzien).padStart(2, '0');
     const dow = new Date(rok, mies - 1, dzien).getDay();
     if (dow === 0) continue; // niedziela — pomijamy, zawsze Szablon D
+    const istn = istniejace[data] || {};
+    const start = pbTimeStr(istn.start);
+    const koniec = pbTimeStr(istn.koniec);
+    const typ = istn.typ_dnia || 'Wolny';
     html += '<span style="font-size:0.85em;">' + data + '</span>' +
-      '<input class="pb-input" type="time" id="pb-ob-start-' + data + '">' +
-      '<input class="pb-input" type="time" id="pb-ob-koniec-' + data + '">' +
-      '<select class="pb-input" id="pb-ob-typ-' + data + '"><option value="Wolny">Wolny</option><option value="A">A</option><option value="B">B</option></select>';
+      '<input class="pb-input" type="time" id="pb-ob-start-' + data + '" value="' + start + '">' +
+      '<input class="pb-input" type="time" id="pb-ob-koniec-' + data + '" value="' + koniec + '">' +
+      '<select class="pb-input" id="pb-ob-typ-' + data + '">' +
+        '<option value="Wolny"' + (typ === 'Wolny' ? ' selected' : '') + '>Wolny</option>' +
+        '<option value="A"' + (typ === 'A' ? ' selected' : '') + '>A</option>' +
+        '<option value="B"' + (typ === 'B' ? ' selected' : '') + '>B</option>' +
+      '</select>';
   }
   html += '</div>';
   document.getElementById('pb-ob-grid').innerHTML = html;
+  if (Object.keys(istniejace).length > 0) {
+    showInfo('Wczytano ' + Object.keys(istniejace).length + ' dni istniejącego grafiku z arkusza — popraw, co trzeba, i przejdź dalej.');
+  }
 }
 
 function pbObCollectGrafik() {

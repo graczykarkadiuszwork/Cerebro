@@ -1,5 +1,15 @@
 # Pip-Boy — status budowy i wdrożenie
 
+## Aktualizacja: cała otoczka Cerebro usunięta z layoutu (nie tylko ukryta)
+
+Arek: "nadal mam tą bezsensowną ramkę cerebro" — samo ukrycie przycisków nawigacji (`hidden`) nie wystarczyło, bo sam sidebar/logo/nagłówek mobilny dalej zajmowały miejsce na ekranie wokół Pip-Boya. Naprawione radykalniej: `Index.html` już w ogóle nie includuje `Sidebar.html` — nie ma stałego panelu bocznego, nie ma logo "Cerebro", nie ma mobilnego nagłówka z hamburgerem. Pip-Boy zajmuje cały ekran od razu po wejściu.
+
+Jedyny pozostały element „chrome” to mała okrągła ikona ⚙ w prawym górnym rogu (`#pb-chrome-settings` w `Index.html`) — otwiera Ustawienia (bo tam wciąż mieszka config: suplementy, pielęgnacja, backup, eksport JSON), a na Ustawieniach ta sama ikona zmienia się w strzałkę „‹ Pip-Boy” z powrotem. `Sidebar.html` zostaje w repozytorium nietknięty (przyda się pod hub), po prostu przestał być gdziekolwiek includowany — nie trzeba go już nawet wgrywać do Apps Script, choć jego obecność tam nie szkodzi.
+
+Przy okazji naprawiony drugi zgłoszony problem — onboarding (Krok 1/9, wgrywanie grafiku pracy) zawsze generował pustą siatkę dni, ignorując cokolwiek już zapisane w arkuszu `grafik_pracy` (czy to wpisane ręcznie bezpośrednio w arkuszu Google Sheets, czy z wcześniejszej, przerwanej próby onboardingu). `pbObGenerujSiatke()` w `PipBoy.html` teraz najpierw woła istniejącą od dawna, ale dotąd nieużywaną do tego celu funkcję `getGrafikMiesiaca()` i wypełnia siatkę tym, co znajdzie dla wybranego miesiąca — puste dni zostają puste, wypełnione pokazują się od razu do poprawienia. Siatka generuje się też automatycznie po wejściu na Krok 1 (bez dodatkowego klikania „Generuj siatkę dni”).
+
+**Uwaga — to wciąż NIE jest automatyczne pobieranie grafiku z RCP.** Odczyt RCP na żywo to jawnie odłożona Faza 2 (sekcja 0.11.2 koncepcji) — wymaga danych dostępowych Arka do systemu ewidencji czasu pracy, których nie mam. To, co zostało naprawione, to tylko brak odczytu z WŁASNEGO arkusza Pip-Boy (`grafik_pracy`) — jeśli dane tam już są, teraz się pokazują; jeśli ich nie ma, nadal trzeba wpisać je ręcznie, tak jak opisuje tekst na ekranie.
+
 ## Wdrożenie samodzielne (Pip-Boy niezależnie od reszty Cerebro)
 
 Na wyraźną prośbę Arka: pozostałe moduły Cerebro (Pulpit, Zadania, Baza Wiedzy, Chat Saver, Terminarz, Personel) — w obecnym, starym wyglądzie — są nieaktualne jeszcze przed wdrożeniem. Hub łączący wszystkie moduły w jedną spójną całość zostanie zbudowany później. Do tego czasu Pip-Boy działa jako samodzielna aplikacja: **kod pozostałych modułów NIE został usunięty** (zostaje w repo nietknięty, gotowy do podłączenia pod hub), tylko wyłączony z nawigacji:

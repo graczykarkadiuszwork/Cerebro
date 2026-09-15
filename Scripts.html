@@ -22,7 +22,27 @@ function executeInsertedScripts(container) {
     oldScript.parentNode.replaceChild(newScript, oldScript);
   });
 }
-function navigateTo(module) { currentModule = module; const config = MODULES[module]; if (!config) return; document.querySelectorAll('.nav-item').forEach(el => { el.classList.remove('bg-[rgba(0,122,255,0.1)]', 'text-[#007aff]'); el.classList.add('text-[#000]'); }); const activeNav = document.getElementById(`nav-${module}`); if (activeNav) { activeNav.classList.add('bg-[rgba(0,122,255,0.1)]', 'text-[#007aff]'); activeNav.classList.remove('text-[#000]'); } const mobileTitle = document.getElementById('mobile-title'); if (mobileTitle) mobileTitle.textContent = config.title; document.getElementById('content').innerHTML = `<div class="flex items-center justify-center h-full"><div class="text-center"><div class="animate-pulse text-5xl mb-4">🧠</div><div class="text-[15px] text-[#8e8e93]">Ładowanie ${config.title}...</div></div></div>`; google.script.run.withSuccessHandler(function(html) { const contentEl = document.getElementById('content'); contentEl.innerHTML = html; lucide.createIcons(); initTooltips(); executeInsertedScripts(contentEl); if (typeof initModule === 'function') initModule(); }).withFailureHandler(function(err) { showError('Błąd ładowania modułu: ' + err.message); }).getModuleHtml(config.file); if (window.innerWidth < 768) toggleMobileSidebar(); }
+// Wdrożenie samodzielne (patrz docs/Pip-Boy-Wdrozenie.md): stałego sidebara
+// już nie ma (usunięty z Index.html, nie tylko ukryty), więc poniższe
+// zapytania o .nav-item/#nav-* po prostu nic nie znajdują i są no-opami —
+// zostawione nietknięte, żeby kod działał identycznie po ponownym
+// podłączeniu Sidebar.html pod przyszłego huba. Jedyny "chrome" poza samą
+// treścią modułu to przycisk #pb-chrome-settings (Index.html), który
+// przełącza się między "Ustawienia" a "‹ Pip-Boy" w zależności od modułu.
+function updateChromeSettingsButton(module) {
+  const btn = document.getElementById('pb-chrome-settings');
+  if (!btn) return;
+  if (module === 'ustawienia') {
+    btn.setAttribute('onclick', "navigateTo('pipboy')");
+    btn.title = 'Pip-Boy';
+    btn.innerHTML = '<i data-lucide="arrow-left" class="w-4 h-4"></i>';
+  } else {
+    btn.setAttribute('onclick', "navigateTo('ustawienia')");
+    btn.title = 'Ustawienia';
+    btn.innerHTML = '<i data-lucide="settings" class="w-4 h-4"></i>';
+  }
+}
+function navigateTo(module) { currentModule = module; const config = MODULES[module]; if (!config) return; document.querySelectorAll('.nav-item').forEach(el => { el.classList.remove('bg-[rgba(0,122,255,0.1)]', 'text-[#007aff]'); el.classList.add('text-[#000]'); }); const activeNav = document.getElementById(`nav-${module}`); if (activeNav) { activeNav.classList.add('bg-[rgba(0,122,255,0.1)]', 'text-[#007aff]'); activeNav.classList.remove('text-[#000]'); } const mobileTitle = document.getElementById('mobile-title'); if (mobileTitle) mobileTitle.textContent = config.title; updateChromeSettingsButton(module); document.getElementById('content').innerHTML = `<div class="flex items-center justify-center h-full"><div class="text-center"><div class="animate-pulse text-5xl mb-4">🧠</div><div class="text-[15px] text-[#8e8e93]">Ładowanie ${config.title}...</div></div></div>`; google.script.run.withSuccessHandler(function(html) { const contentEl = document.getElementById('content'); contentEl.innerHTML = html; lucide.createIcons(); initTooltips(); executeInsertedScripts(contentEl); if (typeof initModule === 'function') initModule(); }).withFailureHandler(function(err) { showError('Błąd ładowania modułu: ' + err.message); }).getModuleHtml(config.file); if (typeof toggleMobileSidebar === 'function' && window.innerWidth < 768) toggleMobileSidebar(); }
 const TRANSLATIONS = { 'Pulpit': 'Dashboard', 'Zadania': 'Tasks', 'Baza Wiedzy': 'Knowledge Base', 'Chat Saver': 'Save AI Chat', 'Terminarz': 'Calendar', 'Personel': 'Staff View', 'Ustawienia': 'Settings', 'Zapisz': 'Save', 'Anuluj': 'Cancel', 'Usuń': 'Delete', 'Edytuj': 'Edit', 'Dodaj': 'Add', 'Szukaj': 'Search', 'Importuj z Drive': 'Import from Drive', 'Eksportuj': 'Export', 'Połączenie': 'Connection', 'Wdrożenie': 'Deployment' };
 let tooltipTimer = null;
 const tooltip = document.getElementById ? document.getElementById('tooltip') : null;
