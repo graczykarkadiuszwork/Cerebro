@@ -917,13 +917,19 @@ function pbObGenerujSiatke() {
   document.getElementById('pb-ob-grid').innerHTML = '<div style="color:var(--pb-green-dim);">Wczytywanie…</div>';
   google.script.run
     .withSuccessHandler(function(result) {
-      const istniejace = {};
-      if (result && result.success && result.data) {
-        result.data.forEach(function(r) { istniejace[r.data] = r; });
+      if (!result || !result.success) {
+        showError('Nie udało się wczytać grafiku z arkusza: ' + (result && result.error ? result.error : 'nieznany błąd — sprawdź, czy PipBoyLogic.gs jest aktualne i czy zrobiłeś nową wersję wdrożenia.'));
+        pbObRenderujSiatkeGrid(miesiac, {});
+        return;
       }
+      const istniejace = {};
+      (result.data || []).forEach(function(r) { istniejace[r.data] = r; });
       pbObRenderujSiatkeGrid(miesiac, istniejace);
     })
-    .withFailureHandler(function() { pbObRenderujSiatkeGrid(miesiac, {}); })
+    .withFailureHandler(function(err) {
+      showError('Błąd komunikacji z serwerem przy wczytywaniu grafiku: ' + err.message);
+      pbObRenderujSiatkeGrid(miesiac, {});
+    })
     .getGrafikMiesiaca(miesiac);
 }
 
