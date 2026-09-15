@@ -265,7 +265,33 @@ function pipboyInstalujTriggerBackupu() {
 function getGrafikMiesiaca(rokMiesiac) { // 'YYYY-MM'
   try {
     const rows = sheetToObjects(pipboySheet('grafik_pracy'));
-    const data = rows.filter(r => String(r.data).startsWith(rokMiesiac));
+    const data = rows.map(function(r) {
+      // Tolerancja formatu kolumny "data": pełna data (RRRR-MM-DD) ALBO sam
+      // numer dnia miesiąca (np. "1", "2"...) — tak Arek wkleił ją ręcznie
+      // z realnego grafiku. Numer dnia normalizujemy względem rokMiesiac,
+      // żeby filtr niżej w ogóle mógł go dopasować.
+      let dataStr = String(r.data == null ? '' : r.data).trim();
+      if (/^\d{1,2}$/.test(dataStr)) {
+        dataStr = rokMiesiac + '-' + dataStr.padStart(2, '0');
+      }
+      // Auto-klasyfikacja typu dnia z godzin, gdy typ_dnia jest puste —
+      // zgodnie z sekcją 0.7 koncepcji: Dzień A = ok. 8:30-15:30 (rano),
+      // Dzień B = ok. 12:00-20:00 (popołudnie), 00:00-00:00 = Wolny.
+      // Własny wpis Arka w typ_dnia (jeśli już go uzupełnił) ma pierwszeństwo
+      // i nigdy nie jest nadpisywany.
+      let typ = String(r.typ_dnia == null ? '' : r.typ_dnia).trim();
+      if (!typ) {
+        const start = String(r.start == null ? '' : r.start).trim();
+        const koniec = String(r.koniec == null ? '' : r.koniec).trim();
+        if ((!start || start === '00:00') && (!koniec || koniec === '00:00')) {
+          typ = 'Wolny';
+        } else {
+          const godzina = parseInt(start.split(':')[0], 10);
+          typ = (!isNaN(godzina) && godzina < 10) ? 'A' : 'B';
+        }
+      }
+      return { data: dataStr, dzien_tygodnia: r.dzien_tygodnia, start: r.start, koniec: r.koniec, typ_dnia: typ };
+    }).filter(r => r.data.indexOf(rokMiesiac) === 0);
     return { success: true, data };
   } catch (e) {
     return { success: false, error: e.toString() };
@@ -336,8 +362,19 @@ function setGrafikMiesiac(dni) {
   try {
     const sheet = pipboySheet('grafik_pracy');
     const dane = sheet.getDataRange().getValues();
+    // rokMiesiac wyprowadzony z pierwszego wpisu (wszystkie wpisy z jednego
+    // wywołania onboardingu dotyczą tego samego miesiąca) — potrzebny, żeby
+    // rozpoznać stare wiersze zapisane samym numerem dnia (ta sama tolerancja
+    // formatu co w getGrafikMiesiaca) i NADPISAĆ je zamiast duplikować.
+    const rokMiesiac = (dni && dni.length > 0) ? String(dni[0].data).slice(0, 7) : null;
     const indexMap = {};
-    for (let i = 1; i < dane.length; i++) indexMap[dane[i][0]] = i;
+    for (let i = 1; i < dane.length; i++) {
+      let klucz = String(dane[i][0]);
+      if (rokMiesiac && /^\d{1,2}$/.test(klucz.trim())) {
+        klucz = rokMiesiac + '-' + klucz.trim().padStart(2, '0');
+      }
+      indexMap[klucz] = i;
+    }
 
     const doDopisania = [];
     (dni || []).forEach(function(wpis) {

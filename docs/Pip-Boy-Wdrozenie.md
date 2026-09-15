@@ -1,5 +1,14 @@
 # Pip-Boy — status budowy i wdrożenie
 
+## Aktualizacja: dane grafiku, które Arek już wpisał, nie pasowały do formatu
+
+Arek podesłał link do swojego arkusza Pip-Boy — sprawdziłem `grafik_pracy` bezpośrednio. Dwa niezgodne z oczekiwanym formatem pola, oba teraz tolerowane po stronie kodu (żadnych ręcznych poprawek w arkuszu nie trzeba robić):
+
+1. **Kolumna `data` zawierała sam numer dnia miesiąca** (`1`, `2`, `3`...), nie pełną datę `RRRR-MM-DD`. `getGrafikMiesiaca()` filtrował przez `startsWith(rokMiesiac)` — z bareliczbami to nigdy nie pasowało, więc nic się nie ładowało. Naprawione: funkcja teraz normalizuje sam numer dnia do pełnej daty względem przeglądanego miesiąca.
+2. **Kolumna `typ_dnia` była całkowicie pusta** dla wszystkich 30 wierszy. Naprawione: gdy `typ_dnia` jest puste, `getGrafikMiesiaca()` klasyfikuje dzień automatycznie z godzin `start`/`koniec`, dokładnie według definicji z sekcji 0.7 koncepcji (Dzień A ≈ 8:30–15:30 rano, Dzień B ≈ 12:00–20:00 popołudnie, `00:00–00:00` → Wolny). Własny wpis w `typ_dnia`, jeśli już tam jest, ma zawsze pierwszeństwo — nic nie jest nadpisywane wbrew temu, co Arek już ustawił.
+
+Przy okazji naprawiony też `setGrafikMiesiac()` (zapis po kliknięciu „Dalej” w onboardingu) — wcześniej, przy starych wierszach zapisanych samym numerem dnia, nie rozpoznawałby ich jako "już istniejące" i dopisywałby NOWE 30 wierszy obok starych (60 wierszy, duplikaty). Teraz rozpoznaje je tą samą normalizacją i nadpisuje w miejscu.
+
 ## Aktualizacja: cała otoczka Cerebro usunięta z layoutu (nie tylko ukryta)
 
 Arek: "nadal mam tą bezsensowną ramkę cerebro" — samo ukrycie przycisków nawigacji (`hidden`) nie wystarczyło, bo sam sidebar/logo/nagłówek mobilny dalej zajmowały miejsce na ekranie wokół Pip-Boya. Naprawione radykalniej: `Index.html` już w ogóle nie includuje `Sidebar.html` — nie ma stałego panelu bocznego, nie ma logo "Cerebro", nie ma mobilnego nagłówka z hamburgerem. Pip-Boy zajmuje cały ekran od razu po wejściu.
