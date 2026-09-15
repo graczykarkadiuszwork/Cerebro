@@ -185,6 +185,24 @@ function isPipBoyConfigured() {
   }
 }
 
+// Diagnostyka: "Skonfiguruj Pip-Boy" tworzy NOWY arkusz przy KAŻDYM kliknięciu
+// (SpreadsheetApp.create) i nadpisuje PIPBOY_SPREADSHEET_ID — jeśli ten
+// przycisk był kliknięty więcej niż raz w toku tej długiej sesji wdrożeniowej,
+// mogło powstać kilka arkuszy Pip-Boy, a tylko NAJNOWSZY jest tym, z którego
+// aplikacja faktycznie czyta. Ta funkcja pokazuje link do TEGO aktualnego —
+// wystawiona na stałe w Ustawieniach (nie tylko na chwilę po kliknięciu
+// "Skonfiguruj Pip-Boy"), żeby dało się to porównać z arkuszem, który się
+// akurat ma otwarty w innej karcie.
+function pipboyGetSpreadsheetUrl() {
+  try {
+    const id = PropertiesService.getScriptProperties().getProperty('PIPBOY_SPREADSHEET_ID');
+    if (!id) return { success: true, data: { url: null } };
+    return { success: true, data: { url: 'https://docs.google.com/spreadsheets/d/' + id + '/edit' } };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
 function todayIso() {
   return Utilities.formatDate(new Date(), Session.getScriptTimeZone() || 'Europe/Warsaw', 'yyyy-MM-dd');
 }
