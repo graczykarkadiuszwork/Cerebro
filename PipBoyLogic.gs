@@ -280,9 +280,23 @@ function pipboyInstalujTriggerBackupu() {
 // z sekcją 0.4 — automatyzacja odczytu grafiku to zadanie przyszłe)
 // ============================================================
 
+// Sheets zapisuje celę wpisaną jako "12:15" jako wartość czasu, którą Apps
+// Script odczytuje jako obiekt Date (epoka 30.12.1899, sama godzina się
+// liczy) — nie jako tekst. Ta funkcja normalizuje oba warianty do "HH:mm".
+function pbGsTimeToHHMM_(val) {
+  if (Object.prototype.toString.call(val) === '[object Date]') {
+    return Utilities.formatDate(val, Session.getScriptTimeZone() || 'Europe/Warsaw', 'HH:mm');
+  }
+  return String(val == null ? '' : val).trim();
+}
+
 function getGrafikMiesiaca(rokMiesiac) { // 'YYYY-MM'
   try {
-    const rows = sheetToObjects(pipboySheet('grafik_pracy'));
+    const sheet = pipboySheet('grafik_pracy');
+    if (!sheet) {
+      return { success: false, error: 'Nie znaleziono zakładki "grafik_pracy" w arkuszu Pip-Boy — sprawdź, czy nazwa zakładki na dole arkusza nie została przypadkiem zmieniona.' };
+    }
+    const rows = sheetToObjects(sheet);
     const data = rows.map(function(r) {
       // Tolerancja formatu kolumny "data": pełna data (RRRR-MM-DD) ALBO sam
       // numer dnia miesiąca (np. "1", "2"...) — tak Arek wkleił ją ręcznie
@@ -297,20 +311,37 @@ function getGrafikMiesiaca(rokMiesiac) { // 'YYYY-MM'
       // Dzień B = ok. 12:00-20:00 (popołudnie), 00:00-00:00 = Wolny.
       // Własny wpis Arka w typ_dnia (jeśli już go uzupełnił) ma pierwszeństwo
       // i nigdy nie jest nadpisywany.
+      // Sheets bywa "sprytny" — cela wpisana jako "12:15" często zapisuje się
+      // wewnętrznie jako wartość czasu (Apps Script odczytuje ją wtedy jako
+      // obiekt Date, nie tekst "12:15"). pbGsTimeToHHMM_ obsługuje oba
+      // przypadki, żeby klasyfikacja i to, co dostaje formularz, było
+      // niezależne od tego, jak Sheets akurat sformatował kolumnę.
+      const startHHMM = pbGsTimeToHHMM_(r.start);
+      const koniecHHMM = pbGsTimeToHHMM_(r.koniec);
       let typ = String(r.typ_dnia == null ? '' : r.typ_dnia).trim();
       if (!typ) {
-        const start = String(r.start == null ? '' : r.start).trim();
-        const koniec = String(r.koniec == null ? '' : r.koniec).trim();
-        if ((!start || start === '00:00') && (!koniec || koniec === '00:00')) {
+        if ((!startHHMM || startHHMM === '00:00') && (!koniecHHMM || koniecHHMM === '00:00')) {
           typ = 'Wolny';
         } else {
-          const godzina = parseInt(start.split(':')[0], 10);
+          const godzina = parseInt(startHHMM.split(':')[0], 10);
           typ = (!isNaN(godzina) && godzina < 10) ? 'A' : 'B';
         }
       }
-      return { data: dataStr, dzien_tygodnia: r.dzien_tygodnia, start: r.start, koniec: r.koniec, typ_dnia: typ };
+      return { data: dataStr, dzien_tygodnia: r.dzien_tygodnia, start: startHHMM, koniec: koniecHHMM, typ_dnia: typ };
     }).filter(r => r.data.indexOf(rokMiesiac) === 0);
-    return { success: true, data };
+    // Diagnostyka (tymczasowa — patrz Ustawienia/PipBoy.html): pokazuje na
+    // ekranie, ile surowych wierszy faktycznie odczytano z arkusza i ile z
+    // nich dopasowało się do wybranego miesiąca, plus surowy pierwszy wiersz
+    // (typy danych z Sheets bywają zaskakujące — np. cela "12:15" bywa
+    // odczytana jako obiekt Date, nie tekst). Do usunięcia, gdy problem z
+    // wczytywaniem grafiku zostanie ostatecznie zdiagnozowany.
+    const debug = {
+      surowychWierszy: rows.length,
+      dopasowanych: data.length,
+      pierwszySurowy: rows.length > 0 ? JSON.stringify(rows[0]) : null,
+      typDanychStart: rows.length > 0 ? Object.prototype.toString.call(rows[0].start) : null
+    };
+    return { success: true, data, debug };
   } catch (e) {
     return { success: false, error: e.toString() };
   }
