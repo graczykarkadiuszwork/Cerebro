@@ -1,5 +1,11 @@
 # Pip-Boy — status budowy i wdrożenie
 
+## ✅ Wdrożenie działa (potwierdzone 2026-09-16)
+
+Widok Dnia renderuje się w pełni: pasek HP, cytat dnia, marquee, przypomnienia cykliczne, bloki dnia. Onboarding (wgranie grafiku pracy) przeszedł poprawnie po naprawie tolerancji formatu opisanej niżej. To zamyka rundę diagnostyczną — Pip-Boy jest odtąd w codziennym użyciu, a nie tylko w fazie wdrożenia.
+
+Rzeczywista przyczyna ostatniego "pustego grafiku": komórki `start`/`koniec` wpisane jako np. `12:15` Arkusze Google zapisują **wewnętrznie jako wartość czasu** (Apps Script odczytuje to jako obiekt `Date`, epoka 30.12.1899, licząca się jest sama godzina), nie jako zwykły tekst. Dotychczasowy kod zakładał tekst. Naprawione funkcją `pbGsTimeToHHMM_()` w `PipBoyLogic.gs`, która rozpoznaje oba warianty. (Tymczasowy panel diagnostyczny, który pomógł to namierzyć, został usunięty po potwierdzeniu naprawy.)
+
 ## Aktualizacja: dane grafiku, które Arek już wpisał, nie pasowały do formatu
 
 Arek podesłał link do swojego arkusza Pip-Boy — sprawdziłem `grafik_pracy` bezpośrednio. Dwa niezgodne z oczekiwanym formatem pola, oba teraz tolerowane po stronie kodu (żadnych ręcznych poprawek w arkuszu nie trzeba robić):

@@ -329,19 +329,7 @@ function getGrafikMiesiaca(rokMiesiac) { // 'YYYY-MM'
       }
       return { data: dataStr, dzien_tygodnia: r.dzien_tygodnia, start: startHHMM, koniec: koniecHHMM, typ_dnia: typ };
     }).filter(r => r.data.indexOf(rokMiesiac) === 0);
-    // Diagnostyka (tymczasowa — patrz Ustawienia/PipBoy.html): pokazuje na
-    // ekranie, ile surowych wierszy faktycznie odczytano z arkusza i ile z
-    // nich dopasowało się do wybranego miesiąca, plus surowy pierwszy wiersz
-    // (typy danych z Sheets bywają zaskakujące — np. cela "12:15" bywa
-    // odczytana jako obiekt Date, nie tekst). Do usunięcia, gdy problem z
-    // wczytywaniem grafiku zostanie ostatecznie zdiagnozowany.
-    const debug = {
-      surowychWierszy: rows.length,
-      dopasowanych: data.length,
-      pierwszySurowy: rows.length > 0 ? JSON.stringify(rows[0]) : null,
-      typDanychStart: rows.length > 0 ? Object.prototype.toString.call(rows[0].start) : null
-    };
-    return { success: true, data, debug };
+    return { success: true, data };
   } catch (e) {
     return { success: false, error: e.toString() };
   }

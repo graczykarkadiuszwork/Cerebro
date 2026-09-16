@@ -903,8 +903,7 @@ function pbObRenderStep1(body) {
     '<p style="color:var(--pb-green-dim); font-size:0.85em; margin-bottom:10px;">Wgraj pierwszy miesięczny grafik pracy (sekcja 0.7) — ręcznie, dopóki odczyt RCP (Faza 2) nie zastąpi tego automatyzacją. Niedziele pominięte — zawsze Szablon D.</p>' +
     '<label style="font-size:0.85em;">Miesiąc</label> <input class="pb-input" type="month" id="pb-ob-miesiac" value="' + domyslnyMiesiac + '" style="width:auto; display:inline-block;">' +
     ' <button class="pb-btn" onclick="pbObGenerujSiatke()">Generuj siatkę dni</button>' +
-    '<div id="pb-ob-grid" style="margin-top:10px; max-height:340px; overflow:auto;"></div>' +
-    '<div id="pb-ob-debug" style="margin-top:10px; font-size:0.75em; color:var(--pb-amber); word-break:break-all;"></div>';
+    '<div id="pb-ob-grid" style="margin-top:10px; max-height:340px; overflow:auto;"></div>';
   pbObGenerujSiatke(); // od razu dla bieżącego miesiąca — bez dodatkowego kliku
 }
 
@@ -926,16 +925,6 @@ function pbObGenerujSiatke() {
       const istniejace = {};
       (result.data || []).forEach(function(r) { istniejace[r.data] = r; });
       pbObRenderujSiatkeGrid(miesiac, istniejace);
-      // Diagnostyka (tymczasowa, do usunięcia po znalezieniu przyczyny) —
-      // pokazuje na stałe, ile wierszy przyszło z arkusza i ile dopasowało
-      // się do miesiąca, żeby nie trzeba było zgadywać ze zrzutów ekranu.
-      if (result.debug) {
-        document.getElementById('pb-ob-debug').textContent =
-          'DIAGNOSTYKA: surowych wierszy w arkuszu: ' + result.debug.surowychWierszy +
-          ' | dopasowanych do ' + miesiac + ': ' + result.debug.dopasowanych +
-          ' | typ danych w kolumnie start: ' + result.debug.typDanychStart +
-          ' | pierwszy surowy wiersz: ' + result.debug.pierwszySurowy;
-      }
     })
     .withFailureHandler(function(err) {
       showError('Błąd komunikacji z serwerem przy wczytywaniu grafiku: ' + err.message);
